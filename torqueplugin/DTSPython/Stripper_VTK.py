@@ -1,7 +1,7 @@
 '''
 Stripper_VTK.py
 
-Copyright (c) 2004 James Urquhart(j_urquhart@btinternet.com)
+Copyright (c) 2004, 2005 James Urquhart(j_urquhart@btinternet.com)
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
@@ -116,7 +116,7 @@ class VTKStripper(Dts_Stripper.Stripper):
 			newmesh = strip.GetOutput()
 			del strip # clear stripper
 		else:
-			print "   Oddity: Mesh has no polygons!"
+			Torque_Util.dump_writeln("   Oddity: Mesh has no polygons!")
 
 		# Import data we got back from stripper.
 		if newmesh != None:
@@ -153,7 +153,7 @@ class VTKStripper(Dts_Stripper.Stripper):
 			if len(inds) > 0:
 				nstrips.append(inds)
 		else:
-			print "   Oddity: Mesh did not return from operation."
+			Torque_Util.dump_writeln("   Oddity: Mesh did not return from operation.")
 
 		# Cleanup
 		del faces

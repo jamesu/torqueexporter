@@ -34,9 +34,10 @@ from Blender import NMesh
 #-------------------------------------------------------------------------------------------------
 
 class BlenderMesh(DtsMesh):
-	def __init__(self, shape, msh,  rootBone, scaleFactor, matrix, Sorted=False):
+	def __init__(self, shape, msh,  rootBone, scaleFactor, matrix, triStrips=False):
 		DtsMesh.__init__(self)
-		self.vertsIndexMap = []
+		self.vertsIndexMap = []		# Map of TexCoord index <> Vertex index map
+		self.mainMaterial = None	# For determining material ipo track to use for ObjectState visibility animation
 		
 		materialGroups = [[]]*(len(msh.materials)+1)
 		
@@ -44,7 +45,7 @@ class BlenderMesh(DtsMesh):
 		for face in msh.faces:
 			if len(face.v) < 3:
 				continue # skip to next face
-			print "DBG: face idx=%d" % face.materialIndex
+			#print "DBG: face idx=%d" % face.materialIndex
 			materialGroups[face.materialIndex].append(face)
 		
 		# Then, we can add in batches
@@ -53,12 +54,11 @@ class BlenderMesh(DtsMesh):
 			for face in group:
 				if len(face.v) < 3:
 					continue # skip to next face
-				# Insert primitive strips
-				pr = Primitive()
-				pr.firstElement = len(self.indices)
-				pr.numElements = 3
-				pr.matindex = pr.Strip | pr.Indexed
 
+				# Insert primitive
+				pr = Primitive(len(self.indices), 3, 0)
+				pr.matindex = pr.Strip | pr.Indexed
+				
 				useSticky = False
 				# Find the image associated with the face on the mesh, if any
 				if len(msh.materials) > 0:
@@ -66,49 +66,54 @@ class BlenderMesh(DtsMesh):
 					matIndex = shape.materials.findMaterial(msh.materials[face.materialIndex].getName())
 					if matIndex == None: matIndex = shape.addMaterial(msh.materials[face.materialIndex])
 					if matIndex == None: matIndex = pr.NoMaterial
-					if matIndex == pr.NoMaterial:
+					if matIndex != pr.NoMaterial: 
+						self.mainMaterial = matIndex
 						useSticky = shape.materials.get(matIndex).sticky
-						pr.matindex |= matIndex
 				else:
-					pr.matindex |= pr.NoMaterial # Nope, no material
-
-				self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,2, useSticky))
-				self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,1, useSticky))
-				self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,0, useSticky))
-
+					matIndex = pr.NoMaterial # Nope, no material
+					
+				pr.matindex |= matIndex
+				
+				# Add an extra element if using triangle strips, else add a new primitive
+				if (len(face.v) > 3) and (triStrips == False):
+					pr.numElements = 4
+					self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,2, useSticky))
+					self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,1, useSticky))
+					self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,3, useSticky))
+					self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,0, useSticky))
+				else:
+					self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,2, useSticky))
+					self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,1, useSticky))
+					self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,0, useSticky))
+					
+					if len(face.v) > 3:
+						self.primitives.append(pr)
+						
+						# Duplicate primitive in reverse order if doublesided
+						if (msh.mode & NMesh.Modes.TWOSIDED) or (face.mode & NMesh.FaceModes.TWOSIDE):
+							for i in range(1, pr.numElements+1):
+								self.indices.append(self.indices[-i])
+							self.primitives.append(Primitive(pr.firstElement+pr.numElements,pr.numElements,pr.matindex))
+					
+						pr = Primitive(len(self.indices), 3, pr.matindex)
+						self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,3, useSticky))
+						self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,2, useSticky))
+						self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,0, useSticky))
+				
 				# Finally add primitive
 				self.primitives.append(pr)
-				# If double sided, add this face again in reverse order
+						
+				# Duplicate primitive in reverse order if doublesided
 				if (msh.mode & NMesh.Modes.TWOSIDED) or (face.mode & NMesh.FaceModes.TWOSIDE):
-					self.indices.append(self.indices[-1])
-					self.indices.append(self.indices[-2])
-					self.indices.append(self.indices[-3])
-					self.primitives.append(Primitive(pr.firstElement+pr.numElements,3,pr.matindex))
-
-				# Add a second triangle if the face has 4 verts
-				if len(face.v) == 4:
-					pr2 = Primitive()
-					pr2.firstElement = len(self.indices)
-					pr2.numElements = 3
-					pr2.matindex = pr.matindex
-					self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,3, useSticky))
-					self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,2, useSticky))
-					self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,0, useSticky))
-					self.primitives.append(pr2)
-					if (msh.mode & NMesh.Modes.TWOSIDED) or (face.mode & NMesh.FaceModes.TWOSIDE):
-						# If double sided, add this face again in reverse order
-						self.indices.append(self.indices[-1])
-						self.indices.append(self.indices[-2])
-						self.indices.append(self.indices[-3])
-						self.primitives.append(Primitive(pr2.firstElement+pr2.numElements,3,pr2.matindex))
-
-		if Sorted: self.mtype = self.T_Sorted
+					for i in range(1, pr.numElements+1):
+						self.indices.append(self.indices[-i])
+					self.primitives.append(Primitive(pr.firstElement+pr.numElements,pr.numElements,pr.matindex))
 
 		# Determine shape type based on vertex weights
 		if len(self.bindex) <= 1:
-			if not self.mtype == self.T_Sorted: self.mtype = self.T_Standard
+			self.mtype = self.T_Standard
 		else:
-			if not self.mtype == self.T_Sorted:
+			if not self.mtype == self.T_Standard:
 				self.mtype = self.T_Standard # default
 				for v in self.bindex:
 					if v != self.bindex[0]:
@@ -174,6 +179,7 @@ class BlenderMesh(DtsMesh):
 		# Add vert Normals
 		normal = Vector(vert.no[0], vert.no[1], vert.no[2])
 		#normal = matrix.passPoint(Vector(vert.no[0], vert.no[1], vert.no[2]))
+		#normal.normalize()
 		self.normals.append(normal)
 		self.enormals.append(self.encodeNormal(normal))
 
@@ -200,3 +206,14 @@ class BlenderMesh(DtsMesh):
 				# and node Index (if not already on list)
 				self.vweight.append(weight / total)
 		return vindex
+		
+	def setBlenderMeshFlags(self, names):
+		# Look through elements in names
+		for n in names:
+			if n == "BB":
+				self.flags |= DtsMesh.Billboard
+			elif n == "BBZ":
+				self.flags |= DtsMesh.Billboard | DtsMesh.BillboardZ
+			elif n == "SORT":
+				self.mtype = self.T_Sorted
+

@@ -1,13 +1,3 @@
-#!BPY
-
-"""
-Name: '0 GUI TEST'
-Blender: 233
-Group: 'Export'
-Submenu: 'Test' testGui
-Tooltip: 'Test Gui Controls'
-"""
-
 '''
 Blender_Gui.py
 
@@ -106,10 +96,9 @@ Please be warned that the blender gui system sometimes sends the wrong event num
 	
 	myButton = Common_Gui.BasicButton("myBut", "Click me", 5, myCallback, myResizeCallback)
 	myMenu = Common_Gui.ComboBox("myMenu", "Use this menu!", 10, myCallback, myResizeCallback)
-	myMenu.construct([
-	"First Menu Item",
-	"Second Menu Item",
-	"Third Menu Item"])
+	myMenu.items.append("First Menu Item")
+	myMenu.items.append("Second Menu Item")
+	myMenu.items.append("Third Menu Item")
 	myText = Common_Gui.SimpleText("myText", "Test These Fabulous Controls!", None, myCallback)
 	
 	Common_Gui.addGuiControl(myText)
@@ -136,11 +125,13 @@ class BasicControl:
 		self.height = 0
 		
 	def positionInControl(self, pos):
+		#print str(pos)+" vs %d %d" % (self.x, self.y)
 		return (((pos[0] >= self.x) and (pos[1] >= self.y)) and ((pos[0] <= (self.x+self.width)) and (pos[1] <= (self.y+self.height))))
 
 	# Override the following functions
 	def onAction(self, evt, mousepos, value):
-		return False
+		if self.callback: self.callback(self)
+		return True
 
 	def onDraw(self, offset):
 		pass
@@ -160,10 +151,6 @@ class BasicButton(BasicControl):
 		BasicControl.__init__(self, name, tooltip, evt, callback, resize_callback)
 		self.width = 100
 		self.height = 20
-
-	def onAction(self, evt, mousepos, value):
-		if self.callback: self.callback(self)
-		return True
 		
 	def onDraw(self, offset):
 		self.data = Draw.Button(self.name, self.evt, self.x+offset[0], self.y+offset[1], self.width, self.height, self.tooltip)
@@ -174,7 +161,7 @@ class ToggleButton(BasicButton):
 		self.state = False
 
 	def onAction(self, evt, mousepos, value):
-		self.state = self.data.val
+		self.state = bool(self.data.val)
 		if self.callback: self.callback(self)
 		return True
 		
@@ -186,24 +173,33 @@ class ComboBox(BasicControl):
 		BasicControl.__init__(self, name, tooltip, evt, callback, resize_callback)
 		self.width = 150
 		self.height = 20
-		self.itemIndex = 0
-		self.construct([])
+		self.itemIndex = -1
+		self.items = []
 
 	# Constructs a menu out of a list of strings
-	def construct(self, items):
-		self.menuItems = self.name+"%t|"
+	def constructString(self):
+		ret = self.name+"%t|"
 		count = 0
-		for i in items:
-			self.menuItems += str(i) + " %x" + str(count) + "|"
+		for i in self.items:
+			ret += str(i) + " %x" + str(count) + "|"
 			count += 1
+		return ret
+	
+	# Sets the item idx to idx of what it finds
+	def setTextValue(self, value):
+		for i in range(0, len(self.items)):
+			if item[i] == value:
+				self.itemIndex = i
+				return
+		self.itemIndex = 0
 
 	def onAction(self, evt, mousepos, value):
-		self.itemIndex = self.data.val
+		self.itemIndex = int(self.data.val)
 		if self.callback: self.callback(self)
 		return True
 
 	def onDraw(self, offset):
-		self.data = Draw.Menu(self.menuItems, self.evt, self.x+offset[0], self.y+offset[1], self.width, self.height, self.itemIndex)
+		self.data = Draw.Menu(self.constructString(), self.evt, self.x+offset[0], self.y+offset[1], self.width, self.height, self.itemIndex)
 		
 class TextBox(BasicControl):
 	def __init__(self, name=None, tooltip=None, evt=None, callback=None, resize_callback=None):
@@ -214,7 +210,7 @@ class TextBox(BasicControl):
 		self.length = 30
 	
 	def onAction(self, evt, mousepos, value):
-		self.value = self.data.val
+		self.value = str(self.data.val)
 		if self.callback: self.callback(self)
 		return True
 
@@ -247,15 +243,14 @@ class NumberSlider(NumberPicker):
 												
 class SimpleText(BasicControl):
 	def __init__(self, name=None, label="", callback=None, resize_callback=None):
+		global curTheme
 		BasicControl.__init__(self, name, None, None, callback, resize_callback)
 		self.enabled = False
-		self.color = [1.0,1.0,1.0,1.0]
+		
+		curTextCol = curTheme.get('buts').text
+		self.color = [curTextCol[0]/255.0,curTextCol[1]/255.0,curTextCol[2]/255.0,curTextCol[3]/255.0]
 		self.label = label
 		self.size = "normal"
-
-	def onAction(self, evt, mousepos, value):
-		if self.callback: self.callback(self)
-		return True
 
 	def onDraw(self, offset):
 		# Evil hack: pretend we are drawing quad's, setting the color there
@@ -264,6 +259,29 @@ class SimpleText(BasicControl):
 		BGL.glEnd()
 		BGL.glRasterPos2i(offset[0]+self.x, offset[1]+self.y)
 		self.data = Draw.Text(self.label, self.size)
+		
+class MultilineText(SimpleText):
+	def onDraw(self, offset):
+		# Evil hack: pretend we are drawing quad's, setting the color there
+		BGL.glBegin(BGL.GL_QUADS)
+		BGL.glColor4f(self.color[0], self.color[1], self.color[2], self.color[3])
+		BGL.glEnd()
+		
+		# Horrific hack: guess the text size considering lines
+		if self.size == "normal": incY = 15
+		elif self.size == "small": incY = 10
+		elif self.size == "large": incY = 20
+		
+		curX = offset[0]+self.x
+		curY = offset[1] + self.y
+		
+		# Essentially we draw the lines in reverse going upwards, acting like any other control
+		lines = self.label.split("\n")
+		lines.reverse()
+		for line in lines:
+			BGL.glRasterPos2i(curX, curY)
+			self.data = Draw.Text(line, self.size)
+			curY += incY
 							
 class SimpleLine(BasicControl):
 	def __init__(self, name=None, callback=None, resize_callback=None):
@@ -272,10 +290,6 @@ class SimpleLine(BasicControl):
 		self.color = [1.0,1.0,1.0,1.0]
 		self.width = 100
 		self.height = 1
-
-	def onAction(self, evt, mousepos, value):
-		if self.callback: self.callback(self)
-		return True
 
 	def onDraw(self, offset):
 		BGL.glBegin(BGL.GL_LINES)
@@ -293,22 +307,21 @@ class SimpleImage(BasicControl):
 		self.width = 100
 		self.height = 100
 
-	def onAction(self, evt, mousepos, value):
-		if self.callback: self.callback(self)
-		return True
-
 	def onDraw(self, offset):
 		BGL.glEnable(BGL.GL_BLEND) 
-		BGL.glBlendFunc(BGL.GL_SRC_ALPHA, BGL.GL_ONE_MINUS_SRC_ALPHA) 
-		self.data = Draw.Image(self.image, self.x, self.y,  float(self.width) / float(self.image.size[0]), float(self.height) / float(self.image.size[1]))
+		self.data = Draw.Image(self.image, self.x+offset[0], self.y+offset[1],  float(self.width) / float(self.image.size[0]), float(self.height) / float(self.image.size[1]))
 		BGL.glDisable(BGL.GL_BLEND)
 
 class BasicContainer(BasicControl):
 	def __init__(self, name=None, callback=None, resize_callback=None):
+		global curTheme
 		BasicControl.__init__(self, name, None, None, callback, resize_callback)
 		self.nested = True
-		self.color = [0.6,0.6,0.6,1.0]
-		self.borderColor = [0.9, 0.9, 0.9, 1.0]
+		
+		curBg = curTheme.get('buts').panel
+		curBorder = curTheme.get('ui').outline
+		self.color = [curBg[0]/255.0,curBg[1]/255.0,curBg[2]/255.0,curBg[3]/255.0]
+		self.borderColor = [curBorder[0]/255.0, curBorder[1]/255.0, curBorder[2]/255.0, curBorder[3]/255.0]
 		self.fade_mode = 0
 		self.controls = []
 		
@@ -316,29 +329,30 @@ class BasicContainer(BasicControl):
 		del self.controls
 	
 	def onAction(self, evt, mousepos, value):
-		print "BASICCONTAINER CHECKING FOR evt=" + str(evt)
+		#print "BASICCONTAINER CHECKING FOR evt=" + str(evt)
 		newpos = [mousepos[0]-self.x, mousepos[1]-self.y]
-		
-		if self.callback: self.callback(self)
 				
 		if evt == None:
 			for control in self.controls:
-				if control.enabled == False:
+				if (control.evt != None) or (control.enabled == False):
 					continue
 				if control.positionInControl(newpos):
 					if control.onAction(evt, newpos, value):
 						return True
+			# Only send callback if event wasn't captured
+			if self.callback: self.callback(self)
 		else:
 			for control in self.controls:
 				if control.evt == evt:
 					if control.enabled:
 						control.onAction(evt, newpos, value)
 						return True
-					else: break
 				elif control.nested:
 					if control.enabled:
 						if control.onAction(evt, newpos, value):
 							return True
+			# Only send callback if event wasn't captured
+			if self.callback: self.callback(self)
 		return False
 
 	def onDraw(self, offset):
@@ -349,33 +363,59 @@ class BasicContainer(BasicControl):
 		real_x = offset[0] + self.x
 		real_y = offset[1] + self.y
 		
-		# Fade left -> right
-		if self.fade_mode == 1:
-			BGL.glBegin(BGL.GL_QUADS)
-			BGL.glColor4f(self.color[0],self.color[1],self.color[2], self.color[3])
-			BGL.glVertex2d(real_x,real_y)
-			BGL.glVertex2d(real_x,real_y+self.height)
-			BGL.glColor4f(self.color[0]*0.5,self.color[1]*0.5,self.color[2]*0.5, self.color[3]*0.5)
-			BGL.glVertex2d(real_x+self.width,real_y+self.height)
-			BGL.glVertex2d(real_x+self.width,real_y)
-			BGL.glEnd()
-		# Fade down -> up
-		elif self.fade_mode == 2:
-			BGL.glBegin(BGL.GL_QUADS)
-			BGL.glColor4f(self.color[0],self.color[1],self.color[2], self.color[3])
-			BGL.glVertex2d(real_x,real_y+self.height)
-			BGL.glColor4f(self.color[0]*0.5,self.color[1]*0.5,self.color[2]*0.5, self.color[3]*0.5)
-			BGL.glVertex2d(real_x,real_y)
-			BGL.glVertex2d(real_x+self.width,real_y)
-			BGL.glColor4f(self.color[0],self.color[1],self.color[2], self.color[3])
-			BGL.glVertex2d(real_x+self.width,real_y+self.height)
-			BGL.glEnd()
-		# Just draw flat rectangle
-		else:
+		fadeStyle = -1
+		
+		if self.fade_mode == 0:
+			fadeStyle = 0
+		elif self.fade_mode > 0:
+			if self.fade_mode > 3:
+				startColor = [self.color[0]*0.2,self.color[1]*0.2,self.color[2]*0.2,self.color[3]]
+				endColor = self.color
+				fadeStyle = self.fade_mode-3
+			else:
+				startColor = self.color
+				endColor = [self.color[0]*0.2,self.color[1]*0.2,self.color[2]*0.2,self.color[3]]
+				fadeStyle = self.fade_mode
+
+		BGL.glEnable(BGL.GL_BLEND)
+		if fadeStyle == 0:
 			BGL.glColor4f(self.color[0],self.color[1],self.color[2], self.color[3])
 			BGL.glRecti(real_x, real_y, real_x+self.width, real_y+self.height)
-			
-		#BGL.glColor3f(1.0,1.0,1.0)
+		elif fadeStyle == 1:
+			BGL.glBegin(BGL.GL_QUADS)
+			BGL.glColor4f(startColor[0],startColor[1],startColor[2], startColor[3])
+			BGL.glVertex2d(real_x,real_y)
+			BGL.glVertex2d(real_x,real_y+self.height)
+			BGL.glColor4f(endColor[0],endColor[1],endColor[2], endColor[3])
+			BGL.glVertex2d(real_x+self.width,real_y+self.height)
+			BGL.glVertex2d(real_x+self.width,real_y)
+			BGL.glEnd()
+		elif fadeStyle == 2:
+			BGL.glBegin(BGL.GL_QUADS)
+			BGL.glColor4f(startColor[0],startColor[1],startColor[2], startColor[3])
+			BGL.glVertex2d(real_x,real_y+self.height)
+			BGL.glVertex2d(real_x+self.width,real_y+self.height)
+			BGL.glColor4f(endColor[0],endColor[1],endColor[2], endColor[3])
+			BGL.glVertex2d(real_x+self.width,real_y)
+			BGL.glVertex2d(real_x,real_y)
+			BGL.glEnd()
+		elif fadeStyle == 3:
+			BGL.glBegin(BGL.GL_QUADS)
+			BGL.glColor4f(startColor[0],startColor[1],startColor[2], startColor[3])
+			BGL.glVertex2d(real_x,real_y+self.height)
+			BGL.glColor4f(endColor[0],endColor[1],endColor[2], endColor[3])
+			BGL.glVertex2d(real_x+self.width,real_y+self.height)
+			BGL.glColor4f(startColor[0],startColor[1],startColor[2], startColor[3])
+			BGL.glVertex2d(real_x+self.width,real_y)
+			BGL.glColor4f(endColor[0],endColor[1],endColor[2], endColor[3])
+			BGL.glVertex2d(real_x,real_y)
+			BGL.glEnd()
+		BGL.glDisable(BGL.GL_BLEND) 
+		
+		for control in self.controls:
+			if control.visible:
+				control.onDraw([real_x, real_y])
+				
 		# Draw border
 		if self.borderColor != None:
 			BGL.glBegin(BGL.GL_LINES)
@@ -392,12 +432,7 @@ class BasicContainer(BasicControl):
 			# Bottom left
 			BGL.glVertex2d(real_x+self.width,real_y)
 			BGL.glVertex2d(real_x,real_y)
-				
-		BGL.glEnd()
-		
-		for control in self.controls:
-			if control.visible:
-				control.onDraw([real_x, real_y])
+			BGL.glEnd()
 		
 	def onContainerResize(self, newwidth, newheight):
 		BasicControl.onContainerResize(self, newwidth, newheight)
@@ -411,7 +446,7 @@ class BasicContainer(BasicControl):
 		res = False
 		for i in range(0, len(self.controls)):
 			if self.controls[i] == control:
-				del self.ontrols[i]
+				del self.controls[i]
 				res = True
 				break
 			if Controls[i].nested:
@@ -419,7 +454,306 @@ class BasicContainer(BasicControl):
 					res = True
 					break
 		return res
+
+class ListContainer(BasicContainer):
+	'''
+	This class implements a scrollable list container.
+	
+	The size of all child controls is controlled by this container. If freedom of
+	movement is required, a BasicContainer should be added.
+	Controls are drawn in order as-is on the controls list.
+	
+	One property of this list you can use to your advantage is that only visible controls are drawn
+	and processed in onAction()'s. 
+	
+	To simplify things, the container only maintains one field.
+	'''
+	
+	def __init__(self, name=None, callback=None, resize_callback=None):
+		global curTheme
+		BasicContainer.__init__(self, name, callback, resize_callback)
 		
+		curTextCol = curTheme.get('ui').menu_back
+		self.color = [curTextCol[0]/255.0,curTextCol[1]/255.0,curTextCol[2]/255.0,curTextCol[3]/255.0]
+		self.scrollPosition = 0	# Position in controls list draw starts from
+		self.childHeight = 24	# Height of each child item
+		self.thumbHeight = 16	# Height of the visible marker
+		self.thumbPosition = 0	# Where is the marker? (to smooth things out)
+		self.barWidth = 16		# Width of bar on the side
+		self.dragState = False	# Are we currently dragging?
+		
+		self.itemIndex = -1		# Selected item
+		
+	def __del__(self):
+		del self.controls
+	
+	def onAction(self, evt, mousepos, value):
+		#print "SCROLLABLECONTAINER CHECKING FOR evt=" + str(evt)
+		newpos = [mousepos[0]-self.x, mousepos[1]-self.y]
+		
+		dragEvents = [Draw.LEFTMOUSE, Draw.MOUSEX, Draw.MOUSEY]
+		
+		if evt == None:
+			if self.needYScroll():
+				# We can accept mouse wheel messages universally
+				if value == Draw.WHEELUPMOUSE:
+					if self.scrollPosition != 0:
+						self.scrollPosition -= 1
+						self.getIdealThumbPosition()
+						#if self.callback: self.callback(self)
+				elif value == Draw.WHEELDOWNMOUSE:
+					if self.scrollPosition < (len(self.controls)-self.maxVisibleControls()):
+						self.scrollPosition += 1
+						self.getIdealThumbPosition()
+						#if self.callback: self.callback(self)
+				else:
+					# Otherwise, we need to be in the scrollbar area
+					if (newpos[0] >= (self.width-self.barWidth)):
+						
+						# We will drag, as long as dragState is true and the left mouse button is down,
+						# but in order to activate we need to recieve a LEFTMOUSE event with the button
+						# down.
+						if value == Draw.LEFTMOUSE:
+							self.dragState = Window.GetMouseButtons() & Window.MButs.L
+							#print "Scrollbar drag state now " + str(self.dragState) 
+						if self.dragState and (value in dragEvents):
+							# Looks like we're dragging with the mouse down
+							# The trick here is to realize that the top of the marker is where the value
+							# is read, whilst the rest of the marker is just decoration.
+							#
+							# In addition, to avoid going off the list we don't consider any children near the end.
+							
+							if Window.GetMouseButtons() & Window.MButs.L:
+								usefulChildren = len(self.controls)-self.maxVisibleControls()
+								#print "Scrollbar useful children : %d" % usefulChildren
+								#print str(newpos) + " | h:%d th:%d" % (self.height, self.thumbHeight)
+								if newpos[1] <= self.thumbHeight:
+									#print "YOU CLICKED UNDER THE THUMB HEIGHT"
+									self.scrollPosition = usefulChildren
+									self.thumbPosition = self.thumbHeight
+								else:
+									self.scrollPosition = int(( 1.0-(float(newpos[1]-self.thumbHeight) / (self.height - self.thumbHeight))) * usefulChildren)
+									self.thumbPosition = newpos[1]
+									
+								#print "Scrollbar DRAGGING, Position calculated as : %d" % self.scrollPosition
+							else:
+								self.dragState = False
+								#if self.callback: self.callback(self)
+								#print "Scrollbar stopped DRAGGING in dragState because mouse was released somewhere."
+			# Looks like we're probably clicking in the list body
+			if (value == Draw.LEFTMOUSE) and (newpos[0] < (self.width-self.barWidth)):
+				# Only send callback when mouse button is released!
+				if not (Window.GetMouseButtons() & Window.MButs.L):
+					idx = self.scrollPosition + int( (1.0-(float(newpos[1]) / self.height)) * self.maxVisibleControls() )
+					if idx >= len(self.controls) : idx = -1
+					#print "Selected item %d" % idx
+					self.selectItem(idx)
+					if (self.callback): self.callback(self)
+				
+			return True
+		else:
+			# We don't have any callbacks here since the control state for the list hasn't been altered
+			for control in self.controls:
+				if control.evt == evt:
+					if control.enabled:
+						control.onAction(evt, newpos, value)
+						return True
+				elif control.nested:
+					if control.enabled:
+						if control.onAction(evt, newpos, value):
+							return True				
+		
+		# Whoops
+		return False
+	
+	def needYScroll(self):
+		if len(self.controls) != 0:
+			if (len(self.controls) * self.childHeight) > self.height:
+				return True
+		return False
+		
+	def maxVisibleControls(self):
+		if self.height == 0: return 0
+		return int(float(self.height) / self.childHeight)
+		
+	def getVisibleControls(self):
+		if len(self.controls) == 0: return []
+		maxValue = self.scrollPosition + self.maxVisibleControls()
+		#print "VisibleControls: %d -> %d (len:%d)" % (self.scrollPosition, maxValue, len(self.controls))
+		if maxValue > len(self.controls):
+			return self.controls[self.scrollPosition:]
+			#print "^^ CORRECTED"
+		else:
+			return self.controls[self.scrollPosition:maxValue]
+			
+	def getIdealThumbPosition(self):
+		if len(self.controls) <= self.maxVisibleControls(): self.thumbPosition = self.thumbHeight
+		else: self.thumbPosition = self.height - int(( ((self.height - self.thumbHeight) / (len(self.controls) - self.maxVisibleControls()) ) * self.scrollPosition))
+			
+	def selectItem(self, idx):
+		if len(self.controls) == 0: return
+		
+		if self.itemIndex != -1: 
+			curCol = curTheme.get('ui').menu_item
+			curTextCol = curTheme.get('ui').menu_text
+			self.controls[self.itemIndex].color = [curCol[0]/255.0, curCol[1]/255.0, curCol[2]/255.0, curCol[3]/255.0]
+			if self.controls[self.itemIndex].nested:
+				for c in self.controls[self.itemIndex].controls:
+					if c.__class__ == SimpleText:
+							c.color = [curTextCol[0]/255.0, curTextCol[1]/255.0, curTextCol[2]/255.0, curTextCol[3]/255.0]
+		
+		if (idx >= len(self.controls)): return
+		self.itemIndex = idx
+		if idx != -1:
+			curCol = curTheme.get('ui').menu_hilite
+			curTextCol = curTheme.get('ui').menu_text_hi
+			self.controls[idx].color = [curCol[0]/255.0, curCol[1]/255.0, curCol[2]/255.0, curCol[3]/255.0]
+			if self.controls[self.itemIndex].nested:
+				for c in self.controls[self.itemIndex].controls:
+					if c.__class__ == SimpleText:
+						c.color = [curTextCol[0]/255.0, curTextCol[1]/255.0, curTextCol[2]/255.0, curTextCol[3]/255.0]
+
+	def onDraw(self, offset):
+		BGL.glRasterPos2i(offset[0]+self.x, offset[1]+self.y)
+		BGL.glColor4f(self.color[0], self.color[1], self.color[2], self.color[3])
+		
+		# Draw Box to distinguish container
+		real_x = offset[0] + self.x
+		real_y = offset[1] + self.y
+		
+		BGL.glEnable(BGL.GL_BLEND)
+		# Back to basics, just draw flat rectangle
+		if self.fade_mode == 0:
+			BGL.glColor4f(self.color[0],self.color[1],self.color[2], self.color[3])
+			BGL.glRecti(real_x, real_y, real_x+self.width, real_y+self.height)
+		
+		# Distinguished area
+		BGL.glColor4f(self.borderColor[0],self.borderColor[1],self.borderColor[2], self.borderColor[3])
+		BGL.glRecti(real_x+self.width-self.barWidth, real_y, real_x+self.width, real_y+self.height)
+		
+		BGL.glDisable(BGL.GL_BLEND)
+		 
+		# Now draw the scrollbar, if required
+		if self.needYScroll():
+			# Marker
+			BGL.glColor4f(self.color[0],self.color[1],self.color[2], self.color[3])
+			#print "!!"+str(self.scrollPosition)
+			BGL.glRecti(real_x+self.width-self.barWidth, real_y+self.thumbPosition-self.thumbHeight, real_x+self.width, real_y+self.thumbPosition)
+		else:
+			self.scrollPosition = 0
+		
+		# Draw items we need
+		curY = self.height - self.childHeight
+		for control in self.getVisibleControls():
+			control.y = curY
+			control.onDraw([real_x, real_y])
+			curY -= self.childHeight
+			
+		# Draw border
+		if self.borderColor != None:
+			BGL.glBegin(BGL.GL_LINES)
+			BGL.glColor4f(self.borderColor[0],self.borderColor[1],self.borderColor[2], self.borderColor[3])
+			# Left up
+			BGL.glVertex2d(real_x,real_y)
+			BGL.glVertex2d(real_x,real_y+self.height)
+			# Top right
+			BGL.glVertex2d(real_x,real_y+self.height)
+			BGL.glVertex2d(real_x+self.width,real_y+self.height)
+			# Right down
+			BGL.glVertex2d(real_x+self.width,real_y+self.height)
+			BGL.glVertex2d(real_x+self.width,real_y)
+			# Bottom left
+			BGL.glVertex2d(real_x+self.width,real_y)
+			BGL.glVertex2d(real_x,real_y)
+			BGL.glEnd()
+		
+	def onContainerResize(self, newwidth, newheight):
+		BasicControl.onContainerResize(self, newwidth, newheight)
+		for c in self.controls:
+			self.fitControlToContainer(c)
+		self.getIdealThumbPosition()
+		
+	def fitControlToContainer(self, control):
+		control.x = 0
+		control.height = self.childHeight
+		control.width = self.width-self.barWidth
+		
+	def addControl(self, control):
+		BasicContainer.addControl(self, control)
+		
+		curCol = curTheme.get('ui').menu_item
+		curTextCol = curTheme.get('ui').menu_text
+		control.color = [curCol[0]/255.0, curCol[1]/255.0, curCol[2]/255.0, curCol[3]/255.0]
+		
+		# Conform to blender's menu text colors
+		if control.nested:
+			for c in control.controls:
+				if c.__class__ == SimpleText:
+					c.color = [curTextCol[0]/255.0, curTextCol[1]/255.0, curTextCol[2]/255.0, curTextCol[3]/255.0]
+		
+		self.fitControlToContainer(control)
+		self.getIdealThumbPosition()
+			
+	def removeControl(self, control):
+		BasicContainer.removeControl(self, control)
+		if self.itemIndex >= len(self.controls): self.itemIndex = -1
+		
+		mc = self.maxVisibleControls()
+		#print "List: Removing child, max controls=%d" % mc
+		if len(self.controls) <= self.maxVisibleControls:
+			#print "len(%d), so position = 0" % len(self.controls)
+			self.scrollPosition = 0
+		elif self.scrollPosition+mc > len(self.children):
+			self.scrollPosition = len(self.children)-mc
+			#print "len(%d), so position now = %d" % (len(self.controls), self.scrollPosition)
+		self.getIdealThumbPosition()
+
+class BasicGrid(BasicContainer):
+	'''
+	This class implements a simplistic grid control.
+	
+	All controls are resized during the resize event,
+	taking into account properties set.
+	'''
+	def __init__(self, name=None, callback=None, resize_callback=None):
+		BasicContainer.__init__(self, name, callback, resize_callback)
+		
+		self.minimumChildHeight = 20
+		
+	def __del__(self):
+		del self.controls
+
+	def onContainerResize(self, newwidth, newheight):
+		BasicControl.onContainerResize(self, newwidth, newheight)
+		
+		if len(self.controls) == 0: return
+		maxChildY = self.height / self.minimumChildHeight
+		if maxChildY == 0: return
+		#print "controls: %d" % len(self.controls)
+		#print "maxY: %d" % maxChildY
+		#print "newwidth: %d" % self.width
+		#print "height: %d" % self.height
+		
+		# TODO: bug when len(controls) is no a multiple of maxChildY
+		reminder = len(self.controls) % maxChildY
+		print "rem: %d" % reminder
+		
+		
+		widthChildX = int(self.width / ((len(self.controls)+(maxChildY-reminder)) / maxChildY))
+		print widthChildX
+		
+		curX, curY = 0, 0
+		for c in self.controls:
+			if (curY == maxChildY):
+				curY = 0
+				curX += 1
+			c.x = curX * widthChildX
+			c.y = curY * self.minimumChildHeight
+			c.width = widthChildX
+			c.height = self.minimumChildHeight
+			curY += 1
+			
+
 # Util class for blender progress bar
 '''
 	The progress management is quite simple.
@@ -501,43 +835,53 @@ def event(evt, val):
 		if not val: dragState = False
 		else:
 			dragState = True
-			dragInitial[0] = Window.GetMouseCoords()[0] - dragOffset[0]
-			dragInitial[1] = Window.GetMouseCoords()[1] - dragOffset[1]
+			dragInitial[0] = curMousePos[0] - dragOffset[0]
+			dragInitial[1] = curMousePos[1] - dragOffset[1]
 		return
 	elif evt == Draw.RIGHTMOUSE:
 		if Draw.PupMenu("Display%t|Reset Gui Offset%x1") == 1:
 			 dragOffset = [0,0]
-	elif evt == Draw.MOUSEX or evt == Draw.MOUSEY:
-		if dragState:
-			areaBounds = Window.GetScreenInfo(Window.Types["SCRIPT"])[0]["vertices"]
+	elif dragState and (evt in [Draw.MOUSEX, Draw.MOUSEY]):
+		areaBounds = Window.GetScreenInfo(Window.Types["SCRIPT"])[0]["vertices"]
 
-			#print (GetMouseCoords()[0] - area[0]["vertices"][0])
-			#print (GetMouseCoords()[1] - area[0]["vertices"][1])
-			#mouseCoords = Window.GetMouseCoords()
-			#print (mouseCoords)
-			#print (area[0]["vertices"])
+		#print (GetMouseCoords()[0] - area[0]["vertices"][0])
+		#print (GetMouseCoords()[1] - area[0]["vertices"][1])
+		#mouseCoords = Window.GetMouseCoords()
+		#print (mouseCoords)
+		#print (area[0]["vertices"])
 
-			# Make sure mouse is still inside script window
-			if (curMousePos[0] > (areaBounds[0]+dragError) and curMousePos[0] < (areaBounds[2]-dragError)) and (curMousePos[1] > (areaBounds[1]+dragError) and curMousePos[1] < (areaBounds[3]-dragError)):
-				dragOffset[0] = curMousePos[0] - dragInitial[0] #- lastRecordedMouseCoords[0] #- area[0]["vertices"][0]
-				dragOffset[1] = curMousePos[1] - dragInitial[1] #- lastRecordedMouseCoords[1] #- area[0]["vertices"][1]
-			else:
-				dragGui = False
-				#print("out of window")
+		# Make sure mouse is still inside script window
+		if (curMousePos[0] > (areaBounds[0]+dragError) and curMousePos[0] < (areaBounds[2]-dragError)) and (curMousePos[1] > (areaBounds[1]+dragError) and curMousePos[1] < (areaBounds[3]-dragError)):
+			dragOffset[0] = curMousePos[0] - dragInitial[0] #- lastRecordedMouseCoords[0] #- area[0]["vertices"][0]
+			dragOffset[1] = curMousePos[1] - dragInitial[1] #- lastRecordedMouseCoords[1] #- area[0]["vertices"][1]
+		else:
+			dragState = False
+			#print("out of window")
 
-			#print (dragOffset)
+		#print (dragOffset)
 	elif (evt in acceptedEvents):
+		#print "EVT: Unaccepted general event,checking controls for action..."
+		# Move the mouse position into window space
+		areaBounds = Window.GetScreenInfo(Window.Types["SCRIPT"])[0]["vertices"]
+		curMousePos[0] -= areaBounds[0]
+		curMousePos[1] -= areaBounds[1]
+		
 		# Translate mouse position using the drag transform
-		curMousePos[0] += dragOffset[0]
-		curMousePos[1] += dragOffset[1]
+		curMousePos[0] -= dragOffset[0]
+		curMousePos[1] -= dragOffset[1]
 		
 		for control in Controls:
 			if control.enabled == False:
+				#print "Control %s [disabled]" % control.name
 				continue
+			
 			# Might have a usable control here...
 			if (control.positionInControl(curMousePos)):
-				control.onAction(None, Window.GetMouseCoords(), evt)
+				#print "Control %s [accepted]" % control.name
+				control.onAction(None, curMousePos, evt)
 				break
+			#else:
+				#print "Control %s [incorrect position]" % control.name
 	Draw.Redraw(1)
 
 # Function to process button events
@@ -584,7 +928,7 @@ def drawGuiControls(baseLayer=False):
 	if len(Controls) == 0: return
 	
 	windowSize = Blender.Window.GetAreaSize()
-	print windowSize[0], windowSize[1]
+	#print windowSize[0], windowSize[1]
 	
 	if (curAreaSize[0] != windowSize[0]) or (curAreaSize[1] != windowSize[1]):
 		curAreaSize = windowSize
@@ -598,32 +942,21 @@ def drawGuiControls(baseLayer=False):
 		if (control == None) or (control.visible == False):
 			continue
 		control.onDraw(dragOffset)
-	
-'''
-	elif control['type'] == "TEXTLINES":
-		if baseLayer: continue
-		BGL.glRasterPos2i(control['x']+offset[0], control['y']+offset[1])
-		posy = control['y']
-		BGL.glColor3f(control['color'][0],control['color'][1],control['color'][2])
-		for l in control['value']:
-			BGL.glRasterPos2i(control['x']+offset[0], posy+offset[1])
-			Draw.Text(l, control['size'])
-			posy -= 15 # Text is this high, we are going downwards
-'''
 
 # Draw Function
 def gui():
 	global curTheme
-	curTheme = Theme.Get()[0]
 	
-	BGL.glClearColor(0.5,0.5,0.5,1)
-	BGL.glClear(BGL.GL_COLOR_BUFFER_BIT)
+	bgCol = curTheme.get('buts').back
+	BGL.glClear(BGL.GL_COLOR_BUFFER_BIT & BGL.GL_DEPTH_BUFFER_BIT)
+	BGL.glClearColor(bgCol[0],bgCol[1],bgCol[2],bgCol[3])
 	BGL.glShadeModel(BGL.GL_SMOOTH)
+	BGL.glBlendFunc(BGL.GL_SRC_ALPHA, BGL.GL_ONE_MINUS_SRC_ALPHA) 
 	
 	drawGuiControls()
 
 def initGui(callback):
-	global Controls, curAreaSize, dragOffset, dragInitial, dragState
+	global Controls, curAreaSize, dragOffset, dragInitial, dragState, curTheme
 	Controls = []
 	curAreaSize = [-1,-1]
 	
@@ -634,13 +967,15 @@ def initGui(callback):
 	global exitCallback
 	exitCallback = callback
 	
+	curTheme = Theme.Get()[0]
+	
 	# Register our events
 	Draw.Register(gui, event, button_event)
 	
 def destroyGui():
 	global Controls
 	Draw.Exit()
-	del Controls
+	del Controls[:]
 	Controls = None
 	exitCallback()
 	return
@@ -697,6 +1032,21 @@ def testGuiResizeCallback(control, newwidth, newheight):
 		control.y = 10
 		control.width = 50
 		control.height = 50
+	elif control.name == "myList":
+		control.x = 450
+		control.y = 100
+		control.width = 200
+		control.height = 24*3
+	elif control.name == "myGrid":
+		control.x = 450
+		control.y = 300
+		control.width = 200
+		control.height = 24*3
+		
+def testGuiListCallback(control):
+	global testGuiListContainer
+	print "Callback: remove %s" % control.name
+	testGuiListContainer.removeControl(control)
 
 def testGuiExit():
 	print "Gui Exited successfully."
@@ -704,14 +1054,14 @@ def testGuiExit():
 def testGui():
 	global testGuiButton, testGuiMenu, testGuiText
 	global testGuiOtherButton, testGuiOtherMenu, testGuiOtherText
+	global testGuiListContainer
 	initGui(testGuiExit)
 	
 	testGuiButton = BasicButton("myBut", "Click me", 5, testGuiCallback, testGuiResizeCallback)
 	testGuiMenu = ComboBox("myMenu", "Use this menu!", 10, testGuiCallback, testGuiResizeCallback)
-	testGuiMenu.construct([
-	"First Menu Item",
-	"Second Menu Item",
-	"Third Menu Item"])
+	testGuiMenu.items.append("First Menu Item")
+	testGuiMenu.items.append("Second Menu Item")
+	testGuiMenu.items.append("Third Menu Item")
 	testGuiText = SimpleText("myText", "Test These Fabulous Controls!", None, testGuiResizeCallback)
 	
 	
@@ -722,21 +1072,40 @@ def testGui():
 	testGuiContainer = BasicContainer("myContainer", None, testGuiResizeCallback)
 	testGuiOtherButton = BasicButton("otherBut", "Click me", 15, testGuiCallback, testGuiResizeCallback)
 	testGuiOtherMenu = ComboBox("otherMenu", "Use this other menu!", 20, testGuiCallback, testGuiResizeCallback)
-	testGuiOtherMenu.construct([
-	"Other First Menu Item",
-	"Other Second Menu Item",
-	"Other Third Menu Item"])
+	testGuiOtherMenu.items.append("Other First Menu Item")
+	testGuiOtherMenu.items.append("Other Second Menu Item")
+	testGuiOtherMenu.items.append("Other Third Menu Item")
 	testGuiOtherText = SimpleText("otherText", "Test These Fabulous Nested Controls!", None, testGuiResizeCallback)
 	
 	testGuiContainer.addControl(testGuiOtherText)
 	testGuiContainer.addControl(testGuiOtherMenu)
 	testGuiContainer.addControl(testGuiOtherButton)
 	
+	# Simple list control, to test list code
+	testGuiListContainer = ListContainer("myList", None, testGuiResizeCallback)
+	but1 = BasicButton("but1", "Button 1", 23, testGuiListCallback, None)
+	but2 = BasicButton("but2", "Button 2", 24, testGuiListCallback, None)
+	but3 = BasicButton("but3", "Button 3", 25, testGuiListCallback, None)
+	but4 = BasicButton("but4", "Button 4", 26, testGuiListCallback, None)
+	but5 = BasicButton("but5", "Button 5", 27, testGuiListCallback, None)
+	testGuiListContainer.addControl(but1)
+	testGuiListContainer.addControl(but2)
+	testGuiListContainer.addControl(but3)
+	testGuiListContainer.addControl(but4)
+	testGuiListContainer.addControl(but5)
+	
+	# Simple grid control, to test grid code
+	testGuiGridContainer = BasicGrid("myGrid", None, testGuiResizeCallback)
+	for i in range(0, 4):
+		testGuiGridContainer.addControl(BasicButton("testBut%d" % i, "Click me", 50, None, None))
+	
 	addGuiControl(testGuiText)
 	addGuiControl(testGuiMenu)
 	addGuiControl(testGuiButton)
 	addGuiControl(testGuiImage)
 	addGuiControl(testGuiContainer)
+	addGuiControl(testGuiListContainer)
+	addGuiControl(testGuiGridContainer)
 
 if __name__ == "__main__":
 	testGui()

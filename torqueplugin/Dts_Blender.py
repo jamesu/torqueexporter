@@ -2,16 +2,13 @@
 
 """
 Name: 'Torque Shape (.dts)...'
-Blender: 233
+Blender: 237
 Group: 'Export'
-Submenu: 'Export' export
-Submenu: 'Configure' config
 Tooltip: 'Export to Torque (.dts) format.'
 """
 
 '''
-Dts_Blender.pyguiMeshTab
-
+Dts_Blender.py
 Copyright (c) 2003 - 2005 James Urquhart(j_urquhart@btinternet.com)
 
 Permission is hereby granted, free of charge, to any person obtaining
@@ -54,8 +51,11 @@ from DtsShape_Blender import *
 
 Version = "0.9"
 Prefs = None
+Prefs_keyname = ""
 export_tree = None
 Debug = True
+textDocName = "TorqueExporter_SCONF"
+pathSeperator = "/"
 
 '''
 Utility Functions
@@ -75,7 +75,12 @@ def basepath(filepath):
 	if "\\" in filepath: sep = "\\"
 	else: sep = "/"
 	words = string.split(filepath, sep)
-	return string.join(words[:-1], sep) + sep
+	return string.join(words[:-1], sep)
+	
+def getPathSeperator(filepath):
+	global pathSeperator
+	if "\\" in filepath: pathSeperator = "\\"
+	else: pathSeperator = "/"
 
 # Gets the Base Name & path from the File Path
 def noext(filepath):
@@ -97,62 +102,10 @@ def getAllChildren(obj):
 	Preferences Code
 '''
 #-------------------------------------------------------------------------------------------------
-
-# Saves preferences
-def savePrefs():
-	global Prefs
-	Registry.SetKey('TORQUEEXPORTER', Prefs)
-	saveTextPrefs()
-
-# Saves preferences to a text buffer
-def saveTextPrefs():
-	global Prefs
-	# We need a blank buffer
-	try: text_doc = Text.Get("TORQUEEXPORTER_CONF")
-	except: text_doc = Text.New("TORQUEEXPORTER_CONF")
-	text_doc.clear()
-
-	text_doc.write("Version %f\n" % Prefs['Version'])
-	text_doc.write("{\n")
-	text_doc.write("DTSVersion %d\n" % Prefs['DTSVersion'])
-	text_doc.write("WriteShapeScript %d\n" % Prefs['WriteShapeScript'])
-	for seq in Prefs['Sequences'].keys():
-		text_doc.write("Sequence \"%s\"\n" % seq)
-		text_doc.write("{\n")
-		text_doc.write("Dsq %d\n" % Prefs['Sequences'][seq]['Dsq'])
-		text_doc.write("Cyclic %d\n" % Prefs['Sequences'][seq]['Cyclic'])
-		text_doc.write("Blend %d\n" % Prefs['Sequences'][seq]['Blend'])
-		text_doc.write("NoExport %d\n" % Prefs['Sequences'][seq]['NoExport'])
-		text_doc.write("Interpolate %d\n" % Prefs['Sequences'][seq]['Interpolate'])
-		text_doc.write("NumGroundFrames %d\n" % Prefs['Sequences'][seq]['NumGroundFrames'])
-		text_doc.write("Triggers %d\n" % len(Prefs['Sequences'][seq]['Triggers']))
-		text_doc.write("{\n")
-		for trig in Prefs['Sequences'][seq]['Triggers']:
-			text_doc.write("Value %d\n" % trig[0])
-			text_doc.write("Time %f\n" % trig[1])
-		text_doc.write("}\n")
-		text_doc.write("}\n")
-	text_doc.write("StripMeshes %d\n" % Prefs['StripMeshes'])
-	text_doc.write("MaxStripSize %d\n" % Prefs['MaxStripSize'])
-	text_doc.write("WriteSequences %d\n" % Prefs['WriteSequences'])
-	text_doc.write("ClusterDepth %d\n" % Prefs['ClusterDepth'])
-	text_doc.write("AlwaysWriteDepth %d\n" % Prefs['AlwaysWriteDepth'])
-	text_doc.write("Billboard %d\n" % Prefs['Billboard']['Enabled'])
-	if Prefs['Billboard']['Enabled']:
-		text_doc.write("{\n")
-		text_doc.write("Equator %d\n" % Prefs['Billboard']['Equator'])
-		text_doc.write("Polar %d\n" % Prefs['Billboard']['Polar'])
-		text_doc.write("PolarAngle %f\n" % Prefs['Billboard']['PolarAngle'])
-		text_doc.write("Dim %d\n" % Prefs['Billboard']['Dim'])
-		text_doc.write("IncludePoles %d\n" % Prefs['Billboard']['IncludePoles'])
-		text_doc.write("Size %d\n" % Prefs['Billboard']['Size'])
-		text_doc.write("}\n")
-	text_doc.write("}\n")
-
-# Loads preferences from a text buffer
-def loadTextPrefs(Prefs):
-	try: text_doc = Text.Get("TORQUEEXPORTER_CONF")
-	except: return Prefs
+	
+# Loads preferences from a text buffer (old version)
+def loadOldTextPrefs(text_doc):
+	global Prefs, dummySequence
 
 	cur_parse = 0
 
@@ -167,8 +120,9 @@ def loadTextPrefs(Prefs):
 		cur_token = tok.getToken()
 		if cur_token == "Version":
 			tok.advanceToken(False)
-			if float(tok.getToken()) > 0.2:
-				Torque_Util.dump_writeln("   Warning : Loading different version config file than is supported")
+			if not ( (float(tok.getToken())) > 0.0 and (float(tok.getToken()) <= 0.2) ):
+				Torque_Util.dump_writeln("   Error: Loading different version config file than is supported")
+				return False
 		elif cur_token == "{":
 			cur_parse = 1
 			while tok.advanceToken(True):
@@ -189,7 +143,7 @@ def loadTextPrefs(Prefs):
 				elif cur_token == "UseStickyCoords": tok.advanceToken(False)
 				elif cur_token == "WriteSequences":
 					tok.advanceToken(False)
-					Prefs['WriteSequences'] = int(tok.getToken())
+					#Prefs['WriteSequences'] = int(tok.getToken())
 				elif cur_token == "ClusterDepth":
 					tok.advanceToken(False)
 					Prefs['ClusterDepth'] = int(tok.getToken())
@@ -198,15 +152,16 @@ def loadTextPrefs(Prefs):
 					Prefs['AlwaysWriteDepth"'] = int(tok.getToken())
 				elif cur_token == "Billboard":
 					tok.advanceToken(False)
-					Prefs['Billboard']['Enabled'] = int(tok.getToken())
+					Prefs['Billboard']['Enabled'] = bool(int(tok.getToken()))
 					if int(tok.getToken()):
 						cur_parse = 2
 				elif cur_token == "Sequence":
 					tok.advanceToken(False)
 					seq_name = tok.getToken()
-					Prefs['Sequences'][seq_name] = {'Dsq' : False, 'Cyclic' : False, 'Blend' : False, 'Triggers' : [], 'Interpolate' : 0, 'NoExport' : False, 'NumGroundFrames' : 0}
+					Prefs['Sequences'][seq_name] = dummySequence.copy()
+					Prefs['Sequences'][seq_name]['Triggers'] = []
 					cur_parse = 3
-				elif cur_token == "NoExport":
+				elif cur_token == "BannedBones":
 					tok.advanceToken(False)
 					Prefs['BannedBones'].append("%s" % tok.getToken())
 				elif (cur_token == "{") and (cur_parse == 2):
@@ -227,7 +182,7 @@ def loadTextPrefs(Prefs):
 							Prefs['Billboard']['Dim'] = int(tok.getToken())
 						elif cur_token == "IncludePoles":
 							tok.advanceToken(False)
-							Prefs['Billboard']['IncludePoles'] = int(tok.getToken())
+							Prefs['Billboard']['IncludePoles'] = bool(int(tok.getToken()))
 						elif cur_token == "Size":
 							tok.advanceToken(False)
 							Prefs['Billboard']['Size'] = int(tok.getToken())
@@ -237,39 +192,44 @@ def loadTextPrefs(Prefs):
 							Torque_Util.dump_writeln("   Unrecognised Billboard token : %s" % cur_token)
 					cur_parse = 1
 				elif (cur_token == "{") and (cur_parse == 3):
+					useKeyframes = True
 					# Parse Sequence Section
 					while tok.advanceToken(True):
 						cur_token = tok.getToken()
 						if cur_token == "Dsq":
 							tok.advanceToken(False)
-							Prefs['Sequences'][seq_name]['Dsq'] = int(tok.getToken())
+							Prefs['Sequences'][seq_name]['Dsq'] = bool(int(tok.getToken()))
 						elif cur_token == "Cyclic":
 							tok.advanceToken(False)
-							Prefs['Sequences'][seq_name]['Cyclic'] = int(tok.getToken())
+							Prefs['Sequences'][seq_name]['Cyclic'] = bool(int(tok.getToken()))
 						elif cur_token == "Blend":
 							tok.advanceToken(False)
-							Prefs['Sequences'][seq_name]['Blend'] = int(tok.getToken())
+							Prefs['Sequences'][seq_name]['Blend'] = bool(int(tok.getToken()))
 						elif (cur_token == "Interpolate_Count") or (cur_token == "Interpolate"):
 							tok.advanceToken(False)
-							Prefs['Sequences'][seq_name]['Interpolate'] = int(tok.getToken())
+							useKeyframes = True
 						elif cur_token == "NoExport":
 							tok.advanceToken(False)
-							Prefs['Sequences'][seq_name]['NoExport'] = int(tok.getToken())
+							Prefs['Sequences'][seq_name]['NoExport'] = bool(int(tok.getToken()))
 						elif cur_token == "NumGroundFrames":
 							tok.advanceToken(False)
 							Prefs['Sequences'][seq_name]['NumGroundFrames'] = int(tok.getToken())
 						elif cur_token == "Triggers":
 							tok.advanceToken(False)
 							triggers_left = int(tok.getToken())
-							for t in range(0, triggers_left): Prefs['Sequences'][seq_name]['Triggers'].append([0,0.0])
+							for t in range(0, triggers_left): Prefs['Sequences'][seq_name]['Triggers'].append([0,0, True])
 							while tok.advanceToken(True):
 								cur_token = tok.getToken()
 								if cur_token == "Value":
 									tok.advanceToken(False)
-									Prefs['Sequences'][seq_name]['Triggers'][-triggers_left][0] = int(tok.getToken())
+									stValue = int(tok.getToken())
+									if stValue < 0:
+										stValue += 32
+										Prefs['Sequences'][seq_name]['Triggers'][-triggers_left][2] = False
+									Prefs['Sequences'][seq_name]['Triggers'][-triggers_left][0] = stValue
 								elif cur_token == "Time":
 									tok.advanceToken(False)
-									Prefs['Sequences'][seq_name]['Triggers'][-triggers_left][1] = float(tok.getToken())
+									Prefs['Sequences'][seq_name]['Triggers'][-triggers_left][1] = 0
 									triggers_left -= 1
 								elif cur_token == "}":
 									break
@@ -284,6 +244,13 @@ def loadTextPrefs(Prefs):
 						else:
 							Torque_Util.dump_writeln("   Unrecognised Sequence token : %s" % cur_token)
 					cur_parse = 1
+					# Get number of frames for this sequence
+					try:
+						action = Blender.NLA.Action.Get(seq_name)
+						Prefs['Sequences'][seq_name]['InterpolateFrames'] = DtsShape_Blender.getNumFrames(None, action.getAllChannelIpos().values(), useKeyframes)
+					except:
+						Torque_Util.dump_writeln("   Warning : sequence '%s' doesn't exist!" % seq_name)
+						Prefs['Sequences'][seq_name]['InterpolateFrames'] = 0
 				elif cur_token == "}":
 					cur_parse = 0
 					break
@@ -291,35 +258,103 @@ def loadTextPrefs(Prefs):
 					Torque_Util.dump_writeln("   Unrecognised token : %s" % cur_token)
 		else:
 			Torque_Util.dump_writeln("   Warning : Unexpected token %s!" % cur_token)
-	return Prefs
+	return True
 
 def initPrefs():
 	Prefs = {}
-	Prefs['Version'] = 0.2 # NOTE: change version if anything *major* is changed.
+	Prefs['Version'] = 0.9 # NOTE: change version if anything *major* is changed.
 	Prefs['DTSVersion'] = 24
 	Prefs['WriteShapeScript'] = False
 	Prefs['Sequences'] = {}
 	Prefs['StripMeshes'] = False
 	Prefs['MaxStripSize'] = 6
-	Prefs['WriteSequences'] = True
 	Prefs['ClusterDepth'] = 1
 	Prefs['AlwaysWriteDepth'] = False
 	Prefs['Billboard'] = {'Enabled' : False,'Equator' : 10,'Polar' : 10,'PolarAngle' : 25,'Dim' : 64,'IncludePoles' : True, 'Size' : 20.0}
 	Prefs['BannedBones'] = []
+	Prefs['CollapseRootTransform'] = True
+	Prefs['TSEMaterial'] = False
+	
+	Prefs['exportBasename'] = basename(Blender.Get("filename"))
+	Prefs['exportBasepath'] = basepath(Blender.Get("filename"))
 	return Prefs
 
 # Loads preferences
 def loadPrefs():
-	global Prefs
-	Prefs = Registry.GetKey('TORQUEEXPORTER%s' % basename(Blender.Get("filename")))
+	global Prefs, Prefs_keyname, textDocName
+	Prefs_keyname = 'TorqueExporterPlugin_%s' % basename(Blender.Get("filename"))
+	Prefs = Registry.GetKey(Prefs_keyname, True)
 	if not Prefs:
-		# Could be saved?
-		Prefs = loadTextPrefs(initPrefs())
+		Torque_Util.dump_writeln("Registry key '%s' could not be loaded, resorting to text object." % Prefs_keyname)
+		Prefs = initPrefs()
+		
+		success = True
+		newConfig = True
+		try: text_doc = Text.Get(textDocName)
+		except:
+			# User hasn't updated yet?
+			newConfig = False
+			try: text_doc = Text.Get("TORQUEEXPORTER_CONF")
+			except: 
+				success = False
+				
+		if not success:
+			# No registry, no text, so need a new Prefs
+			print "No Registry and no text object's, must be new."
+		else:
+			# Ok, so now we can load the text document
+			if newConfig:
+				# Go ahead and load the stuff from the text buffer
+				execStr = "loadPrefs = "
+				for line in text_doc.asLines():
+					execStr += line
+				try:
+					exec(execStr)
+				except:
+					return False
+					
+				Prefs = loadPrefs
+				
+				#if Prefs['Version'] < 0.9:
+				#	...
+				return True
+			else:
+				if not loadOldTextPrefs(text_doc):
+					print "Error: failed to load old preferences!"
+					return False
+				# We'll leave it up to the user to delete the text object
+		
 		Torque_Util.dump_writeln("Loaded Preferences.")
-		# Save prefs
+		# Save prefs (to update text and registry versions)
 		savePrefs()
+		
+# Saves preferences to registry and text object
+def savePrefs():
+	global Prefs, Prefs_keyname
+	Registry.SetKey(Prefs_keyname, Prefs)
+	saveTextPrefs()
 
-dummySequence = {'Dsq' : False, 'Cyclic' : False, 'Blend' : False, 'Triggers' : [], 'Interpolate' : 0, 'NoExport' : False, 'NumGroundFrames' : 0}
+# Saves preferences to a text buffer
+def saveTextPrefs():
+	global Prefs, textDocName
+	# We need a blank buffer
+	try: text_doc = Text.Get(textDocName)
+	except: text_doc = Text.New(textDocName)
+	text_doc.clear()
+	
+	# Use python's amazing str() function to create a string based
+	# representation of the config dictionary
+	text_doc.write(str(Prefs))
+
+dummySequence = {'Dsq' : False,
+'Cyclic' : False,
+'Blend' : False,
+'Triggers' : [], # [State, Time, On]
+'AnimateMaterial' : False,
+'MaterialIpoStartFrame' : 1,
+'InterpolateFrames' : 0,
+'NoExport' : False,
+'NumGroundFrames' : 0}
 
 # Gets a sequence key from the preferences
 # Creates default if key does not exist
@@ -329,7 +364,17 @@ def getSequenceKey(value):
 	try:
 		return Prefs['Sequences'][value]
 	except KeyError:
-		Prefs['Sequences'][value] = {'Dsq' : False, 'Cyclic' : False, 'Blend' : False, 'Triggers' : [], 'Interpolate' : 0, 'NoExport' : False, 'NumGroundFrames' : 0}
+		Prefs['Sequences'][value] = dummySequence.copy()
+		# Create anything that cannot be copied (reference objects like lists),
+		# and set everything that needs a default
+		Prefs['Sequences'][value]['Triggers'] = []
+		try:
+			action = Blender.Armature.NLA.GetActions()[value]
+			maxNumFrames = DtsShape_Blender.getNumFrames(action.getAllChannelIpos().values(), False)
+		except:
+			maxNumFrames = 0
+		Prefs['Sequences'][value]['InterpolateFrames'] = maxNumFrames			
+		
 		return getSequenceKey(value)
 
 # Cleans up extra keys that may not be used anymore (e.g. action deleted)
@@ -355,7 +400,7 @@ class SceneTree:
 	# Creates trees to handle children
 	def handleChild(self,obj):
 		tname = string.split(obj.getName(), ":")[0]
-		if tname.upper() == "SHAPE":
+		if tname.upper()[0:5] == "SHAPE":
 			handle = ShapeTree(self, obj)
 		else:
 			return None
@@ -393,6 +438,17 @@ class SceneTree:
 
 	def getName(self):
 		return "SCENETREE"
+		
+	def find(self, name):
+		for c in self.children:
+			if c == None: continue
+			if c.getName() == name:
+				return c
+		for c in self.children:
+			if c == None: continue
+			ret = c.find(name)
+			if ret: return ret
+		return None
 
 	# Clears out tree
 	def clear(self):
@@ -429,10 +485,10 @@ class ShapeTree(SceneTree):
 			self.collisionMeshes.append(obj)
 			if tname[0:9].upper() != "COLLISION":
 				Torque_Util.dump_writeln("Warning: 'COL' designation for collision node deprecated, use 'COLLISION' instead.")
-		elif (tname[0:3].upper() == "LOS") or (tname[0:20].upper() == "LINEOFSIGHTCOLLISION"):
+		elif (tname[0:3].upper() == "LOS") or (tname[0:20].upper() == "LOSCOLLISION"):
 			self.losCollisionMeshes.append(obj)
-			if tname[0:20].upper() == "LINEOFSIGHTCOLLISION":
-				Torque_Util.dump_writeln("Warning: 'LOS' designation for los collision node deprecated, use 'LINEOFSIGHTCOLLISION' instead.")
+			if tname[0:12].upper() != "LOSCOLLISION":
+				Torque_Util.dump_writeln("Warning: 'LOS' designation for los collision node deprecated, use 'LOSCOLLISION' instead.")
 		else:
 			# Enforce proper organization
 			Torque_Util.dump_writeln("     Warning: Could not accept child %s on shape %s" % (obj.getName(),self.obj.getName()))
@@ -447,8 +503,8 @@ class ShapeTree(SceneTree):
 		Scene.getCurrent().getRenderingContext().currentFrame(1)
 		try:
 		
-			Stream = DtsStream(Prefs['exportBasepath'] + Prefs['exportBasename'] + ".dts", False, Prefs['DTSVersion'])
-			Torque_Util.dump_writeln("Writing shape to  '%s'." % (Prefs['exportBasepath'] + Prefs['exportBasename'] + ".dts"))
+			Stream = DtsStream("%s/%s.dts" % (Prefs['exportBasepath'], Prefs['exportBasename']), False, Prefs['DTSVersion'])
+			Torque_Util.dump_writeln("Writing shape to  '%s'." % ("%s/%s.dts" % (Prefs['exportBasepath'], Prefs['exportBasename'])))
 			# Now, start the shape export process if the Stream loaded
 			if Stream.fs:
 				self.Shape = BlenderShape(Prefs)
@@ -490,7 +546,7 @@ class ShapeTree(SceneTree):
 								progressBar.update()
 								continue
 							else:
-								print "Unhandled: %s" % child.getType()
+								Torque_Util.dump_writeln("Warning: Unhandled object '%s'" % child.getType())
 								progressBar.update()
 								continue
 								
@@ -498,7 +554,7 @@ class ShapeTree(SceneTree):
 					
 					# Now we can add it in order
 					for arm in armatures:
-						self.Shape.addArmature(arm)
+						self.Shape.addArmature(arm, Prefs['CollapseRootTransform'])
 						progressBar.update()
 						
 					for n in nodes:
@@ -526,37 +582,70 @@ class ShapeTree(SceneTree):
 							Prefs['Billboard']['Dim'],
 							Prefs['Billboard']['IncludePoles'],
 							Prefs['Billboard']['Size'])
-						self.Shape.detaillevels.insert(self.numDetails,detail)
 					
 					progressBar.popTask()
-					
+				
+				progressBar.pushTask("Finalizing Geometry..." , 2, 0.6)
 				# Finalize static meshes, do triangle strips
 				self.Shape.finalizeObjects()
+				progressBar.update()
 				if Prefs['StripMeshes']:
 					self.Shape.stripMeshes(Prefs['MaxStripSize'])
-
+				progressBar.update()
+				
 				# Add all actions (will ignore ones not belonging to shape)
-				if Prefs['WriteSequences']:
+				if True:
 					scene = Blender.Scene.getCurrent()
 					context = scene.getRenderingContext()
 					actions = Armature.NLA.GetActions()
 					
+					# The ice be dammed, it's time to take action
 					if len(actions.keys()) > 0:
-						progressBar.pushTask("Adding Actions..." , len(actions.keys()), 0.6)
+						progressBar.pushTask("Adding Actions..." , len(actions.keys()*4), 0.8)
 						for action_name in actions.keys():
-							if getSequenceKey(action_name)['NoExport']:
+							sequenceKey = getSequenceKey(action_name)
+							if (sequenceKey['NoExport']) or (sequenceKey['InterpolateFrames'] == 0):
 								progressBar.update()
-								continue # Skip
+								progressBar.update()
+								progressBar.update()
+								progressBar.update()
+								continue
 							
-							self.Shape.addAction(actions[action_name], scene, context, getSequenceKey(action_name))
+							# Sequence the Action
+							sequence = self.Shape.addAction(actions[action_name], scene, context, getSequenceKey(action_name))
+							if sequence == None:
+								Torque_Util.dump_writeln("Warning : Couldn't add action '%s' to shape!" % action_name)
+								progressBar.update()
+								progressBar.update()
+								progressBar.update()
+								progressBar.update()
+								continue
+							progressBar.update()
+							
+							# Pull the triggers
+							if len(sequenceKey['Triggers']) != 0:
+								self.Shape.addSequenceTriggers(sequence, sequenceKey['Triggers'], DtsShape_Blender.getNumFrames(actions[action_name].getAllChannelIpos().values(), False))
+							progressBar.update()
+							
+							# Materialize
+							if sequenceKey['AnimateMaterial']:
+								self.Shape.addSequenceMaterialIpos(sequence, DtsShape_Blender.getNumFrames(actions[action_name].getAllChannelIpos().values(), False), sequenceKey['MaterialIpoStartFrame'])
+							progressBar.update()
+							
+							# Hey you, DSQ!
+							if sequenceKey['Dsq']:
+								self.Shape.convertAndDumpSequenceToDSQ(sequence, "%s/%s.dsq" % (Prefs['exportBasepath'], action_name), Stream.DTSVersion)
+								Torque_Util.dump_writeln("Loaded and dumped sequence '%s' to '%s/%s.dsq'." % (action_name, Prefs['exportBasepath'], action_name))
+							else:
+								Torque_Util.dump_writeln("Loaded sequence '%s'." % action_name)
+								
+							# Clear out matters if we don't need them
+							if not sequence.has_loc: sequence.matters_translation = []
+							if not sequence.has_rot: sequence.matters_rotation = []
+							if not sequence.has_scale: sequence.matters_scale = []
 							progressBar.update()
 						
 						progressBar.popTask()
-
-				# Final stuff
-				progressBar.pushTask("Finalizing shape..." , 2, 0.8)
-				self.Shape.finalize()
-				progressBar.update()
 				
 				Torque_Util.dump_writeln("> Shape Details")
 				self.Shape.dumpShapeInfo()
@@ -566,6 +655,7 @@ class ShapeTree(SceneTree):
 				# Now we've finished, we can save shape and burn it.
 				progressBar.pushTask("Writing out DTS...", 1, 0.9)
 				Torque_Util.dump_writeln("Writing out DTS...")
+				self.Shape.finalize(Prefs['WriteShapeScript'])
 				self.Shape.write(Stream)
 				Torque_Util.dump_writeln("Done.")
 				progressBar.update()
@@ -590,11 +680,7 @@ class ShapeTree(SceneTree):
 	def handleObject(self):
 		global Prefs
 		self.clear() # clear just in case we already have children
-
-		# Firstly, it would be nice to know all the paths and filenames (for reuse later)
-		Prefs['exportBasename'] = basename(Blender.Get("filename"))
-		Prefs['exportBasepath'] = basepath(Blender.Get("filename"))
-
+		
 		if len(self.normalDetails) > 0: del self.normalDetails[0:-1]
 		if len(self.collisionMeshes) > 0: del self.collisionMeshes[0:-1]
 		if len(self.losCollisionMeshes) > 0: del self.losCollisionMeshes[0:-1]
@@ -608,6 +694,24 @@ class ShapeTree(SceneTree):
 		# Sort detail level sizes
 		self.normalDetails.sort()
 		self.normalDetails.reverse()
+		
+	def getName(self):
+		return "SHAPE"
+		
+	def getShapeBoneNames(self):
+		boneList = []
+		# We need a list of bone's for our gui, so find them
+		for obj in self.normalDetails:
+			for c in getAllChildren(obj[1]):
+				if c.getType() == "Armature":
+					for bone in c.getData().getBones():
+						boneList.append(bone.getName())
+		return boneList
+		
+	def find(self, name):
+		# Not supported
+		return None
+	
 
 '''
 	Functions to export shape and load script
@@ -646,173 +750,464 @@ def export():
 #-------------------------------------------------------------------------------------------------
 
 '''
-	Menu Handlers
-'''
-def getDetailMenu():
-	details = []
-	for o in export_tree.children:
-		if o.__class__ == ShapeTree:
-			for c in o.children:
-				if c.getName()[0:6] == "Detail": details.append(c.getName())
-			break
-	return Blender_Gui.makeMenu("Details",details)
-
-def getSequenceMenu():
-	sequences = []
-	for a in Armature.NLA.GetActions().keys():
-		sequences.append(a)
-	if len(sequences) == 0: sequences.append("N/A")
-	return Blender_Gui.makeMenu("Sequences",sequences)
-
-def getSequenceTriggers(sequence):
-	global Prefs
-	try:
-		trigger_list = []
-		for t in getSequenceKey(sequence)['Triggers']:
-			trigger_list.append("(%d,%f)" % (t[0],t[1]))
-		if len(trigger_list) == 0: return ["N/A"]
-		return trigger_list
-	except KeyError:
-		return ["N/A"]
-
-def getSequenceTriggerMenu():
-	global Sequence_ID
-	seq_val = Blender_Gui.Sheets[Sequence_ID][0][2]['items'][0]['items'][1]['instance'].val
-	if len(Armature.NLA.GetActions().keys()) > seq_val:
-		seq_id = Armature.NLA.GetActions().keys()[seq_val]
-		return Blender_Gui.makeMenu("Triggers",getSequenceTriggers(seq_id))
-	else: return Blender_Gui.makeMenu("Triggers",["N/A"])
-
-'''
 	Gui Init Code
 '''
 
-'''
-	The Gui code needs to alter the following preferences:
-		Dts Version (Prefs['DTSVersion']) 24-25
-		Prefs['Sequences']: (One tab)
-			Seq['DSQ'] (bool)
-			Seq['Cyclic'] (bool)
-			Seq['Blend'] (bool)
-			Seq['NoExport'] (bool)
-			Seq['Interpolate'] (bool)
-			Seq['NumGroundFrames'] (0-numFrames)
-			Seq['Triggers']:
-				Value (-30-30)
-				Time (0-endTime)
-		Global Properties: (one tab)
-			Prefs['StripMeshes']
-			Prefs['MaxStripSize']
-			Prefs['WriteSequences']
-			Sort options: (grouped)
-				Prefs['ClusterDepth']
-				Prefs['AlwaysWriteDepth']
-			Prefs['Billboard']: (hidden, bool)
-				Billboard['Equator'] (2-64)
-				Billboard['Polar'] (3-64)
-				Billboard['PolarAngle'] (0-0.45)
-				Billboard['Dim'] (16-128)
-				Billboard['IncludePoles'] (bool)
-				Billboard['Size'] (1.0-128.0)
-		Prefs[''] (One tab)
-	It also needs the following extra things:
-		About Button
-		Exit Button
-		Title
-		Version (Prefs['Version'])
-'''
-
 # Controls referenced in functions
-guiSequenceTab, guiMeshTab, guiAboutTab, guiTabBar, guiHeaderTab = None, None, None, None, None
+guiSequenceTab, guiGeneralTab, guiArmatureTab, guiAboutTab, guiTabBar, guiHeaderTab = None, None, None, None, None, None
+
+guiSequenceOptions = None
+guiSequenceList = None
+guiBoneList = None
+
+def guiSequenceListItemCallback(control):
+	global Prefs, guiSequenceList
+	
+	# Determine sequence name
+	
+	if control.evt == 40:
+		calcIdx = 0
+	else:
+		calcIdx = (control.evt - 40) / 4
+
+	sequenceName = guiSequenceList.controls[calcIdx].controls[0].label
+	realItem = control.evt - 40 - (calcIdx*4)
+	sequencePrefs = getSequenceKey(sequenceName)
+	
+	if realItem == 0:
+		sequencePrefs['NoExport'] = not control.state
+	elif realItem == 1:
+		sequencePrefs['Dsq'] = control.state
+	elif realItem == 2:
+		sequencePrefs['Blend'] = control.state
+	elif realItem == 3:
+		sequencePrefs['Cyclic'] = control.state
+	
+	
+def createSequenceListitem(seq_name, startEvent):
+	sequencePrefs = getSequenceKey(seq_name)
+	
+	# Note on positions:
+	# It quicker to assign these here, as there is no realistic chance scaling being required.
+	guiContainer = Common_Gui.BasicContainer("", None, None)
+	guiContainer.fade_mode = 2
+	guiName = Common_Gui.SimpleText("", seq_name, None, None)
+	guiName.x, guiName.y = 5, 5
+	guiExport = Common_Gui.ToggleButton("Export", "Export Sequence", startEvent, guiSequenceListItemCallback, None)
+	guiExport.x, guiExport.y = 70, 5
+	guiExport.width, guiExport.height = 50, 15
+	guiExport.state = not sequencePrefs['NoExport']
+	guiDSQ = Common_Gui.ToggleButton("Dsq", "Export Sequence as DSQ", startEvent+1, guiSequenceListItemCallback, None)
+	guiDSQ.x, guiDSQ.y = 122, 5
+	guiDSQ.width, guiDSQ.height = 50, 15
+	guiDSQ.state = sequencePrefs['Dsq']
+	guiBlend = Common_Gui.ToggleButton("Blend", "Export Sequence as DSQ", startEvent+2, guiSequenceListItemCallback, None)
+	guiBlend.x, guiBlend.y = 174, 5
+	guiBlend.width, guiBlend.height = 50, 15
+	guiBlend.state = sequencePrefs['Blend']
+	guiCyclic = Common_Gui.ToggleButton("Cyclic", "Export Sequence as DSQ", startEvent+3, guiSequenceListItemCallback, None)
+	guiCyclic.x, guiCyclic.y = 226, 5
+	guiCyclic.width, guiCyclic.height = 50, 15
+	guiCyclic.state = sequencePrefs['Cyclic']
+	
+	# Add everything
+	guiContainer.addControl(guiName)
+	guiContainer.addControl(guiExport)
+	guiContainer.addControl(guiDSQ)
+	guiContainer.addControl(guiBlend)
+	guiContainer.addControl(guiCyclic)
+	
+	return guiContainer
+
+def populateSequenceList():
+	global guiSequenceList
+	actions = Armature.NLA.GetActions()
+	
+	#print "populateSequenceList: name of list : %s" % guiSequenceList.name
+	# There are a finite number of events we can allocate in blender, so we need to
+	# assign events in batches of the maximum number of visible list items.
+	startEvent = 40
+	for key in actions.keys():
+		guiSequenceList.addControl(createSequenceListitem(key, startEvent))
+		startEvent += 4
+		
+def clearSequenceList():
+	global guiSequenceList
+	
+	for i in range(0, len(guiSequenceList.controls)):
+		del guiSequenceList.controls[i].controls[:]
+	del guiSequenceList.controls[:]
+	
+	guiSequenceList.itemIndex = -1
+	guiSequenceList.scrollPosition = 0
+	if guiSequenceList.callback: guiSequenceList.callback(guiSequenceList) # Bit of a hack, but works
+		
+def populateBoneGrid():
+	global Prefs, export_tree, guiBoneList
+	shapeTree = export_tree.find("SHAPE")
+	
+	evtNo = 40
+	for name in shapeTree.getShapeBoneNames():
+		guiBoneList.addControl(Common_Gui.ToggleButton(name, "Toggle Status", evtNo, guiBoneGridCallback, None))
+		guiBoneList.controls[-1].state = not (name.upper() in Prefs['BannedBones'])
+		evtNo += 1
+		
+def clearBoneGrid():
+	global guiBoneList
+	del guiBoneList.controls[:]
+		
+def guiBoneGridCallback(control):
+	global Prefs
+	
+	real_name = control.name.upper()
+	if control.state:
+		# Remove entry from BannedBones
+		for i in range(0, len(Prefs['BannedBones'])):
+			if Prefs['BannedBones'][i] == real_name:
+				#print "Removed banned bone %s" % real_name
+				del Prefs['BannedBones'][i]
+				break
+	else:
+		Prefs['BannedBones'].append(real_name)
+		#print "Added banned bone %s" % real_name
 
 def guiBaseCallback(control):
-	global guiSequenceTab, guiMeshTab, guiAboutTab
+	global guiSequenceTab, guiArmatureTab, guiGeneralTab, guiAboutTab
 	if control.evt == 1:
 		guiSequenceTab.visible = True
-		guiMeshTab.visible = False
+		guiGeneralTab.visible = False
 		guiAboutTab.visible = False
+		guiArmatureTab.visible = False
 		guiSequenceTab.enabled = True
-		guiMeshTab.enabled = False
+		guiGeneralTab.enabled = False
 		guiAboutTab.enabled = False
+		guiArmatureTab.enabled = False
 	elif control.evt == 2:
 		guiSequenceTab.visible = False
-		guiMeshTab.visible = True
+		guiGeneralTab.visible = True
 		guiAboutTab.visible = False
+		guiArmatureTab.visible = False
 		guiSequenceTab.enabled = False
-		guiMeshTab.enabled = True
+		guiGeneralTab.enabled = True
 		guiAboutTab.enabled = False
+		guiArmatureTab.enabled = False
 	elif control.evt == 3:
-		export()
+		guiSequenceTab.visible = False
+		guiGeneralTab.visible = False
+		guiAboutTab.visible = False
+		guiArmatureTab.visible = True
+		guiSequenceTab.enabled = False
+		guiGeneralTab.enabled = False
+		guiAboutTab.enabled = False
+		guiArmatureTab.enabled = True
 	elif control.evt == 4:
 		guiSequenceTab.visible = False
-		guiMeshTab.visible = False
+		guiGeneralTab.visible = False
 		guiAboutTab.visible = True
+		guiArmatureTab.visible = False
 		guiSequenceTab.enabled = False
-		guiMeshTab.enabled = False
+		guiGeneralTab.enabled = False
 		guiAboutTab.enabled = True
+		guiArmatureTab.enabled = False
+	elif control.evt == 5:
+		export()
+		
+def guiSequenceUpdateTriggers(triggerList, itemIndex):
+	global guiSequenceOptions, guiSequenceList
+	if (len(triggerList) == 0) or (itemIndex >= len(triggerList)):
+				guiSequenceOptions.controls[7].value = 0
+				guiSequenceOptions.controls[8].state = False
+				guiSequenceOptions.controls[9].value = 0
+	else:
+				guiSequenceOptions.controls[7].value = triggerList[itemIndex][0] # State
+				guiSequenceOptions.controls[9].value = triggerList[itemIndex][1] # Time
+				guiSequenceOptions.controls[8].state = triggerList[itemIndex][2] # On
+
+triggerMenuTemplate = "[%d] state=%d"
+
+def guiSequenceTriggersCallback(control):
+	global guiSequenceOptions, guiSequenceList, triggerMenuTemplate
+	if guiSequenceList.itemIndex == -1:
+		return
+	
+	sequenceName = guiSequenceList.controls[guiSequenceList.itemIndex].controls[0].label
+	sequencePrefs = getSequenceKey(sequenceName)
+	itemIndex = guiSequenceOptions.controls[6].itemIndex
+				
+	if control.evt == 14:
+		guiSequenceUpdateTriggers(sequencePrefs['Triggers'], itemIndex)
+	elif control.evt == 18:
+		# Add
+		sequencePrefs['Triggers'].append([1, 1, True])
+		guiSequenceOptions.controls[6].items.append((triggerMenuTemplate % (1, 1)) + "(ON)")
+		guiSequenceOptions.controls[6].itemIndex = len(sequencePrefs['Triggers'])-1
+		guiSequenceUpdateTriggers(sequencePrefs['Triggers'], guiSequenceOptions.controls[6].itemIndex)
+	elif (len(guiSequenceOptions.controls[6].items) != 0):
+		if control.evt == 15:
+			sequencePrefs['Triggers'][itemIndex][0] = control.value
+		elif control.evt == 16:
+			sequencePrefs['Triggers'][itemIndex][2] = control.state
+		elif control.evt == 17:
+			sequencePrefs['Triggers'][itemIndex][1] = control.value
+		elif control.evt == 19:
+			# Remove
+			del sequencePrefs['Triggers'][itemIndex]
+			del guiSequenceOptions.controls[6].items[itemIndex]
+			# Must decrement itemIndex if we are out of bounds
+			if itemIndex <= len(sequencePrefs['Triggers']):
+				guiSequenceOptions.controls[6].itemIndex = len(sequencePrefs['Triggers'])-1
+				itemIndex = guiSequenceOptions.controls[6].itemIndex
+			guiSequenceUpdateTriggers(sequencePrefs['Triggers'], itemIndex)
+		
+		# Update menu caption
+		if sequencePrefs['Triggers'][itemIndex][2]: stateStr = "(ON)"
+		else: stateStr = "(OFF)"
+		guiSequenceOptions.controls[6].items[itemIndex] = (triggerMenuTemplate % (sequencePrefs['Triggers'][itemIndex][1], sequencePrefs['Triggers'][itemIndex][0])) + stateStr
 		
 def guiSequenceCallback(control):
-	pass
-
-def guiMeshCallback(control):
-	pass
-
-def guiAboutCallback(control):
-	pass
-
-def guiBaseResize(control, newwidth, newheight):
-	global guiSequenceTab, guiMeshTab, guiAboutTab, guiTabBar, guiHeaderTab
+	global guiSequenceOptions, guiSequenceList
 	
 	if control.evt == None:
+		if control.name == "sequence.list":
+			# Clear triggers menu
+			del guiSequenceOptions.controls[6].items[:]
+			if control.itemIndex != -1:
+				sequenceName = control.controls[control.itemIndex].controls[0].label
+				sequencePrefs = getSequenceKey(sequenceName)
+				guiSequenceOptions.controls[0].label = "Sequence '%s'" % sequenceName
+				
+				try:
+					action = Blender.Armature.NLA.GetActions()[sequenceName]
+					maxNumFrames = DtsShape_Blender.getNumFrames(action.getAllChannelIpos().values(), False)
+				except:
+					maxNumFrames = 0
+				
+				# Update gui control state's
+				guiSequenceOptions.enabled = True
+				guiSequenceOptions.controls[1].value = sequencePrefs['InterpolateFrames']
+				guiSequenceOptions.controls[1].max = maxNumFrames
+				guiSequenceOptions.controls[2].value = sequencePrefs['NumGroundFrames']
+				guiSequenceOptions.controls[2].max = maxNumFrames
+				guiSequenceOptions.controls[3].state = sequencePrefs['AnimateMaterial']
+				guiSequenceOptions.controls[4].value = sequencePrefs['MaterialIpoStartFrame']
+				
+				# Triggers
+				for t in sequencePrefs['Triggers']:
+					if t[2]: stateStr = "(ON)"
+					else: stateStr = "(OFF)"
+					guiSequenceOptions.controls[6].items.append((triggerMenuTemplate % (t[1], t[0])) + stateStr)
+				
+				guiSequenceOptions.controls[6].itemIndex = 0
+				guiSequenceOptions.controls[9].max = maxNumFrames
+				guiSequenceUpdateTriggers(sequencePrefs['Triggers'], 0)
+			else:
+				guiSequenceOptions.enabled = False
+				guiSequenceOptions.controls[0].label = "Sequence"
+	else:
+		if control.evt >= 10:
+			if guiSequenceList.itemIndex != -1:
+				sequenceName = guiSequenceList.controls[guiSequenceList.itemIndex].controls[0].label
+				sequencePrefs = getSequenceKey(sequenceName)
+				if control.evt == 10:
+					sequencePrefs['InterpolateFrames'] = control.value
+				elif control.evt == 11:
+					sequencePrefs['NumGroundFrames'] = control.value
+				elif control.evt == 12:
+					sequencePrefs['AnimateMaterial'] = control.state
+				elif control.evt == 13:
+					sequencePrefs['MaterialIpoStartFrame'] = control.value
+		else:
+			if control.evt == 6:
+				for child in guiSequenceList.controls:
+					child.controls[1].state = control.state
+					getSequenceKey(child.controls[0].label)['NoExport'] = not control.state
+			elif control.evt == 7:
+				clearSequenceList()
+				populateSequenceList()
+			
+def guiArmatureCallback(control):
+	global Prefs
+	if control.evt == 6:
+		Prefs['CollapseRootTransform'] = bool(control.state)
+
+def guiGeneralSelectorCallback(filename):
+	global guiGeneralTab
+	if filename != "":
+		Prefs['exportBasename'] = basename(filename)
+		Prefs['exportBasepath'] = basepath(filename)
+		
+		pathSep = "/"
+		if "\\" in Prefs['exportBasepath']: pathSep = "\\"
+		guiGeneralTab.controls[16].value = Prefs['exportBasepath'] + pathSep + Prefs['exportBasename']
+
+def guiGeneralCallback(control):
+	global Prefs
+	global guiGeneralTab
+	
+	if control.evt == 6:
+		Prefs['StripMeshes'] = control.state
+	elif control.evt == 7:
+		Prefs['MaxStripSize'] = control.value
+	elif control.evt == 8:
+		Prefs['AlwaysWriteDepth'] = control.state
+	elif control.evt == 9:
+		Prefs['ClusterDepth'] = control.value
+	elif control.evt == 10:
+		Prefs['Billboard']['Enabled'] = control.state
+	elif control.evt == 11:
+		Prefs['Billboard']['Equator'] = control.value
+	elif control.evt == 12:
+		Prefs['Billboard']['Polar'] = control.value
+	elif control.evt == 13:
+		Prefs['Billboard']['PolarAngle'] = control.value
+	elif control.evt == 14:
+		Prefs['Billboard']['Dim'] = control.value
+	elif control.evt == 15:
+		Prefs['Billboard']['IncludePoles'] = control.state
+	elif control.evt == 16:
+		Prefs['Billboard']['Size'] = control.value
+	if control.evt == 17:
+		Prefs['WriteShapeScript'] = control.state
+	elif control.evt == 18:
+		Prefs['exportBasename'] = basename(control.value)
+		Prefs['exportBasepath'] = basepath(control.value)
+	elif control.evt == 19:
+		Blender.Window.FileSelector (guiGeneralSelectorCallback, 'Select destination and filename')
+	elif control.evt == 20:
+		Prefs['exportBasename'] = basename(Blender.Get("filename"))
+		Prefs['exportBasepath'] = basepath(Blender.Get("filename"))
+		
+		pathSep = "/"
+		if "\\" in Prefs['exportBasepath']: pathSep = "\\"
+		guiGeneralTab.controls[16].value = Prefs['exportBasepath'] + pathSep + Prefs['exportBasename']
+	elif control.evt == 21:
+		Prefs['DTSVersion'] = control.value
+	elif control.evt == 22:
+		Prefs['TSEMaterial'] = control.state
+
+def guiBaseResize(control, newwidth, newheight):
+	tabContainers = ["content.sequence", "content.general", "content.armature", "content.about"]
+	if control.evt == None:
 		if control.name == "tabs":
-			control.x = 0
-			control.y = 335
-			control.width = 490
-			control.height = 35
-		elif (control.name == "content.sequence") or (control.name == "content.shape") or (control.name == "content.about"):
-			control.x = 0
-			control.y = 0
-			control.width = 490
-			control.height = 335
+			control.x, control.y = 0, 335
+			control.width, control.height = 490, 55
+		elif control.name in tabContainers:
+			control.x, control.y = 0, 0
+			control.width, control.height = 490, 335
 		elif control.name == "header":
-			control.x = 0
-			control.y = 370
-			control.width = 490
-			control.height = 20
+			control.x, control.y = 0, newheight - 20
+			control.width, control.height = 490, 20
 		elif control.name == "tabs.version":
-			control.x = newwidth-80
-			control.y = 10
+			control.x, control.y = newwidth-80, 10
 	elif control.evt == 1:
-		control.x = 10
-		control.y = 5
-		control.width = 70
-		control.height = 20
+		control.x, control.y = 10, 5
+		control.width, control.height = 70, 20
 	elif control.evt == 2:
-		control.x = 85
-		control.y = 5
-		control.width = 70
-		control.height = 20
+		control.x, control.y = 160, 5
+		control.width, control.height = 70, 20
 	elif control.evt == 3:
-		control.x = 160
-		control.y = 5
-		control.width = 70
-		control.height = 20
+		control.x, control.y = 85, 5
+		control.width, control.height = 70, 20
 	elif control.evt == 4:
-		control.x = 235
-		control.y = 5
-		control.width = 70
-		control.height = 20
+		control.x, control.y = 235, 5
+		control.width, control.height = 70, 20
+	elif control.evt == 5:
+		control.x, control.y = 310, 5
+		control.width, control.height = 70, 20
 
 def guiSequenceResize(control, newwidth, newheight):
 	if control.evt == None:
-		pass
-	elif control.evt == 9:
+		if control.name == "sequence.list":
+			control.x = 10
+			control.y = 30
+			control.height = newheight - 55
+			control.width = 300
+		elif control.name == "sequence.title":
+			control.x = 10
+			control.y = newheight-15
+		elif control.name == "sequence.prefs":
+			control.x = newwidth - 180
+			control.y = 0
+			control.width = 180
+			control.height = newheight
+		elif control.name == "sequence.opts.title":
+			control.x = 5
+			control.y = newheight - 15
+		elif control.name == "sequence.opts.btitle":
+			control.x = 5
+			control.y = newheight - 110
+		elif control.name == "sequence.opts.ttitle":
+			control.x = 5
+			control.y = newheight - 180
+	# Sequence list buttons
+	elif control.evt == 6:
 		control.x = 10
-		control.width = 110
-		control.y = newheight - 140 - control.height
-	pass
+		control.y = 5
+		control.width = 100
+	elif control.evt == 7:
+		control.x = 112
+		control.y = 5
+		control.width = 100
+	# Sequence options
+	elif control.evt == 10:
+		control.x = 5
+		control.y = newheight - 45
+		control.width = newwidth - 10
+	elif control.evt == 11:
+		control.x = 5
+		control.y = newheight - 70
+		control.width = newwidth - 10
+	elif control.evt == 12:
+		control.x = 5
+		control.y = newheight - 95
+		control.width = 65
+	elif control.evt == 13:
+		control.x = 72
+		control.y = newheight - 95
+		control.width = 102
+	# Triggers
+	elif control.evt == 14:
+		control.x = 5
+		control.y = newheight - 210
+		control.width = newwidth - 10
+	elif control.evt == 15:
+		control.x = 5
+		control.y = newheight - 232
+		control.width = newwidth - 50
+	elif control.evt == 16:
+		control.x = 137
+		control.y = newheight - 232
+		control.width = newwidth - 142
+	elif control.evt == 17:
+		control.x = 5
+		control.y = newheight - 254
+		control.width = newwidth - 10
+	elif control.evt == 18:
+		control.x = 5
+		control.y = newheight - 276
+		control.width = (newwidth / 2) - 6
+	elif control.evt == 19:
+		control.x = (newwidth / 2)
+		control.y = newheight - 276
+		control.width = (newwidth / 2) - 6
 
-def guiMeshResize(control, newwidth, newheight):
+def guiArmatureResize(control, newwidth, newheight):
+	if control.evt == None:
+		if control.name == "armature.bantitle":
+			control.x = 10
+			control.y = newheight-15
+		elif control.name == "armature.banlist":
+			control.x = 10
+			control.y = 10
+			control.width = 300
+			control.height = 300
+	else:
+		if control.evt == 6:
+			control.x = 320
+			control.y = newheight - 45
+			control.width = 150
+
+def guiGeneralResize(control, newwidth, newheight):
 	if control.evt == None:
 		if control.name == "shape.strip":
 			control.x = 10
@@ -820,691 +1215,318 @@ def guiMeshResize(control, newwidth, newheight):
 		elif control.name == "shape.cluster":
 			control.x = 10
 			control.y = newheight - 70
-	elif control.evt == 5:
+		elif control.name == "shape.billboard":
+			control.x = 10
+			control.y = newheight - 120
+		elif control.name == "shape.output":
+			control.x = 10
+			control.y = newheight - 250
+	elif control.evt == 6:
 		control.x = 10
 		control.y = newheight - 30 - control.height
 		control.width = 50
-	elif control.evt == 6:
+	elif control.evt == 7:
 		control.x = 62
 		control.y = newheight - 30 - control.height
 		control.width = 180
-	elif control.evt == 7:
+	elif control.evt == 8:
 		control.x = 10
 		control.y = newheight - 80 - control.height
 		control.width = 80
-	elif control.evt == 8:
+	elif control.evt == 9:
 		control.x = 92
 		control.y = newheight - 80 - control.height
 		control.width = 180
-	pass
+	elif control.evt == 10:
+		control.x = 10
+		control.y = newheight - 130 - control.height
+		control.width = 50
+	elif control.evt == 11:
+		control.x = 62
+		control.y = newheight - 130 - control.height
+		control.width = 100
+	elif control.evt == 12:
+		control.x = 62
+		control.y = newheight - 152 - control.height
+		control.width = 100
+	elif control.evt == 13:
+		control.x = 164
+		control.y = newheight - 152 - control.height
+		control.width = 200
+	elif control.evt == 14:
+		control.x = 366
+		control.y = newheight - 130 - control.height
+		control.width = 100
+	elif control.evt == 15:
+		control.x = 366
+		control.y = newheight - 152 - control.height
+		control.width = 100
+	elif control.evt == 16:
+		control.x = 164
+		control.y = newheight - 130 - control.height
+		control.width = 200
+	elif control.evt == 17:
+		control.x = 356
+		control.y = newheight - 260 - control.height
+		control.width = 122
+	elif control.evt == 18:
+		control.x = 10
+		control.y = newheight - 260 - control.height
+		control.width = 220
+	elif control.evt == 19:
+		control.x = 232
+		control.y = newheight - 260 - control.height
+		control.width = 50
+	elif control.evt == 20:
+		control.x = 284
+		control.y = newheight - 260 - control.height
+		control.width = 70
+	elif control.evt == 21:
+		control.x = 356
+		control.y = newheight - 304 - control.height
+		control.width = 122
+	elif control.evt == 22:
+		control.x = 356
+		control.y = newheight - 282 - control.height
+		control.width = 122
 
 def guiAboutResize(control, newwidth, newheight):
 	if control.evt == None:
 		if control.name == "about.text":
 			control.x = 10
-			control.y = 100
-	pass
+			control.y = 120
+			
+def guiHeaderResize(control, newwidth, newheight):
+	if control.name == "header.title":
+		control.x = 5
+		control.y = 5
 
 def initGui():
-	global Version
-	global guiSequenceTab, guiMeshTab, guiAboutTab, guiTabBar, guiHeaderTab
-	global Prefs
+	global Version, Prefs
+	global guiSequenceTab, guiArmatureTab, guiGeneralTab, guiAboutTab, guiTabBar, guiHeaderTab
+	global guiSequenceList, guiSequenceOptions, guiBoneList
 		
 	Common_Gui.initGui(exit_callback)
 	
 	# Main tab controls
-	guiSequenceButton = Common_Gui.BasicButton("Sequence", "Sequence Options", 1, guiBaseCallback, guiBaseResize)
-	guiMeshButton = Common_Gui.BasicButton("Mesh", "Mesh Options", 2, guiBaseCallback, guiBaseResize)
-	guiExportButton = Common_Gui.BasicButton("Export", "Export .dts shape", 3, guiBaseCallback, guiBaseResize)
+	guiSequenceButton = Common_Gui.BasicButton("Sequences", "Sequence options", 1, guiBaseCallback, guiBaseResize)
+	guiMeshButton = Common_Gui.BasicButton("General", "Mesh and other options", 2, guiBaseCallback, guiBaseResize)
+	guiArmatureButton = Common_Gui.BasicButton("Armatures", "Armature options", 3, guiBaseCallback, guiBaseResize)
 	guiAboutButton = Common_Gui.BasicButton("About", "About", 4, guiBaseCallback, guiBaseResize)
+	guiExportButton = Common_Gui.BasicButton("Export", "Export .dts shape", 5, guiBaseCallback, guiBaseResize)
 	guiVersionText = Common_Gui.SimpleText("tabs.version", "Version %s" % Version, None, guiBaseResize)
 
-	# Sequence tabe controls
-	guiWriteSequencesButton = Common_Gui.ToggleButton("Export Sequences", "Allow export of sequences", 5, guiSequenceCallback, guiSequenceResize)
-	guiWriteSequencesButton.state = Prefs['WriteSequences']
+	# Sequence tab controls
+	guiSequenceTitle = Common_Gui.SimpleText("sequence.title", "Action Sequences :", None, guiSequenceResize)
+	guiSequenceList = Common_Gui.ListContainer("sequence.list", guiSequenceCallback, guiSequenceResize)
+	guiSequenceList.fade_mode = 0
+	guiSequenceToggle = Common_Gui.ToggleButton("Toggle All", "Toggle export of all sequences", 6, guiSequenceCallback, guiSequenceResize)
+	guiSequenceToggle.state = False
+	guiSequenceRefresh = Common_Gui.BasicButton("Refresh", "Refresh list of sequences", 7, guiSequenceCallback, guiSequenceResize)
+	guiSequenceOptions = Common_Gui.BasicContainer("sequence.prefs", None, guiSequenceResize)
+	guiSequenceOptions.enabled = False
+	guiSequenceOptions.fade_mode = 5
+	guiSequenceOptions.borderColor = None
 	
-	# Shape tab controls
-	guiStripText = Common_Gui.SimpleText("shape.strip", "Triangle Stripping", None, guiMeshResize)
-	guiStripMeshesButton = Common_Gui.ToggleButton("Enable", "Generate triangle strips for meshes", 5, guiMeshCallback, guiMeshResize)
+	# Sequence tab, list controls test
+	#for i in range(0, 20):
+		#guiSequenceList.addControl(Common_Gui.BasicContainer("l%d" % i, None, None))
+	
+	# Sequence tab, sequence options controls
+	guiSequenceOptionsTitle = Common_Gui.SimpleText("sequence.opts.title", "Sequence", None, guiSequenceResize)
+	guiSequenceOptionsFramecount = Common_Gui.NumberPicker("Frames", "Amount of frames to export", 10, guiSequenceCallback, guiSequenceResize)
+	guiSequenceOptionsFramecount.min = 1
+	guiSequenceOptionsGroundFramecount = Common_Gui.NumberPicker("Ground Frames", "Amount of ground frames to export", 11, guiSequenceCallback, guiSequenceResize)
+	guiSequenceOptionsAnimateMaterials = Common_Gui.ToggleButton("Mat Anim", "Animate Materials", 12, guiSequenceCallback, guiSequenceResize)
+	guiSequenceOptionsMaterialStartFrame = Common_Gui.NumberPicker("Start", "Frame to start exporting material track", 13, guiSequenceCallback, guiSequenceResize)
+	guiSequenceOptionsMaterialStartFrame.min = 1
+	guiSequenceOptionsMaterialStartFrame.max = Blender.Scene.getCurrent().getRenderingContext().endFrame()	
+	
+	guiSequenceOptionsTriggerTitle = Common_Gui.SimpleText("sequence.opts.ttitle", "Triggers", None, guiSequenceResize)
+	guiSequenceOptionsTriggerMenu = Common_Gui.ComboBox("Trigger List", "Select a trigger from this list to edit its properties", 14, guiSequenceTriggersCallback, guiSequenceResize)
+	guiSequenceOptionsTriggerState = Common_Gui.NumberPicker("State", "State of trigger to alter", 15, guiSequenceTriggersCallback, guiSequenceResize)
+	guiSequenceOptionsTriggerState.min, guiSequenceOptionsTriggerState.max = 1, 32
+	guiSequenceOptionsTriggerStateOn = Common_Gui.ToggleButton("On", "Determines if state will be activated or deactivated", 16, guiSequenceTriggersCallback, guiSequenceResize)
+	guiSequenceOptionsTriggerFrame = Common_Gui.NumberPicker("Frame", "Frame to activate trigger on", 17, guiSequenceTriggersCallback, guiSequenceResize)
+	guiSequenceOptionsTriggerFrame.min = 1
+	guiSequenceOptionsTriggerAdd = Common_Gui.BasicButton("Add", "Add new trigger", 18, guiSequenceTriggersCallback, guiSequenceResize)
+	guiSequenceOptionsTriggerDel = Common_Gui.BasicButton("Del", "Delete currently selected trigger", 19, guiSequenceTriggersCallback, guiSequenceResize)
+	
+	# Armature tab controls
+	guiBoneText =  Common_Gui.SimpleText("armature.bantitle", "Bones that should be exported :", None, guiArmatureResize)
+	guiBoneList = Common_Gui.BasicGrid("armature.banlist", None, guiArmatureResize)
+	guiArmatureRootToggle = Common_Gui.ToggleButton("Collapse Root Transform", "Collapse root transform when exporting Armature's", 6, guiArmatureCallback, guiArmatureResize)
+	guiArmatureRootToggle.state = Prefs['CollapseRootTransform']
+	
+	# General tab controls
+	guiStripText = Common_Gui.SimpleText("shape.strip", "Triangle Stripping", None, guiGeneralResize)
+	guiStripMeshesButton = Common_Gui.ToggleButton("Enable", "Generate triangle strips for meshes", 6, guiGeneralCallback, guiGeneralResize)
 	guiStripMeshesButton.state = Prefs['StripMeshes']
-	guiMaxStripSizeSlider = Common_Gui.NumberSlider("Strip Size ", "Maximum size of generated triangle strips", 6, guiMeshCallback, guiMeshResize)
+	guiMaxStripSizeSlider = Common_Gui.NumberSlider("Strip Size ", "Maximum size of generated triangle strips", 7, guiGeneralCallback, guiGeneralResize)
 	guiMaxStripSizeSlider.min, guiMaxStripSizeSlider.max = 3, 30
 	guiMaxStripSizeSlider.value = Prefs['MaxStripSize']
-	guiClusterText = Common_Gui.SimpleText("shape.cluster", "Cluster Mesh", None, guiMeshResize)
-	guiClusterDepthButton = Common_Gui.ToggleButton("Write Depth ", "Always Write the Depth on Cluster meshes", 7, guiMeshCallback, guiMeshResize)
-	guiClusterDepthSlider = Common_Gui.NumberSlider("Depth", "Maximum depth Clusters meshes should be calculated to", 8, guiMeshCallback, guiMeshResize)
-	guiClusterDepthSlider.min, guiClusterDepthSlider.max = 3, 30
-	guiClusterDepthButton.state = Prefs['AlwaysWriteDepth']
+	# --
+	guiClusterText = Common_Gui.SimpleText("shape.cluster", "Cluster Mesh", None, guiGeneralResize)
+	guiClusterWriteDepth = Common_Gui.ToggleButton("Write Depth ", "Always Write the Depth on Cluster meshes", 8, guiGeneralCallback, guiGeneralResize)
+	guiClusterWriteDepth.state = Prefs['AlwaysWriteDepth']
+	guiClusterDepth = Common_Gui.NumberSlider("Depth", "Maximum depth Clusters meshes should be calculated to", 9, guiGeneralCallback, guiGeneralResize)
+	guiClusterDepth.min, guiClusterDepth.max = 3, 30
+	guiClusterDepth.value = Prefs['ClusterDepth']
+	# --
+	guiBillboardText = Common_Gui.SimpleText("shape.billboard", "Billboard", None, guiGeneralResize)
+	guiBillboardButton = Common_Gui.ToggleButton("Enable", "Add a billboard detail level to the shape", 10, guiGeneralCallback, guiGeneralResize)
+	guiBillboardButton.state = Prefs['Billboard']['Enabled']
+	guiBillboardEquator = Common_Gui.NumberPicker("Equator", "Number of images around the equator", 11, guiGeneralCallback, guiGeneralResize)
+	guiBillboardEquator.min, guiBillboardEquator.max = 2, 64
+	guiBillboardEquator.value = Prefs['Billboard']['Equator']
+	guiBillboardPolar = Common_Gui.NumberPicker("Polar", "Number of images around the polar", 12, guiGeneralCallback, guiGeneralResize)
+	guiBillboardPolar.min, guiBillboardPolar.max = 3, 64
+	guiBillboardPolar.value = Prefs['Billboard']['Polar']
+	guiBillboardPolarAngle = Common_Gui.NumberSlider("Polar Angle", "Angle to take polar images at", 13, guiGeneralCallback, guiGeneralResize)
+	guiBillboardPolarAngle.min, guiBillboardPolarAngle.max = 0.0, 45.0
+	guiBillboardPolarAngle.value = Prefs['Billboard']['PolarAngle']
+	guiBillboardDim = Common_Gui.NumberPicker("Dim", "Dimensions of billboard images", 14, guiGeneralCallback, guiGeneralResize)
+	guiBillboardDim.min, guiBillboardDim.max = 16, 128
+	guiBillboardDim.value = Prefs['Billboard']['Dim']
+	guiBillboardPoles = Common_Gui.ToggleButton("Poles", "Take images at the poles", 15, guiGeneralCallback, guiGeneralResize)
+	guiBillboardPoles.state = Prefs['Billboard']['IncludePoles']
+	guiBillboardSize = Common_Gui.NumberSlider("Size", "Size of billboard's detail level", 16, guiGeneralCallback, guiGeneralResize)
+	guiBillboardSize.min, guiBillboardSize.max = 0.0, 128.0
+	guiBillboardSize.value = Prefs['Billboard']['Size']
+	# --
+	guiOutputText = Common_Gui.SimpleText("shape.output", "Output", None, guiGeneralResize)
+	guiShapeScriptButton =  Common_Gui.ToggleButton("Write Shape Script", "Write .cs script that details the .dts and all .dsq sequences", 17, guiGeneralCallback, guiGeneralResize)
+	guiCustomFilename = Common_Gui.TextBox("Filename", "Filename to write to", 18, guiGeneralCallback, guiGeneralResize)
+	guiCustomFilename.length = 255
+	guiCustomFilename.value = Prefs['exportBasepath'] + Prefs['exportBasename']
+	guiCustomFilenameSelect = Common_Gui.BasicButton("Select...", "Select a filename and destination for export", 19, guiGeneralCallback, guiGeneralResize)
+	guiCustomFilenameDefaults = Common_Gui.BasicButton("Default", "Reset filename and destination to defaults", 20, guiGeneralCallback, guiGeneralResize)
+	
+	guiCustomDTSVersion = Common_Gui.NumberPicker("Dts Version", "Version of DTS file to export", 21, guiGeneralCallback, guiGeneralResize)
+	guiCustomDTSVersion.min, guiCustomDTSVersion.max = 24, 25
+	
+	guiTSEMaterial = Common_Gui.ToggleButton("Write TSE Materials", "Write materials and scripts geared for TSE", 22, guiGeneralCallback, guiGeneralResize)
+	guiTSEMaterial.state = Prefs['TSEMaterial']
 	
 	# About tab controls
-	guiAboutText = Common_Gui.SimpleText("about.text", "Foo\nGoo\nWoo", None, guiAboutResize)
+	guiAboutText = Common_Gui.MultilineText("about.text", 
+	"Torque Exporter Plugin for Blender\n" +
+	"\n"
+	"Written by James Urquhart, with assistance from Tim Gift, Clark Fagot, Wes Beary,\n" +
+	"Ben Garney, Joshua Ritter, Emanuel Greisen, Todd Koeckeritz,\n" +
+	"Ryan J. Parker, and Walter Yoon.\n" +
+	"GUI code written with assistance from Xen and Xavier Amado.\n" +
+	"Additional thanks goes to the testers.\n" +
+	"\n" +
+	"Visit GarageGames at http://www.garagegames.com", None, guiAboutResize)
+	
+	# Header controls
+	guiHeaderText = Common_Gui.SimpleText("header.title", "Torque Exporter Plugin", None, guiHeaderResize)
+	headerTextColor = headerColor = Common_Gui.curTheme.get('buts').text_hi
+	guiHeaderText.color = [headerTextColor[0]/255.0, headerTextColor[1]/255.0, headerTextColor[2]/255.0, headerTextColor[3]/255.0]
 	
 	# Container Controls
 	guiHeaderBar = Common_Gui.BasicContainer("header", None, guiBaseResize)
+	guiHeaderBar.borderColor = None
+	headerColor = Common_Gui.curTheme.get('buts').header
+	guiHeaderBar.color = [headerColor[0]/255.0, headerColor[1]/255.0, headerColor[2]/255.0, headerColor[3]/255.0]
+	guiHeaderBar.fade_mode = 0
 	guiTabBar = Common_Gui.BasicContainer("tabs", None, guiBaseResize)
-	guiTabBar.fade_mode = 2
-	guiTabBar.borderColor = None
+	guiTabBar.fade_mode = 0
+	#guiTabBar.borderColor = None
 	guiSequenceTab = Common_Gui.BasicContainer("content.sequence", None, guiBaseResize)
-	guiSequenceTab.borderColor = None
+	guiSequenceTab.fade_mode = 1
 	guiSequenceTab.enabled, guiSequenceTab.visible = True, True
-	guiMeshTab = Common_Gui.BasicContainer("content.shape", None, guiBaseResize)
-	guiMeshTab.borderColor = None
-	guiMeshTab.enabled, guiMeshTab.visible = False, False
+	guiGeneralTab = Common_Gui.BasicContainer("content.general", None, guiBaseResize)
+	guiGeneralTab.fade_mode = 1
+	guiGeneralTab.enabled, guiGeneralTab.visible = False, False
+	guiArmatureTab = Common_Gui.BasicContainer("content.armature", None, guiBaseResize)
+	guiArmatureTab.fade_mode = 1
+	guiArmatureTab.enabled, guiArmatureTab.visible = False, False
 	guiAboutTab = Common_Gui.BasicContainer("content.about", None, guiBaseResize)
-	guiAboutTab.borderColor = None
+	guiAboutTab.fade_mode = 1
 	guiAboutTab.enabled, guiAboutTab.visible = False, False
 	
 	# Add all controls to respective containers
 	
-	Common_Gui.addGuiControl(guiHeaderBar)
+	guiHeaderBar.addControl(guiHeaderText)
 	
 	Common_Gui.addGuiControl(guiTabBar)
+	guiTabBar.addControl(guiHeaderBar) # Here to get the blend from panel color
 	guiTabBar.addControl(guiSequenceButton)
 	guiTabBar.addControl(guiMeshButton)
-	guiTabBar.addControl(guiExportButton)
+	guiTabBar.addControl(guiArmatureButton)
 	guiTabBar.addControl(guiAboutButton)
+	guiTabBar.addControl(guiExportButton)
 	guiTabBar.addControl(guiVersionText)
 	
 	Common_Gui.addGuiControl(guiSequenceTab)
-	guiSequenceTab.addControl(guiWriteSequencesButton)
+	guiSequenceTab.addControl(guiSequenceTitle)
+	guiSequenceTab.addControl(guiSequenceList)
+	guiSequenceTab.addControl(guiSequenceToggle)
+	guiSequenceTab.addControl(guiSequenceRefresh)
+	guiSequenceTab.addControl(guiSequenceOptions)
 	
-	Common_Gui.addGuiControl(guiMeshTab)
-	guiMeshTab.addControl(guiStripText)
-	guiMeshTab.addControl(guiStripMeshesButton)
-	guiMeshTab.addControl(guiMaxStripSizeSlider)
-	guiMeshTab.addControl(guiClusterText)
-	guiMeshTab.addControl(guiClusterDepthSlider)
-	guiMeshTab.addControl(guiClusterDepthButton)
+	guiSequenceOptions.addControl(guiSequenceOptionsTitle)
+	guiSequenceOptions.addControl(guiSequenceOptionsFramecount)
+	guiSequenceOptions.addControl(guiSequenceOptionsGroundFramecount)
+	guiSequenceOptions.addControl(guiSequenceOptionsAnimateMaterials)
+	guiSequenceOptions.addControl(guiSequenceOptionsMaterialStartFrame)
+	guiSequenceOptions.addControl(guiSequenceOptionsTriggerTitle)
+	guiSequenceOptions.addControl(guiSequenceOptionsTriggerMenu)
+	guiSequenceOptions.addControl(guiSequenceOptionsTriggerState)
+	guiSequenceOptions.addControl(guiSequenceOptionsTriggerStateOn)
+	guiSequenceOptions.addControl(guiSequenceOptionsTriggerFrame)
+	guiSequenceOptions.addControl(guiSequenceOptionsTriggerAdd)
+	guiSequenceOptions.addControl(guiSequenceOptionsTriggerDel)
 	
-	#Prefs['Billboard']: (hidden, bool)
-	#	Billboard['Equator'] (2-64)
-	#	Billboard['Polar'] (3-64)
-	#	Billboard['PolarAngle'] (0-0.45)
-	#	Billboard['Dim'] (16-128)
-	#	Billboard['IncludePoles'] (bool)
-	#	Billboard['Size'] (1.0-128.0)
+	populateSequenceList()
+	
+	Common_Gui.addGuiControl(guiArmatureTab)
+	guiArmatureTab.addControl(guiBoneText)
+	guiArmatureTab.addControl(guiBoneList)
+	populateBoneGrid()
+	guiArmatureTab.addControl(guiArmatureRootToggle)
+	
+	Common_Gui.addGuiControl(guiGeneralTab)
+	guiGeneralTab.addControl(guiStripText)
+	guiGeneralTab.addControl(guiStripMeshesButton)
+	guiGeneralTab.addControl(guiMaxStripSizeSlider)
+	guiGeneralTab.addControl(guiClusterText)
+	guiGeneralTab.addControl(guiClusterDepth)
+	guiGeneralTab.addControl(guiClusterWriteDepth)
+	guiGeneralTab.addControl(guiBillboardText)
+	guiGeneralTab.addControl(guiBillboardButton)
+	guiGeneralTab.addControl(guiBillboardEquator)
+	guiGeneralTab.addControl(guiBillboardPolar)
+	guiGeneralTab.addControl(guiBillboardPolarAngle)
+	guiGeneralTab.addControl(guiBillboardDim)
+	guiGeneralTab.addControl(guiBillboardPoles)
+	guiGeneralTab.addControl(guiBillboardSize)
+	guiGeneralTab.addControl(guiOutputText)
+	guiGeneralTab.addControl(guiShapeScriptButton)
+	guiGeneralTab.addControl(guiCustomFilename)
+	guiGeneralTab.addControl(guiCustomFilenameSelect)
+	guiGeneralTab.addControl(guiCustomFilenameDefaults)
+	guiGeneralTab.addControl(guiCustomDTSVersion)
+	guiGeneralTab.addControl(guiTSEMaterial)
 
 	Common_Gui.addGuiControl(guiAboutTab)
 	guiAboutTab.addControl(guiAboutText)
-	
-	'''
-	TopSharedBar=[	{
-							'type' : 'CONTAINER',
-							'x' : 0, 'y' : 200, 'w' : 490, 'h' : 20,
-							'color_in' : shared_bar_end, 'color_out' : shared_bar_int, 'fade_mode' : 2,
-							'color_border' : shared_border_col, 'visible' : True,
-							'items' : [
-								{
-									'type' : 'TEXT',
-									'x' : 10, 'y' : 5, 'color' : [1.,1.,1.],
-									'value' : "Torque Exporter", 'size' : "normal", 'visible' : True,
-								}
-							]
-						}
-					]
-
-	SequenceSheet = SharedBar + TopSharedBar + [
-						{
-							'type' : 'CONTAINER',
-							'x' : 0, 'y' : 30, 'w' : 490, 'h' : 170,
-							'color_in' : [0.75,0.75,0.75], 'color_out' : [0.5,0.5,0.5], 'fade_mode' : 0,
-							'color_border' : shared_border_col, 'visible' : True,
-							'items' : [
-								# Per-Sequence options
-								{
-								'type' : 'CONTAINER',
-								'x' : 0, 'y' : 110, 'w' : 350, 'h' : 60,
-								'color_in' : shared_bar_int, 'fade_mode' : 0,
-								'color_border' : shared_border_col, 'visible' : True,
-								'items' : [
-									{
-										'type' : 'TEXT',
-										'x' : 10, 'y' : 40, 'color' : [1.,1.,1.],
-										'value' : "Sequences", 'size' : "normal", 'visible' : True,
-									},
-									{
-										'type' : 'MENU', 'event' : 50,
-										'x' : 10, 'y' : 10, 'w' : 152 , 'h' : 20,
-										'items' : getSequenceMenu, 'value' : 0, 'visible' : True, 'instance' : None,
-									},
-									]
-								},
-								{
-								'type' : 'CONTAINER',
-								'x' : 10, 'y' : 0, 'w' : 180, 'h' : 109,
-								'color_in' : shared_bar_int, 'color_out' : shared_bar_end,'fade_mode' : 0,
-								'color_border' : None, 'visible' : True,
-								'items' : [
-									{
-										'type' : 'TOGGLE', 'event' : 6,
-										'x' : 0, 'y' : 42, 'w' : 86, 'h' : 15, 'visible' : True, 'instance' : None,
-										'name' : "DSQ", 'tooltip' : "Write DSQ instead of storing sequence in Shape", 'value' : 1
-									},
-									{
-										'type' : 'TOGGLE', 'event' : 7,
-										'x' : 88, 'y' : 42, 'w' : 86, 'h' : 15, 'visible' : True, 'instance' : None,
-										'name' : "Cyclic", 'tooltip' : "Make animation cyclic. Will also ignore duplicate start-end frames.", 'value' : 2
-									},
-									{
-										'type' : 'TOGGLE', 'event' : 16,
-										'x' : 88, 'y' : 25, 'w' : 86, 'h' : 15, 'visible' : True, 'instance' : None,
-										'name' : "Blend", 'tooltip' : "Make animation a blend (relative to root)", 'value' : 3
-									},
-									# Additional Sequence Options (Ground Frames, Interpolation)
-									{
-										'type' : 'SLIDER', 'event' : 18,
-										'x' : 0, 'y' : 86, 'w' : 175 , 'h' : 20, 'tooltip' : "Amount of ground frames to export. 0 if no ground frames",
-										'name' : "#GRND Fr ", 'min' : 0, 'max' : 50, 'value' : 10, 'visible' : True, 'instance' : None,
-									},
-									{
-										'type' : 'TOGGLE', 'event' : 20,
-										'x' : 0, 'y' : 64, 'w' : 175 , 'h' : 20, 'tooltip' : "Should we grab the whole set of frames for the animation, or just the keyframes?",
-										'name' : "Interpolate Frames", 'min' : 0, 'max' : 100, 'value' : 12, 'visible' : True, 'instance' : None,
-									},
-									{
-										'type' : 'TOGGLE', 'event' : 21,
-										'x' : 0, 'y' : 25, 'w' : 86, 'h' : 15, 'visible' : True, 'instance' : None,
-										'name' : "No Export", 'tooltip' : "Don't Export this Sequence", 'value' : 13
-									},
-									]
-								},
-								# Sequence Trigger Options
-								{
-								'type' : 'CONTAINER',
-								'x' : 207, 'y' : 0, 'w' : 131, 'h' : 109,
-								'color_in' : shared_bar_int, 'color_out' : shared_bar_end, 'fade_mode' : 0,
-								'color_border' : None, 'visible' : True,
-								'items' : [
-									{
-										'type' : 'TEXT',
-										'x' : 0, 'y' : 94, 'color' : [1.,1.,1.],
-										'value' : "Triggers", 'size' : "normal", 'visible' : True,
-									},
-									{
-										'type' : 'MENU', 'event' : 60,
-										'x' : 0, 'y' : 64, 'w' : 130 , 'h' : 20,
-										'items' : getSequenceTriggerMenu, 'value' : 0, 'visible' : True, 'instance' : None,
-									},
-									{
-									'type' : 'BUTTON', 'event' : 10,
-									'x' : 66, 'y' : 86, 'w' : 32, 'h' : 20,
-									'name' : "Add", 'tooltip' : "Add new Trigger", 'visible' : True, 'instance' : None,
-									},
-									{
-									'type' : 'BUTTON', 'event' : 11,
-									'x' : 98, 'y' : 86, 'w' : 32, 'h' : 20,
-									'name' : "Del", 'tooltip' : "Remove Trigger", 'visible' : True, 'instance' : None,
-									},
-									{
-										'type' : 'SLIDER', 'event' : 12,
-										'x' : 0, 'y' : 49, 'w' : 130 , 'h' : 15, 'tooltip' : "Value when triggered",
-										'name' : "Value ", 'min' : -30, 'max' : 30, 'value' : 5, 'visible' : True, 'instance' : None,
-									},
-									{
-										'type' : 'NUMBER', 'event' : 13,
-										'x' : 0, 'y' : 34, 'w' : 130 , 'h' : 15, 'tooltip' : "Time Triggered",
-										'name' : "Time ", 'min' : 0.0, 'max' : 120.0, 'value' : 6, 'visible' : True, 'instance' : None,
-									},
-									]
-								},
-								# General Sequence Options
-								{
-								'type' : 'CONTAINER',
-								'x' : 350, 'y' : 0, 'w' : 140, 'h' : 170,
-								'color_in' : shared_bar_int, 'color_out' : shared_bar_end, 'fade_mode' : 2,
-								'color_border' : shared_border_col, 'visible' : True,
-								'items' : [
-									{
-										'type' : 'TEXT',
-										'x' : 10, 'y' : 150, 'color' : [1.,1.,1.],
-										'value' : "Sequence Options", 'size' : "normal", 'visible' : True,
-									},
-									{
-										'type' : 'TOGGLE', 'event' : 14,
-										'x' : 10, 'y' : 120, 'w' : 120, 'h' : 15, 'visible' : True, 'instance' : None,
-										'name' : "Export Sequences", 'tooltip' : "Export Sequences", 'value' : 7
-									},
-									{
-										'type' : 'TOGGLE', 'event' : 15,
-										'x' : 10, 'y' : 103, 'w' : 120, 'h' : 15, 'visible' : True, 'instance' : None,
-										'name' : "Write Shape Script", 'tooltip' : "Write a shape script (.cs) for DSQ's", 'value' : 8
-									},
-									]
-								},
-							]
-						}
-					]
-	Sequence_ID = Blender_Gui.addSheet(SequenceSheet,sequence_val,sequence_evt)
-
-	# Mesh Sheet
-	MeshSheet = SharedBar + TopSharedBar + [
-						{
-							'type' : 'CONTAINER',
-							'x' : 0, 'y' : 30, 'w' : 490, 'h' : 170,
-							'color_in' : [0.75,0.75,0.75], 'color_out' : [0.5,0.5,0.5], 'fade_mode' : 0,
-							'color_border' : shared_border_col, 'visible' : True,
-							'items' : [
-								{
-								'type' : 'CONTAINER',
-								'x' : 0, 'y' : 0, 'w' : 350, 'h' : 170,
-								'color_in' : shared_bar_int, 'fade_mode' : 0,
-								'color_border' : shared_border_col, 'visible' : True,
-								'items' : [
-									# Detail Options (flags, etc)
-									{
-										'type' : 'TEXT',
-										'x' : 10, 'y' : 150, 'color' : [1.,1.,1.],
-										'value' : "Detail Options", 'size' : "normal", 'visible' : True,
-									},
-									# Billboards
-									{
-										'type' : 'TOGGLE', 'event' : 6,
-										'x' : 10, 'y' : 122, 'w' : 60, 'h' : 20, 'visible' : True, 'instance' : None,
-										'name' : "Billboard", 'tooltip' : "Generate Billboard for this detail level", 'value' : 1
-									},
-									{
-										'type' : 'NUMBER', 'event' : 7,
-										'x' : 10, 'y' : 104, 'w' : 110 , 'h' : 15, 'tooltip' : "Equator Step",
-										'name' : "Equator", 'min' : 2, 'max' : 64, 'value' : 2, 'visible' : Prefs['Billboard']['Enabled'], 'instance' : None,
-									},
-									{
-										'type' : 'NUMBER', 'event' : 8,
-										'x' : 10, 'y' : 87, 'w' : 110 , 'h' : 15, 'tooltip' : "Polar Step",
-										'name' : "Polar", 'min' : 3, 'max' : 64, 'value' : 3, 'visible' : Prefs['Billboard']['Enabled'], 'instance' : None,
-									},
-									{
-										'type' : 'NUMBER', 'event' : 9,
-										'x' : 10, 'y' : 70, 'w' : 110 , 'h' : 15, 'tooltip' : "Polar Angle",
-										'name' : "Polar Angle", 'min' : .0, 'max' : 45.0, 'value' : 4, 'visible' : Prefs['Billboard']['Enabled'], 'instance' : None,
-									},
-									{
-										'type' : 'NUMBER', 'event' : 10,
-										'x' : 10, 'y' : 53, 'w' : 110 , 'h' : 15, 'tooltip' : "Image Size (pixels)",
-										'name' : "Image Size", 'min' : 16, 'max' : 128, 'value' : 5, 'visible' : Prefs['Billboard']['Enabled'], 'instance' : None,
-									},
-									{
-										'type' : 'TOGGLE', 'event' : 11,
-										'x' : 10, 'y' : 36, 'w' : 110, 'h' : 15, 'visible' : Prefs['Billboard']['Enabled'], 'instance' : None,
-										'name' : "Include Poles", 'tooltip' : "Take polar snapshots?", 'value' : 6
-									},
-									{
-										'type' : 'NUMBER', 'event' : 12,
-										'x' : 10, 'y' : 19, 'w' : 110 , 'h' : 15, 'tooltip' : "Size of the billboard detail",
-										'name' : "Detail Size", 'min' : 1, 'max' : 128, 'value' : 7, 'visible' : Prefs['Billboard']['Enabled'], 'instance' : None,
-									},
-									{
-										'type' : 'TOGGLE', 'event' : 13,
-										'x' : 72, 'y' : 122, 'w' : 100, 'h' : 20, 'visible' : True, 'instance' : None,
-										'name' : "Generate Details", 'tooltip' : "Generate missing detail level meshes", 'value' : 8
-									},
-									]
-								},
-								# Mesh Export Options
-								{
-								'type' : 'CONTAINER',
-								'x' : 350, 'y' : 0, 'w' : 140, 'h' : 170,
-								'color_in' : shared_bar_int, 'color_out' : shared_bar_end, 'fade_mode' : 2,
-								'color_border' : shared_border_col, 'visible' : True,
-								'items' : [
-									{
-										'type' : 'TEXT',
-										'x' : 10, 'y' : 150, 'color' : [1.,1.,1.],
-										'value' : "Mesh Options", 'size' : "normal", 'visible' : True,
-									},
-									{
-										'type' : 'TOGGLE', 'event' : 14,
-										'x' : 10, 'y' : 120, 'w' : 120, 'h' : 15, 'visible' : True, 'instance' : None,
-										'name' : "Triangle Strips", 'tooltip' : "Generate Triangle Strips for Meshes", 'value' : 9
-									},
-									{
-										'type' : 'NUMBER', 'event' : 15,
-										'x' : 10, 'y' : 103, 'w' : 120 , 'h' : 15, 'tooltip' : "Maximum strip size",
-										'name' : "Max Strip Size", 'min' : -30, 'max' : 30, 'value' : 10, 'visible' : Prefs['StripMeshes'], 'instance' : None,
-									},
-									{
-										'type' : 'NUMBER', 'event' : 16,
-										'x' : 10, 'y' : 70, 'w' : 120 , 'h' : 15, 'tooltip' : "Maximum cluster depth on Sorted Meshes",
-										'name' : "Cluster Depth", 'min' : -30, 'max' : 30, 'value' : 11, 'visible' : True, 'instance' : None,
-									},
-									{
-										'type' : 'TEXT',
-										'x' : 10, 'y' : 90, 'color' : [1.,1.,1.],
-										'value' : "Sorted Mesh Options", 'size' : "normal", 'visible' : True,
-									},
-									{
-										'type' : 'TOGGLE', 'event' : 17,
-										'x' : 10, 'y' : 53, 'w' : 120, 'h' : 15, 'visible' : True, 'instance' : None,
-										'name' : "Write Depth", 'tooltip' : "Always Write Depth on Sorted Meshes", 'value' : 12
-									},
-									]
-								}
-							]
-						}
-					]
-	Mesh_ID = Blender_Gui.addSheet(MeshSheet,mesh_val,mesh_evt)
-
-	# About Sheet
-	aboutText = ["DTS Exporter for the Torque Game Engine",
-	"Written by James Urquhart, with assistance from Tim Gift, Clark Fagot, Wes Beary,",
-	"Ben Garney, Joshua Ritter, Emanuel Greisen, Todd Koeckeritz, Xavier Amado,",
-	"Ryan J. Parker, and Walter Yoon.",
-	"Additional thanks goes to the testers.",
-	"",
-	"Visit GarageGames at http://www.garagegames.com"]
-	AboutSheet = SharedBar + TopSharedBar + [
-						{
-							'type' : 'CONTAINER',
-							'x' : 0, 'y' : 30, 'w' : 490, 'h' : 170,
-							'color_in' : [0.75,0.75,0.75], 'color_out' : [0.5,0.5,0.5], 'fade_mode' : 0,
-							'color_border' : shared_border_col, 'visible' : True,
-							'items' : [
-								{
-									'type' : 'TEXTLINES',
-									'x' : 1, 'y' : 151, 'color' : [1.,1.,1.],
-									'value' : aboutText, 'size' : "normal", 'visible' : True,
-								},
-							]
-						}
-					]
-	About_ID = Blender_Gui.addSheet(AboutSheet,about_val,about_evt)
-	'''
-
-
-'''
-	Shared Event Handler
-'''
-def shared_evt(evt):
-	global Sequence_ID
-	global Mesh_ID
-	global About_ID
-
-	if evt == 1: Blender_Gui.NewSheet = Sequence_ID
-	elif evt == 2: Blender_Gui.NewSheet = Mesh_ID
-	elif evt == 3: export()
-	elif evt == 4: Blender_Gui.NewSheet = About_ID
-	else: return False
-	return True
-
-'''
-	About Sheet Handling
-'''
-
-def about_val(val):
-	return 0
-
-def about_evt(evt):
-	if not shared_evt(evt):
-		return False
-
-'''
-	Mesh Sheet Handling
-'''
-
-# Gets detail level from number
-# Assumes same order as detail menu
-def mesh_getDetail(num):
-	real_number = num+1
-	global export_tree
-	for o in export_tree.children:
-		if o.__class__ == ShapeTree:
-			count = 0
-			for c in o.children:
-				if c.getName()[0:6] == "Detail":
-					count += 1
-				if count == real_number:
-					return c.getName()
-			break
-def mesh_val(val):
-	global Mesh_ID
-	global Prefs
-	if val == 1:
-		# Billboard
-		return Prefs['Billboard']['Enabled']
-	elif val == 2:
-		# Equator
-		return Prefs['Billboard']['Equator']
-	elif val == 3:
-		# Polar
-		return Prefs['Billboard']['Polar']
-	elif val == 4:
-		# Polar Angle
-		return Prefs['Billboard']['PolarAngle']
-	elif val == 5:
-		# Image Size
-		return Prefs['Billboard']['Dim']
-	elif val == 6:
-		# Polar Snapshots
-		return Prefs['Billboard']['IncludePoles']
-	elif val == 7:
-		# Billboard size
-		return Prefs['Billboard']['Size']
-	elif val == 8:
-		# Automagic Details
-		return Prefs['AutoDetail']
-	elif val == 9:
-		# Triangle Strips
-		return Prefs['StripMeshes']
-	elif val == 10:
-		# Triangle Strip Max Size
-		return Prefs['MaxStripSize']
-	elif val == 11:
-		# Max Cluster Size
-		return Prefs['ClusterDepth']
-	elif val == 12:
-		# Always write Depth?
-		return Prefs['AlwaysWriteDepth']
-	return 0
-
-def mesh_evt(evt):
-	global Mesh_ID
-	global Prefs
-	if shared_evt(evt): return True
-	elif evt == 6:
-		# Billboard
-		if not Prefs['Billboard']['Enabled']:
-			# Enable billboard
-			Prefs['Billboard']['Enabled'] = True
-			# Show controls
-			for c in Blender_Gui.Sheets[Mesh_ID][0][2]['items'][0]['items'][2:8]:
-				c['visible'] = True
-		else:
-			# Disable Billboard
-			Prefs['Billboard']['Enabled'] = False
-			# Hide Controls
-			for c in Blender_Gui.Sheets[Mesh_ID][0][2]['items'][0]['items'][2:8]:
-				c['visible'] = False
-	elif evt == 7:
-		# Equator
-		new_val = Blender_Gui.Sheets[Mesh_ID][0][2]['items'][0]['items'][2]['instance'].val
-		Prefs['Billboard']['Equator'] = new_val
-	elif evt == 8:
-		# Polar
-		new_val = Blender_Gui.Sheets[Mesh_ID][0][2]['items'][0]['items'][3]['instance'].val
-		Prefs['Billboard']['Polar'] = new_val
-	elif evt == 9:
-		# Polar Angle
-		new_val = Blender_Gui.Sheets[Mesh_ID][0][2]['items'][0]['items'][4]['instance'].val
-		Prefs['Billboard']['PolarAngle'] = new_val
-	elif evt == 10:
-		# Image Size
-		new_val = Blender_Gui.Sheets[Mesh_ID][0][2]['items'][0]['items'][5]['instance'].val
-		Prefs['Billboard']['Dim'] = new_val
-	elif evt == 11:
-		# Polar Snapshots
-		Prefs['Billboard']['IncludePoles'] = not Prefs['Billboard']['IncludePoles']
-	elif evt == 12:
-		# Billboard size
-		Prefs['Billboard']['Size'] = Blender_Gui.Sheets[Mesh_ID][0][2]['items'][0]['items'][7]['instance'].val
-	elif evt == 13:
-		# Automagic Details
-		Prefs['AutoDetail'] = not Prefs['AutoDetail']
-	elif evt == 14:
-		# Triangle Strips
-		Prefs['StripMeshes'] = not Prefs['StripMeshes']
-		Blender_Gui.Sheets[Mesh_ID][0][2]['items'][1]['items'][2]['visible'] = Prefs['StripMeshes']
-	elif evt == 15:
-		# Triangle Strip Max Size
-		Prefs['MaxStripSize'] = Blender_Gui.Sheets[Mesh_ID][0][2]['items'][1]['items'][2]['instance'].val
-	elif evt == 16:
-		# Max Cluster Size in Sorted Mesh Code
-		Prefs['ClusterDepth'] = Blender_Gui.Sheets[Mesh_ID][0][2]['items'][1]['items'][3]['instance'].val
-	elif evt == 17:
-		Prefs['AlwaysWriteDepth'] = not Prefs['AlwaysWriteDepth']
-	else: return False
-	return True
-
-'''
-	Sequence Sheet Handling
-'''
-
-def sequence_val(val):
-	global Sequence_ID
-	global Prefs
-	# Grab common stuff...
-	try: seq_val = Blender_Gui.Sheets[Sequence_ID][0][2]['items'][0]['items'][1]['instance'].val
-	except: seq_val = -1
-	try: trigger_val = Blender_Gui.Sheets[Sequence_ID][0][2]['items'][2]['items'][1]['instance'].val
-	except: pass
-	if len(Armature.NLA.GetActions().keys()) > seq_val:
-		seq_name = Armature.NLA.GetActions().keys()[seq_val]
-	else:
-		seq_name = None
-
-	# Process events...
-	if val == 1:
-		# Write DSQ
-		if seq_name != None:
-			return getSequenceKey(seq_name)['Dsq']
-	elif val == 2:
-		# Cyclic
-		if seq_name != None:
-			return getSequenceKey(seq_name)['Cyclic']
-	elif val == 3:
-		# Blend
-		if seq_name != None:
-			return getSequenceKey(seq_name)['Blend']
-	elif val == 5:
-		# Value
-		if seq_name != None:
-			if trigger_val < len(getSequenceKey(seq_name)['Triggers']): return getSequenceKey(seq_name)['Triggers'][trigger_val][0]
-	elif val == 6:
-		# Time
-		if seq_name != None:
-			if trigger_val < len(getSequenceKey(seq_name)['Triggers']): return getSequenceKey(seq_name)['Triggers'][trigger_val][1]
-	elif val == 7:
-		# Export Sequences
-		return Prefs['WriteSequences']
-	elif val == 8:
-		# Shape Script
-		return Prefs['WriteShapeScript']
-	elif val == 10:
-		# Ground Frame Count
-		if seq_name != None:
-			return getSequenceKey(seq_name)['NumGroundFrames']
-	elif val == 12:
-		# No. Frames to export for interpolation
-		if seq_name != None:
-			return getSequenceKey(seq_name)['Interpolate']
-	elif val == 13:
-		# Don't export?
-		if seq_name != None:
-			return getSequenceKey(seq_name)['NoExport']
-	return 0
-
-def sequence_evt(evt):
-	global Sequence_ID
-	global Prefs
-	# Grab common stuff...
-	try:
-		seq_val = Blender_Gui.Sheets[Sequence_ID][0][2]['items'][0]['items'][1]['instance'].val
-		trigger_val = Blender_Gui.Sheets[Sequence_ID][0][2]['items'][2]['items'][1]['instance'].val
-		if len(Armature.NLA.GetActions().keys()) > seq_val:
-			seq_name = Armature.NLA.GetActions().keys()[seq_val]
-		else:
-			seq_name = None
-	except:
-		seq_name = None
-
-	# Process events...
-	if shared_evt(evt): return True
-	elif evt == 50:
-		# Sequence Menu
-
-		# Re-calcuate max number of interpolation frames and ground frames
-		maxFrames = getNumActionFrames(Armature.NLA.GetActions()[seq_name], False)
-		# Ground frame control...
-		Blender_Gui.Sheets[Sequence_ID][0][2]['items'][1]['items'][3]['max'] = maxFrames
-		if Blender_Gui.Sheets[Sequence_ID][0][2]['items'][1]['items'][3]['instance'].val > maxFrames:
-			getSequenceKey(seq_name)['NumGroundFrames'] = maxFrames
-
-		Draw.Redraw(0)
-	elif evt == 6:
-		# DSQ
-		if len(Armature.NLA.GetActions().keys()) > seq_val:
-			getSequenceKey(seq_name)['Dsq'] = not getSequenceKey(seq_name)['Dsq']
-	elif evt == 7:
-		# Cyclic
-		if seq_name != None:
-			getSequenceKey(seq_name)['Cyclic'] = not getSequenceKey(seq_name)['Cyclic']
-	elif evt == 16:
-		# Blend
-		if seq_name != None:
-			getSequenceKey(seq_name)['Blend'] = not getSequenceKey(seq_name)['Blend']
-	elif evt == 60:
-		# Triggers Menu
-		Draw.Redraw(0)
-	elif evt == 10:
-		# Add
-		if seq_name != None:
-			getSequenceKey(seq_name)['Triggers'].append([10,0.0])
-	elif evt == 11:
-		# Del
-		if seq_name != None:
-			if trigger_val < len(getSequenceKey(seq_name)['Triggers']): del getSequenceKey(seq_name)['Triggers'][trigger_val]
-	elif evt == 12:
-		# Value
-		if seq_name != None:
-			new_val = Blender_Gui.Sheets[Sequence_ID][0][2]['items'][2]['items'][4]['instance'].val
-			if trigger_val < len(getSequenceKey(seq_name)['Triggers']): getSequenceKey(seq_name)['Triggers'][trigger_val][0] = new_val
-	elif evt == 13:
-		# Time
-		if seq_name != None:
-			new_val = Blender_Gui.Sheets[Sequence_ID][0][2]['items'][2]['items'][5]['instance'].val
-			if trigger_val < len(getSequenceKey(seq_name)['Triggers']): getSequenceKey(seq_name)['Triggers'][trigger_val][1] = new_val
-	elif evt == 14:
-		# Export Sequences
-		Prefs['WriteSequences'] = not Prefs['WriteSequences']
-	elif evt == 15:
-		# Shape Script
-		Prefs['WriteShapeScript'] = not Prefs['WriteShapeScript']
-	elif evt == 18:
-		# Ground Frame Count
-		if seq_name != None:
-			new_val = Blender_Gui.Sheets[Sequence_ID][0][2]['items'][1]['items'][3]['instance'].val
-			getSequenceKey(seq_name)['NumGroundFrames'] = new_val
-	elif evt == 20:
-		# Interpolate interval for keyframes
-		if seq_name != None:
-			getSequenceKey(seq_name)['Interpolate'] = not getSequenceKey(seq_name)['Interpolate']
-	elif evt == 21:
-		# Don't export?
-		if seq_name != None:
-			getSequenceKey(seq_name)['NoExport'] = not getSequenceKey(seq_name)['NoExport']
-
-	else: return False
-	return True
 
 # Called when gui exits
 def exit_callback():
 	Torque_Util.dump_setout("stdout")
+	clearSequenceList()
+	clearBoneGrid()
 
 '''
 	Entry Point
 '''
 #-------------------------------------------------------------------------------------------------
 
-# Export model
-if __name__ == "__main__":
+def entryPoint():
+	getPathSeperator(Blender.Get("filename"))
 	if Debug:
 		Torque_Util.dump_setout("stdout")
 	else:
@@ -1517,17 +1539,11 @@ if __name__ == "__main__":
 		Torque_Util.dump_writeln("Using unaccelerated math code, performance may be suboptimal")
 	Torque_Util.dump_writeln("**************************")
 	loadPrefs()
-	# Determine the best course of action
-	a = __script__['arg']
-	if (a == 'export') or (a == None):
-		# Process scene and export (default)
-		handleScene()
-		export()
-		Torque_Util.dump_setout("stdout")
-	elif a == 'config':
-		# Process scene and launch config panel
-		handleScene()
-		initGui()
-	else:
-		# Something bad happened
-		Torque_Util.dump_writeln("Error: invalid script arguement '%s'" % a)
+	
+	# Process scene and load configuration gui
+	handleScene()
+	initGui()
+	
+# Main entrypoint
+if __name__ == "__main__":
+	entryPoint()

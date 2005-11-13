@@ -164,7 +164,7 @@ class DtsMesh:
 	def getPolyCount(self):
 		count = 0
 		for p in range(len(self.primitives)):
-			if (self.primitives[p].matindex & Primitive().Strip):
+			if (self.primitives[p].matindex & self.primitives[p].Strip):
 				count += self.primitives[p].numElements - 2
 			else:
 				count += self.primitives[p].numElements / 3
@@ -254,6 +254,7 @@ class DtsMesh:
 	def rotate(self, rot):
 		for v in range(0,len(self.verts)):
 			self.verts[v] = rot.apply(self.verts[v])
+			self.normals[v] = rot.apply(self.normals[v])
 		self.calculateBounds()
 		self.calculateCenter()
 		self.calculateRadius()
@@ -761,10 +762,10 @@ class DtsMesh:
 		Dts_Stripper.Stripper.maxStripSize = max_stripsize
 		stripper = Dts_Stripper.chooseStripper()
 		if not stripper: 
-			Torque_Util.dump_writeln("     Stripping Mesh : Disabled (No Stripper Found)")
+			Torque_Util.dump_writeln("   Stripping Mesh : Disabled (No Stripper Found)")
 			return
 		else:
-			Torque_Util.dump_writeln("     Stripping Mesh : ...")
+			Torque_Util.dump_writeln("   Stripping Mesh : ...")
 		stripper.verts = self.verts
 
 		# Convert primitives in different batches if we are a cluster, else, do it normally

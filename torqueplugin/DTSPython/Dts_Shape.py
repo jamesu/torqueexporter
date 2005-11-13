@@ -272,26 +272,16 @@ class Trigger:
 	InvertOnReverse = 1 << 30
 	StateMask = 1 << (30)-1
 	
-	def __init__(self, st=0, ps=0.0, revert=False):
+	def __init__(self, st=0, on=True, ps=0.0, revert=False):
 		self.pos = ps
 		
-		if (st == 0) or (st < -30) or (st > 30):
+		if (st <= 0) or (st > 30):
 			Torque_Util.dump_writeln("Warning : Invalid Trigger state (%d)" % st)
-		if st < 0:
-			val = -st - 1
-			on = False
-		else:
-			val = st - 1
-			on = True
 		
-		if on:
-			self.state = 1 << val
-			self.state |= self.StateOn
-		else:
-			self.state = 1 << val
-		
-		if revert:
-			self.state |= self.InvertOnReverse
+		st -= 1 # 0..31
+		self.state = 1 << st
+		if on: self.state |= self.StateOn
+		if revert: self.state |= self.InvertOnReverse
 			
 # The Morph Mesh Class
 class Morph:
@@ -1060,6 +1050,9 @@ class DtsShape:
 	
 	def addName(self, s):
 		return self.sTable.addString(s)
+		
+	def getName(self, idx):
+		return self.sTable.get(idx)
 	
 	def calculateBounds(self):
 		if len(self.objects) == 0:
@@ -1334,8 +1327,8 @@ class DtsShape:
 		pass
 
 	# Following functions for DSQ Support
-	def writeDSQSequence(self, fs, sequence):
-		fs.write(struct.pack('<i', 24)) # S32, version 24 currently
+	def writeDSQSequence(self, fs, sequence, version):
+		fs.write(struct.pack('<i', version)) # S32, version 24 currently
 
 		nodes_used = sequence.getNodes()
 		node_rots = sequence.countNodes(0)
@@ -1482,7 +1475,7 @@ class DtsShape:
 			fs.write(0x00)
 
 		# Now write the sequence itself
-		sequence.write(fs, self.dstream.DTSVersion, True)
+		sequence.write(fs, version, True)
 
 		# write out all the triggers...
 		if baseTrigger > -1:

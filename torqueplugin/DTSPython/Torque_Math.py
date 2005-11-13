@@ -7,7 +7,7 @@ Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
 "Software"), to deal in the Software without restriction, including
 without limitation the rights to use, copy, modify, merge, publish,
-distribute, sublicense, and/or sell copies of the Software, and to
+distribute, sublicense, and/or sell copies of the Software, and toMathutils
 permit persons to whom the Software is furnished to do so, subject to
 the following conditions:
 
@@ -46,10 +46,9 @@ from struct import *
 	* MatrixF
 '''
 
-# TODO: Acceleration
-
 try:
-	import Blehnder
+	# TODO: fix. Blender interface does not currently work correctly
+	import BlFender
 	accelerator = "BLENDER"
 except:
 	accelerator = None
@@ -76,11 +75,11 @@ if accelerator == "BLENDER":
 			return res
 		def __add__(self, other):
 			res = Vector(self.object.x, self.object.y, self.object.z)
-			res.object += self.object
+			res.object += other.object
 			return res
 		def __sub__(self, other):
 			res = Vector(self.object.x, self.object.y, self.object.z)
-			res.object -= self.object
+			res.object -= other.object
 			return res
 		def __mul__(self, other):
 			res = Vector(self.object.x, self.object.y, self.object.z)
@@ -150,11 +149,11 @@ if accelerator == "BLENDER":
 			return res
 		def __add__(self, other):
 			res = Vector(self.object.x, self.object.y, self.object.z, self.object.w)
-			res.object += self.object
+			res.object += other.object
 			return res
 		def __sub__(self, other):
 			res = Vector(self.object.x, self.object.y, self.object.z, self.object.w)
-			res.object -= self.object
+			res.object -= other.object
 			return res
 		def __mul__(self, other):
 			res = Vector(self.object.x, self.object.y, self.object.z, self.object.w)
@@ -209,11 +208,11 @@ if accelerator == "BLENDER":
 			return res
 		def __add__(self, other):
 			res = Vector2(self.object.x, self.object.y)
-			res.object += self.object
+			res.object += other.object
 			return res
 		def __sub__(self, other):
 			res = Vector2(self.object.x, self.object.y)
-			res.object -= self.object
+			res.object -= other.object
 			return res
 		def __mul__(self, other):
 			res = Vector2(self.object.x, self.object.y)
@@ -301,6 +300,12 @@ if accelerator == "BLENDER":
 
 	# The Matrix Class
 	class MatrixF:
+		'''
+			Blender version of MatrixF
+			
+			This is a bit tricky since torque's matrices are arranged by rows where blenders is the opposite.
+		'''
+		
 		def __init__(self, dat=None):
 			if dat == None:
 				self.object = Blender.Mathutils.Matrix(
@@ -325,8 +330,10 @@ if accelerator == "BLENDER":
 			bin = int(key) / 4
 			self.object[bin][bin*4] = value
 		def get(self, x, y):
+			# x = row, y = col
 			return self.object[x][y]
 		def set(self, x, y, val):
+			# x = row, y = col
 			self.object[x][y] = val
 		def identity(self):
 			return MatrixF(
@@ -335,8 +342,8 @@ if accelerator == "BLENDER":
 			0.0, 0.0, 1.0, 0.0,
 			0.0, 0.0, 0.0, 1.0])
 		def transpose(self):
-			result = MatrixF()
-			result.object = []
+			result = self.copy()
+			result.object.transpose()
 			return result
 		def getCol(self, no):
 			result = []
@@ -363,11 +370,11 @@ if accelerator == "BLENDER":
 				res[r] = cell
 			return res
 		def xVector4(self, vect):
-			result = Vector4()
-			result[0] = (self[0]*vect[0] + self[1]*vect[1] + self[2]*vect[2]  + self[3]*vect[3])
-			result[1] = (self[4]*vect[0] + self[5]*vect[1] + self[6]*vect[2]  + self[7]*vect[3])
-			result[2] = (self[8]*vect[0] + self[9]*vect[1] + self[10]*vect[2] + self[11]*vect[3])
-			result[3] = (self[12]*vect[0]+ self[13]*vect[1]+ self[14]*vect[2] + self[15]*vect[3])
+			result = Vector4(
+			(self.object[0][0]*vect[0] + self.object[0][1]*vect[1] + self.object[0][2]*vect[2] + self.object[0][3]*vect[3]) # r1 
+			(self.object[1][0]*vect[0] + self.object[1][1]*vect[1] + self.object[1][2]*vect[2] + self.object[1][3]*vect[3]) # r2
+			(self.object[2][0]*vect[0] + self.object[2][1]*vect[1] + self.object[2][2]*vect[2] + self.object[2][3]*vect[3]) # r3
+			(self.object[3][0]*vect[0] + self.object[3][1]*vect[1] + self.object[4][2]*vect[2] + self.object[3][3]*vect[3])) # r4
 			return result
 		def passPoint(self, point):
 			return Vector(point[0] * self.get(0, 0) + point[1] * self.get(1, 0) + point[2] * self.get(2, 0) + self.get(3, 0),
@@ -382,28 +389,39 @@ if accelerator == "BLENDER":
 		def inverse(self):
 			return self.invert()
 		def __mul__(self, a):
-			result = MatrixF()
+			result = self.copy()
 			result.object = self.object * a.object
 			return result
 		def rotate(self, axis, angle):
 			result = MatrixF()
-			result.object = Blender.Mathutils.RotationMatrix(angle, 4, "r", axis)
+			result.object = Blender.Mathutils.RotationMatrix(float(angle), 4, "r", axis.object)
 			return result
 		def translate_matrix(self, vec):
-			narr = self.members
-			return MatrixF([narr[0],narr[1],narr[2],narr[3],
-								narr[4],narr[5],narr[6],narr[7],
-								narr[8],narr[9],narr[10],narr[11],
-								narr[12]+vec[y],narr[13]+vec[y],narr[14]+vec[y],narr[15]])
+			result = self.copy()
+			result.object = Blender.Mathutils.CopyMat(self.object)
+			result[3][0] += vec[0]
+			result[3][0] += vec[1]
+			result[3][0] += vec[2]
+			return result
 		def scale_matrix(self, vec):
-			narr = self.members
-			return MatrixF([narr[0]*vec[0],narr[1]*vec[1],narr[2]*vec[2],narr[3],
-								narr[4]*vec[0],narr[5]*vec[1],narr[6]*vec[2],narr[7],
-								narr[8]*vec[0],narr[9]*vec[1],narr[10]*vec[2],narr[11],
-								narr[12]*vec[0],narr[13]*vec[1],narr[14]*vec[2],narr[15]])
+			result = self.copy()
+			result.object = Blender.Mathutils.CopyMat(self.object)
+			result[0][0] *= vec[0]
+			result[0][1] *= vec[1]
+			result[0][2] *= vec[2]
+			result[1][0] *= vec[0]
+			result[1][1] *= vec[1]
+			result[1][2] *= vec[2]
+			result[2][0] *= vec[0]
+			result[2][1] *= vec[1]
+			result[2][2] *= vec[2]
+			result[3][0] *= vec[0]
+			result[3][1] *= vec[1]
+			result[3][2] *= vec[2]
+			return result
 		def copy(self):
 			result = MatrixF()
-			result.object = Blender.MathUtils.CopyMat(self.object)
+			result.object = Blender.Mathutils.CopyMat(self.object)
 			return result
 		def invert(self):
 			result = self.copy()
@@ -756,8 +774,10 @@ else:
 		def __setitem__(self, key, value):
 			self.members[key] = value
 		def get(self, x, y):
+			# x = row, y = col
 			return self.members[(x*4)+y]
 		def set(self, x, y, val):
+			# x = row, y = col
 			self.members[(x*4)+y] = val
 		def col(self, no):
 			result = Vector()
@@ -777,13 +797,12 @@ else:
 					result.set(c, r, self.get(r, c))
 			return result
 		def setCol(self, no, col):
-			for r in range(0, 4):
-				self.set(r, no, col[r]) # self.members[(x*4)+y] = val
+			for c in range(0, 4):
+				self.set(c, no, col[c]) # self.members[(x*4)+y] = val
 		def setRow(self, no, row):
 			for r in range(0, 4):
 				self.set(no, r, row[r])
 		def getRow(self, no):
-			result = []
 			for r in range(0, 4):
 				result.append(self.get(no, r))
 			return result

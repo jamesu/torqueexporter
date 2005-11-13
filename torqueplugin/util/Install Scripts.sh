@@ -28,7 +28,7 @@ fi
 # Now we can copy the files over
 if ( [ -e Dts_Blender.py ] && [ -e DTSPython ] )
 then
-	if ( cp -Rv Dts_Blender.py Blender_Gui.py DTSPython ~/.blender/scripts/ )
+	if ( p -Rfv Dts_Blender.py DtsShape_Blender.py DtsMesh_Blender.py Common_Gui.py DTSPython ~/.blender/scripts/ )
 	then
 		echo "Install: Scripts successfully copied."
 	else
