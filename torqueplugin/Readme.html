@@ -1,0 +1,156 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <meta content="text/html; charset=ISO-8859-1"
+ http-equiv="content-type">
+  <title>Torque Exporter Readme</title>
+</head>
+<body>
+<h1>Torque Exporter for Blender</h1>
+<h2>Introduction</h2>
+<p>
+The Torque Exporter for Blender, or Blender Exporter for Torque is a
+set of python scripts that allows one to export .dts shapes from
+blender scenes in .blend files.<br>
+The exporter currently supports alot of the dts format. However, it is
+still missing support for various non-critical features (e.g. IFL's).
+</p>
+<p>
+Please note that the torque exporter is still under development, and as
+such, certain features may not work or expected, may not be documented,
+or may not be available at all.
+</p>
+<h2>Requirements</h2>
+<table style="text-align: left; width: 840px; height: 115px;" border="1"
+ cellspacing="1" cellpadding="1">
+  <tbody>
+    <tr>
+      <td style="vertical-align: top;">
+      <h3>Requirement</h3>
+      </td>
+      <td style="vertical-align: top;">
+      <h3>Description</h3>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;"><a
+ href="http://www.blender3d.org">Blender</a> 2.33+<br>
+      </td>
+      <td style="vertical-align: top;">Required by the exporter scripts
+to run.<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;"><a href="http://www.python.org">Python</a>
+2.2+<br>
+      </td>
+      <td style="vertical-align: top;">Required by the exporter scripts
+to run.<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;"><a href="http://www.vtk.org">VTK</a>
++ Python Bindings<br>
+      </td>
+      <td style="vertical-align: top;">Optional; Allows meshes to be
+decimated, and triangle strips to be generated.<br>
+      </td>
+    </tr>
+  </tbody>
+</table>
+<h2>Installation</h2>
+<ol>
+  <li>Extract the scripts to the directory where your copy of blender
+looks for python scripts for inclusion into the Import/Export menus.</li>
+  <li>Ensure your "PYTHONPATH" environment variable is set accordingly
+so that it also includes the directory where the python scripts are
+located. An example of how to do this is located <a
+ href="http://download.blender.org/documentation/html/c8651.html">here</a>.<br>
+  </li>
+  <li>Run blender to ensure the "Torque DTS Exporter" item is located
+on the "Export" menu.<br>
+  </li>
+</ol>
+<h2>How-To</h2>
+<p>
+The inner workings of the exporter have changed compared to previous
+versions. <br>
+The example shape located in example.blend contains a working example
+of how to structure content for exporting via the exporter.<br>
+</p>
+<p>
+Existing content can easily be structured to export with the exporter.<br>
+</p>
+<ul>
+  <li>The Exporter first looks for an object called "Shape".
+  <ul>
+    <li>The Exporter will then check the object's children, which
+should be named as follows :
+      <ul>
+        <li>Detailx - Detail Marker, where "x" is the detail level size.</li>
+        <li>Colx - Collision Marker, where x is the number of the collision mesh.</li>
+        <li>Losx - LOS Collision Marker, where x is the number of the LOS collision mesh.</li>
+      </ul>
+    </li>
+  </ul>
+  </li>
+</ul>
+<p></p>
+<p>
+All objects parented (directly or indirectly) to the Detail / Collision
+markers will be included
+in the export in the according detail / collision level.<br>
+NOTE: Using Emptys for the markers is preferred.</p>
+<h3>Sequences (Actions)</h3>
+<p>
+For sequences, the exporter looks for the Action's in blender and
+extracts the necessary keyframe data from the action ipo's. <br>
+The exporter supports loc, rot, and size animation of bones.</p>
+<p>An additional feature of the sequence export is the support for "ground frames", which are used by torque alot in player animations. The basic idea is that they track the movement and rotation of the object in an animation.<br>
+To Export Ground Frames, the "GRND fr" option needs to be set to above 0. Select the number of groundframes to export (sampling rate), and make sure you have an object called "Bounds" somewhere in your scene (NOTE: it does not need to be attatched to the shape empty - e.g. it could be attatched to your armature bones, or out in the middle of nowhere).</p>
+<p>The "Bounds" object can also act as an alternative set of bounds for your shape. for this to happen, the object needs to be of type "Mesh".
+</p>
+<p>
+Finally, the "Interpolate" option toggles exporting a sequence frame by frame, or by keyframe. Doing it by keyframe saves space (since your not exporting as many frames), but the animation delay between the keyframes remains constant in torque. Doing it frame by frame ensures that movements in your sequence are timed correctly in the exported shape.
+</p>
+<h3>Texturing</h3>
+<p>
+In order to apply textures to the model, one needs to assign one or
+more blender materials to a mesh. In addition, the mesh has to have a
+UV map, or if the "Stick" mapto option is enabled, sticky coords.<br>
+The name of the material in blender corresponds to the texture torque
+loads. e.g. if you had a material called "Bob", torque would try to
+load "Bob.jpg" or "Bob.png" as the texture.<br>
+NOTE: At least 1 texture channel needs to be present in the material,
+of type "Image".
+</p>
+<p>
+Since the properties of materials you can assign in torque itself are not as sophisticated as the ones in blender, the exporter guesses many things, including :
+<ul>
+  <li>If the emit of the material is higher than 0.0, the material is marked as "Self Illuminating"</li>
+  <li>If the first texture of the material does now have its "MipMap" option set, no mipmaps will be generated for the material.</li>
+  <li>If in the first texture channel of the material the "Alpha" option is set in the "MapTo" options, then the material is marked as translucent.
+    <ul>
+      <li>If the material is marked as translucent, and the alpha of the material is lower than 1.0, the material is marked as blending Additive.</li>
+    </ul>
+  </li>
+  <li>Mapping a texture channel to reflectance sets it as a reflectance map for the material.</li>
+  <li>Mapping a texture channel to normals sets it as a bump map for the material</li>
+  <li>If there is another texture channel with neither reflectance or normal mapping, then it is set as a detail map for the material.</li>
+</ul>
+</p>
+<h3>Additional Options</h3>
+<p>
+Many more options can be configured in the exporter gui, which can be
+accessed by selecting the "Configure" option in the "Torque DTS
+Exporter" menu (if installed in the export menu).</p>
+<p>
+NOTE: Unlike previous versions, the exporter no longer stores
+configuration options in a ".cfg" file. Rather, options are stored in
+the .blend file. Options are updated every time the export process is
+invoked.</p>
+<h2>Contact</h2>
+E-Mail : j_urquhart (at) btinternet.com<br>
+Resource URL : <a href="http://www.garagegames.com/blender">http://www.garagegames.com/blender</a><br>
+</body>
+</html>
