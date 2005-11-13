@@ -25,7 +25,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 from Dts_Stream import *
 from Torque_Util import *
 import Dts_Stripper
-import Dts_Decimate
 import math
 import copy
 
@@ -77,7 +76,7 @@ class DtsMesh:
 	T_Skin         = 1		# Skin meshes can be deformed by bones
 	T_Decal       = 2		# Decal meshes are a bit obsolete. They were used to plonk bullet holes, etc on shapes
 	T_Sorted      = 3		# Sorted meshes are extended Standard meshes which allow transparent surfaces to be drawn correctly
-	T_Null          = 4		# No mesh. Purpose of this is unknown.
+	T_Null          = 4		# No mesh. Useful to write dummy meshes in objects.
 	
 	# Mesh Flags
 	Billboard = 0x80000000		# Mesh always faces player
@@ -118,6 +117,12 @@ class DtsMesh:
 		self.firstTVerts = array('i')	# First texture verts in cluster
 		self.bounds = Box()		# Bounds of shape
 		self.center = Vector()		# Center of shape
+		
+		# Morphs
+		self.morphIndex = array('i')
+		self.mindex = array('i')
+		self.mvindex = array('i')
+		self.mverts = []
 	
 	def __del__(self):
 		del self.verts
@@ -142,6 +147,10 @@ class DtsMesh:
 		del self.firstTVerts
 		del self.bounds
 		del self.center
+		del self.morphIndex
+		del self.mindex
+		del self.mvindex
+		del self.mverts
 		
 	def getType(self):
 		return self.mtype
@@ -226,11 +235,7 @@ class DtsMesh:
 		# Build inverse transform, the mesh wants to be able to
 		# transform the vertices into node space.
 		t = q.inverse().apply(-t)
-		row = []
-		row.append(t.x())
-		row.append(t.y())
-		row.append(t.z())
-		row.append(1)
+		row = [t.x(), t.y(), t.z(), 1]
 		
 		# point * translation * transform (+ a bit of weights) = position
 		# The toMatrix builds a transposed transform from what we
@@ -288,18 +293,19 @@ class DtsMesh:
 				self.bounds.max[2] = vertex[2]
 	
 	def calculateCenter(self):
-		for v in range(len(self.bounds.max.members)):
-			self.center[v] = ((self.bounds.min.members[v] - self.bounds.max.members[v])/2) + self.bounds.max.members[v]
+		self.center[0] = ((self.bounds.min[0] - self.bounds.max[0])/2) + self.bounds.max[0]
+		self.center[1] = ((self.bounds.min[1] - self.bounds.max[1])/2) + self.bounds.max[1]
+		self.center[2] = ((self.bounds.min[2] - self.bounds.max[2])/2) + self.bounds.max[2]
 	
 	def calculateRadius(self):
 		self.radius = float(0.0)
 			
 		for vertex in self.verts:
 			tV = vertex - self.center
-			result = 0
-			for n in range(len(tV.members)):
-				result += tV.members[n] * tV.members[n]
-			distance = math.sqrt(result)
+			distance = math.sqrt(
+			(tV[0] * tV[0]) +
+			(tV[1] * tV[1]) +
+			(tV[2] * tV[2]))
 			if distance > self.radius:
 				self.radius = distance
 	
@@ -384,6 +390,18 @@ class DtsMesh:
 			self.flags = dstream.readu32()
 
 			dstream.readCheck()
+			
+			# Morph data
+			if dstream.DTSVersion > 24:
+				for cnt in range(0, dstream.reads32()):
+					self.morphIndex.append(dstream.reads32())
+				for cnt in range(0, dstream.reads32()):
+					self.mindex.append(dstream.reads32())
+				for cnt in range(0, dstream.reads32()):
+					self.mvindex.append(dstream.reads32())
+				for cnt in range(0, dstream.reads32()):
+					self.mverts.append(dstream.readPoint3F())
+				dstream.readCheck()
 
 			# Woohoo!! Done Reading Mesh Bit...
 			self.calculateBounds()
@@ -496,7 +514,7 @@ class DtsMesh:
 		else:
 			# Null or Standard or Unknown Mesh
 			if self.mtype != self.T_Standard:
-				print "Error : Cannot read mesh type %d" % (self.mtype)
+				Torque_Util.dump_writeln("Error : Cannot read mesh type %d" % (self.mtype))
 		return True # We are ok
 
 	# Write!!
@@ -577,6 +595,22 @@ class DtsMesh:
 			dstream.writeu32(self.flags)
 
 			dstream.storeCheck()
+			
+			if dstream.DTSVersion > 24:
+				# Morph data
+				dstream.writes32(len(self.morphIndex))
+				for p in self.morphIndex:
+					dstream.writes32(p)
+				dstream.writes32(len(self.mindex))
+				for p in self.mindex:
+					dstream.writes32(p)
+				dstream.writes32(len(self.mvindex))
+				for p in self.mvindex:
+					dstream.writes32(p)
+				dstream.writes32(len(self.mverts))
+				for vert in self.mverts:
+					dstream.writesPoint3F(vert)
+				dstream.storeCheck()
 
 			# Now write Other mesh type data
 			if self.mtype == self.T_Skin: 
@@ -656,7 +690,7 @@ class DtsMesh:
 		newinds = array('H')
 		newprims = []
 		numStrips = 0
-		print "Converting Triangle Strip -> Triangles"
+		Torque_Util.dump_writeln("Converting Triangle Strip -> Triangles")
 		for p in self.primitives:
 			if p.matindex & p.Strip:
 				if quads and p.numElements == 4:
@@ -682,7 +716,7 @@ class DtsMesh:
 					newinds.append(self.indices[p.firstElement+1])
 					newinds.append(self.indices[p.firstElement+2])
 			#else TODO: Support Fan, etc
-		print "Converted %d strips" % numStrips
+		Torque_Util.dump_writeln("Converted %d strips" % numStrips)
 		# Finally we have our new primitives
 		self.indices, self.primitives = newinds, newprims
 
@@ -727,10 +761,10 @@ class DtsMesh:
 		Dts_Stripper.Stripper.maxStripSize = max_stripsize
 		stripper = Dts_Stripper.chooseStripper()
 		if not stripper: 
-			print "     Stripping Mesh : Disabled (No Stripper Found)"
+			Torque_Util.dump_writeln("     Stripping Mesh : Disabled (No Stripper Found)")
 			return
 		else:
-			print "     Stripping Mesh : ..."
+			Torque_Util.dump_writeln("     Stripping Mesh : ...")
 		stripper.verts = self.verts
 
 		# Convert primitives in different batches if we are a cluster, else, do it normally
@@ -771,40 +805,7 @@ class DtsMesh:
 		# Applies a matrix to all the verts in the mesh
 		for v in self.verts:
 			v = matrix.passPoint(v)
-	
-	'''
-	Decimation code
-	'''
-	# Makes primitives less
-	def collapsePrims(self, target=0.5):
-		# If we do not have VTK, we cannot use this code
-		
-		if self.mtype == self.T_Sorted:
-			print "     Decimate : Disabled (Sorted Mesh)"
-			return
-
-		decimate = Dts_Decimate.chooseDecimator()
-		if not decimate:
-			print "     Decimate : Disabled (Not Decimator found)"
-			return
-		else:
-			print "     Decimate : ..."
-		
-		# All we need to do is convert the whole set of primitives
-		for p in self.primitives:
-			decimate.faces.append([self.indices[p.firstElement:p.firstElement+p.numElements], p.matindex])
-		
-		decimate.process(target)
-		
-		self.indices = []
-		self.primitives = []
-		for face in decimate.faces:
-			self.primitives.append(Primitive(len(self.indices),len(face[0]),face[1]))
-			for ind in face[0]:
-				self.indices.append(ind)
-				
-		del decimate
-		
+			
 	# Duplicates mesh
 	def duplicate(self):
 		# Arrays and class objects are the major concern
@@ -845,7 +846,7 @@ class DtsMesh:
 		for n in self.nodeIndex:
 			d.nodeIndex.append(n)
 		for n in self.nodeTransforms:
-			d.nodeTransforms.append(MatrixF(copy.deepcopy(n.members)))
+			d.nodeTransforms.append(n.copy())
 
 		for p in self.startPrimitive:
 			d.startPrimitive.append(p)

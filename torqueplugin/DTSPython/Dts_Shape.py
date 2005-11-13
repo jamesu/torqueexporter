@@ -127,16 +127,16 @@ class MaterialList:
 		return len(self.materials)
 	
 	def printInfo(self):
-		print "Material List, Version %d" % (self.version)
-		print "Contains : %d Materials" % (len(self.materials))
+		Torque_Util.dump_writeln("Material List, Version %d" % self.version)
+		Torque_Util.dump_writeln("Contains : %d Materials" % len(self.materials))
 		for m in self.materials:
-			print "Material : %s" % (m.name)
-			print "-Flags : %d" % (m.flags)
-			print "-Reflectance : %d" % (m.reflectance)
-			print "-Bump : %d" % (m.bump)
-			print "-Detail : %d" % (m.detail)
-			print "-detailScale : %f" % (m.detailScale)
-			print "-reflection : %f" % (m.reflection)
+			Torque_Util.dump_writeln("Material : %s" % m.name)
+			Torque_Util.dump_writeln("-Flags : %d" % m.flags)
+			Torque_Util.dump_writeln("-Reflectance : %d" % m.reflectance)
+			Torque_Util.dump_writeln("-Bump : %d" % m.bump)
+			Torque_Util.dump_writeln("-Detail : %d" % m.detail)
+			Torque_Util.dump_writeln("-detailScale : %f" % m.detailScale)
+			Torque_Util.dump_writeln("-reflection : %f" % m.reflection)
 	
 	def read(self, fs):
 		ver = struct.unpack('<b', fs.read(calcsize('<b')))[0] #U8
@@ -163,7 +163,7 @@ class MaterialList:
 			for mat in self.materials:
 				mat.reflection = struct.unpack('<f', fs.read(calcsize('<f')))[0] # F32
 		else:
-			print "Error! Version mismatch (%d, should be %d)" % (ver, self.version)
+			Torque_Util.dump_writeln("Error! Version mismatch (%d, should be %d)" % (ver, self.version))
 	
 	def write(self, fs):
 		fs.write(struct.pack('<b', self.version)) # Version
@@ -276,7 +276,7 @@ class Trigger:
 		self.pos = ps
 		
 		if (st == 0) or (st < -30) or (st > 30):
-			print "Warning : Invalid Trigger state (%d)" % (st)
+			Torque_Util.dump_writeln("Warning : Invalid Trigger state (%d)" % st)
 		if st < 0:
 			val = -st - 1
 			on = False
@@ -292,6 +292,12 @@ class Trigger:
 		
 		if revert:
 			self.state |= self.InvertOnReverse
+			
+# The Morph Mesh Class
+class Morph:
+	def __init__(self, na=0, initial=0.0):
+		self.nameIndex = na
+		self.initialValue = initial
 
 # Get the highest number from an array (unsigned)
 def highest(arr):
@@ -311,22 +317,23 @@ class Sequence:
 	MakePath        = 0x0020
 	IFLInit         = 0x0040
 	HasTranslucency = 0x0080
-	def __init__(self, na=0, fl=0, nk=0, du=0.0, pri=0, fg=-1, ng=0, br=-1, bt=-1, bs=-1, bos=-1, bds=-1, ft=-1, nt=0, tb=0):
-		self.nameIndex = na		# index of the name in the DTS string table
-		self.flags = fl			# Flags of sequence
+	def __init__(self, na=0, fl=0, nk=0, du=0.0, pri=0, fg=-1, ng=0, br=-1, bt=-1, bs=-1, bos=-1, bds=-1, ft=-1, nt=0, tb=0, bm=0):
+		self.nameIndex = na			# index of the name in the DTS string table
+		self.flags = fl				# Flags of sequence
 		self.numKeyFrames = nk		# Number of keyframes in sequence
-		self.duration = du		# Duratuion of the sequence in seconds
-		self.priority = pri		# Priority of sequence
+		self.duration = du			# Duratuion of the sequence in seconds
+		self.priority = pri			# Priority of sequence
 		self.firstGroundFrame = fg	# Index of first ground frame
 		self.numGroundFrames = ng	# Number of ground frames
 		self.baseRotation = br		# Index of first rotation frame
 		self.baseTranslation = bt	# Index of first translation frame
-		self.baseScale = bs		# Index of first scale frame
+		self.baseScale = bs			# Index of first scale frame
 		self.baseObjectState = bos	# Index of first object state
 		self.baseDecalState = bds	# Index of first decal state
 		self.firstTrigger = ft		# Index of first trigger
 		self.numTriggers = nt		# Number of triggers
-		self.toolBegin=tb		# ToolBegin
+		self.toolBegin=tb			# ToolBegin
+		self.baseMorph = bm			# Morph meshes
 		self.matters_rotation = []	# Boolean list of nodes used in sequence with rotation frames
 		self.matters_translation = []	# Boolean list of nodes used in sequence with translation frames
 		self.matters_scale = []		# Boolean list of nodes used in sequence with scale frames
@@ -335,6 +342,7 @@ class Sequence:
 		self.matters_vis = []		# Boolean list of object states.visibility used in sequence
 		self.matters_frame = []		# Boolean list of object states.frame used in sequence
 		self.matters_matframe = []	# Boolean list of object states.matframe used in sequence
+		self.matters_morph = []     # Boolean list of morphs
 	def __del__(self):
 		del self.matters_rotation
 		del self.matters_translation
@@ -344,7 +352,8 @@ class Sequence:
 		del self.matters_vis
 		del self.matters_frame
 		del self.matters_matframe
-	def read(self, fs):
+		del self.matters_morph
+	def read(self, fs, version):
 		self.nameIndex = struct.unpack('<i', fs.read(calcsize('<i')))[0] #S32
 		self.flags = struct.unpack('<I', fs.read(calcsize('<I')))[0] #U32
 		self.numKeyFrames = struct.unpack('<i', fs.read(calcsize('<i')))[0] #S32
@@ -361,6 +370,9 @@ class Sequence:
 		self.numTriggers = struct.unpack('<i', fs.read(calcsize('<i')))[0] #S32
 		self.toolBegin = struct.unpack('<f', fs.read(calcsize('<f')))[0] #F32
 		
+		if version > 24:
+			self.baseMorph = struct.unpack('<i', fs.read(calcsize('<i')))[0] #S32
+		
 		# Read integer sets
 		self.matters_rotation = readIntegerSet(fs)
 		self.matters_translation = readIntegerSet(fs)
@@ -370,8 +382,11 @@ class Sequence:
 		self.matters_vis = readIntegerSet(fs)
 		self.matters_frame = readIntegerSet(fs)
 		self.matters_matframe = readIntegerSet(fs)
+		
+		if version > 24:
+			self.matters_morph = readIntegerSet(fs)
 	
-	def write(self, fs, noIndex=False):
+	def write(self, fs, version, noIndex=False):
 		# Write Struct...
 		if noIndex == False: # Write Index
 			fs.write(struct.pack('<i',self.nameIndex))
@@ -390,6 +405,9 @@ class Sequence:
 		fs.write(struct.pack('<i',self.numTriggers))
 		fs.write(struct.pack('<f',self.toolBegin))
 		
+		if version > 24:
+			fs.write(struct.pack('<i',self.baseMorph))
+		
 		# Write integer sets
 		writeIntegerSet(fs, self.matters_rotation)
 		writeIntegerSet(fs, self.matters_translation)
@@ -399,6 +417,9 @@ class Sequence:
 		writeIntegerSet(fs, self.matters_vis)
 		writeIntegerSet(fs, self.matters_frame)
 		writeIntegerSet(fs, self.matters_matframe)
+		
+		if version > 24:
+			writeIntegerSet(fs, self.matters_morph)
 
 	# Resizes the matters array, removing 0's
 	def clearMatters(self, matter):
@@ -491,6 +512,9 @@ class DtsShape:
 		self.tubeRadius = 0		# Shape tube radius (all meshes)
 		self.radius = 0.0		# Shape radius (all meshes)
 		self.meshes = []		# Meshes
+		self.morphs = []        # Morphs
+		self.morphDefSettings = [] # Morphs (default settings)
+		self.morphSettings = [] # Morphs (settings)
 		self.nodes = []			# Nodes (bones)
 		self.sequences = []		# Sequences
 		self.triggers = []		# Triggers
@@ -514,6 +538,9 @@ class DtsShape:
 		
 		self.groundTranslations = []	# Ground translation frames
 		self.groundRotations = []	# Ground rotation frames
+		
+		self.morphs = []				# Morph initial data
+		self.morphSettings = array('f')	# Morph frames
 		
 		self.alphain = array('f')	# Used for detail blending
 		self.alphaout = array('f')	# Used for detail blending
@@ -545,6 +572,8 @@ class DtsShape:
 		del self.nodeAbitraryScaleRots
 		del self.groundTranslations
 		del self.groundRotations
+		del self.morphs
+		del self.morphSettings
 		del self.alphain 
 		del self.alphaout
 		del self.mPreviousMerge
@@ -627,6 +656,13 @@ class DtsShape:
 		dstream.writes32(self.mSmallestVisibleSize) # This is typecasted to F32, but isn't a float when stored
 		dstream.writes32(self.mSmallestVisibleDL)
 
+		# Morphs
+		if dstream.DTSVersion > 24:
+			# Note: appears to be redundancy here...
+			dstream.writes32(len(self.morphs))
+			dstream.writes32(len(self.morphs))
+			dstream.writes32(len(self.morphSettings))
+		
 		dstream.storeCheck()
 
 		# Write Bounds...
@@ -748,6 +784,16 @@ class DtsShape:
 		
 		dstream.storeCheck()
 		
+		# Morphs
+		if dstream.DTSVersion > 24:
+			for morph in self.morphs:
+				dstream.writeMorph(morph)
+			for morph in self.morphs:
+				dstream.writef32(morph.initialValue)
+			for morphset in self.morphSettings:
+				dstream.writef32(morphset)
+			dstream.storeCheck()
+		
 		# Names
 		for cnt in self.sTable.strings:
 			dstream.writeStringt(cnt)
@@ -762,25 +808,25 @@ class DtsShape:
 		# Write Sequences and Materials HERE
 		dstream.fs.write(struct.pack('<i', len(self.sequences))) #S32
 		for seq in self.sequences:
-			seq.write(dstream.fs)
+			seq.write(dstream.fs, dstream.DTSVersion)
 		
 		# Write Material List
 		self.materials.write(dstream.fs)
 	
 	def read(self, dstream):
 		# Read in a shape. Calls the mesh read, and soforth
-		print "Reading in Sequences and Materials"
+		Torque_Util.dump_writeln("Reading in Sequences and Materials")
 		# First, we need to read in sequences (not in memory buffers, is at end of the file)...
 		numSequences = struct.unpack('<i', dstream.fs.read(calcsize('<i')))[0] #S32
 		for seq in range(0, numSequences): # ^^ as usual, this spits out an annoying array
 			sq = Sequence()
-			sq.read(dstream.fs)
+			sq.read(dstream.fs, dstream.DTSVersion)
 			self.sequences.append(sq)
 		
 		# Read Material List
 		self.materials.read(dstream.fs)
 		
-		print "Reading in from streams..."
+		Torque_Util.dump_writeln("Reading in from streams...")
 		## >> End of normal file reading <<##
 		# Get Counts...
 		numNodes = dstream.reads32()       # S32 numNodes = alloc.get32();
@@ -806,7 +852,18 @@ class DtsShape:
 		self.mSmallestVisibleDL = dstream.reads32()
 		skipDL = min(self.mSmallestVisibleDL,self.smNumSkipLoadDetails)
 		
-		dstream.readCheck() # Fails on 8bit buffer
+		# Morphs
+		if dstream.DTSVersion > 24:
+			# Note: appears to be redundancy here...
+			numMorphs = dstream.reads32()
+			numDefMorphs = dstream.reads32()
+			if numMorphs != numDefMorphs:
+				Torque_Util.dump_writeln("Error: Morph number mismatch (%d morphs for %d defaults)" % (numMorphs, numDefMorphs))
+				return
+				
+			numMorphSettings = dstream.reads32()
+		
+		dstream.readCheck()
 			
 		# get bounds
 		self.radius = dstream.readf32()
@@ -944,7 +1001,7 @@ class DtsShape:
 		# Meshes
 		# about to read in the meshes...first must allocate some scratch space
 		# ^^ We are not doing it in python though
-		print "Reading in Meshes..."
+		Torque_Util.dump_writeln("Reading in Meshes...")
 		# Read in Meshes (sans skins)...
 		# Straight forward read one at a time
 		
@@ -953,17 +1010,27 @@ class DtsShape:
 			skip = False#self.checkSkip(cnt, curObject, curDecal, skipDL)
 			mesh = DtsMesh()
 			mesh.mtype = dstream.readu32() #U32 Type of Mesh
-			print "Found Mesh"
+			Torque_Util.dump_writeln("Found Mesh")
 			if not skip:
-				print "Reading..."
+				Torque_Util.dump_writeln("Reading...")
 				val = mesh.read(dstream, self)
 				if (val != 1) and (mesh.mtype != 4):
-					print "Error Reading Mesh!"
+					Torque_Util.dump_writeln("Error Reading Mesh!")
 					return None
 				self.meshes.append(mesh)
 
 		dstream.readCheck()
-		print "Finished Reading Meshes"
+		Torque_Util.dump_writeln("Finished Reading Meshes")
+		
+		# Morphs
+		if dstream.DTSVersion > 24:
+			for cnt in range(0, numMorphs):
+				self.morphs.append(dstream.readMorph())
+			for cnt in range(0, numDefMorphs):
+				self.morphs[cnt].initialValue = dstream.readf32()
+			for cnt in range(0, numMorphSettings):
+				self.morphSettings.append(dstream.readf32())
+			dstream.readCheck()
 		
 		# Read in names to our private string table...
 		for cnt in range(0, numNames):
@@ -1099,37 +1166,39 @@ class DtsShape:
 		return self.materials.materialExists(name)
 	
 	def printInfo(self):
-		print "Stats for Shape"
-		print "***************"
-		print "nodes : %d" % (len(self.nodes))
-		print "objects : %d" % (len(self.objects))
-		print "decals : %d" % (len(self.decals))
-		print "subshapes : %d" % (len(self.subshapes))
-		print "ifl materials : %d" % (len(self.iflmaterials))
-		print "node rotations : %d" % (len(self.nodeRotations))
-		print "node translations : %d" % (len(self.nodeTranslations))
-		print "node uniform scales : %d" % (len(self.nodeUniformScales))
-		print "node aligned scales : %d" % (len(self.nodeAlignedScales))
-		print "node abitrary scales : %d" % (len(self.nodeAbitraryScaleFactors))
+		Torque_Util.dump_writeln("Stats for Shape")
+		Torque_Util.dump_writeln("***************")
+		Torque_Util.dump_writeln("nodes : %d" % len(self.nodes))
+		Torque_Util.dump_writeln("objects : %d" % len(self.objects))
+		Torque_Util.dump_writeln("decals : %d" % len(self.decals))
+		Torque_Util.dump_writeln("subshapes : %d" % len(self.subshapes))
+		Torque_Util.dump_writeln("ifl materials : %d" % len(self.iflmaterials))
+		Torque_Util.dump_writeln("node rotations : %d" % len(self.nodeRotations))
+		Torque_Util.dump_writeln("node translations : %d" % len(self.nodeTranslations))
+		Torque_Util.dump_writeln("node uniform scales : %d" % len(self.nodeUniformScales))
+		Torque_Util.dump_writeln("node aligned scales : %d" % len(self.nodeAlignedScales))
+		Torque_Util.dump_writeln("node abitrary scales : %d" % len(self.nodeAbitraryScaleFactors))
+		Torque_Util.dump_writeln("morphs : %d" % len(self.morphs))
 		
-		print "ground frames : %d" % (len(self.groundTranslations))
-		print "object states : %d" % (len(self.objectstates))
-		print "decal states : %d" % (len(self.decalstates))
-		print "triggers : %d" % (len(self.triggers))
-		print "detail levels : %d" % (len(self.detaillevels))
-		print "meshes : %d" % (len(self.meshes))
-		print "names : %d" % (len(self.sTable.strings))
+		Torque_Util.dump_writeln("ground frames : %d" % len(self.groundTranslations))
+		Torque_Util.dump_writeln("morph frames: %d" % len(self.morphSettings))
+		Torque_Util.dump_writeln("object states : %d" % len(self.objectstates))
+		Torque_Util.dump_writeln("decal states : %d" % len(self.decalstates))
+		Torque_Util.dump_writeln("triggers : %d" % len(self.triggers))
+		Torque_Util.dump_writeln("detail levels : %d" % len(self.detaillevels))
+		Torque_Util.dump_writeln("meshes : %d" % len(self.meshes))
+		Torque_Util.dump_writeln("names : %d" % len(self.sTable.strings))
 		for n in self.sTable.strings:
-			print "  %s" % (n.tostring())
-		print "smallest visible size : %d" % (self.mSmallestVisibleSize)
-		print "smallest visible DL : %d" % (self.mSmallestVisibleDL)
+			Torque_Util.dump_writeln("  %s" % n.tostring())
+		Torque_Util.dump_writeln("smallest visible size : %d" % self.mSmallestVisibleSize)
+		Torque_Util.dump_writeln("smallest visible DL : %d" % self.mSmallestVisibleDL)
 		
-		print "radius : %f" % (self.radius)
-		print "tube radius : %f" % (self.tubeRadius)
-		print "center : (%f %f %f)" % (self.center[0], self.center[1], self.center[2])
-		print "bounds : (%f %f %f) (%f %f %f)" % (self.bounds.min[0], self.bounds.min[1], self.bounds.min[2],self.bounds.max[0], self.bounds.max[1], self.bounds.max[2])
+		Torque_Util.dump_writeln("radius : %f" % self.radius)
+		Torque_Util.dump_writeln("tube radius : %f" % self.tubeRadius)
+		Torque_Util.dump_writeln("center : (%f %f %f)" % (self.center[0], self.center[1], self.center[2]))
+		Torque_Util.dump_writeln("bounds : (%f %f %f) (%f %f %f)" % (self.bounds.min[0], self.bounds.min[1], self.bounds.min[2],self.bounds.max[0], self.bounds.max[1], self.bounds.max[2]))
 
-		print "End Stats"
+		Torque_Util.dump_writeln("End Stats")
 	
 	def clearDynamicData(self):
 		pass
@@ -1299,7 +1368,7 @@ class DtsShape:
 		
 		if len(nodes_used) != sequence.countNodes():
 			# This should never happen
-			print "Warning : node list size mismatch! Expecting %d nodes, but got %d. Sequence may not load." % (sequence.countNodes(),len(nodes_used))
+			Torque_Util.dump_writeln("Warning : node list size mismatch! Expecting %d nodes, but got %d. Sequence may not load." % (sequence.countNodes(),len(nodes_used)))
 		
 		sequence.matters_rotation = new_rot_matters
 		sequence.matters_translation = new_loc_matters
@@ -1413,7 +1482,7 @@ class DtsShape:
 			fs.write(0x00)
 
 		# Now write the sequence itself
-		sequence.write(fs, True)
+		sequence.write(fs, self.dstream.DTSVersion, True)
 
 		# write out all the triggers...
 		if baseTrigger > -1:
@@ -1425,5 +1494,5 @@ class DtsShape:
 			fs.write(struct.pack('<i', 0)) # S32
 
 	def readDSQSequences(self):
-		print "TODO: Shape.readDSQSequences"
+		Torque_Util.dump_writeln("TODO: Shape.readDSQSequences")
 		# We do not need to implement this for the exporter

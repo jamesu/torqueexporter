@@ -28,6 +28,7 @@ from struct import *
 from array import *
 import sys
 
+import Torque_Util
 from Torque_Util import *
 from Dts_Shape import IflMaterial, dObject, DetailLevel, SubShape, Node, Trigger, ObjectState, Decal, DecalState
 from Dts_Mesh import Cluster, Primitive
@@ -48,22 +49,27 @@ def little_endian():
     return ord(array("i",[1]).tostring()[0])
 
 class DtsStream:
-	DTSVersion = 24				# Version to read
-	mExporterVersion = int(0)		# Exporter Version
+	mExporterVersion = int(1)		# Exporter Version
+	
 	def __init__(self, fname, read=False, version=24):
 		if read:
 			self.fs = open(fname, "rb")
-			self.DTSVersion = version	# Version to read
+			self.DTSVersion = 25	# Biggest version we can read
 			self.createStreams()
 			if self.flood() == None:
 				self.fs.close()
 				self.fs = None
-				return None # Failed to read for whatever reason
+				return None		# Failed to read for whatever reason
 		else:
 			self.fs = open(fname, "wb")
-			self.DTSVersion = version
-			self.checkCount = 0	# Count of checkpoints read/written
+			self.checkCount = 0		# Count of checkpoints read/written
 			self.createStreams()
+			# Set version to write
+			if (version < 24):
+				self.DTSVersion = 24
+			else:
+				self.DTSVersion = version
+	
 	def createStreams(self):
 		self.buffer32 = array('i')	# array of long
 		self.buffer16 = array('h')	# array of signed short
@@ -92,7 +98,7 @@ class DtsStream:
 			return self.checkCount
 		else:
 			self.checkCount += 1
-			print "Error! Checkpoint mismatch! (%d %d %d(8,16,32), should be %d)" % (c8, c16, c32, self.checkCount-1)
+			Torque_Util.dump_writeln("Error! Checkpoint mismatch! (%d %d %d(8,16,32), should be %d)" % (c8, c16, c32, self.checkCount-1))
 			sys.exit(1)
 			#return -1
 	def flush(self):
@@ -120,7 +126,7 @@ class DtsStream:
 		# ByteSwap buffers if neccesary
 		
 		if not little_endian():
-			print "Swap"
+			Torque_Util.dump_writeln("Big endian platform, performing byteswap.")
 			hdr.byteswap()
 			self.buffer32.byteswap()
 			self.buffer16.byteswap()
@@ -144,8 +150,8 @@ class DtsStream:
 		self.mExporterVersion = ver >> 16
 		ver &= 0xFF
    
-		if self.DTSVersion != int(ver):
-			print "Error : File Version is %d, can only read in version %d!" % (ver, self.DTSVersion)
+		if ((ver >= 24) and (ver <= self.DTSVersion)):
+			print "Error : File Version is %d, can only read in version 24 -> %d!" % (ver, self.DTSVersion)
 			return None
 		self.Allocated32 = offset16
 		self.Allocated16 = (offset8-offset16) * 2
@@ -264,8 +270,8 @@ class DtsStream:
 		x, y = self.readf32(), self.readf32()
 		return Vector2(x, y)
 	def writePoint2F(self, value):
-		self.writef32(value.members[0])
-		self.writef32(value.members[1])
+		self.writef32(value[0])
+		self.writef32(value[1])
 	def readPoint3F(self):
 		# X, Y, Z
 		x, y, z = self.readf32(), self.readf32(), self.readf32()
@@ -486,5 +492,10 @@ class DtsStream:
 		self.writes32(value.firstFrame)
 		self.writes32(value.time)
 		self.writes32(value.numFrames)
-
+	def readMorph(self):
+		v1 = self.reads32()
+		return Morph(v1)
+	def writeMorph(self, value):
+		self.writes32(value.name)
+	
 # End of file
