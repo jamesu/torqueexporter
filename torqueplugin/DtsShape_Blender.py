@@ -1,7 +1,7 @@
 '''
 Dts.Shape_Blender.py
 
-Copyright (c) 2005 James Urquhart(j_urquhart@btinternet.com)
+Copyright (c) 2005 - 2006 James Urquhart(j_urquhart@btinternet.com)
 
 Permission is hereby granted, free of charge, to any person obtainingTorque_Util.dump_write
 a copy of this software and associated documentation files (the
@@ -30,11 +30,182 @@ from DtsMesh_Blender import *
 
 import Blender
 from Blender import NMesh, Armature, Scene, Object, Material, Texture
-
+from Blender import Mathutils as bMath
 '''
    Util functions used by class as well as exporter gui
 '''
 #-------------------------------------------------------------------------------------------------
+
+# Convert Bone pos to a MatrixF
+def blender_bone2matrixf(head, tail, roll):
+	'''
+		Convert bone rest state (defined by bone.head, bone.tail and bone.roll)
+		to a matrix (the more standard notation).
+		Taken from blenkernel/intern/armature.c in Blender source.
+		See also DNA_armature_types.h:47.
+	'''
+	target = Vector(0.0, 1.0, 0.0)
+	delta  = Vector(tail[0] - head[0], tail[1] - head[1], tail[2] - head[2])
+	nor    = delta.normalize()
+
+	# Find Axis & Amount for bone matrix
+	axis   = target.cross(nor)
+
+	if axis.dot(axis) > 0.0000000000001:
+		# if nor is *not* a multiple of target ...
+		axis    = axis.normalize()
+		theta   = math.acos(target.dot(nor))
+		# Make Bone matrix
+		bMatrix = MatrixF().rotate(axis, theta)
+	else:
+		# if nor is a multiple of target ...
+		# point same direction, or opposite?
+		if target.dot(nor) > 0.0:
+			updown =  1.0
+		else:
+			updown = -1.0
+
+		# I think this should work ...
+		dMatrix = [
+		updown, 0.0, 0.0, 0.0,
+		0.0, updown, 0.0, 0.0,
+		0.0, 0.0, 1.0, 0.0,
+		0.0, 0.0, 0.0, 1.0,
+		]
+		bMatrix = MatrixF(dMatrix)
+
+	# Make Roll matrix
+	rMatrix = MatrixF().rotate(nor, roll)
+	# Combine and output result
+	return (rMatrix * bMatrix)
+
+
+# Makes a ghost copy of an armature in blender, puts it in a
+# cannonical state, and uses it for the export, rather than
+# the user's armature.  This avoids many problems and will
+# allow the exporter code to be simplifed. - Joe
+def getGhostArmature(armOb, ghostName):
+	'''
+
+	Armature ghosting function
+	by J.S. Greenawalt
+
+	'''
+	# put the scene in object mode if it's not already there.
+	in_editmode = Blender.Window.EditMode()
+ 	if in_editmode: Blender.Window.EditMode(0)
+	
+	# get the existing armature data.
+	arm = armOb.getData() # assumes 'Armature' exists
+
+	# get the current scene
+	scene = Blender.Scene.getCurrent()
+
+	# try to find an existing ghost object to recycle
+	# if not found make a new one
+	try:
+		ghostObject = Blender.Object.Get(ghostName + "-OB")
+		if ghostObject == None:
+			raise AttributeError
+	except AttributeError:
+		ghostObject = Blender.Object.New('Armature', ghostName + "-OB")
+
+	# try to find an existing ghost data block to recycle
+	# if not found, make a new one.
+	try:
+		ghostData = Blender.Armature.Get(ghostName + "-DB")
+		if ghostData == None:
+			raise AttributeError
+	except AttributeError:
+		ghostData = Blender.Armature.Armature(ghostName + "-DB")
+
+	# link the data with the object
+	ghostObject.link(ghostData)
+
+	# link the object with the scene
+	if ghostObject not in scene.getChildren():
+		scene.link(ghostObject)
+
+	# copy location from the real armature to the ghost.
+	ghostObject.setLocation(armOb.getLocation())
+
+	# begin data copy
+	ghostData.makeEditable()
+
+	# delete all existing data from the ghost armature
+	for bone in ghostData.bones.values():
+		del ghostData.bones[bone.name]
+
+	# copy all bones from the real armature to the ghost
+	for bone in arm.bones.values():
+		eb = Blender.Armature.Editbone()
+		# transform the bones to match the armature's rotation
+		rotMat = armOb.getMatrix().rotationPart() #.invert()
+		eb.head = bone.head['ARMATURESPACE'] * rotMat
+		eb.tail = bone.tail['ARMATURESPACE'] * rotMat
+		ghostData.bones[bone.name] = eb
+
+	# match bone roll angles to worldspace
+	for bone in arm.bones.values():
+		rotMat = armOb.getMatrix().rotationPart()
+		# which way is the z axis of the bone pointing in worldspace?
+		bWorld = bone.matrix['ARMATURESPACE'].rotationPart()  * rotMat
+		xVec = bMath.Vector(1.0,0.0,0.0) * bWorld
+		yVec = bMath.Vector(0.0,1.0,0.0) * bWorld
+		zVec = bMath.Vector(0.0,0.0,1.0) * bWorld
+		'''
+		# add some new bones to visualize these vectors
+		eb = A.Editbone()
+		eb.head = bone.tail['ARMATURESPACE'] * rotMat
+		eb.tail = (bone.tail['ARMATURESPACE'] * rotMat) + zVec
+		ghostData.bones['zVec'] = eb
+		eb = A.Editbone()
+		eb.head = bone.tail['ARMATURESPACE'] * rotMat
+		eb.tail = (bone.tail['ARMATURESPACE'] * rotMat) + xVec
+		ghostData.bones['xVec'] = eb
+		'''
+
+		# now, figure out what the roll angle should be.
+		# get the z vector for the new bone
+		zVecNew = bMath.Vector(0.0,0.0,1.0) * ghostData.bones[bone.name].matrix.rotationPart()
+		# and the y vector
+		yVecNew = bMath.Vector(0.0,1.0,0.0) * ghostData.bones[bone.name].matrix.rotationPart()
+		'''
+		# visualize the vector
+		eb = A.Editbone()
+		eb.head = bone.tail['ARMATURESPACE'] * rotMat
+		eb.tail = (bone.tail['ARMATURESPACE'] * rotMat) + zVecNew
+		ghostData.bones['zVecNEW'] = eb
+		'''
+
+		# now find the angle between zVec and zVecNew and set the roll angle 
+		# accordingly.
+		bRoll = bMath.AngleBetweenVecs(zVecNew, zVec)
+		# see if we need to reverse the roll
+		# rotate zVecNew around the bone's y axis by bRoll
+		zRotTest = zVecNew * bMath.RotationMatrix(bRoll, 3, 'r', yVecNew)
+		zRotDif = bMath.AngleBetweenVecs(zRotTest, zVec)
+		# if they don't match, reverse the roll angle
+		if zRotDif > 0.0001:
+			bRoll = 360.0 - bRoll
+
+		ghostData.bones[bone.name].roll = bRoll
+
+	# hook up parent/child relationships
+	for bone in arm.bones.values():
+		if bone.hasParent():
+			ghostData.bones[bone.name].parent = ghostData.bones[bone.parent.name]
+		else:
+			ghostData.bones[bone.name].clearParent()
+		# copy options
+		ghostData.bones[bone.name].options = bone.options
+
+	ghostData.update()
+	# end data copy
+
+	# must unlink the ghost from the scene when we are done with it!!!
+	return ghostObject
+
 
 # Helpful function to make a map of curve names
 def BuildCurveMap(ipo):
@@ -69,7 +240,7 @@ def getCMapSupports(curveMap):
 	except KeyError: has_scale = False
 	return has_loc,has_rot,has_scale
 	
-# Tells us the meximum frame count in a set of ipo's
+# Tells us the maximum frame count in a set of ipo's
 def getNumFrames(ipos, useKey = False):
 	numFrames = 0
 	if not useKey:
@@ -245,14 +416,10 @@ class BlenderShape(DtsShape):
 				Torque_Util.dump_writeln("Warning: Too many clone's of mesh found in detail level, object '%s' skipped!" % o.getName())
 				continue
 			
-			# Now we can import as normal
-			mesh_data = o.getData()
 			
-			# Convert the mesh to a regular mesh if its SubSurf'd
-			if mesh_data.getMode() & NMesh.Modes.SUBSURF:
-				Torque_Util.dump_writeln("Warning: Object '%s' is a SubSurfaced Mesh, all vertex groups will be lost!")
-				mesh_data = NMesh.GetRawFromObject(o.getName())
-				mesh_data.update()
+			# Now we can import as normal
+			mesh_data = o.getData();
+			mesh_data.update()
 				
 			# Get Object's Matrix
 			mat = self.collapseBlenderTransform(o)
@@ -331,6 +498,7 @@ class BlenderShape(DtsShape):
 	def finalizeObjects(self):
 		# Go through object's, add meshes, set transforms
 		for o in self.objects:
+			
 			o.numMeshes = len(o.tempMeshes)
 			o.firstMesh = len(self.meshes)
 			
@@ -342,7 +510,7 @@ class BlenderShape(DtsShape):
 			if len(o.tempMeshes) == 0:
 				Torque_Util.dump("Warning: Object '%s' has no meshes!" % self.sTable.get(o.name));
 				continue
-				
+			
 			isSkinned = False
 			if o.tempMeshes[0].mtype != o.tempMeshes[0].T_Null: o.mainMaterial = o.tempMeshes[0].mainMaterial
 			else: o.mainMaterial = None
@@ -367,21 +535,27 @@ class BlenderShape(DtsShape):
 					case we need to transform the vertices into the node's
 					local space.
 				'''
+				
 				if not isSkinned:
+					
 					# Transform the mesh into node space. The Mesh vertices
-					# must all be relative to the bone their attached to
+					# must all be relative to the bone they're attached to
+					
 					world_trans, world_rot = self.getNodeWorldPosRot(o.node)
 					tmsh.translate(-world_trans)
 					tmsh.rotate(world_rot.inverse())
+					
 					if tmsh.mtype == tmsh.T_Skin:
 						tmsh.mtype = tmsh.T_Standard
 						Torque_Util.dump_writeln("Warning: Invalid skinned mesh in rigid object '%s'!" % (self.sTable.get(o.name)))
+					
 				else:
+					
 					for n in range(0, tmsh.getNodeIndexCount()):
 						# The node transform must take us from shape space to bone space
 						world_trans, world_rot = self.getNodeWorldPosRot(tmsh.getNodeIndex(n))
 						tmsh.setNodeTransform(n, world_trans, world_rot)		
-			
+				
 				self.meshes.append(tmsh)
 				
 		# To conclude, remove subshape's and details we don't need
@@ -438,9 +612,9 @@ class BlenderShape(DtsShape):
 	# Converts a blender matrix to a Torque_Util.MatrixF
 	def toTorqueUtilMatrix(self, blendermatrix):
 		return MatrixF([blendermatrix[0][0],blendermatrix[0][1],blendermatrix[0][2],blendermatrix[0][3],
-						 blendermatrix[1][0],blendermatrix[1][1],blendermatrix[1][2],blendermatrix[1][3],
-						 blendermatrix[2][0],blendermatrix[2][1],blendermatrix[2][2],blendermatrix[2][3],
-						 blendermatrix[3][0],blendermatrix[3][1],blendermatrix[3][2],blendermatrix[3][3]])
+				blendermatrix[1][0],blendermatrix[1][1],blendermatrix[1][2],blendermatrix[1][3],
+				blendermatrix[2][0],blendermatrix[2][1],blendermatrix[2][2],blendermatrix[2][3],
+				blendermatrix[3][0],blendermatrix[3][1],blendermatrix[3][2],blendermatrix[3][3]])
 
 	# Creates a matrix that transforms to shape space
 	def collapseBlenderTransform(self, object):
@@ -484,62 +658,44 @@ class BlenderShape(DtsShape):
 		'''
 		# First, process armature
 		arm = armature.getData()
-		
 		# Don't add existing armatures
 		for added in self.addedArmatures:
-			if added.getData() == arm.getData():
-				print "Note : ignoring attempt to process armature data '%s' again." % arm.getData().getName()
+			added = added[0]
+			if added.name == arm.name:
+				#print "Note : ignoring attempt to process armature data '%s' again." % arm.name
 				return False
 		
 		startNode = len(self.nodes)
+		
+		parentBone = -1
+
+		ghostOb = getGhostArmature(armature, "DTS-EXP-GHOST")
+		ghostArm = ghostOb.getData()
 		# Get the armature's position, rotation, and scale
-		matf = self.collapseBlenderTransform(armature)
+		matf = self.collapseBlenderTransform(ghostOb)
 		pos, rot = Vector(matf.get(3,0),matf.get(3,1),matf.get(3,2)), Quaternion().fromMatrix(matf).inverse()
-		scale = self.collapseBlenderScale(armature)
-		
-		scale_transform = MatrixF([
-		scale[0], 0.0, 0.0, 0.0,
-		0.0, scale[1], 0.0, 0.0,
-		0.0, 0.0, scale[2], 0.0,
-		0.0, 0.0, 0.0, 1.0])
-		
-		if collapseTransform:
-			parentBone = -1
-		else:
-			parentBone = len(self.nodes)
-			n = Node(self.sTable.addString(arm.getName()), -1)
-			n.armIdx = len(self.addedArmatures)
-			self.defaultTranslations.append(pos)
-			self.defaultRotations.append(rot)
-			self.nodes.append(n)
-				
-		# Add each bone tree
-		for bone in arm.getBones():
-			# scale_transform if for scaling the bone lengths, not their rotations or anything else.
-			if bone.getParent() == None: self.addBones(bone, scale_transform, parentBone)
+		scale = [1.0, 1.0, 1.0]
 			
+		# Add each bone tree
+		for bone in ghostArm.bones.values():
+			if bone.parent == None:
+				self.addBones(bone, matf, scale, parentBone, True)
+		
+		# kill the ghost!
+		#if not collapseTransform:
+		scene = Blender.Scene.getCurrent()
+		scene.unlink(ghostOb)
+			
+		
 		# Set armature index on all added nodes
 		for node in self.nodes[startNode:len(self.nodes)]:
 			node.armIdx = len(self.addedArmatures)
 			
-		# Now collapse the root transform to effectively move the structure into world space
-		if collapseTransform:
-			for node in range(startNode, len(self.nodes)):
-				if self.nodes[node].parent == -1:
-					self.defaultTranslations[node] += pos
-					self.defaultRotations[node] = rot * self.defaultRotations[node]
-				#else:
-				#	self.defaultRotations[node] = rot * self.defaultRotations[node]
-		#else:
-		#	for node in range(startNode, len(self.nodes)):
-		#		if self.nodes[node].parent != -1:
-		#			self.defaultRotations[node] = rot * self.defaultRotations[node]
-					
-		self.addedArmatures.append([arm, pos, rot, scale])
+		self.addedArmatures.append([arm, pos, rot, self.collapseBlenderScale(armature)])		
 		
 		return True
 				
-	def addBones(self, bone, scale_transform, parentId):
+	def addBones(self, bone, transformMat, scale, parentId, isOrphan):
 		'''
 		This function recursively adds a bone from an armature to the shape as a node.
 		
@@ -563,38 +719,48 @@ class BlenderShape(DtsShape):
 		
 		One thing that blender does not take into account however is the scale of the root armature - 
 		to solve this, we need to pass down the scaling values for each axis from the addArmature() function.
-		'''
+
 		
-		real_name = bone.getName()
+		** Sadly getRestMatrix() is gone in blender 2.40, had to revert back to the old method - Joe G.
+
+		'''
+		real_name = bone.name
 		# Do not add bones on the "BannedBones" list
 		if real_name.upper() in self.preferences['BannedBones']:
 			return False
 
 		# Blender bones are defined in their parent's rotational space, but relative to the parent's tail.
-		rest_matrix = self.toTorqueUtilMatrix(bone.getRestMatrix("bonespace"))
-		rest_rotation = Quaternion().fromMatrix(rest_matrix).inverse()
-					
-		# Child bones should translate along the Y axis, so convert the original matrix location
-		# transform to a straight translation along Y (using the length)
-		rest_translation_vector = scale_transform.passPoint(Vector(rest_matrix.get(3, 0), rest_matrix.get(3, 1), rest_matrix.get(3, 2)))
-		real_head = scale_transform.passPoint(Vector(bone.head[0], bone.head[1], bone.head[2])) # Take into account head on actual bone too!
-		rest_position = Vector(real_head[0], real_head[1]+rest_translation_vector.length(), real_head[2])
-		
-		# Add a DTS bone to the shape
-		b = Node(self.sTable.addString(real_name), parentId)
-		
-		self.defaultTranslations.append(rest_position)
-		self.defaultRotations.append(rest_rotation)
-		self.nodes.append(b)
-		
-		self.subshapes[0].numNodes += 1
+		# Convert to vector
+                bhead = Vector(bone.head['BONESPACE'][0],bone.head['BONESPACE'][1],bone.head['BONESPACE'][2])
+                btail = Vector(bone.tail['BONESPACE'][0],bone.tail['BONESPACE'][1],bone.tail['BONESPACE'][2])
+		# Move into parent space & build rotation
+		head = transformMat.passPoint(bhead)
+		tail = transformMat.passPoint(btail)
 
+		# ... and add on scale
+		head[0], head[1], head[2] = scale[0]*head[0], scale[1]*head[1], scale[2]*head[2]
+		tail[0], tail[1], tail[2] = scale[0]*tail[0], scale[1]*tail[1], scale[2]*tail[2]
+		rot = Quaternion().fromMatrix(transformMat * blender_bone2matrixf(head, tail, bone.roll['BONESPACE']*0.017453293)).inverse()
+
+		# Add a DTS bone to the shape
+		b = Node(self.sTable.addString(real_name), parentId, isOrphan)
+		self.defaultTranslations.append(head)
+		self.defaultRotations.append(rot)
+		self.nodes.append(b)
+
+		# Add any children this bone may have
+		# Child nodes are always translated along the Y axis
+		nmat = transformMat.identity()
+		nmat.setRow(3,Vector(0,(btail - bhead).length(),0)) # Translation matrix
+		self.subshapes[0].numNodes += 1
 		# Add the rest of the bones
 		parentId = len(self.nodes)-1
-		children = bone.getChildren()
-		if len(children) != 0:
-			for bChild in bone.getChildren():
-				self.addBones(bChild, scale_transform, parentId)
+		if bone.hasChildren():
+			for bChild in bone.children:
+				# must add only IMMEDIATE children! bone.children gives us the whole branch.
+				if bChild.parent.name == bone.name:
+					#self.addBlenderChildren(bChild, nmat, parentId, scale, indent + 1)
+					self.addBones(bChild, nmat, scale, parentId, False)
 			
 	def addNode(self, object):
 		# Adds generic node with object's name
@@ -613,8 +779,8 @@ class BlenderShape(DtsShape):
 		
 		self.subshapes[0].numNodes += 1
 		
-	# Gets loc, rot, scale at time frame_idx
-	def getTransformAtFrame(self, scene, context, sequence, curveMap, nodeIndex, frame_idx, baseTransform=False):
+	# Gets loc, rot, scale of a node at time frame_idx
+	def getTransformAtFrame(self, scene, context, sequence, curveMap, nodeIndex, frame_idx, baseTransform=None):
 		# Get the node's ipo...
 		ipo = sequence.ipo[nodeIndex]
 		if ipo == 0: # No ipo for this node, so its not animated
@@ -677,9 +843,9 @@ class BlenderShape(DtsShape):
 			# If we have rot values...
 			if has_rot:
 				rot = Quaternion(
-				ipo.getCurveCurval(curveMap['QuatX']) * arm_scale[0],
-				ipo.getCurveCurval(curveMap['QuatY']) * arm_scale[1],
-				ipo.getCurveCurval(curveMap['QuatZ']) * arm_scale[2],
+				ipo.getCurveCurval(curveMap['QuatX']), #* arm_scale[0],
+				ipo.getCurveCurval(curveMap['QuatY']), #* arm_scale[1],
+				ipo.getCurveCurval(curveMap['QuatZ']), #* arm_scale[2],
 				ipo.getCurveCurval(curveMap['QuatW']))
 				# We need to get the difference between the rest position and blend position, *then* rotate it into worldspace
 				if baseTransform[1] != None: rot = ((baseTransform[1].inverse() * rot).inverse() * arm_rot)
@@ -689,9 +855,9 @@ class BlenderShape(DtsShape):
 			if has_scale:
 				# Size is a ratio of the original
 				scale = Vector(
-				ipo.getCurveCurval(curveMap['SizeX']) * arm_scale[0],
-				ipo.getCurveCurval(curveMap['SizeY']) * arm_scale[1],
-				ipo.getCurveCurval(curveMap['SizeZ']) * arm_scale[2])
+				ipo.getCurveCurval(curveMap['SizeX']), #* arm_scale[0],
+				ipo.getCurveCurval(curveMap['SizeY']), #* arm_scale[1],
+				ipo.getCurveCurval(curveMap['SizeZ'])) #* arm_scale[2])
 				# Get difference between this scale and base scale by division
 				if baseTransform[2] != None:
 					scale[0] /= baseTransform[2][0]
@@ -706,15 +872,18 @@ class BlenderShape(DtsShape):
 				ipo.getCurveCurval(curveMap['LocX']) * arm_scale[0],
 				ipo.getCurveCurval(curveMap['LocY']) * arm_scale[1],
 				ipo.getCurveCurval(curveMap['LocZ']) * arm_scale[2])
+				# for orphan bones movement is relative to the bone's own rotation
+				if self.nodes[nodeIndex].isOrphan:
+					loc = self.defaultRotations[nodeIndex].apply(loc)
 				loc += self.defaultTranslations[nodeIndex]
 				#print "REG  loc: %f %f %f" % (loc[0],loc[1],loc[2])
 
 			# If we have rot values...
 			if has_rot:
 				ipo_rot = Quaternion(
-				ipo.getCurveCurval(curveMap['QuatX']) * arm_scale[0],
-				ipo.getCurveCurval(curveMap['QuatY']) * arm_scale[1],
-				ipo.getCurveCurval(curveMap['QuatZ']) * arm_scale[2],
+				ipo.getCurveCurval(curveMap['QuatX']), #* arm_scale[0],
+				ipo.getCurveCurval(curveMap['QuatY']), #* arm_scale[1],
+				ipo.getCurveCurval(curveMap['QuatZ']), #* arm_scale[2],
 				ipo.getCurveCurval(curveMap['QuatW']))
 				rot = (ipo_rot.inverse() * arm_rot) * self.defaultRotations[nodeIndex]
 				#print "REG rot: %f %f %f %f" % (ipo_rot[0],ipo_rot[1],ipo_rot[2],ipo_rot[3])
@@ -723,12 +892,82 @@ class BlenderShape(DtsShape):
 			if has_scale:
 				# Size is a ratio of the original
 				scale = Vector(
-				ipo.getCurveCurval(curveMap['SizeX']) * arm_scale[0],
-				ipo.getCurveCurval(curveMap['SizeY']) * arm_scale[1],
-				ipo.getCurveCurval(curveMap['SizeZ']) * arm_scale[2])
+				ipo.getCurveCurval(curveMap['SizeX']), #* arm_scale[0],
+				ipo.getCurveCurval(curveMap['SizeY']), #* arm_scale[1],
+				ipo.getCurveCurval(curveMap['SizeZ'])) #* arm_scale[2])
 				#print "REG scale: %f %f %f" % (scale[0],scale[1],scale[2])
 
 		return loc, rot, scale
+
+	
+	# -----------------------------------------------------------
+	# Builds a base transform for blend animations using the
+	# designated action and frame #. 
+	def buildBaseTransforms(self, blendSequence, blendAction, useActionName, useFrame, scene, context):
+		# channel names in the action containing the base pose frame
+		# must match those in the blend sequence
+		useAction = Blender.Armature.NLA.GetActions()[useActionName]
+		refAnimChannels = useAction.getAllChannelIpos()
+		bAnimChannels = blendAction.getAllChannelIpos()
+		for c in bAnimChannels:
+			if not (c in refAnimChannels):
+				# bail, throw an exception
+				print "Error importing blend animation. You must have same channels in ref anim!!!"
+				return None
+		# channel types don't need to match.
+		
+		# Need to create a temporary sequence and build a list
+		# of node transforms to use as the base transforms for nodes
+		# in our blend animation.
+		tempSequence = Sequence("randomName")
+		tempSequence.numTriggers = 0
+		tempSequence.firstTrigger = -1
+		tempSequence.has_ground = False
+		tempSequence.fps = float(useFrame-1)
+		if tempSequence.fps < 1.0: tempSequence.fps = 1.0
+		tempSequence.duration = 0
+
+		baseTransforms = []
+		# Make set of blank ipos and matters for each node
+		tempSequence.ipo = []
+		tempSequence.frames = []
+		for n in self.nodes:
+			tempSequence.ipo.append(0)
+			tempSequence.matters_translation.append(False)
+			tempSequence.matters_rotation.append(False)
+			tempSequence.matters_scale.append(False)
+			tempSequence.frames.append(0)
+			# and a blank transform
+			baseTransforms.append(0)
+			
+		# fill in the sequence ipos for the given nodes/channels
+		# Loop through the ipo list
+		for c in refAnimChannels:			
+			nodeIndex = self.getNodeIndex(c)
+			# Determine if this node is in the shape
+			if nodeIndex == None: continue
+			# use the reference animation.
+			tempSequence.ipo[nodeIndex] = refAnimChannels[c]
+		
+		tempSequence.numKeyFrames = getNumFrames(tempSequence.ipo, False)
+		
+
+		# build our transform for each node		
+		for nodeIndex in range(len(self.nodes)):
+			ipo = tempSequence.ipo[nodeIndex]
+			if ipo == 0: # No ipo for this node
+				continue
+			curveMap = BuildCurveMap(ipo)
+			has_loc, has_rot, has_scale = getCMapSupports(curveMap)
+			tempSequence.matters_translation[nodeIndex] = has_loc
+			tempSequence.matters_rotation[nodeIndex] = has_rot
+			tempSequence.matters_scale[nodeIndex] = has_scale
+			baseTransforms[nodeIndex] = self.getTransformAtFrame(scene, context, tempSequence, curveMap, nodeIndex, useFrame, [None, None, None])
+
+		return baseTransforms
+		
+	# -----------------------------------------------------------
+	
 	
 	# Import a sequence
 	def addAction(self, action, scene, context, sequencePrefs):
@@ -820,7 +1059,9 @@ class BlenderShape(DtsShape):
 
 		# Determine the number of key frames
 		sequence.numKeyFrames = getNumFrames(sequence.ipo, False)
-		if (sequence.numKeyFrames == 0) or ((sequence.flags & sequence.Blend) and (sequence.numKeyFrames == 1)):
+		#sequence.numKeyFrames = getNumFrames(sequence.ipo, True)
+		#if (sequence.numKeyFrames == 0) or ((sequence.flags & sequence.Blend) and (sequence.numKeyFrames == 1)):
+		if sequence.numKeyFrames == 0:
 			Torque_Util.dump_writeln("Warning: Action has no keyframes, aborting export for this sequence.")
 			del sequence.ipo
 			del sequence.frames
@@ -859,9 +1100,23 @@ class BlenderShape(DtsShape):
 		if sequence.has_ground: sequence.firstGroundFrame = len(self.groundTranslations)
 		else: sequence.firstGroundFrame = -1
 		
+		# this is the number of frames we are actually exporting.
+		numFrames = sequencePrefs['InterpolateFrames']+1
+		
 		remove_last = False
-		if isBlend: numFrames = sequencePrefs['InterpolateFrames']
-		else: numFrames = sequencePrefs['InterpolateFrames']+1
+		baseTransforms = []
+		if isBlend:
+			# Need to build a list of node transforms to use as the
+			# base transforms for nodes in our blend animation.
+ 			useAction = sequencePrefs['BlendRefPoseAction']
+			useFrame = sequencePrefs['BlendRefPoseFrame']
+			baseTransforms = self.buildBaseTransforms(sequence, action, useAction, useFrame, scene, context)
+			if baseTransforms == None:
+				print "Error getting base Transforms!!!!!"
+
+
+
+			
 
 		# Loop through the ipo list
 		for nodeIndex in range(len(self.nodes)):
@@ -882,11 +1137,21 @@ class BlenderShape(DtsShape):
 			if sequence.has_rot: sequence.matters_rotation[nodeIndex] = has_rot
 			if sequence.has_scale: sequence.matters_scale[nodeIndex] = has_scale
 			
-			if isBlend: baseTransform = self.getTransformAtFrame(scene, context, sequence, curveMap, nodeIndex, sequence.numKeyFrames, [None, None, None])
-			else: baseTransform = None
+			
+			if isBlend: 
+				#baseTransform = self.getTransformAtFrame(scene, context, sequence, curveMap, nodeIndex, sequence.numKeyFrames, [None, None, None])
+				baseTransform = baseTransforms[nodeIndex]
+			else:
+				baseTransform = None
 				
 			# Grab every frame from blender, according to how many frames the user wants
-			interpolateInc = sequence.numKeyFrames / sequencePrefs['InterpolateFrames']
+			interpolateInc = float(sequence.numKeyFrames) / float(sequencePrefs['InterpolateFrames'])
+			
+			# don't know why, but sometimes we are getting an off by one error
+			# in sequencePrefs['InterpolateFrames'], added this check here to 
+			# make sure our interpolate Increment is one or more.
+			if interpolateInc < 1.0: interpolateInc = 1.0
+			
 			for frame in range(1, numFrames):
 				loc, rot, scale = self.getTransformAtFrame(scene, context, sequence, curveMap, nodeIndex, (frame*interpolateInc), baseTransform)
 				sequence.frames[nodeIndex].append([loc,rot,scale])
@@ -1304,7 +1569,8 @@ class BlenderShape(DtsShape):
 		Torque_Util.dump_writeln("   > Detail Levels")
 		for detail in self.detaillevels:
 			Torque_Util.dump_writeln("      %s (size : %d)" % (self.sTable.get(detail.name), detail.size))
-		Torque_Util.dump_writeln("      Smallest : %s (size : %d)" % (self.sTable.get(self.detaillevels[self.mSmallestVisibleDL].name), self.mSmallestVisibleSize))
+		if len(self.detaillevels) > 0:
+			Torque_Util.dump_writeln("      Smallest : %s (size : %d)" % (self.sTable.get(self.detaillevels[self.mSmallestVisibleDL].name), self.mSmallestVisibleSize))
 		
 		Torque_Util.dump_writeln("   > Internal Sequences")
 		for sequence in self.sequences:

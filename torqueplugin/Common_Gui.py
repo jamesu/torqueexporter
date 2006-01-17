@@ -1,7 +1,7 @@
 '''
 Blender_Gui.py
 
-Copyright (c) 2003 - 2005 James Urquhart(j_urquhart@btinternet.com)
+Copyright (c) 2003 - 2006 James Urquhart(j_urquhart@btinternet.com)
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
@@ -188,7 +188,7 @@ class ComboBox(BasicControl):
 	# Sets the item idx to idx of what it finds
 	def setTextValue(self, value):
 		for i in range(0, len(self.items)):
-			if item[i] == value:
+			if self.items[i] == value:
 				self.itemIndex = i
 				return
 		self.itemIndex = 0
@@ -356,6 +356,7 @@ class BasicContainer(BasicControl):
 		return False
 
 	def onDraw(self, offset):
+		#print "redrawing container."
 		BGL.glRasterPos2i(offset[0]+self.x, offset[1]+self.y)
 		BGL.glColor4f(self.color[0], self.color[1], self.color[2], self.color[3])
 		
@@ -544,7 +545,10 @@ class ListContainer(BasicContainer):
 			if (value == Draw.LEFTMOUSE) and (newpos[0] < (self.width-self.barWidth)):
 				# Only send callback when mouse button is released!
 				if not (Window.GetMouseButtons() & Window.MButs.L):
-					idx = self.scrollPosition + int( (1.0-(float(newpos[1]) / self.height)) * self.maxVisibleControls() )
+					# calculate the amount of dead space at the bottom if any
+					deadSpace = self.height % self.childHeight
+					# find the id of the list item that was clicked.
+					idx = self.scrollPosition + int( (1.0- (float(newpos[1]-deadSpace) / (self.height-deadSpace)) ) * self.maxVisibleControls() )
 					if idx >= len(self.controls) : idx = -1
 					#print "Selected item %d" % idx
 					self.selectItem(idx)
@@ -734,13 +738,13 @@ class BasicGrid(BasicContainer):
 		#print "newwidth: %d" % self.width
 		#print "height: %d" % self.height
 		
-		# TODO: bug when len(controls) is no a multiple of maxChildY
+		# TODO: bug when len(controls) is not a multiple of maxChildY
 		reminder = len(self.controls) % maxChildY
-		print "rem: %d" % reminder
+		#print "rem: %d" % reminder
 		
 		
 		widthChildX = int(self.width / ((len(self.controls)+(maxChildY-reminder)) / maxChildY))
-		print widthChildX
+		#print widthChildX  # prints '150' to the console - Joe
 		
 		curX, curY = 0, 0
 		for c in self.controls:
@@ -838,7 +842,7 @@ def event(evt, val):
 			dragInitial[0] = curMousePos[0] - dragOffset[0]
 			dragInitial[1] = curMousePos[1] - dragOffset[1]
 		return
-	elif evt == Draw.RIGHTMOUSE:
+	elif evt == Draw.RIGHTMOUSE:		
 		if Draw.PupMenu("Display%t|Reset Gui Offset%x1") == 1:
 			 dragOffset = [0,0]
 	elif dragState and (evt in [Draw.MOUSEX, Draw.MOUSEY]):
@@ -857,8 +861,7 @@ def event(evt, val):
 		else:
 			dragState = False
 			#print("out of window")
-
-		#print (dragOffset)
+		#print (dragOffset)		
 	elif (evt in acceptedEvents):
 		#print "EVT: Unaccepted general event,checking controls for action..."
 		# Move the mouse position into window space
@@ -881,8 +884,9 @@ def event(evt, val):
 				control.onAction(None, curMousePos, evt)
 				break
 			#else:
-				#print "Control %s [incorrect position]" % control.name
-	Draw.Redraw(1)
+			#print "Control %s [incorrect position]" % control.name
+	if not (evt in [Draw.MOUSEX, Draw.MOUSEY]):
+		Draw.Redraw(1)
 
 # Function to process button events
 # Passes event onto current handler sheet

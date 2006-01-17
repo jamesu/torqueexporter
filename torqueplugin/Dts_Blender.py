@@ -9,7 +9,7 @@ Tooltip: 'Export to Torque (.dts) format.'
 
 '''
 Dts_Blender.py
-Copyright (c) 2003 - 2005 James Urquhart(j_urquhart@btinternet.com)
+Copyright (c) 2003 - 2006 James Urquhart(j_urquhart@btinternet.com)
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
@@ -38,6 +38,7 @@ from Blender import *
 import Common_Gui
 import string
 import math
+import re
 
 import DtsShape_Blender
 from DtsShape_Blender import *
@@ -98,6 +99,13 @@ def getAllChildren(obj):
 		obj_children += getAllChildren(child)
 	return obj_children
 
+# converts a file name into a legal python variable name.
+# this is need for blender registry support.
+def pythonizeFileName(filename):
+	# replace all non-alphanumeric chars with _
+	p = re.compile('\W')
+	return p.sub('_', filename)
+	
 '''
 	Preferences Code
 '''
@@ -120,6 +128,9 @@ def loadOldTextPrefs(text_doc):
 		cur_token = tok.getToken()
 		if cur_token == "Version":
 			tok.advanceToken(False)
+			#if not ( float(tok.getToken()) < 0.3):
+			#	Torque_Util.dump_writeln("   Error: Loading different version config file than is supported")
+			#	return False
 			if not ( (float(tok.getToken())) > 0.0 and (float(tok.getToken()) <= 0.2) ):
 				Torque_Util.dump_writeln("   Error: Loading different version config file than is supported")
 				return False
@@ -214,6 +225,15 @@ def loadOldTextPrefs(text_doc):
 						elif cur_token == "NumGroundFrames":
 							tok.advanceToken(False)
 							Prefs['Sequences'][seq_name]['NumGroundFrames'] = int(tok.getToken())
+						# ------------------------------------
+						# Joe : added this to get the action and reference frame for blends
+						elif cur_token == "BlendRefPoseAction":
+							tok.advanceToken(False)
+							Prefs['Sequences'][seq_name]['BlendRefPoseAction'] = tok.getToken()
+						elif cur_token == "BlendRefPoseFrame":
+							tok.advanceToken(False)
+							Prefs['Sequences'][seq_name]['BlendRefPoseFrame'] = int(tok.getToken())
+						# ------------------------------------
 						elif cur_token == "Triggers":
 							tok.advanceToken(False)
 							triggers_left = int(tok.getToken())
@@ -282,10 +302,10 @@ def initPrefs():
 # Loads preferences
 def loadPrefs():
 	global Prefs, Prefs_keyname, textDocName
-	Prefs_keyname = 'TorqueExporterPlugin_%s' % basename(Blender.Get("filename"))
+	Prefs_keyname = 'TorqueExporterPlugin_%s' % pythonizeFileName(basename(Blender.Get("filename")))
 	Prefs = Registry.GetKey(Prefs_keyname, True)
 	if not Prefs:
-		Torque_Util.dump_writeln("Registry key '%s' could not be loaded, resorting to text object." % Prefs_keyname)
+		#Torque_Util.dump_writeln("Registry key '%s' could not be loaded, resorting to text object." % Prefs_keyname)
 		Prefs = initPrefs()
 		
 		success = True
@@ -331,7 +351,8 @@ def loadPrefs():
 # Saves preferences to registry and text object
 def savePrefs():
 	global Prefs, Prefs_keyname
-	Registry.SetKey(Prefs_keyname, Prefs)
+	Registry.SetKey(Prefs_keyname, Prefs, False) # must NOT cache the data to disk!!!
+	Prefs = Registry.GetKey(Prefs_keyname, True)
 	saveTextPrefs()
 
 # Saves preferences to a text buffer
@@ -360,7 +381,8 @@ dummySequence = {'Dsq' : False,
 # Creates default if key does not exist
 def getSequenceKey(value):
 	global Prefs, dummySequence
-	if value == "N/A": return dummySequence
+	if value == "N/A":
+		return dummySequence
 	try:
 		return Prefs['Sequences'][value]
 	except KeyError:
@@ -374,7 +396,10 @@ def getSequenceKey(value):
 		except:
 			maxNumFrames = 0
 		Prefs['Sequences'][value]['InterpolateFrames'] = maxNumFrames			
-		
+		# Joe : added for ref pose of blend animations
+		# default reference pose for blends is in the middle of the same action
+		Prefs['Sequences'][value]['BlendRefPoseAction'] = value			
+		Prefs['Sequences'][value]['BlendRefPoseFrame'] = maxNumFrames/2 
 		return getSequenceKey(value)
 
 # Cleans up extra keys that may not be used anymore (e.g. action deleted)
@@ -502,9 +527,10 @@ class ShapeTree(SceneTree):
 		# Set scene frame to 1 in case we have any problems
 		Scene.getCurrent().getRenderingContext().currentFrame(1)
 		try:
-		
-			Stream = DtsStream("%s/%s.dts" % (Prefs['exportBasepath'], Prefs['exportBasename']), False, Prefs['DTSVersion'])
-			Torque_Util.dump_writeln("Writing shape to  '%s'." % ("%s/%s.dts" % (Prefs['exportBasepath'], Prefs['exportBasename'])))
+			# make sure our path seperator is correct.
+			getPathSeperator(Prefs['exportBasepath'])
+			Stream = DtsStream("%s%s%s.dts" % (Prefs['exportBasepath'], pathSeperator, Prefs['exportBasename']), False, Prefs['DTSVersion'])
+			Torque_Util.dump_writeln("Writing shape to  '%s'." % ("%s\\%s.dts" % (Prefs['exportBasepath'], Prefs['exportBasename'])))
 			# Now, start the shape export process if the Stream loaded
 			if Stream.fs:
 				self.Shape = BlenderShape(Prefs)
@@ -532,12 +558,14 @@ class ShapeTree(SceneTree):
 							if child.getType() == "Armature":
 								# Need to ensure we only add one instance of an armature datablock
 								for arm in armatures:
-									if arm.getData().getName() == child.getData().getName():
+									#if arm.getData().getName() == child.getData().getName():
+									if arm.getData().name == child.getData().name:
 										progressBar.update()
 										continue
 								armatures.append(child)
 							elif child.getType() == "Camera":
 								# Treat these like nodes
+								# Joe : hey neat :)
 								nodes.append(child)
 							elif child.getType() == "Mesh":
 								meshList.append(child)
@@ -598,7 +626,6 @@ class ShapeTree(SceneTree):
 					scene = Blender.Scene.getCurrent()
 					context = scene.getRenderingContext()
 					actions = Armature.NLA.GetActions()
-					
 					# The ice be dammed, it's time to take action
 					if len(actions.keys()) > 0:
 						progressBar.pushTask("Adding Actions..." , len(actions.keys()*4), 0.8)
@@ -704,8 +731,9 @@ class ShapeTree(SceneTree):
 		for obj in self.normalDetails:
 			for c in getAllChildren(obj[1]):
 				if c.getType() == "Armature":
-					for bone in c.getData().getBones():
-						boneList.append(bone.getName())
+					#for bone in c.getData().getBones():
+					for bone in c.getData().bones.values():
+						boneList.append(bone.name)
 		return boneList
 		
 	def find(self, name):
@@ -729,6 +757,7 @@ def handleScene():
 
 def export():
 	Torque_Util.dump_writeln("Exporting...")
+	print "Exporting..."
 	savePrefs()
 	
 	cur_progress = Common_Gui.Progress()
@@ -743,6 +772,8 @@ def export():
 		Torque_Util.dump_writeln("Error. Not processed scene yet!")
 		
 	del cur_progress
+	print "Finished.  See generated log file for details."
+	Torque_Util.dump_finish()
 
 '''
 	Gui Handling Code
@@ -780,10 +811,19 @@ def guiSequenceListItemCallback(control):
 		sequencePrefs['Dsq'] = control.state
 	elif realItem == 2:
 		sequencePrefs['Blend'] = control.state
+		# if blend is true, show the ref pose controls
+		if sequencePrefs['Blend'] == True:
+			guiSequenceOptions.controls[12].visible = True
+			guiSequenceOptions.controls[13].visible = True
+			guiSequenceOptions.controls[14].visible = True
+		else:
+			guiSequenceOptions.controls[12].visible = False
+			guiSequenceOptions.controls[13].visible = False
+			guiSequenceOptions.controls[14].visible = False
 	elif realItem == 3:
 		sequencePrefs['Cyclic'] = control.state
-	
-	
+
+
 def createSequenceListitem(seq_name, startEvent):
 	sequencePrefs = getSequenceKey(seq_name)
 	
@@ -830,6 +870,9 @@ def populateSequenceList():
 	for key in actions.keys():
 		guiSequenceList.addControl(createSequenceListitem(key, startEvent))
 		startEvent += 4
+	
+	# Joe : populate the ref pose combo box
+	guiSequenceOptions.controls[13].items = actions.keys()
 		
 def clearSequenceList():
 	global guiSequenceList
@@ -845,7 +888,7 @@ def clearSequenceList():
 def populateBoneGrid():
 	global Prefs, export_tree, guiBoneList
 	shapeTree = export_tree.find("SHAPE")
-	
+	if shapeTree == None: return
 	evtNo = 40
 	for name in shapeTree.getShapeBoneNames():
 		guiBoneList.addControl(Common_Gui.ToggleButton(name, "Toggle Status", evtNo, guiBoneGridCallback, None))
@@ -982,7 +1025,7 @@ def guiSequenceCallback(control):
 				except:
 					maxNumFrames = 0
 				
-				# Update gui control state's
+				# Update gui control states
 				guiSequenceOptions.enabled = True
 				guiSequenceOptions.controls[1].value = sequencePrefs['InterpolateFrames']
 				guiSequenceOptions.controls[1].max = maxNumFrames
@@ -990,6 +1033,13 @@ def guiSequenceCallback(control):
 				guiSequenceOptions.controls[2].max = maxNumFrames
 				guiSequenceOptions.controls[3].state = sequencePrefs['AnimateMaterial']
 				guiSequenceOptions.controls[4].value = sequencePrefs['MaterialIpoStartFrame']
+				
+				# Joe : added for blend anim ref pose selection
+				guiSequenceOptions.controls[12].label = "Ref pose for '%s'" % sequenceName
+				guiSequenceOptions.controls[13].setTextValue(sequencePrefs['BlendRefPoseAction'])
+				guiSequenceOptions.controls[14].min = 1
+				guiSequenceOptions.controls[14].max = DtsShape_Blender.getNumFrames(Blender.Armature.NLA.GetActions()[sequencePrefs['BlendRefPoseAction']].getAllChannelIpos().values(), False)
+				guiSequenceOptions.controls[14].value = sequencePrefs['BlendRefPoseFrame']
 				
 				# Triggers
 				for t in sequencePrefs['Triggers']:
@@ -1000,9 +1050,20 @@ def guiSequenceCallback(control):
 				guiSequenceOptions.controls[6].itemIndex = 0
 				guiSequenceOptions.controls[9].max = maxNumFrames
 				guiSequenceUpdateTriggers(sequencePrefs['Triggers'], 0)
+				# show/hide ref pose stuff.
+				if sequencePrefs['Blend'] == True:
+					guiSequenceOptions.controls[12].visible = True
+					guiSequenceOptions.controls[13].visible = True
+					guiSequenceOptions.controls[14].visible = True
+				else:
+					guiSequenceOptions.controls[12].visible = False
+					guiSequenceOptions.controls[13].visible = False
+					guiSequenceOptions.controls[14].visible = False
+
 			else:
 				guiSequenceOptions.enabled = False
 				guiSequenceOptions.controls[0].label = "Sequence"
+
 	else:
 		if control.evt >= 10:
 			if guiSequenceList.itemIndex != -1:
@@ -1011,11 +1072,22 @@ def guiSequenceCallback(control):
 				if control.evt == 10:
 					sequencePrefs['InterpolateFrames'] = control.value
 				elif control.evt == 11:
+					#print "setting number of ground frames to: %i" % control.value
 					sequencePrefs['NumGroundFrames'] = control.value
 				elif control.evt == 12:
 					sequencePrefs['AnimateMaterial'] = control.state
 				elif control.evt == 13:
 					sequencePrefs['MaterialIpoStartFrame'] = control.value
+				# Joe : added for blend ref pose selection
+				elif control.evt == 20:
+					#print "setting refernce pose action to: %s" % control.items[control.itemIndex]
+					sequencePrefs['BlendRefPoseAction'] = control.items[control.itemIndex]
+					sequencePrefs['BlendRefPoseFrame'] = 1
+					guiSequenceOptions.controls[14].value = sequencePrefs['BlendRefPoseFrame']
+				elif control.evt == 21:
+					#print "setting refernce pose frame to: %i" % control.value
+					sequencePrefs['BlendRefPoseFrame'] = control.value
+				
 		else:
 			if control.evt == 6:
 				for child in guiSequenceList.controls:
@@ -1078,7 +1150,10 @@ def guiGeneralCallback(control):
 		Prefs['exportBasepath'] = basepath(Blender.Get("filename"))
 		
 		pathSep = "/"
-		if "\\" in Prefs['exportBasepath']: pathSep = "\\"
+		if "\\" in Prefs['exportBasepath']:
+			pathSep = "\\"
+		else:
+			pathSep = "/"
 		guiGeneralTab.controls[16].value = Prefs['exportBasepath'] + pathSep + Prefs['exportBasename']
 	elif control.evt == 21:
 		Prefs['DTSVersion'] = control.value
@@ -1138,7 +1213,10 @@ def guiSequenceResize(control, newwidth, newheight):
 			control.y = newheight - 110
 		elif control.name == "sequence.opts.ttitle":
 			control.x = 5
-			control.y = newheight - 180
+			control.y = newheight - 190
+		elif control.name == "sequence.opts.rtitle":
+			control.x = 5
+			control.y = newheight - 115
 	# Sequence list buttons
 	elif control.evt == 6:
 		control.x = 10
@@ -1168,28 +1246,37 @@ def guiSequenceResize(control, newwidth, newheight):
 	# Triggers
 	elif control.evt == 14:
 		control.x = 5
-		control.y = newheight - 210
+		control.y = newheight - 220
 		control.width = newwidth - 10
 	elif control.evt == 15:
 		control.x = 5
-		control.y = newheight - 232
+		control.y = newheight - 242
 		control.width = newwidth - 50
 	elif control.evt == 16:
 		control.x = 137
-		control.y = newheight - 232
+		control.y = newheight - 242
 		control.width = newwidth - 142
 	elif control.evt == 17:
 		control.x = 5
-		control.y = newheight - 254
+		control.y = newheight - 264
 		control.width = newwidth - 10
 	elif control.evt == 18:
 		control.x = 5
-		control.y = newheight - 276
+		control.y = newheight - 286
 		control.width = (newwidth / 2) - 6
 	elif control.evt == 19:
 		control.x = (newwidth / 2)
-		control.y = newheight - 276
+		control.y = newheight - 286
 		control.width = (newwidth / 2) - 6
+	# Joe - reference pose controls
+	elif control.evt == 20:
+		control.x = 5
+		control.y = newheight - 145
+		control.width = (newwidth) - 10
+	elif control.evt == 21:
+		control.x = 5
+		control.y = newheight - 170
+		control.width = (newwidth) - 10
 
 def guiArmatureResize(control, newwidth, newheight):
 	if control.evt == None:
@@ -1342,6 +1429,17 @@ def initGui():
 	guiSequenceOptionsMaterialStartFrame.min = 1
 	guiSequenceOptionsMaterialStartFrame.max = Blender.Scene.getCurrent().getRenderingContext().endFrame()	
 	
+	# Joe : added this to allow the user to select an arbitrary frame from any action as the reference pose
+	# for blend animations.
+	guiSequenceOptionsRefposeTitle = Common_Gui.SimpleText("sequence.opts.rtitle", "Ref Pose for ", None, guiSequenceResize)
+	guiSequenceOptionsRefposeTitle.visible = False
+	guiSequenceOptionsRefposeMenu = Common_Gui.ComboBox("Use Action", "Select an action containing your refernce pose for this blend.", 20, guiSequenceCallback, guiSequenceResize)
+	guiSequenceOptionsRefposeMenu.visible = False
+	guiSequenceOptionsRefposeFrame = Common_Gui.NumberPicker("Frame", "Frame to use for reference pose", 21, guiSequenceCallback, guiSequenceResize)
+	guiSequenceOptionsRefposeFrame.visible = False
+	guiSequenceOptionsRefposeFrame.min = 1
+	
+	
 	guiSequenceOptionsTriggerTitle = Common_Gui.SimpleText("sequence.opts.ttitle", "Triggers", None, guiSequenceResize)
 	guiSequenceOptionsTriggerMenu = Common_Gui.ComboBox("Trigger List", "Select a trigger from this list to edit its properties", 14, guiSequenceTriggersCallback, guiSequenceResize)
 	guiSequenceOptionsTriggerState = Common_Gui.NumberPicker("State", "State of trigger to alter", 15, guiSequenceTriggersCallback, guiSequenceResize)
@@ -1356,7 +1454,8 @@ def initGui():
 	guiBoneText =  Common_Gui.SimpleText("armature.bantitle", "Bones that should be exported :", None, guiArmatureResize)
 	guiBoneList = Common_Gui.BasicGrid("armature.banlist", None, guiArmatureResize)
 	guiArmatureRootToggle = Common_Gui.ToggleButton("Collapse Root Transform", "Collapse root transform when exporting Armature's", 6, guiArmatureCallback, guiArmatureResize)
-	guiArmatureRootToggle.state = Prefs['CollapseRootTransform']
+	guiArmatureRootToggle.state = False # Prefs['CollapseRootTransform']
+	guiArmatureRootToggle.visible = False # TODO: remove this control - Joe.
 	
 	# General tab controls
 	guiStripText = Common_Gui.SimpleText("shape.strip", "Triangle Stripping", None, guiGeneralResize)
@@ -1398,7 +1497,11 @@ def initGui():
 	guiShapeScriptButton =  Common_Gui.ToggleButton("Write Shape Script", "Write .cs script that details the .dts and all .dsq sequences", 17, guiGeneralCallback, guiGeneralResize)
 	guiCustomFilename = Common_Gui.TextBox("Filename", "Filename to write to", 18, guiGeneralCallback, guiGeneralResize)
 	guiCustomFilename.length = 255
-	guiCustomFilename.value = Prefs['exportBasepath'] + Prefs['exportBasename']
+	if "\\" in Prefs['exportBasepath']:
+		pathSep = "\\"
+	else:
+		pathSep = "/"
+	guiCustomFilename.value = Prefs['exportBasepath'] + pathSep + Prefs['exportBasename'] + ".dts"
 	guiCustomFilenameSelect = Common_Gui.BasicButton("Select...", "Select a filename and destination for export", 19, guiGeneralCallback, guiGeneralResize)
 	guiCustomFilenameDefaults = Common_Gui.BasicButton("Default", "Reset filename and destination to defaults", 20, guiGeneralCallback, guiGeneralResize)
 	
@@ -1414,7 +1517,7 @@ def initGui():
 	"\n"
 	"Written by James Urquhart, with assistance from Tim Gift, Clark Fagot, Wes Beary,\n" +
 	"Ben Garney, Joshua Ritter, Emanuel Greisen, Todd Koeckeritz,\n" +
-	"Ryan J. Parker, and Walter Yoon.\n" +
+	"Ryan J. Parker, Walter Yoon, and Joseph Greenawalt.\n" +
 	"GUI code written with assistance from Xen and Xavier Amado.\n" +
 	"Additional thanks goes to the testers.\n" +
 	"\n" +
@@ -1472,6 +1575,7 @@ def initGui():
 	guiSequenceOptions.addControl(guiSequenceOptionsGroundFramecount)
 	guiSequenceOptions.addControl(guiSequenceOptionsAnimateMaterials)
 	guiSequenceOptions.addControl(guiSequenceOptionsMaterialStartFrame)
+
 	guiSequenceOptions.addControl(guiSequenceOptionsTriggerTitle)
 	guiSequenceOptions.addControl(guiSequenceOptionsTriggerMenu)
 	guiSequenceOptions.addControl(guiSequenceOptionsTriggerState)
@@ -1479,6 +1583,11 @@ def initGui():
 	guiSequenceOptions.addControl(guiSequenceOptionsTriggerFrame)
 	guiSequenceOptions.addControl(guiSequenceOptionsTriggerAdd)
 	guiSequenceOptions.addControl(guiSequenceOptionsTriggerDel)
+
+	# Joe : added these for selection of ref pose.
+	guiSequenceOptions.addControl(guiSequenceOptionsRefposeTitle)
+	guiSequenceOptions.addControl(guiSequenceOptionsRefposeMenu)
+	guiSequenceOptions.addControl(guiSequenceOptionsRefposeFrame)
 	
 	populateSequenceList()
 	
@@ -1525,7 +1634,7 @@ def exit_callback():
 '''
 #-------------------------------------------------------------------------------------------------
 
-def entryPoint():
+def entryPoint(a):
 	getPathSeperator(Blender.Get("filename"))
 	if Debug:
 		Torque_Util.dump_setout("stdout")
@@ -1540,10 +1649,14 @@ def entryPoint():
 	Torque_Util.dump_writeln("**************************")
 	loadPrefs()
 	
-	# Process scene and load configuration gui
-	handleScene()
-	initGui()
+	if (a == 'quick') :
+		handleScene()
+		export()
+	elif a == 'normal' or (a == None):
+		# Process scene and load configuration gui
+		handleScene()
+		initGui()
 	
 # Main entrypoint
 if __name__ == "__main__":
-	entryPoint()
+	entryPoint('normal')

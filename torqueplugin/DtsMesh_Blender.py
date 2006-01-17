@@ -1,7 +1,7 @@
 '''
 Dts.Mesh_Blender.py
 
-Copyright (c) 2005 James Urquhart(j_urquhart@btinternet.com)
+Copyright (c) 2005 - 2006 James Urquhart(j_urquhart@btinternet.com)
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
@@ -38,15 +38,20 @@ class BlenderMesh(DtsMesh):
 		DtsMesh.__init__(self)
 		self.vertsIndexMap = []		# Map of TexCoord index <> Vertex index map
 		self.mainMaterial = None	# For determining material ipo track to use for ObjectState visibility animation
+		self.weightDictionary = self.createWeightDictionary(msh);
+		# Joe : this appears to be causing all faces to be added twice!
+		#materialGroups = [[]]*(len(msh.materials)+1)
+		materialGroups = [[]]
+		for i in range (0, len(msh.materials)):
+			materialGroups.append([])
 		
-		materialGroups = [[]]*(len(msh.materials)+1)
 		
 		# First, sort faces by material
 		for face in msh.faces:
 			if len(face.v) < 3:
 				continue # skip to next face
 			#print "DBG: face idx=%d" % face.materialIndex
-			materialGroups[face.materialIndex].append(face)
+			materialGroups[face.mat].append(face)
 		
 		# Then, we can add in batches
 		for group in materialGroups: 
@@ -63,8 +68,8 @@ class BlenderMesh(DtsMesh):
 				# Find the image associated with the face on the mesh, if any
 				if len(msh.materials) > 0:
 					# Also, use sticky coords if we were asked to
-					matIndex = shape.materials.findMaterial(msh.materials[face.materialIndex].getName())
-					if matIndex == None: matIndex = shape.addMaterial(msh.materials[face.materialIndex])
+					matIndex = shape.materials.findMaterial(msh.materials[face.mat].getName())
+					if matIndex == None: matIndex = shape.addMaterial(msh.materials[face.mat])
 					if matIndex == None: matIndex = pr.NoMaterial
 					if matIndex != pr.NoMaterial: 
 						self.mainMaterial = matIndex
@@ -140,6 +145,17 @@ class BlenderMesh(DtsMesh):
 	def __del__(self):
 		DtsMesh.__del__(self)
 
+	
+	def createWeightDictionary(self, mesh):
+		weightDictionary = {}
+		for i in range(len(mesh.verts)):
+			weightDictionary[i] = []
+		for group in mesh.getVertGroupNames():
+			for vert in mesh.getVertsFromGroup(group, 1):
+			    	index, weight = vert[0], vert[1]
+			    	weightDictionary[index].append((group, weight))
+		return weightDictionary
+		
 	def appendVertex(self, shape, msh, rootBone, matrix, scaleFactor, face, faceIndex, useSticky):
 		# Use Face coords if requested
 		if not useSticky:
@@ -185,7 +201,12 @@ class BlenderMesh(DtsMesh):
 
 		# Add bone weights
 		bone, weight = -1, 1.0
-		influences = msh.getVertexInfluences(vert.index)
+		influences = []
+		weights = self.weightDictionary[vert.index]
+		for weight in weights:
+			# group name and weight
+			influences.append([weight[0], weight[1]])
+
 		if len(influences) > 0:
 			# Total weights should add up to one, so we need
 			# to normalize the weights assigned in blender.

@@ -1,7 +1,7 @@
 '''
 Torque_Util.py
 
-Copyright (c) 2003 - 2005 James Urquhart(j_urquhart@btinternet.com)
+Copyright (c) 2003 - 2006 James Urquhart(j_urquhart@btinternet.com)
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
@@ -243,6 +243,12 @@ def dump_setout(filename="stdout"):
 	else:
 		dump_file = open(filename, "w")
 		print "Dumping output to file '%s'" % filename
+
+def dump_finish():
+	if dump_file != None:
+		dump_file.flush()
+	#dump_file.close()
+	
 
 def dump_write(string):
 	if dump_file != None:
