@@ -54,7 +54,7 @@ Version = "0.9"
 Prefs = None
 Prefs_keyname = ""
 export_tree = None
-Debug = False
+Debug = True
 textDocName = "TorqueExporter_SCONF"
 pathSeperator = "/"
 
@@ -122,15 +122,12 @@ def loadOldTextPrefs(text_doc):
 	lines = text_doc.asLines()
 	for l in lines: txt += "%s\n" % l
 	text_arr.fromstring(txt)
-
+	seq_name = None
 	tok = Tokenizer(text_arr)
 	while tok.advanceToken(True):
 		cur_token = tok.getToken()
 		if cur_token == "Version":
 			tok.advanceToken(False)
-			#if not ( float(tok.getToken()) < 0.3):
-			#	Torque_Util.dump_writeln("   Error: Loading different version config file than is supported")
-			#	return False
 			if not ( (float(tok.getToken())) > 0.0 and (float(tok.getToken()) <= 0.2) ):
 				Torque_Util.dump_writeln("   Error: Loading different version config file than is supported")
 				return False
@@ -171,6 +168,13 @@ def loadOldTextPrefs(text_doc):
 					seq_name = tok.getToken()
 					Prefs['Sequences'][seq_name] = dummySequence.copy()
 					Prefs['Sequences'][seq_name]['Triggers'] = []
+					# set defaults for ref pose stuff
+					# Get number of frames for this sequence
+					#try:
+					action = Blender.Armature.NLA.GetActions()[seq_name]
+					Prefs['Sequences'][seq_name]['InterpolateFrames'] = DtsShape_Blender.getNumFrames(action.getAllChannelIpos().values(), False)
+					Prefs['Sequences'][seq_name]['BlendRefPoseAction'] = seq_name
+					Prefs['Sequences'][seq_name]['BlendRefPoseFrame'] = 1
 					cur_parse = 3
 				elif cur_token == "BannedBones":
 					tok.advanceToken(False)
@@ -215,7 +219,10 @@ def loadOldTextPrefs(text_doc):
 							Prefs['Sequences'][seq_name]['Cyclic'] = bool(int(tok.getToken()))
 						elif cur_token == "Blend":
 							tok.advanceToken(False)
-							Prefs['Sequences'][seq_name]['Blend'] = bool(int(tok.getToken()))
+							# Lets always set the actions to not be blends when loading style old prefs.
+							# This hopefully forces the user to look at how blend anims are handled now.
+							#Prefs['Sequences'][seq_name]['Blend'] = bool(int(tok.getToken()))
+							Prefs['Sequences'][seq_name]['Blend'] = False
 						elif (cur_token == "Interpolate_Count") or (cur_token == "Interpolate"):
 							tok.advanceToken(False)
 							useKeyframes = True
@@ -225,15 +232,6 @@ def loadOldTextPrefs(text_doc):
 						elif cur_token == "NumGroundFrames":
 							tok.advanceToken(False)
 							Prefs['Sequences'][seq_name]['NumGroundFrames'] = int(tok.getToken())
-						# ------------------------------------
-						# Joe : added this to get the action and reference frame for blends
-						elif cur_token == "BlendRefPoseAction":
-							tok.advanceToken(False)
-							Prefs['Sequences'][seq_name]['BlendRefPoseAction'] = tok.getToken()
-						elif cur_token == "BlendRefPoseFrame":
-							tok.advanceToken(False)
-							Prefs['Sequences'][seq_name]['BlendRefPoseFrame'] = int(tok.getToken())
-						# ------------------------------------
 						elif cur_token == "Triggers":
 							tok.advanceToken(False)
 							triggers_left = int(tok.getToken())
@@ -263,14 +261,16 @@ def loadOldTextPrefs(text_doc):
 							break
 						else:
 							Torque_Util.dump_writeln("   Unrecognised Sequence token : %s" % cur_token)
+
 					cur_parse = 1
 					# Get number of frames for this sequence
-					try:
-						action = Blender.NLA.Action.Get(seq_name)
-						Prefs['Sequences'][seq_name]['InterpolateFrames'] = DtsShape_Blender.getNumFrames(None, action.getAllChannelIpos().values(), useKeyframes)
-					except:
-						Torque_Util.dump_writeln("   Warning : sequence '%s' doesn't exist!" % seq_name)
-						Prefs['Sequences'][seq_name]['InterpolateFrames'] = 0
+					if seq_name != None:
+						try:
+							action = Blender.NLA.Action.Get(seq_name)
+							Prefs['Sequences'][seq_name]['InterpolateFrames'] = DtsShape_Blender.getNumFrames(None, action.getAllChannelIpos().values(), useKeyframes)
+						except:
+							Torque_Util.dump_writeln("   Warning : sequence '%s' doesn't exist!" % seq_name)
+							Prefs['Sequences'][seq_name]['InterpolateFrames'] = 0
 				elif cur_token == "}":
 					cur_parse = 0
 					break
@@ -278,6 +278,7 @@ def loadOldTextPrefs(text_doc):
 					Torque_Util.dump_writeln("   Unrecognised token : %s" % cur_token)
 		else:
 			Torque_Util.dump_writeln("   Warning : Unexpected token %s!" % cur_token)
+
 	return True
 
 def initPrefs():
@@ -352,7 +353,6 @@ def loadPrefs():
 def savePrefs():
 	global Prefs, Prefs_keyname
 	Registry.SetKey(Prefs_keyname, Prefs, False) # must NOT cache the data to disk!!!
-	Prefs = Registry.GetKey(Prefs_keyname, True)
 	saveTextPrefs()
 
 # Saves preferences to a text buffer
