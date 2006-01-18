@@ -777,6 +777,11 @@ def export():
 	del cur_progress
 	print "Finished.  See generated log file for details."
 	Torque_Util.dump_finish()
+	# Reselect any objects that are currently selected.
+	# this prevents a strange bug where objects are selected after
+	# export, but behave as if they are not.
+	for ob in Blender.Object.GetSelected():
+		ob.select(True)
 
 '''
 	Gui Handling Code
