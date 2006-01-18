@@ -174,7 +174,10 @@ def loadOldTextPrefs(text_doc):
 					action = Blender.Armature.NLA.GetActions()[seq_name]
 					Prefs['Sequences'][seq_name]['InterpolateFrames'] = DtsShape_Blender.getNumFrames(action.getAllChannelIpos().values(), False)
 					Prefs['Sequences'][seq_name]['BlendRefPoseAction'] = seq_name
-					Prefs['Sequences'][seq_name]['BlendRefPoseFrame'] = 1
+					blendRefPoseFrame = Prefs['Sequences'][seq_name]['InterpolateFrames']/2
+					if blendRefPoseFrame < 1: blendRefPoseFrame = 1
+					Prefs['Sequences'][seq_name]['BlendRefPoseFrame'] = blendRefPoseFrame
+
 					cur_parse = 3
 				elif cur_token == "BannedBones":
 					tok.advanceToken(False)
