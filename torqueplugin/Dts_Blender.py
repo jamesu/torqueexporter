@@ -54,7 +54,7 @@ Version = "0.9"
 Prefs = None
 Prefs_keyname = ""
 export_tree = None
-Debug = True
+Debug = False
 textDocName = "TorqueExporter_SCONF"
 pathSeperator = "/"
 
@@ -1649,7 +1649,7 @@ def entryPoint(a):
 	Torque_Util.dump_writeln("**************************")
 	loadPrefs()
 	
-	if (a == 'quick') :
+	if (a == 'quick'):
 		handleScene()
 		export()
 	elif a == 'normal' or (a == None):
