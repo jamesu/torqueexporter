@@ -135,14 +135,18 @@ def writeIntegerSet(fs, bits):
 	if  len(bits) >= 32:
 		use = int(math.ceil(len(bits) / 32.0))
 	else: use = 1
-	
+
 	words = [0]*use
+
 	for i in range(0, len(bits)):
 		if bits[i]:
 			words[i >> 5] |= 1 << (i & 31)
+
 	fs.write(struct.pack('<i', use)) #S32, don't care about this
 	fs.write(struct.pack('<i', use)) #S32
 	for w in words:
+		# ugly ugly hack to deal with python 2.4's int -> long int conversion confusion
+		w = struct.unpack('i', struct.pack('I', w))[0]
 		fs.write(struct.pack('<i', w))
 	del words
 

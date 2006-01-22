@@ -54,7 +54,7 @@ Version = "0.9"
 Prefs = None
 Prefs_keyname = ""
 export_tree = None
-Debug = False
+Debug = True
 textDocName = "TorqueExporter_SCONF"
 pathSeperator = "/"
 
@@ -699,6 +699,7 @@ class ShapeTree(SceneTree):
 				progressBar.popTask()
 				return None
 		except Exception, msg:
+			print "You are here!"
 			Torque_Util.dump_writeln("Error: Exception encountered, bailing out.")
 			Torque_Util.dump_writeln(Exception)
 			Torque_Util.dump_setout("stdout")
@@ -780,8 +781,9 @@ def export():
 	# Reselect any objects that are currently selected.
 	# this prevents a strange bug where objects are selected after
 	# export, but behave as if they are not.
-	for ob in Blender.Object.GetSelected():
-		ob.select(True)
+	if Blender.Object.GetSelected() != None:
+		for ob in Blender.Object.GetSelected():
+			ob.select(True)
 
 '''
 	Gui Handling Code
