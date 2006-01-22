@@ -67,6 +67,16 @@ blender scripts directory. <br>
   </li>
   <li>Run blender to verify that the "Torque Shape (.dts)..."
 item is located on the "Export" menu.</li>
+  <li>Please ensure that you <span style="font-weight: bold;">do not</span>
+have a pythonpath set to a version of python less than Python
+2.4.&nbsp; Older versions of python in the pythonpath will cause the
+exporter scripts to fail.&nbsp; You should not need a separate python
+install on most operating systems.<br>
+  </li>
+  <li>Linux users will need to set the executable flag on
+InstallScripts.sh using the command "chmod +x InstallScripts.sh"
+(without quotes) before it can be executed.<br>
+  </li>
 </ol>
 <h2>Installation Folders</h2>
 <table style="text-align: left; width: 100%;" border="1" cellpadding="2"
@@ -97,7 +107,7 @@ Registry]\.blender\scripts</td>
     </tr>
     <tr>
       <td>Linux</td>
-      <td>Install Scripts.sh</td>
+      <td>InstallScripts.sh</td>
       <td>~/.blender/scripts</td>
     </tr>
   </tbody>
@@ -181,10 +191,10 @@ sequence in the exporter's sequences tab.&nbsp; Press the "Blend"
 button next to the sequence name.&nbsp; Two new options will appear on
 the right allowing you to select the "reference pose" for your blend
 animation.&nbsp; The reference pose can be chosen from any frame of any
-of the available sequences.&nbsp; The sequence containing the reference
+of the available actions.&nbsp; The action containing the reference
 pose does not need to be exported.&nbsp; The only limitation is that
 all of the animation channels contained in the blend sequence must also
-be present in the sequence containing the reference pose.<br>
+be present in the action containing the reference pose.<br>
 </p>
 <p>Finally, the "Frames" option tells the exporter how many frames to
 export out of the total frames present in the Action. This defaults to
@@ -200,7 +210,7 @@ your meshes and use their ipo curves(specifically, "ALPHA") to create
 an DTS Object visibility track for the sequence. </p>
 <p>
 <i>NOTE: the exporter will determine the material associated with
-a DTS Object(see previous section) as the first material it finds when
+a DTS Object(see next section) as the first material it finds when
 exporting the first mesh of the DTS Object.</i>
 </p>
 <h3>Texturing</h3>
