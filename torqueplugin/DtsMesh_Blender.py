@@ -148,12 +148,21 @@ class BlenderMesh(DtsMesh):
 	
 	def createWeightDictionary(self, mesh):
 		weightDictionary = {}
+		boneList = []
+		for arm in Blender.Armature.Get().values():
+			for b in arm.bones.values():
+				boneList.append(b.name)
+
 		for i in range(len(mesh.verts)):
 			weightDictionary[i] = []
+
 		for group in mesh.getVertGroupNames():
+			# ignore groups that have no corresponding bone.
+			if not (group in boneList): continue
 			for vert in mesh.getVertsFromGroup(group, 1):
 			    	index, weight = vert[0], vert[1]
 			    	weightDictionary[index].append((group, weight))
+				
 		return weightDictionary
 		
 	def appendVertex(self, shape, msh, rootBone, matrix, scaleFactor, face, faceIndex, useSticky):
