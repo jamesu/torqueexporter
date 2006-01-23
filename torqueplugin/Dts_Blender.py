@@ -54,7 +54,7 @@ Version = "0.9"
 Prefs = None
 Prefs_keyname = ""
 export_tree = None
-Debug = True
+Debug = False
 textDocName = "TorqueExporter_SCONF"
 pathSeperator = "/"
 
@@ -699,7 +699,6 @@ class ShapeTree(SceneTree):
 				progressBar.popTask()
 				return None
 		except Exception, msg:
-			print "You are here!"
 			Torque_Util.dump_writeln("Error: Exception encountered, bailing out.")
 			Torque_Util.dump_writeln(Exception)
 			Torque_Util.dump_setout("stdout")
