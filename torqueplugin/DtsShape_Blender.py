@@ -1051,6 +1051,7 @@ class BlenderShape(DtsShape):
 			sequence.flags |= sequence.MakePath
 		else: sequence.has_ground = False
 		sequence.fps = context.framesPerSec()
+		sequence.priority = sequencePrefs['Priority']
 
 		# Assign temp flags
 		sequence.has_loc = False

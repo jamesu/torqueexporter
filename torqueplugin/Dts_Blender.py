@@ -54,7 +54,7 @@ Version = "0.9"
 Prefs = None
 Prefs_keyname = ""
 export_tree = None
-Debug = False
+Debug = True
 textDocName = "TorqueExporter_SCONF"
 pathSeperator = "/"
 
@@ -177,6 +177,7 @@ def loadOldTextPrefs(text_doc):
 					blendRefPoseFrame = Prefs['Sequences'][seq_name]['InterpolateFrames']/2
 					if blendRefPoseFrame < 1: blendRefPoseFrame = 1
 					Prefs['Sequences'][seq_name]['BlendRefPoseFrame'] = blendRefPoseFrame
+					Prefs['Sequences'][seq_name]['Priority'] = 0
 
 					cur_parse = 3
 				elif cur_token == "BannedBones":
@@ -402,7 +403,8 @@ def getSequenceKey(value):
 		# Joe : added for ref pose of blend animations
 		# default reference pose for blends is in the middle of the same action
 		Prefs['Sequences'][value]['BlendRefPoseAction'] = value			
-		Prefs['Sequences'][value]['BlendRefPoseFrame'] = maxNumFrames/2 
+		Prefs['Sequences'][value]['BlendRefPoseFrame'] = maxNumFrames/2
+		Prefs['Sequences'][value]['Priority'] = 0
 		return getSequenceKey(value)
 
 # Cleans up extra keys that may not be used anymore (e.g. action deleted)
@@ -1096,6 +1098,9 @@ def guiSequenceCallback(control):
 				elif control.evt == 21:
 					#print "setting refernce pose frame to: %i" % control.value
 					sequencePrefs['BlendRefPoseFrame'] = control.value
+				elif control.evt == 23:
+					print "setting priority"
+					sequencePrefs['Priority'] = control.value
 				
 		else:
 			if control.evt == 6:
@@ -1222,10 +1227,10 @@ def guiSequenceResize(control, newwidth, newheight):
 			control.y = newheight - 110
 		elif control.name == "sequence.opts.ttitle":
 			control.x = 5
-			control.y = newheight - 190
+			control.y = newheight - 215 #190
 		elif control.name == "sequence.opts.rtitle":
 			control.x = 5
-			control.y = newheight - 115
+			control.y = newheight - 140 #115
 	# Sequence list buttons
 	elif control.evt == 6:
 		control.x = 10
@@ -1255,37 +1260,43 @@ def guiSequenceResize(control, newwidth, newheight):
 	# Triggers
 	elif control.evt == 14:
 		control.x = 5
-		control.y = newheight - 220
+		control.y = newheight - 245 #220
 		control.width = newwidth - 10
 	elif control.evt == 15:
 		control.x = 5
-		control.y = newheight - 242
+		control.y = newheight - 267 #242
 		control.width = newwidth - 50
 	elif control.evt == 16:
 		control.x = 137
-		control.y = newheight - 242
+		control.y = newheight - 267 #242
 		control.width = newwidth - 142
 	elif control.evt == 17:
 		control.x = 5
-		control.y = newheight - 264
+		control.y = newheight - 289 #264
 		control.width = newwidth - 10
 	elif control.evt == 18:
 		control.x = 5
-		control.y = newheight - 286
+		control.y = newheight - 311 #286
 		control.width = (newwidth / 2) - 6
 	elif control.evt == 19:
 		control.x = (newwidth / 2)
-		control.y = newheight - 286
+		control.y = newheight - 311 #286
 		control.width = (newwidth / 2) - 6
 	# Joe - reference pose controls
 	elif control.evt == 20:
 		control.x = 5
-		control.y = newheight - 145
+		control.y = newheight - 170 #145
 		control.width = (newwidth) - 10
 	elif control.evt == 21:
 		control.x = 5
-		control.y = newheight - 170
+		control.y = newheight - 195 #170
 		control.width = (newwidth) - 10
+	# sequence priority
+	elif control.evt == 23:
+		control.x = 5
+		control.y = newheight - 120
+		control.width = newwidth - 10
+	
 
 def guiArmatureResize(control, newwidth, newheight):
 	if control.evt == None:
@@ -1437,6 +1448,10 @@ def initGui():
 	guiSequenceOptionsMaterialStartFrame = Common_Gui.NumberPicker("Start", "Frame to start exporting material track", 13, guiSequenceCallback, guiSequenceResize)
 	guiSequenceOptionsMaterialStartFrame.min = 1
 	guiSequenceOptionsMaterialStartFrame.max = Blender.Scene.getCurrent().getRenderingContext().endFrame()	
+	
+	guiSequenceOptionsPriority = Common_Gui.NumberPicker("Priority", "Sequence playback priority", 23, guiSequenceCallback, guiSequenceResize)
+	guiSequenceOptionsPriority.min = 0
+	guiSequenceOptionsPriority.max = 64 # this seems resonable
 	
 	# Joe : added this to allow the user to select an arbitrary frame from any action as the reference pose
 	# for blend animations.
@@ -1597,6 +1612,8 @@ def initGui():
 	guiSequenceOptions.addControl(guiSequenceOptionsRefposeTitle)
 	guiSequenceOptions.addControl(guiSequenceOptionsRefposeMenu)
 	guiSequenceOptions.addControl(guiSequenceOptionsRefposeFrame)
+	
+	guiSequenceOptions.addControl(guiSequenceOptionsPriority)
 	
 	populateSequenceList()
 	
