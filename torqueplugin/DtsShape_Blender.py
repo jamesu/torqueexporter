@@ -1051,7 +1051,12 @@ class BlenderShape(DtsShape):
 			sequence.flags |= sequence.MakePath
 		else: sequence.has_ground = False
 		sequence.fps = context.framesPerSec()
-		sequence.priority = sequencePrefs['Priority']
+		# hack, there must be a more elegant way to handle this.
+		try:
+			sequence.priority = sequencePrefs['Priority']
+		except KeyError:
+			sequencePrefs['Priority'] = 0
+			sequence.priority = sequencePrefs['Priority']
 
 		# Assign temp flags
 		sequence.has_loc = False
@@ -1113,11 +1118,7 @@ class BlenderShape(DtsShape):
 			useFrame = sequencePrefs['BlendRefPoseFrame']
 			baseTransforms = self.buildBaseTransforms(sequence, action, useAction, useFrame, scene, context)
 			if baseTransforms == None:
-				print "Error getting base Transforms!!!!!"
-
-
-
-			
+				print "Error getting base Transforms!!!!!"			
 
 		# Loop through the ipo list
 		for nodeIndex in range(len(self.nodes)):
