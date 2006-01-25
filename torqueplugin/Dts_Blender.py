@@ -379,7 +379,8 @@ dummySequence = {'Dsq' : False,
 'MaterialIpoStartFrame' : 1,
 'InterpolateFrames' : 0,
 'NoExport' : False,
-'NumGroundFrames' : 0}
+'NumGroundFrames' : 0,
+'Priority' : 0}
 
 # Gets a sequence key from the preferences
 # Creates default if key does not exist
@@ -1051,7 +1052,7 @@ def guiSequenceCallback(control):
 				guiSequenceOptions.controls[14].min = 1
 				guiSequenceOptions.controls[14].max = DtsShape_Blender.getNumFrames(Blender.Armature.NLA.GetActions()[sequencePrefs['BlendRefPoseAction']].getAllChannelIpos().values(), False)
 				guiSequenceOptions.controls[14].value = sequencePrefs['BlendRefPoseFrame']
-				# hack
+				# hack, there must be a better way to handle this.
 				try:
 					guiSequenceOptions.controls[15].value = sequencePrefs['Priority']
 				except KeyError:
@@ -1153,6 +1154,19 @@ def guiGeneralCallback(control):
 	elif control.evt == 13:
 		Prefs['Billboard']['PolarAngle'] = control.value
 	elif control.evt == 14:
+		val = int(control.value)
+		# need to constrain this to be a power of 2
+		# it would be easier just to use a combo box, but this is more fun.
+		# did the value go up or down?
+		if control.value > Prefs['Billboard']['Dim']:
+			# we go up
+			print "going up."
+			val = int(2**math.ceil(math.log(control.value,2)))
+		elif control.value < Prefs['Billboard']['Dim']:
+			print "going down."
+			# we go down
+			val = int(2**math.floor(math.log(control.value,2)))
+		control.value = val
 		Prefs['Billboard']['Dim'] = control.value
 	elif control.evt == 15:
 		Prefs['Billboard']['IncludePoles'] = control.state
