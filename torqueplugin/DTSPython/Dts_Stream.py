@@ -171,7 +171,10 @@ class DtsStream:
 	def write(self, value): self.write32(value) # Evil
 	def write8(self, value): self.buffer8.append(value)
 	def write16(self, value): self.buffer16.append(value)
-	def write32(self, value): self.buffer32.append(value)
+	def write32(self, value):
+		# ugly ugly hack to deal with python 2.4's int -> long int conversion confusion
+		val = struct.unpack('i', struct.pack('I', value))[0]
+		self.buffer32.append(val)
 	def read(self): return self.read32()
 	def read8(self): return self.buffer8.pop(0)
 	def read16(self): return self.buffer16.pop(0)
