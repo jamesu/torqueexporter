@@ -1531,7 +1531,7 @@ class BlenderShape(DtsShape):
 				#shapeScript.write("   sequence%d = \"./%s_%s.dsq %s\";\n" % (count,self.preferences['exportBasepath'],sequence,sequence))
 				shapeScript.write("   sequence%d = \"./%s.dsq %s\";\n" % (count,sequence,sequence))
 				count += 1
-			shapeScript.write("}")
+			shapeScript.write("};")
 			shapeScript.close()
 
 		if self.preferences['TSEMaterial']:
