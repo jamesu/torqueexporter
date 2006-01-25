@@ -54,7 +54,7 @@ Version = "0.9"
 Prefs = None
 Prefs_keyname = ""
 export_tree = None
-Debug = True
+Debug = False
 textDocName = "TorqueExporter_SCONF"
 pathSeperator = "/"
 
@@ -1099,7 +1099,7 @@ def guiSequenceCallback(control):
 					#print "setting refernce pose frame to: %i" % control.value
 					sequencePrefs['BlendRefPoseFrame'] = control.value
 				elif control.evt == 23:
-					print "setting priority"
+					#print "setting priority"
 					sequencePrefs['Priority'] = control.value
 				
 		else:
@@ -1227,10 +1227,10 @@ def guiSequenceResize(control, newwidth, newheight):
 			control.y = newheight - 110
 		elif control.name == "sequence.opts.ttitle":
 			control.x = 5
-			control.y = newheight - 215 #190
+			control.y = newheight - 215
 		elif control.name == "sequence.opts.rtitle":
 			control.x = 5
-			control.y = newheight - 140 #115
+			control.y = newheight - 140
 	# Sequence list buttons
 	elif control.evt == 6:
 		control.x = 10
@@ -1260,36 +1260,36 @@ def guiSequenceResize(control, newwidth, newheight):
 	# Triggers
 	elif control.evt == 14:
 		control.x = 5
-		control.y = newheight - 245 #220
+		control.y = newheight - 245
 		control.width = newwidth - 10
 	elif control.evt == 15:
 		control.x = 5
-		control.y = newheight - 267 #242
+		control.y = newheight - 267
 		control.width = newwidth - 50
 	elif control.evt == 16:
 		control.x = 137
-		control.y = newheight - 267 #242
+		control.y = newheight - 267
 		control.width = newwidth - 142
 	elif control.evt == 17:
 		control.x = 5
-		control.y = newheight - 289 #264
+		control.y = newheight - 289
 		control.width = newwidth - 10
 	elif control.evt == 18:
 		control.x = 5
-		control.y = newheight - 311 #286
+		control.y = newheight - 311
 		control.width = (newwidth / 2) - 6
 	elif control.evt == 19:
 		control.x = (newwidth / 2)
-		control.y = newheight - 311 #286
+		control.y = newheight - 311
 		control.width = (newwidth / 2) - 6
 	# Joe - reference pose controls
 	elif control.evt == 20:
 		control.x = 5
-		control.y = newheight - 170 #145
+		control.y = newheight - 170
 		control.width = (newwidth) - 10
 	elif control.evt == 21:
 		control.x = 5
-		control.y = newheight - 195 #170
+		control.y = newheight - 195
 		control.width = (newwidth) - 10
 	# sequence priority
 	elif control.evt == 23:
