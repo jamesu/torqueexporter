@@ -105,9 +105,10 @@ def getGhostArmature(armOb, ghostName):
 	# if not found make a new one
 	try:
 		ghostObject = Blender.Object.Get(ghostName + "-OB")
+		# in 2.40 returns none, in 2.41 throws ValueError
 		if ghostObject == None:
 			raise AttributeError
-	except AttributeError:
+	except:
 		ghostObject = Blender.Object.New('Armature', ghostName + "-OB")
 
 	# try to find an existing ghost data block to recycle
@@ -116,7 +117,7 @@ def getGhostArmature(armOb, ghostName):
 		ghostData = Blender.Armature.Get(ghostName + "-DB")
 		if ghostData == None:
 			raise AttributeError
-	except AttributeError:
+	except:
 		ghostData = Blender.Armature.Armature(ghostName + "-DB")
 
 	# link the data with the object
