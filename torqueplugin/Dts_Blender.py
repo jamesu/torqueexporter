@@ -2,7 +2,7 @@
 
 """
 Name: 'Torque Shape (.dts)...'
-Blender: 237
+Blender: 240
 Group: 'Export'
 Tooltip: 'Export to Torque (.dts) format.'
 """
