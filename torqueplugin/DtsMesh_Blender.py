@@ -78,9 +78,9 @@ class BlenderMesh(DtsMesh):
 					matIndex = pr.NoMaterial # Nope, no material
 					
 				pr.matindex |= matIndex
-				
 				# Add an extra element if using triangle strips, else add a new primitive
-				if (len(face.v) > 3) and (triStrips == False):
+				#if (len(face.v) > 3) and (triStrips == False):
+				if (len(face.v) > 3) and (triStrips == True):
 					pr.numElements = 4
 					self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,2, useSticky))
 					self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,1, useSticky))
@@ -93,11 +93,10 @@ class BlenderMesh(DtsMesh):
 					
 					if len(face.v) > 3:
 						self.primitives.append(pr)
-						
 						# Duplicate primitive in reverse order if doublesided
 						if (msh.mode & NMesh.Modes.TWOSIDED) or (face.mode & NMesh.FaceModes.TWOSIDE):
-							for i in range(1, pr.numElements+1):
-								self.indices.append(self.indices[-i])
+							for i in range((pr.firstElement+pr.numElements)-1,pr.firstElement-1,-1):							
+								self.indices.append(self.indices[i])
 							self.primitives.append(Primitive(pr.firstElement+pr.numElements,pr.numElements,pr.matindex))
 					
 						pr = Primitive(len(self.indices), 3, pr.matindex)
@@ -110,9 +109,10 @@ class BlenderMesh(DtsMesh):
 						
 				# Duplicate primitive in reverse order if doublesided
 				if (msh.mode & NMesh.Modes.TWOSIDED) or (face.mode & NMesh.FaceModes.TWOSIDE):
-					for i in range(1, pr.numElements+1):
-						self.indices.append(self.indices[-i])
+					for i in range((pr.firstElement+pr.numElements)-1,pr.firstElement-1,-1):
+						self.indices.append(self.indices[i])
 					self.primitives.append(Primitive(pr.firstElement+pr.numElements,pr.numElements,pr.matindex))
+
 
 		# Determine shape type based on vertex weights
 		if len(self.bindex) <= 1:
