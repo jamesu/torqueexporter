@@ -54,7 +54,7 @@ Version = "0.9"
 Prefs = None
 Prefs_keyname = ""
 export_tree = None
-Debug = True
+Debug = False
 textDocName = "TorqueExporter_SCONF"
 pathSeperator = "/"
 
