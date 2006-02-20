@@ -43,6 +43,7 @@ import re
 import DtsShape_Blender
 from DtsShape_Blender import *
 
+import os.path
 
 '''
   Blender Exporter For Torque
@@ -57,6 +58,8 @@ export_tree = None
 Debug = False
 textDocName = "TorqueExporter_SCONF"
 pathSeperator = "/"
+
+if Debug: import profile
 
 '''
 Utility Functions
@@ -340,8 +343,10 @@ def loadPrefs():
 					
 				Prefs = loadPrefs
 				
-				#if Prefs['Version'] < 0.9:
-				#	...
+				# make sure the output path is valid.
+				if not os.path.exists(Prefs['exportBasepath']):
+					Prefs['exportBasepath'] = basepath(Blender.Get("filename"))
+				savePrefs()
 				return True
 			else:
 				if not loadOldTextPrefs(text_doc):
@@ -352,6 +357,11 @@ def loadPrefs():
 		Torque_Util.dump_writeln("Loaded Preferences.")
 		# Save prefs (to update text and registry versions)
 		savePrefs()
+
+	# make sure the output path is valid.
+	if not os.path.exists(Prefs['exportBasepath']):
+		Prefs['exportBasepath'] = basepath(Blender.Get("filename"))
+	
 		
 # Saves preferences to registry and text object
 def savePrefs():
@@ -389,7 +399,7 @@ def getSequenceKey(value):
 	if value == "N/A":
 		return dummySequence
 	try:
-		return Prefs['Sequences'][value]
+		return Prefs['Sequences'][value]	
 	except KeyError:
 		Prefs['Sequences'][value] = dummySequence.copy()
 		# Create anything that cannot be copied (reference objects like lists),
@@ -533,6 +543,9 @@ class ShapeTree(SceneTree):
 		# Set scene frame to 1 in case we have any problems
 		Scene.getCurrent().getRenderingContext().currentFrame(1)
 		try:
+			# double check the base path before opening the stream
+			if not os.path.exists(Prefs['exportBasepath']):
+				Prefs['exportBasepath'] = basepath(Blender.Get("filename"))
 			# make sure our path seperator is correct.
 			getPathSeperator(Prefs['exportBasepath'])
 			Stream = DtsStream("%s%s%s.dts" % (Prefs['exportBasepath'], pathSeperator, Prefs['exportBasename']), False, Prefs['DTSVersion'])
@@ -636,6 +649,10 @@ class ShapeTree(SceneTree):
 					if len(actions.keys()) > 0:
 						progressBar.pushTask("Adding Actions..." , len(actions.keys()*4), 0.8)
 						for action_name in actions.keys():
+							# skip the fake action (workaround for a blender bug)
+							# TODO: surround this w/ version check when bug is fixed.
+							if action_name == "DTSEXPFAKEACT": continue
+							
 							sequenceKey = getSequenceKey(action_name)
 							if (sequenceKey['NoExport']) or (sequenceKey['InterpolateFrames'] == 0):
 								progressBar.update()
@@ -757,6 +774,8 @@ def handleScene():
 	# What we do here is clear any existing export tree, then create a brand new one.
 	# This is useful if things have changed.
 	if export_tree != None: export_tree.clear()
+	scn = Blender.Scene.GetCurrent()
+	scn.update(1)
 	export_tree = SceneTree(None,Blender.Scene.getCurrent())
 	Torque_Util.dump_writeln("Cleaning Preference Keys")
 	cleanKeys()
@@ -838,7 +857,6 @@ def guiSequenceListItemCallback(control):
 
 def createSequenceListitem(seq_name, startEvent):
 	sequencePrefs = getSequenceKey(seq_name)
-	
 	# Note on positions:
 	# It quicker to assign these here, as there is no realistic chance scaling being required.
 	guiContainer = Common_Gui.BasicContainer("", None, None)
@@ -880,11 +898,13 @@ def populateSequenceList():
 	# assign events in batches of the maximum number of visible list items.
 	startEvent = 40
 	for key in actions.keys():
+		# skip the fake action (hack for blender 2.41 bug)
+		if key == "DTSEXPFAKEACT": continue		
 		guiSequenceList.addControl(createSequenceListitem(key, startEvent))
 		startEvent += 4
-	
-	# Joe : populate the ref pose combo box
-	guiSequenceOptions.controls[13].items = actions.keys()
+		# Joe : add any new animations to the ref pose combo box
+		if not (key in guiSequenceOptions.controls[13].items):
+			guiSequenceOptions.controls[13].items.append(key)
 		
 def clearSequenceList():
 	global guiSequenceList
@@ -1015,6 +1035,8 @@ def guiSequenceTriggersCallback(control):
 			guiSequenceUpdateTriggers(sequencePrefs['Triggers'], itemIndex)
 		
 		# Update menu caption
+		if itemIndex == -1:
+			return
 		if sequencePrefs['Triggers'][itemIndex][2]: stateStr = "(ON)"
 		else: stateStr = "(OFF)"
 		guiSequenceOptions.controls[6].items[itemIndex] = (triggerMenuTemplate % (sequencePrefs['Triggers'][itemIndex][1], sequencePrefs['Triggers'][itemIndex][0])) + stateStr
@@ -1047,6 +1069,10 @@ def guiSequenceCallback(control):
 				guiSequenceOptions.controls[4].value = sequencePrefs['MaterialIpoStartFrame']
 				
 				# Joe : added for blend anim ref pose selection
+				# make sure the user didn't delete the action containing the refrence pose
+				# out from underneath us while we weren't looking.
+				try: blah = Blender.Armature.NLA.GetActions()[sequencePrefs['BlendRefPoseAction']]
+				except: sequencePrefs['BlendRefPoseAction'] = sequenceName
 				guiSequenceOptions.controls[12].label = "Ref pose for '%s'" % sequenceName
 				guiSequenceOptions.controls[13].setTextValue(sequencePrefs['BlendRefPoseAction'])
 				guiSequenceOptions.controls[14].min = 1
@@ -1160,10 +1186,8 @@ def guiGeneralCallback(control):
 		# did the value go up or down?
 		if control.value > Prefs['Billboard']['Dim']:
 			# we go up
-			print "going up."
 			val = int(2**math.ceil(math.log(control.value,2)))
 		elif control.value < Prefs['Billboard']['Dim']:
-			print "going down."
 			# we go down
 			val = int(2**math.floor(math.log(control.value,2)))
 		control.value = val
@@ -1539,7 +1563,7 @@ def initGui():
 	# --
 	guiOutputText = Common_Gui.SimpleText("shape.output", "Output", None, guiGeneralResize)
 	guiShapeScriptButton =  Common_Gui.ToggleButton("Write Shape Script", "Write .cs script that details the .dts and all .dsq sequences", 17, guiGeneralCallback, guiGeneralResize)
-	guiCustomFilename = Common_Gui.TextBox("Filename", "Filename to write to", 18, guiGeneralCallback, guiGeneralResize)
+	guiCustomFilename = Common_Gui.TextBox("Filename: ", "Filename to write to", 18, guiGeneralCallback, guiGeneralResize)
 	guiCustomFilename.length = 255
 	if "\\" in Prefs['exportBasepath']:
 		pathSep = "\\"
@@ -1680,6 +1704,10 @@ def exit_callback():
 '''
 #-------------------------------------------------------------------------------------------------
 
+if Debug:
+	import __main__
+	import pstats
+	
 def entryPoint(a):
 	getPathSeperator(Blender.Get("filename"))
 	if Debug:
@@ -1697,12 +1725,26 @@ def entryPoint(a):
 	
 	if (a == 'quick'):
 		handleScene()
-		export()
+		# some profiling stuff for debug mode
+		if Debug:
+			# make the entry point available from __main__
+			__main__.export = export
+			profile.run('export(),', 'd:/exporterProfilelog.txt')
+		else:
+			export()
+		# dump out profiler stats for debug mode
+		if Debug:
+			# print out the profiler stats.
+			p = pstats.Stats('d:/exporterProfilelog.txt')
+			p.strip_dirs().sort_stats('cumulative').print_stats(60)
+			p.strip_dirs().sort_stats('time').print_stats(60)
 	elif a == 'normal' or (a == None):
 		# Process scene and load configuration gui
 		handleScene()
 		initGui()
 	
+
+
 # Main entrypoint
 if __name__ == "__main__":
 	entryPoint('normal')

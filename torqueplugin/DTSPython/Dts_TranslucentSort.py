@@ -144,8 +144,7 @@ class TranslucentSort:
 		for i in range(0, len(self.faceInfoList)):
 			self.faceInfoList[i] = FaceInfo()
 			self.faceInfoList[i].used = False
-		
-		for i in range(0, len(self.mFaces)):
+		for i in range(0, len(self.mFaces)):			
 			self.initFaceInfo(self.mFaces[i], self.faceInfoList[i])
 			self.setFaceInfo(self.mFaces[i], self.faceInfoList[i])
 	

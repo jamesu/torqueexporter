@@ -297,6 +297,16 @@ if accelerator == "BLENDER":
 			q = Quaternion(v.x(), v.y(), v.z(), 0)
 			r = self.conjugate() * q * self
 			return Vector(r.x(), r.y(), r.z())
+		def eqDelta(self, quat, delta):
+			# tests for equality with another Quaternion, using delta as the margin of error
+			return (((self[0] - quat[0]) < delta)\
+			and ((self[0] - quat[0]) > -delta)\
+			and ((self[1] - quat[1]) < delta)\
+			and ((self[1] - quat[1]) > -delta)\
+			and ((self[2] - quat[2]) < delta)\
+			and ((self[2] - quat[2]) > -delta)\
+			and ((self[3] - quat[3]) < delta)\
+			and ((self[3] - quat[3]) > -delta))
 
 	# The Matrix Class
 	class MatrixF:
@@ -480,6 +490,14 @@ else:
 				if other.members[i] != self.members[i]:
 					return False
 			return True
+		def eqDelta(self, vec, delta):
+			return (((self[0] - vec[0]) < delta)\
+			and ((self[0] - vec[0]) > -delta)\
+			and ((self[1] - vec[1]) < delta)\
+			and ((self[1] - vec[1]) > -delta)\
+			and ((self[2] - vec[2]) < delta)\
+			and ((self[2] - vec[2]) > -delta))
+
 		def x(self):
 			return self.members[0]
 		def y(self):
@@ -745,6 +763,17 @@ else:
 			q = Quaternion(v.x(), v.y(), v.z(), 0)
 			r = self.conjugate() * q * self
 			return Vector(r.x(), r.y(), r.z())
+		def eqDelta(self, quat, delta):
+			# tests for equality with another Quaternion, using delta as the margin of error
+			return (((self[0] - quat[0]) < delta)\
+			and ((self[0] - quat[0]) > -delta)\
+			and ((self[1] - quat[1]) < delta)\
+			and ((self[1] - quat[1]) > -delta)\
+			and ((self[2] - quat[2]) < delta)\
+			and ((self[2] - quat[2]) > -delta)\
+			and ((self[3] - quat[3]) < delta)\
+			and ((self[3] - quat[3]) > -delta))
+
 			
 			
 

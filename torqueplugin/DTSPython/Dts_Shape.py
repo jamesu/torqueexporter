@@ -276,13 +276,16 @@ class Trigger:
 	def __init__(self, st=0, on=True, ps=0.0, revert=False):
 		self.pos = ps
 		
-		if (st <= 0) or (st > 30):
+		if (st <= 0) or (st > 32):
 			Torque_Util.dump_writeln("Warning : Invalid Trigger state (%d)" % st)
 		
-		st -= 1 # 0..31
-		self.state = 1 << st
+		#st -= 1 # 0..31
+		#self.state = 1 << st
+		# this is just a plain integer, only bits 31 and 30 are used as flags.
+		self.state = st
 		if on: self.state |= self.StateOn
 		if revert: self.state |= self.InvertOnReverse
+
 			
 # The Morph Mesh Class
 class Morph:
@@ -1070,7 +1073,7 @@ class DtsShape:
 			rot = Quaternion()
 			trans, rot = self.getNodeWorldPosRot(object.node)
 			for j in range(0, object.numMeshes):
-				bounds2 = self.meshes[object.firstMesh + j].getBounds(trans,rot) ;
+				bounds2 = self.meshes[object.firstMesh + j].getBounds(trans,rot)
 				self.bounds.min[0] = min(self.bounds.min.x(), bounds2.min.x())
 				self.bounds.min[1] = min(self.bounds.min.y(), bounds2.min.y())
 				self.bounds.min[2] = min(self.bounds.min.z(), bounds2.min.z())

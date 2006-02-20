@@ -217,6 +217,7 @@ class DtsMesh:
 				bounds2.max[1] = tv[1]
 			if tv[2] > bounds2.max[2]:
 				bounds2.max[2] = tv[2]
+		
 		return(bounds2)
 	
 	def setMaterial(self, n):

@@ -31,6 +31,8 @@ from DtsMesh_Blender import *
 import Blender
 from Blender import NMesh, Armature, Scene, Object, Material, Texture
 from Blender import Mathutils as bMath
+
+
 '''
    Util functions used by class as well as exporter gui
 '''
@@ -248,8 +250,17 @@ def getNumFrames(ipos, useKey = False):
 		for i in ipos:
 			if i != 0:
 				# This basically gets the furthest frame in blender this sequence has a keyframe at
-				if i.getCurveBeztriple(0, i.getNBezPoints(0)-1)[3] > numFrames:
-					numFrames = int(i.getCurveBeztriple(0, i.getNBezPoints(0)-1)[3])
+				# *** Blender Bug *** Sometimes Blender crashes under windows when accessing an ipo 
+				# ** with an "Inf" (influence) key associated in 2.41.
+				# ** Blender is returning a pointer into nowhere land and there's nothing we can do to 
+				# ** detect it until it's too late to avoid crashing the whole app >:( - Joe G.
+				try:
+					if i.getCurveBeztriple(0, i.getNBezPoints(0)-1)[3] > numFrames:
+						#numframes = int(i.getRctf()[1])
+						numFrames = int(i.getCurveBeztriple(0, i.getNBezPoints(0)-1)[3])
+				except TypeError:
+					# no IPO curve...
+					continue
 	else:
 		for i in ipos:
 			if i != 0:
@@ -347,7 +358,8 @@ class BlenderShape(DtsShape):
 		
 		# Import the mesh - make sure its static
 		mat = self.collapseBlenderTransform(mesh)
-		tmsh = BlenderMesh(self, mesh.getData(), 0 ,  1.0, mat, self.preferences['StripMeshes'])
+		# last parameter tells BlenderMesh to ignore the double sided flag, double sided meshes are harmful to convexity :)
+		tmsh = BlenderMesh(self, mesh.getData(), 0 ,  1.0, mat, self.preferences['StripMeshes'], True)
 		tmsh.mtype = tmsh.T_Standard
 		
 		# Store constructed detail level info into shape
@@ -431,7 +443,8 @@ class BlenderShape(DtsShape):
 			
 			# If we ended up being a Sorted Mesh, sort the faces
 			if tmsh.mtype == tmsh.T_Sorted:
-				tmsh.sortMesh(Prefs['AlwaysWriteDepth'], Prefs['ClusterDepth'])
+				#tmsh.sortMesh(Prefs['AlwaysWriteDepth'], Prefs['ClusterDepth'])
+				tmsh.sortMesh(self.preferences['AlwaysWriteDepth'], self.preferences['ClusterDepth'])
 				
 			# Increment polycount metric
 			polyCount += tmsh.getPolyCount()
@@ -499,7 +512,6 @@ class BlenderShape(DtsShape):
 	def finalizeObjects(self):
 		# Go through object's, add meshes, set transforms
 		for o in self.objects:
-			
 			o.numMeshes = len(o.tempMeshes)
 			o.firstMesh = len(self.meshes)
 			
@@ -568,7 +580,6 @@ class BlenderShape(DtsShape):
 			if self.detaillevels[count].subshape >= len(self.subshapes):
 				del self.detaillevels[count]
 			else: count += 1
-		
 		# Calculate bounds and sizes
 		if len(self.detaillevels) == 0:
 			Torque_Util.dump_writeln("      Warning : Shape contains no detail levels!")
@@ -579,7 +590,7 @@ class BlenderShape(DtsShape):
 		# If we have an object in blender called "Bounds" of type "Mesh", use that.
 		try:
 			bound_obj = Blender.Object.Get("Bounds")
-			matf = collapseBlenderTransform(bound_obj)
+			matf = self.collapseBlenderTransform(bound_obj)
 			if bound_obj.getType() == "Mesh":
 				bmesh = bound_obj.getData()
 				self.bounds.max = Vector(-10e30, -10e30, -10e30)
@@ -604,11 +615,12 @@ class BlenderShape(DtsShape):
 				self.calculateCenter()
 				self.calculateRadius()
 				self.calculateTubeRadius()
-		except:
+		except ValueError:
 				self.calculateBounds()
 				self.calculateCenter()
 				self.calculateRadius()
 				self.calculateTubeRadius()
+
 			
 	# Converts a blender matrix to a Torque_Util.MatrixF
 	def toTorqueUtilMatrix(self, blendermatrix):
@@ -660,9 +672,9 @@ class BlenderShape(DtsShape):
 		# First, process armature
 		arm = armature.getData()
 		# Don't add existing armatures
-		for added in self.addedArmatures:
-			added = added[0]
-			if added.name == arm.name:
+		for added in self.addedArmatures:			
+			#added = added[0]
+			if added[0].getData().name == arm.name:
 				#print "Note : ignoring attempt to process armature data '%s' again." % arm.name
 				return False
 		
@@ -672,7 +684,7 @@ class BlenderShape(DtsShape):
 
 		ghostOb = getGhostArmature(armature, "DTS-EXP-GHOST")
 		ghostArm = ghostOb.getData()
-		# Get the armature's position, rotation, and scale
+		# Get the fake armature's position, rotation, and scale
 		matf = self.collapseBlenderTransform(ghostOb)
 		pos, rot = Vector(matf.get(3,0),matf.get(3,1),matf.get(3,2)), Quaternion().fromMatrix(matf).inverse()
 		scale = [1.0, 1.0, 1.0]
@@ -683,7 +695,6 @@ class BlenderShape(DtsShape):
 				self.addBones(bone, matf, scale, parentBone, True)
 		
 		# kill the ghost!
-		#if not collapseTransform:
 		scene = Blender.Scene.getCurrent()
 		scene.unlink(ghostOb)
 			
@@ -691,8 +702,11 @@ class BlenderShape(DtsShape):
 		# Set armature index on all added nodes
 		for node in self.nodes[startNode:len(self.nodes)]:
 			node.armIdx = len(self.addedArmatures)
-			
-		self.addedArmatures.append([arm, pos, rot, self.collapseBlenderScale(armature)])		
+
+		# now get the real armature transforms for animations
+		matf = self.collapseBlenderTransform(armature)
+		rot = Quaternion().fromMatrix(matf)
+		self.addedArmatures.append([armature, pos, rot, self.collapseBlenderScale(armature)])		
 		
 		return True
 				
@@ -747,6 +761,8 @@ class BlenderShape(DtsShape):
 		b = Node(self.sTable.addString(real_name), parentId, isOrphan)
 		self.defaultTranslations.append(head)
 		self.defaultRotations.append(rot)
+		# need to get the bone's armature space transform and store it to use later with the pose stuff
+		b.armSpaceTransform = bone.matrix['ARMATURESPACE']
 		self.nodes.append(b)
 
 		# Add any children this bone may have
@@ -758,9 +774,8 @@ class BlenderShape(DtsShape):
 		parentId = len(self.nodes)-1
 		if bone.hasChildren():
 			for bChild in bone.children:
-				# must add only IMMEDIATE children! bone.children gives us the whole branch.
+				# must add only IMMEDIATE children! bone.children gives us the whole branch in 2.40.
 				if bChild.parent.name == bone.name:
-					#self.addBlenderChildren(bChild, nmat, parentId, scale, indent + 1)
 					self.addBones(bChild, nmat, scale, parentId, False)
 			
 	def addNode(self, object):
@@ -779,28 +794,26 @@ class BlenderShape(DtsShape):
 		self.nodes.append(b)
 		
 		self.subshapes[0].numNodes += 1
-		
-	# Gets loc, rot, scale of a node at time frame_idx
-	def getTransformAtFrame(self, scene, context, sequence, curveMap, nodeIndex, frame_idx, baseTransform=None):
-		# Get the node's ipo...
-		ipo = sequence.ipo[nodeIndex]
-		if ipo == 0: # No ipo for this node, so its not animated
-			return None
 
-		loc, rot, scale = None, None, None
 		
-		arm_pos = self.addedArmatures[self.nodes[nodeIndex].armIdx][1]
-		arm_rot = self.addedArmatures[self.nodes[nodeIndex].armIdx][2]
-		arm_scale = self.addedArmatures[self.nodes[nodeIndex].armIdx][3]
+	# These three helper methods are used by getPoseTransform. They should probably be moved elsewhere.
+	def isRotated(self, quat):
+		delta = 0.00001
+		return not ((quat[0] < delta) and (quat[0] > 0.0 - delta) and (quat[1] < delta) and (quat[1] > 0.0 - delta) and (quat[2] < delta) and (quat[2] > 0.0 - delta))
+	
+	def isTranslated(self, vec):
+		delta = 0.00001
+		return not ((vec[0] < delta) and (vec[0] > -delta) and (vec[1] < delta) and (vec[1] > -delta) and (vec[2] < delta) and (vec[2] > -delta))
+	
+	def isScaled(self, vec):
+		delta = 0.00001
+		return not ((vec[0] < 1.0 + delta) and (vec[0] > 1.0 - delta) and (vec[1] < 1.0 + delta) and (vec[1] > 1.0 - delta) and (vec[2] < 1.0 + delta) and (vec[2] > 1.0 - delta))
 		
-		# Determine which bone attributes are modified by *this* IPO block
-		has_loc, has_rot, has_scale = sequence.matters_translation[nodeIndex], sequence.matters_rotation[nodeIndex], sequence.matters_scale[nodeIndex]
+	# grab the pose transform of whatever frame we're currently at.  Frame must be set before calling this method.
+	def getPoseTransform(self, sequence, nodeIndex, frame_idx, baseTransform=None, getRawValues=False):
 
-		# Set the current frame in blender to the frame the ipo keyframe is at
-		context.currentFrame(int(frame_idx))
-
-		# Update the ipo's current value
-		scene.update(1)
+		loc, rot, scale = None, None, None		
+		arm = self.addedArmatures[self.nodes[nodeIndex].armIdx][0]
 
 		# Add ground frames if enabled
 		if sequence.has_ground:
@@ -820,6 +833,7 @@ class BlenderShape(DtsShape):
 						sequence.numGroundFrames += 1
 					except:
 						Torque_Util.dump_writeln("Warning: Error getting ground frame %d" % sequence.numGroundFrames)
+						Torque_Util.dump_writeln("  You must have an object named Bounds in your scene to export ground frames.")
 
 		# Convert time units from Blender's frame (starting at 1) to second
 		# (using sequence FPS)
@@ -827,100 +841,135 @@ class BlenderShape(DtsShape):
 		if sequence.duration < time:
 			sequence.duration = time
 
+		# some temp variables to make life easier
+		node = self.nodes[nodeIndex]
+		parentNode = self.nodes[node.parent]
+		bonename = self.sTable.get(node.name)
+		parentname = self.sTable.get(parentNode.name)
+		
+		# our actual pose for this frame.
+		pose = arm.getPose()
+
+		# Begin complicated math :)
+		
+		# - determine the bone's rotation relative to it's default orientation.		
+		theMat = bMath.Matrix(pose.bones[bonename].localMatrix.rotationPart())
+		defMat = bMath.Matrix(self.nodes[nodeIndex].armSpaceTransform.rotationPart())
+		# take the armature's rotation into account.
+		defMat = defMat * bMath.Matrix(arm.getMatrix()).rotationPart().invert()
+		# get rid of parent rotation.
+		if not node.isOrphan:
+			theMat = theMat * bMath.Matrix(pose.bones[parentname].localMatrix.rotationPart()).invert()
+		# move rotation into bone's local frame of reference.
+		theMat = bMath.Matrix(defMat) * bMath.Matrix(theMat)
+		# find the difference between the default rotation and the rotation for this frame.
+		quat1 = defMat.toQuat()
+		quat2 = bMath.Quaternion(theMat.toQuat())
+		theMat = bMath.Quaternion(bMath.DifferenceQuats(quat1, quat2)).toMatrix()
+
+		
+		# - determine the translation of the bone relative to it's parent.
+		tp = pose.bones[bonename].loc
+		# scale the translation by the armature's scale
+		armSize = arm.getSize()
+		tp[0],tp[1],tp[2] = tp[0] * armSize[0], tp[1] * armSize[1], tp[2] * armSize[2]
+		trans = Vector(tp[0], tp[1], tp[2])
+
+
+		# - determine the scale of the bone.
+		scaleVec = pose.bones[bonename].size
+
+
+		# We dump out every transform regardless of whether it matters or not.  This avoids having to
+		# make multiple passes through the frames to deterime what's animated.  Unused tracks and channels
+		# are cleaned up later.
 		if baseTransform != None:
 			# Blended animation, so find the difference between
 			# frames and store this
 
-			# If we have loc values...
-			if has_loc:
-				loc = Vector(
-				ipo.getCurveCurval(curveMap['LocX']) * arm_scale[0],
-				ipo.getCurveCurval(curveMap['LocY']) * arm_scale[1],
-				ipo.getCurveCurval(curveMap['LocZ']) * arm_scale[2])
-				# Simple now - earlier to get difference
-				if baseTransform[0] != None: loc -=  baseTransform[0]
-				#print "BLEND  loc: %f %f %f" % (loc[0],loc[1],loc[2])
+			# process translation
+			trans = trans - baseTransform[0]
+			if self.isTranslated(trans):
+				sequence.matters_translation[nodeIndex] = True
+				sequence.has_loc = True				
+			loc = trans
 
-			# If we have rot values...
-			if has_rot:
-				rot = Quaternion(
-				ipo.getCurveCurval(curveMap['QuatX']), #* arm_scale[0],
-				ipo.getCurveCurval(curveMap['QuatY']), #* arm_scale[1],
-				ipo.getCurveCurval(curveMap['QuatZ']), #* arm_scale[2],
-				ipo.getCurveCurval(curveMap['QuatW']))
-				# We need to get the difference between the rest position and blend position, *then* rotate it into worldspace
-				if baseTransform[1] != None: rot = ((baseTransform[1].inverse() * rot).inverse() * arm_rot)
-				#print "BLEND rot: %f %f %f %f" % (ipo_rot[0],ipo_rot[1],ipo_rot[2],ipo_rot[3])
+			# process rotation
+			qt = theMat.toQuat()
+			btqt = bMath.Quaternion(baseTransform[1][3],baseTransform[1][0], baseTransform[1][1], baseTransform[1][2])
+			difqt = bMath.DifferenceQuats(qt, btqt)
+			quat = Quaternion(difqt.x, difqt.y, difqt.z, difqt.w)
+			rotation = quat
+			if self.isRotated(rotation):
+				sequence.matters_rotation[nodeIndex] = True
+				sequence.has_rot = True
+			rot = rotation
 
-			# If we have scale values...
-			if has_scale:
-				# Size is a ratio of the original
-				scale = Vector(
-				ipo.getCurveCurval(curveMap['SizeX']), #* arm_scale[0],
-				ipo.getCurveCurval(curveMap['SizeY']), #* arm_scale[1],
-				ipo.getCurveCurval(curveMap['SizeZ'])) #* arm_scale[2])
-				# Get difference between this scale and base scale by division
-				if baseTransform[2] != None:
-					scale[0] /= baseTransform[2][0]
-					scale[1] /= baseTransform[2][1]
-					scale[2] /= baseTransform[2][2]
-				#print "BLEND scale: %f %f %f" % (scale[0],scale[1],scale[2])
+			# process scale
+			scale = Vector(scaleVec[0], scaleVec[1], scaleVec[2])
+			# Get difference between this scale and base scale by division
+			scale[0] /= baseTransform[2][0]
+			scale[1] /= baseTransform[2][1]
+			scale[2] /= baseTransform[2][2]
+			if self.isScaled(scale):
+				sequence.matters_scale[nodeIndex] = True
+				sequence.has_scale = True
+
+
+
 		else:
 			# Standard animations, so store total translations
-			# If we have loc values...
-			if has_loc:
-				loc = Vector(
-				ipo.getCurveCurval(curveMap['LocX']) * arm_scale[0],
-				ipo.getCurveCurval(curveMap['LocY']) * arm_scale[1],
-				ipo.getCurveCurval(curveMap['LocZ']) * arm_scale[2])
+
+			# process translation
+			if getRawValues:
+				loc = trans
+			else:
+				if self.isTranslated(trans):
+					sequence.matters_translation[nodeIndex] = True
+					sequence.has_loc = True				
+				loc = trans
 				# for orphan bones movement is relative to the bone's own rotation
-				if self.nodes[nodeIndex].isOrphan:
+				if node.isOrphan:
 					loc = self.defaultRotations[nodeIndex].apply(loc)
 				loc += self.defaultTranslations[nodeIndex]
-				#print "REG  loc: %f %f %f" % (loc[0],loc[1],loc[2])
 
-			# If we have rot values...
-			if has_rot:
-				ipo_rot = Quaternion(
-				ipo.getCurveCurval(curveMap['QuatX']), #* arm_scale[0],
-				ipo.getCurveCurval(curveMap['QuatY']), #* arm_scale[1],
-				ipo.getCurveCurval(curveMap['QuatZ']), #* arm_scale[2],
-				ipo.getCurveCurval(curveMap['QuatW']))
-				rot = (ipo_rot.inverse() * arm_rot) * self.defaultRotations[nodeIndex]
-				#print "REG rot: %f %f %f %f" % (ipo_rot[0],ipo_rot[1],ipo_rot[2],ipo_rot[3])
-
-			# If we have scale values...
-			if has_scale:
-				# Size is a ratio of the original
-				scale = Vector(
-				ipo.getCurveCurval(curveMap['SizeX']), #* arm_scale[0],
-				ipo.getCurveCurval(curveMap['SizeY']), #* arm_scale[1],
-				ipo.getCurveCurval(curveMap['SizeZ'])) #* arm_scale[2])
-				#print "REG scale: %f %f %f" % (scale[0],scale[1],scale[2])
-
+			
+			# process rotation
+			qt = theMat.toQuat()
+			quat = Quaternion(qt.x, qt.y, qt.z, qt.w)
+			rotation = quat
+			if getRawValues:
+				rot = rotation
+			else:
+				if self.isRotated(rotation):
+					sequence.matters_rotation[nodeIndex] = True
+					sequence.has_rot = True
+				rot = rotation.inverse() * self.defaultRotations[nodeIndex]
+				
+			# process scale.
+			if getRawValues:
+				scale = Vector(scaleVec[0], scaleVec[1], scaleVec[2])
+			else:
+				if self.isScaled(scaleVec):
+					sequence.matters_scale[nodeIndex] = True
+					sequence.has_scale = True			
+				scale = Vector(scaleVec[0], scaleVec[1], scaleVec[2])
+			
 		return loc, rot, scale
 
-	
-	# -----------------------------------------------------------
+
 	# Builds a base transform for blend animations using the
 	# designated action and frame #. 
 	def buildBaseTransforms(self, blendSequence, blendAction, useActionName, useFrame, scene, context):
-		# channel names in the action containing the base pose frame
-		# must match those in the blend sequence
 		useAction = Blender.Armature.NLA.GetActions()[useActionName]
 		refAnimChannels = useAction.getAllChannelIpos()
 		bAnimChannels = blendAction.getAllChannelIpos()
-		for c in bAnimChannels:
-			if not (c in refAnimChannels):
-				# bail, throw an exception
-				print "Error importing blend animation. You must have same channels in ref anim!!!"
-				return None
-		# channel types don't need to match.
 		
 		# Need to create a temporary sequence and build a list
 		# of node transforms to use as the base transforms for nodes
 		# in our blend animation.
-		tempSequence = Sequence("randomName")
+		tempSequence = Sequence()
+		tempSequence.name = useActionName
 		tempSequence.numTriggers = 0
 		tempSequence.firstTrigger = -1
 		tempSequence.has_ground = False
@@ -934,9 +983,9 @@ class BlenderShape(DtsShape):
 		tempSequence.frames = []
 		for n in self.nodes:
 			tempSequence.ipo.append(0)
-			tempSequence.matters_translation.append(False)
-			tempSequence.matters_rotation.append(False)
-			tempSequence.matters_scale.append(False)
+			tempSequence.matters_translation.append(True)
+			tempSequence.matters_rotation.append(True)
+			tempSequence.matters_scale.append(True)
 			tempSequence.frames.append(0)
 			# and a blank transform
 			baseTransforms.append(0)
@@ -950,40 +999,58 @@ class BlenderShape(DtsShape):
 			# use the reference animation.
 			tempSequence.ipo[nodeIndex] = refAnimChannels[c]
 		
-		tempSequence.numKeyFrames = getNumFrames(tempSequence.ipo, False)
-		
+		#tempSequence.numKeyFrames = getNumFrames(tempSequence.ipo, False)
+		tempSequence.numKeyFrames = 1000 # one brazilion
 
+		# loop through each node and reset it's transforms.  This avoids transforms carrying over from
+		# other animations.
+		for nodeIndex in range(1, len(self.nodes)):
+			arm = self.addedArmatures[self.nodes[nodeIndex].armIdx][0]
+			tempPose = arm.getPose()
+			bonename = self.sTable.get(self.nodes[nodeIndex].name)
+			# reset the bone's transform
+			tempPose.bones[bonename].quat = bMath.Quaternion().identity()
+			tempPose.bones[bonename].size = bMath.Vector(1.0, 1.0, 1.0)
+			tempPose.bones[bonename].loc = bMath.Vector(0.0, 0.0, 0.0)
+			# update the pose.
+			tempPose.update()
+		
+		# now set the active action and move to the desired frame
+		for i in range(0, len(self.addedArmatures)):
+			arm = self.addedArmatures[i][0]	
+			useAction.setActive(arm)
+
+		# Set the current frame in blender
+		context.currentFrame(useFrame)
+		# Update the scene's state.
+		scene.update(1)
+		
 		# build our transform for each node		
-		for nodeIndex in range(len(self.nodes)):
+		for nodeIndex in range(1, len(self.nodes)):
 			ipo = tempSequence.ipo[nodeIndex]
-			if ipo == 0: # No ipo for this node
-				continue
-			curveMap = BuildCurveMap(ipo)
-			has_loc, has_rot, has_scale = getCMapSupports(curveMap)
-			tempSequence.matters_translation[nodeIndex] = has_loc
-			tempSequence.matters_rotation[nodeIndex] = has_rot
-			tempSequence.matters_scale[nodeIndex] = has_scale
-			baseTransforms[nodeIndex] = self.getTransformAtFrame(scene, context, tempSequence, curveMap, nodeIndex, useFrame, [None, None, None])
+			curveMap = None
+			tempSequence.matters_translation[nodeIndex] = True
+			tempSequence.matters_rotation[nodeIndex] = True
+			tempSequence.matters_scale[nodeIndex] = True
+			baseTransforms[nodeIndex] = self.getPoseTransform(tempSequence, nodeIndex, useFrame, None, True)
+		
 
 		return baseTransforms
 		
-	# -----------------------------------------------------------
-	
+
 	
 	# Import a sequence
 	def addAction(self, action, scene, context, sequencePrefs):
 		'''
-		This adds adds an action to a shape as a sequence.
+		This adds an action to a shape as a sequence.
 		
 		Sequences are added on a one-by-one basis.
 		The first part of the function determines if the action is worth exporting - if not, the function fails,
 		otherwise it is setup.
 		
-		The second part of the function determines what the action animates - location, rotation, and scale keyframes
-		are all supported, though you must stick to a particular convention in an action - e.g. you can't have a loc,rot
-		keyframe, then a loc,rot,scale one - it needs to be one or the other.
+		The second part of the function determines what the action animates.
 		
-		The third part of the function adds the keyframes, making heavy use of the getTransformAtFrame function. You can control the
+		The third part of the function adds the keyframes, making heavy use of the getPoseTransform function. You can control the
 		amount of frames exported via the 'InterpolateFrames' option.
 		
 		Finally, the sequence data is dumped to the shape. Additionally, if the sequence has been marked as a dsq,
@@ -991,51 +1058,65 @@ class BlenderShape(DtsShape):
 		
 		NOTE: this function needs to be called AFTER all calls to addArmature/addNode, for obvious reasons.
 		'''
+
 		# Lets start off with the basic sequence
-		
 		sequence = Sequence(self.sTable.addString(action.getName()))
+		sequence.name = action.getName()
 		sequence.numTriggers = 0
 		sequence.firstTrigger = -1
 
 		# Make set of blank ipos and matters for current node
-		sequence.ipo = []
+		#sequence.ipo = []
 		sequence.frames = []
 		for n in self.nodes:
-			sequence.ipo.append(0)
+			#sequence.ipo.append(0)
 			sequence.matters_translation.append(False)
 			sequence.matters_rotation.append(False)
 			sequence.matters_scale.append(False)
 			sequence.frames.append(0)
+
+		# Assign temp flags
+		sequence.has_loc = False
+		sequence.has_rot = False
+		sequence.has_scale = False
 			
+		# Figure out which nodes have IPO curves.  Need this to determine the number of keyframes; and
+		# possibly to force export of some channels where nothing actually moves but the user requires
+		# the transforms to be keyed in place for some reason.
 		nodeFound = False
 		nodeIndex = None
-		# Figure out which nodes are animated
 		channels = action.getAllChannelIpos()
 		for channel_name in channels:
-			if channels[channel_name].getNcurves() == 0:
-				continue
+			if channels[channel_name].getNcurves() == 0: continue
 			nodeIndex = self.getNodeIndex(channel_name)
+			# Determine if this node is in the shape
+			if nodeIndex == None: continue
+			# determine channel type and force matters for all channels that are explicitly keyed.
+			try:
+				if (channels[channel_name].getCurve('LocX') != None) or (channels[channel_name].getCurve('LocY') != None) or (channels[channel_name].getCurve('LocZ') != None):
+					sequence.matters_translation[nodeIndex] = True
+					sequence.has_loc = True
+				if (channels[channel_name].getCurve('QuatX') != None) or (channels[channel_name].getCurve('QuatY') != None) or (channels[channel_name].getCurve('QuatZ') != None):
+					sequence.matters_rotation[nodeIndex] = True
+					sequence.has_rot = True
+				if (channels[channel_name].getCurve('SizeX') != None) or (channels[channel_name].getCurve('SizeY') != None) or (channels[channel_name].getCurve('SizeZ') != None):
+					sequence.matters_scale[nodeIndex] = True
+					sequence.has_scale = True
+			except ValueError:
+				# not an Action IPO...
+				nothing = None # <- buh.
 			
 			# TODO: how do we determine RVK channels?
 
-			# Determine if this node is in the shape
-			if nodeIndex == None: continue
-			else:
-				# Print informative sequence name if we found a node in the shape (first time only)
-				if not nodeFound:
-					Torque_Util.dump_writeln("   Action %s used, dumping..." % action.getName())
-				nodeFound = True
-				# Print informative track message
-				Torque_Util.dump_writeln("      Track: %s (node %d)" % (channel_name,nodeIndex))
+			# Print informative sequence name if we found a node in the shape (first time only)
+			if not nodeFound:
+				Torque_Util.dump_writeln("   Action %s used, dumping..." % action.getName())
+			nodeFound = True
+			# Print informative track message
+			Torque_Util.dump_writeln("      Track: %s (node %d)" % (channel_name,nodeIndex))
 
-			sequence.ipo[nodeIndex] = channels[channel_name]
+			#sequence.ipo[nodeIndex] = channels[channel_name]
 			
-		# If *none* of the nodes in this Action were present in the shape, abandon importing this action.
-		if nodeFound == False:
-			del sequence.ipo
-			del sequence.frames
-			del sequence
-			return None
 
 		# Add additional flags, e.g. cyclic
 		if sequencePrefs['Cyclic']: 
@@ -1052,6 +1133,7 @@ class BlenderShape(DtsShape):
 			sequence.flags |= sequence.MakePath
 		else: sequence.has_ground = False
 		sequence.fps = context.framesPerSec()
+
 		# hack, there must be a more elegant way to handle this.
 		try:
 			sequence.priority = sequencePrefs['Priority']
@@ -1059,37 +1141,146 @@ class BlenderShape(DtsShape):
 			sequencePrefs['Priority'] = 0
 			sequence.priority = sequencePrefs['Priority']
 
-		# Assign temp flags
-		sequence.has_loc = False
-		sequence.has_rot = False
-		sequence.has_scale = False
 
-		# Determine the number of key frames
-		sequence.numKeyFrames = getNumFrames(sequence.ipo, False)
-		#sequence.numKeyFrames = getNumFrames(sequence.ipo, True)
-		#if (sequence.numKeyFrames == 0) or ((sequence.flags & sequence.Blend) and (sequence.numKeyFrames == 1)):
-		if sequence.numKeyFrames == 0:
-			Torque_Util.dump_writeln("Warning: Action has no keyframes, aborting export for this sequence.")
-			del sequence.ipo
-			del sequence.frames
-			del sequence
-			return None
+		# Determine the number of key frames. Takes into account channels for bones that are
+		# not being exported, as they may still effect the animation through IK or other constraints.
+		sequence.numKeyFrames = getNumFrames(action.getAllChannelIpos().values(), False)
+
+		# calc the interpolation increment
+		interpolateInc = float(sequence.numKeyFrames) / float(sequencePrefs['InterpolateFrames'])
+		# make sure it's not less than 1
+		if interpolateInc < 1.0: interpolateInc = 1.0
 
 		# Print different messages depending if we used interpolate or not
 		Torque_Util.dump_writeln("      Frames: %d " % sequencePrefs['InterpolateFrames'])
 		
-		self.sequences.append(sequence)
+		# Depending on what we have, set the bases accordingly
+		if sequence.has_ground: sequence.firstGroundFrame = len(self.groundTranslations)
+		else: sequence.firstGroundFrame = -1
 		
-		# Calculate what this Action animates
-		for ipo in sequence.ipo:
-			if ipo == 0: continue # No ipo, no play
-			curveMap = BuildCurveMap(ipo)
-			has_loc, has_rot, has_scale = getCMapSupports(curveMap)
-			if (not sequence.has_loc) and (has_loc): sequence.has_loc = True
-			if (not sequence.has_rot) and (has_rot): sequence.has_rot = True
-			if (not sequence.has_scale) and (has_scale):
-				sequence.has_scale = True
-				sequence.flags |= sequence.AlignedScale # scale is aligned in blender
+		# this is the number of frames we are exporting.
+		numFrames = sequencePrefs['InterpolateFrames']+1
+		
+		remove_last = False
+		baseTransforms = []
+		useAction = None
+		useFrame = None
+		if isBlend:
+			# Need to build a list of node transforms to use as the
+			# base transforms for nodes in our blend animation.
+ 			useAction = sequencePrefs['BlendRefPoseAction']
+			useFrame = sequencePrefs['BlendRefPoseFrame']
+			baseTransforms = self.buildBaseTransforms(sequence, action, useAction, useFrame, scene, context)
+			if baseTransforms == None:
+				Torque_Util.dump_writeln("Error getting base Transforms!!!!!")
+
+
+		# *** special processing for the first frame:
+		# For blend animations, we need to reset the pose to the reference pose instead of the default
+		# transforms.  Otherwise, we won't be able to tell reliably which bones have actually moved
+		# during the blend sequence.
+		if isBlend:
+			for nodeIndex in range(1, len(self.nodes)):
+				# get our blend ref pose action
+				refPoseAct = Blender.Armature.NLA.GetActions()[useAction]
+				# now set the active action and move to the desired frame
+				for i in range(0, len(self.addedArmatures)):
+					arm = self.addedArmatures[i][0]
+					refPoseAct.setActive(arm)
+			# Set the current frame in blender
+			context.currentFrame(useFrame)
+			# Update the scene's state.
+			scene.update(1)				
+		# For normal animations, loop through each node and reset it's transforms.
+		# This avoids transforms carrying over from other animations.
+		else:
+			for nodeIndex in range(1, len(self.nodes)):
+				arm = self.addedArmatures[self.nodes[nodeIndex].armIdx][0]
+				tempPose = arm.getPose()
+				# get the bone's default blender matrix
+				bonename = self.sTable.get(self.nodes[nodeIndex].name)
+				# reset the bone's transform
+				tempPose.bones[bonename].quat = bMath.Quaternion().identity()
+				tempPose.bones[bonename].size = bMath.Vector(1.0, 1.0, 1.0)
+				tempPose.bones[bonename].loc = bMath.Vector(0.0, 0.0, 0.0)
+			# update the pose.
+			tempPose.update()
+
+		
+		# create blank frames for each node
+		for nodeIndex in range(1, len(self.nodes)):
+			sequence.frames[nodeIndex] = []
+		
+		# loop through all of the armatures and set the current action as active for all
+		# of them.  Sadly, there is no way to tell which action belongs with which armature
+		# using the API in Blender 2.41, so this is a bit messy.
+		act = Blender.Armature.NLA.GetActions()[sequence.name]
+		for i in range(0, len(self.addedArmatures)):
+			arm = self.addedArmatures[i][0]			
+			act.setActive(arm)
+			
+		# loop through all of the frames
+		for frame in range(1, numFrames):
+			# Set the current frame in blender
+			context.currentFrame(int(frame*interpolateInc))
+			# Update the scene's state.
+			scene.update(1)
+			# loop through each node for the current frame.
+			for nodeIndex in range(1, len(self.nodes)):
+				if isBlend: 
+					baseTransform = baseTransforms[nodeIndex]
+				else:
+					baseTransform = None
+				# let's pretend that everything matters, we'll remove the cruft later
+				# this prevents us from having to do a second pass through the frames.
+				loc, rot, scale = self.getPoseTransform(sequence, nodeIndex, (frame*interpolateInc), baseTransform)
+				sequence.frames[nodeIndex].append([loc,rot,scale])
+		
+		# if nothing was actually animated abandon exporting the action.
+		if not (sequence.has_loc or sequence.has_rot or sequence.has_scale):
+			Torque_Util.dump_writeln("Warning: Action has no keyframes, aborting export for this sequence.")
+			del sequence.frames
+			del sequence
+			return None
+
+		# set the aligned scale flag if we have scale.
+		if sequence.has_scale: sequence.flags |= Sequence.AlignedScale
+		
+		# It should be safe to add this sequence to the list now.
+		self.sequences.append(sequence)
+
+		# Now that we have all the transforms for each node at 
+		# every frame, remove the ones that we don't need. This is much faster than doing
+		# two passes through the blender frames to determine what's animated and what's not.
+		for nodeIndex in range(1, len(self.nodes)):
+			if not sequence.matters_translation[nodeIndex]:
+				for frame in range(0, numFrames-1):					
+					sequence.frames[nodeIndex][frame][0] = None
+			if not sequence.matters_rotation[nodeIndex]:
+				for frame in range(0, numFrames-1):
+					sequence.frames[nodeIndex][frame][1] = None					
+			if not sequence.matters_scale[nodeIndex]:
+				for frame in range(0, numFrames-1):
+					sequence.frames[nodeIndex][frame][2] = None
+		
+		remove_translation, remove_rotation, remove_scale = True, True, True
+		if isCyclic:
+			for nodeIndex in range(1, len(self.nodes)):
+				# If we added any new translations, and the first frame is equal to the last,
+				# allow the next pass of nodes to happen, to remove the last frame.
+				# (This fixes the "dead-space" issue)
+				if len(sequence.frames[nodeIndex]) != 0:
+					if (sequence.frames[nodeIndex][0][0] != None) and (sequence.frames[nodeIndex][-1][0] != None) and not sequence.frames[nodeIndex][0][0].eqDelta(sequence.frames[nodeIndex][-1][0], 0.000001):
+						remove_translation = False
+					if (sequence.frames[nodeIndex][0][1] != None) and (sequence.frames[nodeIndex][-1][1] != None) and not sequence.frames[nodeIndex][0][1].eqDelta(sequence.frames[nodeIndex][-1][1], 0.000001):
+						remove_rotation = False
+					if (sequence.frames[nodeIndex][0][2] != None) and (sequence.frames[nodeIndex][-1][2] != None) and not sequence.frames[nodeIndex][0][2].eqDelta(sequence.frames[nodeIndex][-1][2], 0.000001):
+						remove_scale = False
+
+			# Determine if the change has affected all that we animate
+			if (remove_translation) and (remove_rotation) and (remove_scale):
+				remove_last = True
+			
 
 		Torque_Util.dump_write("      Animates:")
 		if sequence.has_loc: Torque_Util.dump_write("loc")
@@ -1098,117 +1289,6 @@ class BlenderShape(DtsShape):
 		if sequence.has_ground: Torque_Util.dump_write("ground")
 		Torque_Util.dump_writeln("")
 
-		'''
-			To top everything off, we need to import all the animation frames.
-			Loop through all the sequences and the IPO blocks in nodeIndex order so that
-			the animation node and rotation tables will be correctly compressed.
-		'''
-		# Depending on what we have, set the bases accordingly
-		if sequence.has_ground: sequence.firstGroundFrame = len(self.groundTranslations)
-		else: sequence.firstGroundFrame = -1
-		
-		# this is the number of frames we are actually exporting.
-		numFrames = sequencePrefs['InterpolateFrames']+1
-		
-		remove_last = False
-		baseTransforms = []
-		if isBlend:
-			# Need to build a list of node transforms to use as the
-			# base transforms for nodes in our blend animation.
- 			useAction = sequencePrefs['BlendRefPoseAction']
-			useFrame = sequencePrefs['BlendRefPoseFrame']
-			baseTransforms = self.buildBaseTransforms(sequence, action, useAction, useFrame, scene, context)
-			if baseTransforms == None:
-				print "Error getting base Transforms!!!!!"			
-
-		# Loop through the ipo list
-		for nodeIndex in range(len(self.nodes)):
-			ipo = sequence.ipo[nodeIndex]
-			if ipo == 0: # No ipo for this node, so its not animated
-				continue
-			sequence.frames[nodeIndex] = []
-
-			# Build curveMap for this ipo
-			curveMap = BuildCurveMap(ipo)
-
-			# Determine which bone attributes are modified by *this* IPO block
-			has_loc, has_rot, has_scale = getCMapSupports(curveMap)
-
-			# If we are adding rotation or translation nodes, make sure the
-			# sequence matters is properly set..
-			if sequence.has_loc: sequence.matters_translation[nodeIndex] = has_loc
-			if sequence.has_rot: sequence.matters_rotation[nodeIndex] = has_rot
-			if sequence.has_scale: sequence.matters_scale[nodeIndex] = has_scale
-			
-			
-			if isBlend: 
-				#baseTransform = self.getTransformAtFrame(scene, context, sequence, curveMap, nodeIndex, sequence.numKeyFrames, [None, None, None])
-				baseTransform = baseTransforms[nodeIndex]
-			else:
-				baseTransform = None
-				
-			# Grab every frame from blender, according to how many frames the user wants
-			interpolateInc = float(sequence.numKeyFrames) / float(sequencePrefs['InterpolateFrames'])
-			
-			# don't know why, but sometimes we are getting an off by one error
-			# in sequencePrefs['InterpolateFrames'], added this check here to 
-			# make sure our interpolate Increment is one or more.
-			if interpolateInc < 1.0: interpolateInc = 1.0
-			
-			for frame in range(1, numFrames):
-				loc, rot, scale = self.getTransformAtFrame(scene, context, sequence, curveMap, nodeIndex, (frame*interpolateInc), baseTransform)
-				sequence.frames[nodeIndex].append([loc,rot,scale])
-			
-			if isCyclic:
-				'''
-					If we added any new translations, and the first frame is equal to the last, allow the next pass of nodes to happen, to remove the last frame.
-					(This fixes the "dead-space" issue)
-				'''
-				remove_translation, remove_rotation, remove_scale = False, False, False
-
-				if len(sequence.frames[nodeIndex]) != 0:
-					'''
-					if (sequence.frames[nodeIndex][0][0] != None) and (sequence.frames[nodeIndex][-1][0] != None):
-						Torque_Util.dump_writeln("LOC: %f %f %f == %f %f %f?" % (sequence.frames[nodeIndex][0][0][0],
-						sequence.frames[nodeIndex][0][0][1],
-						sequence.frames[nodeIndex][0][0][2],
-						sequence.frames[nodeIndex][-1][0][0],
-						sequence.frames[nodeIndex][-1][0][1],
-						sequence.frames[nodeIndex][-1][0][2]))
-					if (sequence.frames[nodeIndex][0][1] != None) and (sequence.frames[nodeIndex][-1][1] != None):
-						Torque_Util.dump_writeln("ROT: %f %f %f %f == %f %f %f %f?" % (sequence.frames[nodeIndex][0][1][0],
-						sequence.frames[nodeIndex][0][1][1],
-						sequence.frames[nodeIndex][0][1][2],
-						sequence.frames[nodeIndex][0][1][3],
-						sequence.frames[nodeIndex][-1][1][0],
-						sequence.frames[nodeIndex][-1][1][1],
-						sequence.frames[nodeIndex][-1][1][2],
-						sequence.frames[nodeIndex][-1][1][3]))
-					if (sequence.frames[nodeIndex][0][2] != None) and (sequence.frames[nodeIndex][-1][2] != None):
-						Torque_Util.dump_writeln("SCA: %f %f %f == %f %f %f?" % (sequence.frames[nodeIndex][0][2][0],
-						sequence.frames[nodeIndex][0][2][1],
-						sequence.frames[nodeIndex][0][2][2],
-						sequence.frames[nodeIndex][-1][2][0],
-						sequence.frames[nodeIndex][-1][2][1],
-						sequence.frames[nodeIndex][-1][2][2]))
-					'''
-
-					if (sequence.frames[nodeIndex][0][0] != None) and (sequence.frames[nodeIndex][-1][0] != None) and (sequence.frames[nodeIndex][0][0] == sequence.frames[nodeIndex][-1][0]):
-						remove_translation = True
-					if (sequence.frames[nodeIndex][0][1] != None) and (sequence.frames[nodeIndex][-1][1] != None) and (sequence.frames[nodeIndex][0][1] == sequence.frames[nodeIndex][-1][1]):
-						remove_rotation = True
-					if (sequence.frames[nodeIndex][0][2] != None) and (sequence.frames[nodeIndex][-1][2] != None) and (sequence.frames[nodeIndex][0][2] == sequence.frames[nodeIndex][-1][2]):
-						remove_scale = True
-
-				# Determine if the change has affected all that we animate
-				'''
-				Torque_Util.dump_writeln("%d %d" % (has_loc,remove_translation))
-				Torque_Util.dump_writeln("%d %d" % (has_rot,remove_rotation))
-				Torque_Util.dump_writeln("%d %d" % (has_scale,remove_scale))
-				'''
-				if (has_loc == remove_translation) and (has_rot == remove_rotation) and (has_scale == remove_scale):
-					remove_last = True
-		
 		# We can now reveal the true number of keyframes
 		sequence.numKeyFrames = numFrames-1
 
@@ -1216,9 +1296,9 @@ class BlenderShape(DtsShape):
 		if remove_last:
 			# Go through list of frames for nodes animated in sequence and delete the last frame from all of them
 			for nodeIndex in range(len(self.nodes)):
-				ipo = sequence.ipo[nodeIndex]
-				if ipo != 0:
-					#dump.writeln("Deleting last frame for node %s" % (self.sTable.get(self.nodes[nodeIndex].name)))
+				#ipo = sequence.ipo[nodeIndex]
+				#if ipo != 0:
+				if sequence.matters_translation[nodeIndex] or sequence.matters_rotation[nodeIndex] or sequence.matters_scale[nodeIndex]:
 					del sequence.frames[nodeIndex][-1]
 			sequence.numKeyFrames -= 1
 			Torque_Util.dump_writeln("      Note: Duplicate frames removed,  (was %d,  now %d)" % (sequence.numKeyFrames+1, sequence.numKeyFrames))
@@ -1245,11 +1325,28 @@ class BlenderShape(DtsShape):
 					self.nodeAlignedScales.append(frame[2])
 		
 		# Clean out temporary junk
-		del sequence.ipo
 		del sequence.frames
-		
+
+		# UGLY WORKAROUND HACK
+		# This is a workaround for a bug in blender 2.41 that causes the reference count of the last
+		# action that Action.setActive() is called on from a script to be corrupted.  The only way
+		# around this nasty bug is to create a fake action and make sure that we always set it active
+		# as last action.  When they fix the bug this fake action crap can be removed from the code
+		# or surrounded with version checks.  I really hate this, but it seems to be the only possible
+		# workaround.
+		try:
+			# if fake action already exists reuse it.
+			act = Blender.Armature.NLA.GetActions()["DTSEXPFAKEACT"]
+		except:
+			# if it doesn't exist, create it.
+			act = Blender.Armature.NLA.NewAction("DTSEXPFAKEACT")
+		act.setActive(arm)
+
 		return sequence		
-		
+
+
+
+	
 	def addSequenceTriggers(self, sequence, unsortedTriggers, nFrames):
 		if sequence.firstTrigger == -1:
 			sequence.firstTrigger = len(self.triggers)
@@ -1267,7 +1364,7 @@ class BlenderShape(DtsShape):
 				elif (i == (len(triggers)-1)):
 					triggers.append(u)
 		triggers.reverse()
-		
+
 		# Check for triggers with both on and off states
 		triggerState = []
 		for t in triggers:
@@ -1286,8 +1383,10 @@ class BlenderShape(DtsShape):
 			
 			self.triggers.append(Trigger(triggers[i][0], triggers[i][2], realPos, triggerState[i]))
 		del triggerState
-				
+		print "self.triggers:"
+		print self.triggers
 		sequence.numTriggers += len(triggers)
+
 
 	# Processes a material ipo and incorporates it into the Action
 	def addSequenceMaterialIpos(self, sequence, numFrames, startFrame=1):
@@ -1338,7 +1437,7 @@ class BlenderShape(DtsShape):
 			curveMap = BuildCurveMap(ipo)
 			for frame in range(startFrame, startFrame+sequence.numKeyFrames):
 				frame_idx = int(interpolateInc * frame)
-			
+				if frame_idx < 1.0: frame_idx = 1.0
 				#print "Grabbing material ipo for frame %d, normally %d" % (frame_idx, frame)
 				
 				# Set the current frame in blender to the frame the ipo keyframe is at
@@ -1416,7 +1515,7 @@ class BlenderShape(DtsShape):
 		if self.preferences['TSEMaterial']:
 			return self.addTSEMaterial(bmat)
 		
-		material = dMaterial(bmat.getName(), dMaterial.SWrap | dMaterial.TWrap,self.materials.size(),-1,-1,1.0,bmat.getRef())
+		material = dMaterial(bmat.getName(), dMaterial.SWrap | dMaterial.TWrap,-1,-1,-1,1.0,bmat.getRef())
 		material.sticky = False
 
 		# If we are emitting light, we must be self illuminating
@@ -1443,7 +1542,6 @@ class BlenderShape(DtsShape):
 			for i in range(1, len(textures)):
 				texture_obj = textures[i]
 				if texture_obj == None: continue
-
 				# Figure out if we have an Image
 				if texture_obj.tex.type != Texture.Types.IMAGE:
 					Torque_Util.dump_writeln("      Warning: Material(%s,%d) Only Image textures are supported. Skipped." % (bmat.getName(),i))
@@ -1452,20 +1550,27 @@ class BlenderShape(DtsShape):
 				# Determine what this texture is used for
 				# A) We have a reflectance map
 				if (material.reflectance == -1) and (texture_obj.mapto & Texture.MapTo.REF):
+					# Joe : this is still not working in showtool, need to investigate.
 					# We have a reflectance map
 					reflectance_map = dMaterial(texture_obj.tex.getName(), dMaterial.SWrap | dMaterial.TWrap,-1,-1,-1,1.0,bmat.getRef())
 					reflectance_map.flags |= dMaterial.ReflectanceMap
+					if texture_obj.texco & Texture.TexCo.STICK:
+						reflectance_map.sticky = True
 					material.flags &= ~dMaterial.NeverEnvMap
 					material.reflectance = self.materials.add(reflectance_map)
 				# B) We have a normal map (basically a 3d bump map)
 				elif (material.bump == -1) and (texture_obj.mapto & Texture.MapTo.NOR):
 					bump_map = dMaterial(texture_obj.tex.getName(), dMaterial.SWrap | dMaterial.TWrap,-1,-1,-1,1.0,bmat.getRef())
 					bump_map.flags |= dMaterial.BumpMap
+					if texture_obj.texco & Texture.TexCo.STICK:
+						bump_map.sticky = True
 					material.bump = self.materials.add(bump_map)
 				# C) We have a texture; Lets presume its a detail map (since its laid on top after all)
 				elif material.detail == -1:
 					detail_map = dMaterial(texture_obj.tex.getName(), dMaterial.SWrap | dMaterial.TWrap,-1,-1,-1,1.0,bmat.getRef())
 					detail_map.flags |= dMaterial.DetailMap
+					if texture_obj.texco & Texture.TexCo.STICK:
+						detail_map.sticky = True
 					material.detail = self.materials.add(detail_map)
 		else:
 			Torque_Util.dump_writeln("      Warning: Material(%s) does not have any textures assigned!" % bmat.getName())

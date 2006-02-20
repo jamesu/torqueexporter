@@ -34,13 +34,11 @@ from Blender import NMesh
 #-------------------------------------------------------------------------------------------------
 
 class BlenderMesh(DtsMesh):
-	def __init__(self, shape, msh,  rootBone, scaleFactor, matrix, triStrips=False):
+	def __init__(self, shape, msh,  rootBone, scaleFactor, matrix, triStrips=False, ignoreDblSided=False):
 		DtsMesh.__init__(self)
 		self.vertsIndexMap = []		# Map of TexCoord index <> Vertex index map
 		self.mainMaterial = None	# For determining material ipo track to use for ObjectState visibility animation
 		self.weightDictionary = self.createWeightDictionary(msh);
-		# Joe : this appears to be causing all faces to be added twice!
-		#materialGroups = [[]]*(len(msh.materials)+1)
 		materialGroups = [[]]
 		for i in range (0, len(msh.materials)):
 			materialGroups.append([])
@@ -94,7 +92,7 @@ class BlenderMesh(DtsMesh):
 					if len(face.v) > 3:
 						self.primitives.append(pr)
 						# Duplicate primitive in reverse order if doublesided
-						if (msh.mode & NMesh.Modes.TWOSIDED) or (face.mode & NMesh.FaceModes.TWOSIDE):
+						if ((msh.mode & NMesh.Modes.TWOSIDED) or (face.mode & NMesh.FaceModes.TWOSIDE)) and not ignoreDblSided:
 							for i in range((pr.firstElement+pr.numElements)-1,pr.firstElement-1,-1):							
 								self.indices.append(self.indices[i])
 							self.primitives.append(Primitive(pr.firstElement+pr.numElements,pr.numElements,pr.matindex))
@@ -108,7 +106,7 @@ class BlenderMesh(DtsMesh):
 				self.primitives.append(pr)
 						
 				# Duplicate primitive in reverse order if doublesided
-				if (msh.mode & NMesh.Modes.TWOSIDED) or (face.mode & NMesh.FaceModes.TWOSIDE):
+				if ((msh.mode & NMesh.Modes.TWOSIDED) or (face.mode & NMesh.FaceModes.TWOSIDE)) and not ignoreDblSided: 
 					for i in range((pr.firstElement+pr.numElements)-1,pr.firstElement-1,-1):
 						self.indices.append(self.indices[i])
 					self.primitives.append(Primitive(pr.firstElement+pr.numElements,pr.numElements,pr.matindex))

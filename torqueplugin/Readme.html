@@ -40,7 +40,7 @@ forums</a>.<br>
     </tr>
     <tr>
       <td style="vertical-align: top;"><a
- href="http://www.blender3d.org">Blender</a> 2.40+<br>
+ href="http://www.blender3d.org">Blender</a> 2.41+<br>
       </td>
       <td style="vertical-align: top;">Required by the
 exporter scripts
@@ -169,7 +169,7 @@ object <b>"glassWindow"</b><br>
 <h3>Sequences (Actions)</h3>
 <p>
 For sequences, the exporter looks for the Action's in blender and
-extracts the necessary keyframe data from the action ipo's. <br>
+extracts the necessary keyframe data. <br>
 The exporter supports loc, rot, and size animation of bones.</p>
 <p>An additional feature of the sequence export is the support
 for "ground frames", which are used by torque in player
@@ -192,9 +192,7 @@ button next to the sequence name.&nbsp; Two new options will appear on
 the right allowing you to select the "reference pose" for your blend
 animation.&nbsp; The reference pose can be chosen from any frame of any
 of the available actions.&nbsp; The action containing the reference
-pose does not need to be exported.&nbsp; The only limitation is that
-all of the animation channels contained in the blend sequence must also
-be present in the action containing the reference pose.<br>
+pose does not need to be exported.<br>
 </p>
 <p>Finally, the "Frames" option tells the exporter how many frames to
 export out of the total frames present in the Action. This defaults to

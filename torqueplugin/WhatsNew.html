@@ -7,6 +7,45 @@
 </head>
 <body>
 <h1>Torque Exporter Plug in for Blender</h1>
+<h2>What's New for version .91<br>
+</h2>
+<ul>
+  <li>Animation code rewritten.&nbsp; You can now create animations
+using Inverse Kinematics (and other constraints) and export them
+directly without needing to bake the actions first.&nbsp; It is highly
+recommended that you use bones as your constraint targets rather than
+empties.&nbsp; The constraint targets do not need to be exported.<br>
+  </li>
+  <li>Bug fixes for detail maps and material properties.<br>
+  </li>
+  <li>Fixed exporter crash when the action containing the reference
+pose for a blend animation is deleted.<br>
+  </li>
+  <li>The validity of the output path is now checked prior to
+export.&nbsp; If the path is invalid (usually is for files that you
+download from someone else), it is reset to the default path (the
+folder containing your blend file).<br>
+  </li>
+  <li>Fixed a bug that caused duplicate entries to be added to the
+blend ref pose action pulldown when the sequence list was refreshed.<br>
+  </li>
+  <li>Re-enabled GUI refresh while dragging, now you can see where you
+are dragging the GUI to in real time.<br>
+  </li>
+  <li>Fixed a bug that was causing newly added detail levels and
+collision meshes not to show up in the export until Blender was
+restarted.<br>
+  </li>
+  <li>Collision meshes now ignore the double sided mesh flag, are
+always single sided.<br>
+  </li>
+  <li>Fixed an exporter crash that occured when the last Trigger for a
+sequence was deleted.</li>
+  <li>Fixed a bug that was causing trigger state values for exported
+sequences to be incorrect.<br>
+  </li>
+  <li>Other small fixes and enhancements.</li>
+</ul>
 <h2>What's New for version .90<br>
 </h2>
 <ul>

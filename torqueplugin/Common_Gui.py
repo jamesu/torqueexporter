@@ -356,7 +356,6 @@ class BasicContainer(BasicControl):
 		return False
 
 	def onDraw(self, offset):
-		#print "redrawing container."
 		BGL.glRasterPos2i(offset[0]+self.x, offset[1]+self.y)
 		BGL.glColor4f(self.color[0], self.color[1], self.color[2], self.color[3])
 		
@@ -885,7 +884,7 @@ def event(evt, val):
 				break
 			#else:
 			#print "Control %s [incorrect position]" % control.name
-	if not (evt in [Draw.MOUSEX, Draw.MOUSEY]):
+	if (not (evt in [Draw.MOUSEX, Draw.MOUSEY])) or dragState:
 		Draw.Redraw(1)
 
 # Function to process button events
