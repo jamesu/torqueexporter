@@ -1003,18 +1003,22 @@ class BlenderShape(DtsShape):
 		tempSequence.numKeyFrames = 1000 # one brazilion
 
 		# loop through each node and reset it's transforms.  This avoids transforms carrying over from
-		# other animations.
-		for nodeIndex in range(1, len(self.nodes)):
-			arm = self.addedArmatures[self.nodes[nodeIndex].armIdx][0]
-			tempPose = arm.getPose()
-			bonename = self.sTable.get(self.nodes[nodeIndex].name)
-			# reset the bone's transform
-			tempPose.bones[bonename].quat = bMath.Quaternion().identity()
-			tempPose.bones[bonename].size = bMath.Vector(1.0, 1.0, 1.0)
-			tempPose.bones[bonename].loc = bMath.Vector(0.0, 0.0, 0.0)
+		# other animations. Need to cycle through _ALL_ bones and reset the transforms.
+		for armname in Blender.Armature.Get():
+			if armname == "DTS-EXP-GHOST-DB" or armname == "DTS-EXP-GHOST-OB": continue
+			armOb = Blender.Object.Get(armname)
+			armDb = Blender.Armature.Get(armname)
+			tempPose = armOb.getPose()
+			for bonename in armDb.bones.keys():
+				# reset the bone's transform
+				tempPose.bones[bonename].quat = bMath.Quaternion().identity()
+				tempPose.bones[bonename].size = bMath.Vector(1.0, 1.0, 1.0)
+				tempPose.bones[bonename].loc = bMath.Vector(0.0, 0.0, 0.0)
 			# update the pose.
 			tempPose.update()
-		
+		# Update the scene's state.
+		scene.update(1)
+
 		# now set the active action and move to the desired frame
 		for i in range(0, len(self.addedArmatures)):
 			arm = self.addedArmatures[i][0]	
@@ -1092,6 +1096,7 @@ class BlenderShape(DtsShape):
 			# Determine if this node is in the shape
 			if nodeIndex == None: continue
 			# determine channel type and force matters for all channels that are explicitly keyed.
+			# I'm still not sure if I really want to do this :)
 			try:
 				if (channels[channel_name].getCurve('LocX') != None) or (channels[channel_name].getCurve('LocY') != None) or (channels[channel_name].getCurve('LocZ') != None):
 					sequence.matters_translation[nodeIndex] = True
@@ -1180,13 +1185,12 @@ class BlenderShape(DtsShape):
 		# transforms.  Otherwise, we won't be able to tell reliably which bones have actually moved
 		# during the blend sequence.
 		if isBlend:
-			for nodeIndex in range(1, len(self.nodes)):
-				# get our blend ref pose action
-				refPoseAct = Blender.Armature.NLA.GetActions()[useAction]
-				# now set the active action and move to the desired frame
-				for i in range(0, len(self.addedArmatures)):
-					arm = self.addedArmatures[i][0]
-					refPoseAct.setActive(arm)
+			# get our blend ref pose action
+			refPoseAct = Blender.Armature.NLA.GetActions()[useAction]
+			# now set the active action and move to the desired frame
+			for i in range(0, len(self.addedArmatures)):
+				arm = self.addedArmatures[i][0]
+				refPoseAct.setActive(arm)
 			# Set the current frame in blender
 			context.currentFrame(useFrame)
 			# Update the scene's state.
@@ -1194,17 +1198,21 @@ class BlenderShape(DtsShape):
 		# For normal animations, loop through each node and reset it's transforms.
 		# This avoids transforms carrying over from other animations.
 		else:
-			for nodeIndex in range(1, len(self.nodes)):
-				arm = self.addedArmatures[self.nodes[nodeIndex].armIdx][0]
-				tempPose = arm.getPose()
-				# get the bone's default blender matrix
-				bonename = self.sTable.get(self.nodes[nodeIndex].name)
-				# reset the bone's transform
-				tempPose.bones[bonename].quat = bMath.Quaternion().identity()
-				tempPose.bones[bonename].size = bMath.Vector(1.0, 1.0, 1.0)
-				tempPose.bones[bonename].loc = bMath.Vector(0.0, 0.0, 0.0)
-			# update the pose.
-			tempPose.update()
+			# need to cycle through ALL bones and reset the transforms.
+			for armname in Blender.Armature.Get():
+				if armname == "DTS-EXP-GHOST-DB" or armname == "DTS-EXP-GHOST-OB": continue
+				armOb = Blender.Object.Get(armname)
+				armDb = Blender.Armature.Get(armname)
+				tempPose = armOb.getPose()
+				for bonename in armDb.bones.keys():
+					# reset the bone's transform
+					tempPose.bones[bonename].quat = bMath.Quaternion().identity()
+					tempPose.bones[bonename].size = bMath.Vector(1.0, 1.0, 1.0)
+					tempPose.bones[bonename].loc = bMath.Vector(0.0, 0.0, 0.0)
+				# update the pose.
+				tempPose.update()
+			# Update the scene's state.
+			scene.update(1)
 
 		
 		# create blank frames for each node
