@@ -2,7 +2,7 @@
 
 """
 Name: 'Torque Shape (.dts)...'
-Blender: 240
+Blender: 241
 Group: 'Export'
 Tooltip: 'Export to Torque (.dts) format.'
 """
@@ -51,11 +51,11 @@ import os.path
   Blender Dts Classes for Python
 '''
 
-Version = "0.9"
+Version = "0.91RC3"
 Prefs = None
 Prefs_keyname = ""
 export_tree = None
-Debug = False
+Debug = True
 textDocName = "TorqueExporter_SCONF"
 pathSeperator = "/"
 
@@ -860,7 +860,9 @@ def createSequenceListitem(seq_name, startEvent):
 	# Note on positions:
 	# It quicker to assign these here, as there is no realistic chance scaling being required.
 	guiContainer = Common_Gui.BasicContainer("", None, None)
-	guiContainer.fade_mode = 2
+	
+	# testing new fade modes for sequence list items
+	guiContainer.fade_mode = 8  # same as 2 but with a brighter endcolor, easier on the eyes.
 	guiName = Common_Gui.SimpleText("", seq_name, None, None)
 	guiName.x, guiName.y = 5, 5
 	guiExport = Common_Gui.ToggleButton("Export", "Export Sequence", startEvent, guiSequenceListItemCallback, None)
@@ -1231,7 +1233,9 @@ def guiBaseResize(control, newwidth, newheight):
 			control.x, control.y = 0, newheight - 20
 			control.width, control.height = 490, 20
 		elif control.name == "tabs.version":
-			control.x, control.y = newwidth-80, 10
+			# TODO : adjust this whenever the version text changes
+			#control.x, control.y = newwidth-80, 10
+			control.x, control.y = newwidth-100, 10
 	elif control.evt == 1:
 		control.x, control.y = 10, 5
 		control.width, control.height = 70, 20

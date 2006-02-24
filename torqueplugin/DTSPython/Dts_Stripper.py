@@ -32,6 +32,7 @@ import copy
 '''
 
 use_stripper = "VTK"
+#use_stripper = "NVIDIA"
 
 class Stripper:
 	def __init__(self):

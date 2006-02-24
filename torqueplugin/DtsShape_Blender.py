@@ -1007,7 +1007,7 @@ class BlenderShape(DtsShape):
 		for armname in Blender.Armature.Get():
 			if armname == "DTS-EXP-GHOST-DB" or armname == "DTS-EXP-GHOST-OB": continue
 			armOb = Blender.Object.Get(armname)
-			armDb = Blender.Armature.Get(armname)
+			armDb = armOb.getData()
 			tempPose = armOb.getPose()
 			for bonename in armDb.bones.keys():
 				# reset the bone's transform
@@ -1202,7 +1202,7 @@ class BlenderShape(DtsShape):
 			for armname in Blender.Armature.Get():
 				if armname == "DTS-EXP-GHOST-DB" or armname == "DTS-EXP-GHOST-OB": continue
 				armOb = Blender.Object.Get(armname)
-				armDb = Blender.Armature.Get(armname)
+				armDb = armOb.getData()
 				tempPose = armOb.getPose()
 				for bonename in armDb.bones.keys():
 					# reset the bone's transform
@@ -1391,8 +1391,6 @@ class BlenderShape(DtsShape):
 			
 			self.triggers.append(Trigger(triggers[i][0], triggers[i][2], realPos, triggerState[i]))
 		del triggerState
-		print "self.triggers:"
-		print self.triggers
 		sequence.numTriggers += len(triggers)
 
 
