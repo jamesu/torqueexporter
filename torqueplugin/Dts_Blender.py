@@ -51,11 +51,11 @@ import os.path
   Blender Dts Classes for Python
 '''
 
-Version = "0.91RC3"
+Version = "0.91RC4"
 Prefs = None
 Prefs_keyname = ""
 export_tree = None
-Debug = True
+Debug = False
 textDocName = "TorqueExporter_SCONF"
 pathSeperator = "/"
 

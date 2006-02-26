@@ -1004,12 +1004,10 @@ class BlenderShape(DtsShape):
 
 		# loop through each node and reset it's transforms.  This avoids transforms carrying over from
 		# other animations. Need to cycle through _ALL_ bones and reset the transforms.
-		for armname in Blender.Armature.Get():
-			if armname == "DTS-EXP-GHOST-DB" or armname == "DTS-EXP-GHOST-OB": continue
-			armOb = Blender.Object.Get(armname)
-			armDb = armOb.getData()
+		for armOb in Blender.Object.Get():
+			if (armOb.getType() != 'Armature') or (armOb.name == "DTS-EXP-GHOST-OB"): continue
 			tempPose = armOb.getPose()
-			for bonename in armDb.bones.keys():
+			for bonename in armOb.getData().bones.keys():
 				# reset the bone's transform
 				tempPose.bones[bonename].quat = bMath.Quaternion().identity()
 				tempPose.bones[bonename].size = bMath.Vector(1.0, 1.0, 1.0)
@@ -1018,6 +1016,7 @@ class BlenderShape(DtsShape):
 			tempPose.update()
 		# Update the scene's state.
 		scene.update(1)
+
 
 		# now set the active action and move to the desired frame
 		for i in range(0, len(self.addedArmatures)):
@@ -1199,12 +1198,10 @@ class BlenderShape(DtsShape):
 		# This avoids transforms carrying over from other animations.
 		else:
 			# need to cycle through ALL bones and reset the transforms.
-			for armname in Blender.Armature.Get():
-				if armname == "DTS-EXP-GHOST-DB" or armname == "DTS-EXP-GHOST-OB": continue
-				armOb = Blender.Object.Get(armname)
-				armDb = armOb.getData()
+			for armOb in Blender.Object.Get():
+				if (armOb.getType() != 'Armature') or (armOb.name == "DTS-EXP-GHOST-OB"): continue
 				tempPose = armOb.getPose()
-				for bonename in armDb.bones.keys():
+				for bonename in armOb.getData().bones.keys():
 					# reset the bone's transform
 					tempPose.bones[bonename].quat = bMath.Quaternion().identity()
 					tempPose.bones[bonename].size = bMath.Vector(1.0, 1.0, 1.0)
