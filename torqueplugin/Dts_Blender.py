@@ -51,7 +51,7 @@ import os.path
   Blender Dts Classes for Python
 '''
 
-Version = "0.91RC4"
+Version = "0.91RC5"
 Prefs = None
 Prefs_keyname = ""
 export_tree = None
@@ -925,7 +925,7 @@ def populateBoneGrid():
 	if shapeTree == None: return
 	evtNo = 40
 	for name in shapeTree.getShapeBoneNames():
-		guiBoneList.addControl(Common_Gui.ToggleButton(name, "Toggle Status", evtNo, guiBoneGridCallback, None))
+		guiBoneList.addControl(Common_Gui.ToggleButton(name, "Toggle Status of " + name, evtNo, guiBoneGridCallback, None))
 		guiBoneList.controls[-1].state = not (name.upper() in Prefs['BannedBones'])
 		evtNo += 1
 		
