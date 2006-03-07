@@ -32,6 +32,7 @@ import Blender
 from Blender import NMesh, Armature, Scene, Object, Material, Texture
 from Blender import Mathutils as bMath
 
+import gc
 
 '''
    Util functions used by class as well as exporter gui
@@ -297,6 +298,7 @@ class BlenderShape(DtsShape):
 		self.addedArmatures = []	# Armature object,  Armature matrix
 		self.externalSequences = []
 		self.scriptMaterials = []
+		gc.enable()
 		
 	def __del__(self):
 		DtsShape.__del__(self)
@@ -798,7 +800,7 @@ class BlenderShape(DtsShape):
 		
 	# These three helper methods are used by getPoseTransform. They should probably be moved elsewhere.
 	def isRotated(self, quat):
-		delta = 0.00001
+		delta = 0.0001
 		return not ((quat[0] < delta) and (quat[0] > 0.0 - delta) and (quat[1] < delta) and (quat[1] > 0.0 - delta) and (quat[2] < delta) and (quat[2] > 0.0 - delta))
 	
 	def isTranslated(self, vec):
@@ -808,11 +810,12 @@ class BlenderShape(DtsShape):
 	def isScaled(self, vec):
 		delta = 0.00001
 		return not ((vec[0] < 1.0 + delta) and (vec[0] > 1.0 - delta) and (vec[1] < 1.0 + delta) and (vec[1] > 1.0 - delta) and (vec[2] < 1.0 + delta) and (vec[2] > 1.0 - delta))
-		
-	# grab the pose transform of whatever frame we're currently at.  Frame must be set before calling this method.
-	def getPoseTransform(self, sequence, nodeIndex, frame_idx, baseTransform=None, getRawValues=False):
 
-		loc, rot, scale = None, None, None		
+	
+	# grab the pose transform of whatever frame we're currently at.  Frame must be set before calling this method.
+	def getPoseTransform(self, sequence, nodeIndex, frame_idx, pose, baseTransform=None, getRawValues=False):
+
+		loc, rot, scale = None, None, None
 		arm = self.addedArmatures[self.nodes[nodeIndex].armIdx][0]
 
 		# Add ground frames if enabled
@@ -847,9 +850,13 @@ class BlenderShape(DtsShape):
 		bonename = self.sTable.get(node.name)
 		parentname = self.sTable.get(parentNode.name)
 		
-		# our actual pose for this frame.
-		pose = arm.getPose()
 
+
+		# our actual pose for this frame.
+		#pose = arm.getPose()
+		#del pose
+		#return loc, rot, scale
+		
 		# Begin complicated math :)
 		
 		# - determine the bone's rotation relative to it's default orientation.		
@@ -864,8 +871,8 @@ class BlenderShape(DtsShape):
 		theMat = bMath.Matrix(defMat) * bMath.Matrix(theMat)
 		# find the difference between the default rotation and the rotation for this frame.
 		quat1 = defMat.toQuat()
-		quat2 = bMath.Quaternion(theMat.toQuat())
-		theMat = bMath.Quaternion(bMath.DifferenceQuats(quat1, quat2)).toMatrix()
+		quat2 = theMat.toQuat()
+		qt = bMath.DifferenceQuats(quat1, quat2)
 
 		
 		# - determine the translation of the bone relative to it's parent.
@@ -895,7 +902,6 @@ class BlenderShape(DtsShape):
 			loc = trans
 
 			# process rotation
-			qt = theMat.toQuat()
 			btqt = bMath.Quaternion(baseTransform[1][3],baseTransform[1][0], baseTransform[1][1], baseTransform[1][2])
 			difqt = bMath.DifferenceQuats(qt, btqt)
 			quat = Quaternion(difqt.x, difqt.y, difqt.z, difqt.w)
@@ -935,7 +941,6 @@ class BlenderShape(DtsShape):
 
 			
 			# process rotation
-			qt = theMat.toQuat()
 			quat = Quaternion(qt.x, qt.y, qt.z, qt.w)
 			rotation = quat
 			if getRawValues:
@@ -982,11 +987,11 @@ class BlenderShape(DtsShape):
 		tempSequence.ipo = []
 		tempSequence.frames = []
 		for n in self.nodes:
-			tempSequence.ipo.append(0)
+			#tempSequence.ipo.append(0)
 			tempSequence.matters_translation.append(True)
 			tempSequence.matters_rotation.append(True)
 			tempSequence.matters_scale.append(True)
-			tempSequence.frames.append(0)
+			#tempSequence.frames.append(0)
 			# and a blank transform
 			baseTransforms.append(0)
 			
@@ -1028,16 +1033,21 @@ class BlenderShape(DtsShape):
 		# Update the scene's state.
 		scene.update(1)
 		
-		# build our transform for each node		
-		for nodeIndex in range(1, len(self.nodes)):
-			ipo = tempSequence.ipo[nodeIndex]
-			curveMap = None
-			tempSequence.matters_translation[nodeIndex] = True
-			tempSequence.matters_rotation[nodeIndex] = True
-			tempSequence.matters_scale[nodeIndex] = True
-			baseTransforms[nodeIndex] = self.getPoseTransform(tempSequence, nodeIndex, useFrame, None, True)
+		for armIdx in range(0, len(self.addedArmatures)):
+			arm = self.addedArmatures[armIdx][0]
+			pose = arm.getPose()
+			# build our transform for each node		
+			for nodeIndex in range(1, len(self.nodes)):
+				# since Armature.getPose() leaks memory in Blender 2.41, skip nodes not
+				# belonging to the current armature to avoid having to call it unnecessarily.
+				if self.nodes[nodeIndex].armIdx != armIdx: continue
+				curveMap = None
+				tempSequence.matters_translation[nodeIndex] = True
+				tempSequence.matters_rotation[nodeIndex] = True
+				tempSequence.matters_scale[nodeIndex] = True
+				baseTransforms[nodeIndex] = self.getPoseTransform(tempSequence, nodeIndex, useFrame, pose, None, True)
 		
-
+		del tempSequence
 		return baseTransforms
 		
 
@@ -1061,6 +1071,7 @@ class BlenderShape(DtsShape):
 		
 		NOTE: this function needs to be called AFTER all calls to addArmature/addNode, for obvious reasons.
 		'''
+		
 
 		# Lets start off with the basic sequence
 		sequence = Sequence(self.sTable.addString(action.getName()))
@@ -1118,8 +1129,8 @@ class BlenderShape(DtsShape):
 			nodeFound = True
 			# Print informative track message
 			Torque_Util.dump_writeln("      Track: %s (node %d)" % (channel_name,nodeIndex))
+		del channels
 
-			#sequence.ipo[nodeIndex] = channels[channel_name]
 			
 
 		# Add additional flags, e.g. cyclic
@@ -1230,16 +1241,23 @@ class BlenderShape(DtsShape):
 			context.currentFrame(int(frame*interpolateInc))
 			# Update the scene's state.
 			scene.update(1)
-			# loop through each node for the current frame.
-			for nodeIndex in range(1, len(self.nodes)):
-				if isBlend: 
-					baseTransform = baseTransforms[nodeIndex]
-				else:
-					baseTransform = None
-				# let's pretend that everything matters, we'll remove the cruft later
-				# this prevents us from having to do a second pass through the frames.
-				loc, rot, scale = self.getPoseTransform(sequence, nodeIndex, (frame*interpolateInc), baseTransform)
-				sequence.frames[nodeIndex].append([loc,rot,scale])
+			# loop through each armature
+			for armIdx in range(0, len(self.addedArmatures)):
+				arm = self.addedArmatures[armIdx][0]
+				pose = arm.getPose()
+				# loop through each node for the current frame.
+				for nodeIndex in range(1, len(self.nodes)):
+					# since Armature.getPose() leaks memory in Blender 2.41, skip nodes not
+					# belonging to the current armature to avoid having to call it unnecessarily.
+					if self.nodes[nodeIndex].armIdx != armIdx: continue
+					if isBlend: 
+						baseTransform = baseTransforms[nodeIndex]
+					else:
+						baseTransform = None
+					# let's pretend that everything matters, we'll remove the cruft later
+					# this prevents us from having to do a second pass through the frames.
+					loc, rot, scale = self.getPoseTransform(sequence, nodeIndex, (frame*interpolateInc), pose, baseTransform)
+					sequence.frames[nodeIndex].append([loc,rot,scale])
 		
 		# if nothing was actually animated abandon exporting the action.
 		if not (sequence.has_loc or sequence.has_rot or sequence.has_scale):
@@ -1346,7 +1364,9 @@ class BlenderShape(DtsShape):
 			# if it doesn't exist, create it.
 			act = Blender.Armature.NLA.NewAction("DTSEXPFAKEACT")
 		act.setActive(arm)
-
+		
+		gc.collect()
+		
 		return sequence		
 
 
