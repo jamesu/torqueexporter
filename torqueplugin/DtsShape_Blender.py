@@ -967,8 +967,6 @@ class BlenderShape(DtsShape):
 	# designated action and frame #. 
 	def buildBaseTransforms(self, blendSequence, blendAction, useActionName, useFrame, scene, context):
 		useAction = Blender.Armature.NLA.GetActions()[useActionName]
-		refAnimChannels = useAction.getAllChannelIpos()
-		bAnimChannels = blendAction.getAllChannelIpos()
 		
 		# Need to create a temporary sequence and build a list
 		# of node transforms to use as the base transforms for nodes
@@ -987,25 +985,14 @@ class BlenderShape(DtsShape):
 		tempSequence.ipo = []
 		tempSequence.frames = []
 		for n in self.nodes:
-			#tempSequence.ipo.append(0)
 			tempSequence.matters_translation.append(True)
 			tempSequence.matters_rotation.append(True)
 			tempSequence.matters_scale.append(True)
-			#tempSequence.frames.append(0)
 			# and a blank transform
 			baseTransforms.append(0)
 			
-		# fill in the sequence ipos for the given nodes/channels
-		# Loop through the ipo list
-		for c in refAnimChannels:			
-			nodeIndex = self.getNodeIndex(c)
-			# Determine if this node is in the shape
-			if nodeIndex == None: continue
-			# use the reference animation.
-			tempSequence.ipo[nodeIndex] = refAnimChannels[c]
 		
-		#tempSequence.numKeyFrames = getNumFrames(tempSequence.ipo, False)
-		tempSequence.numKeyFrames = 1000 # one brazilion
+		tempSequence.numKeyFrames = 10000 # one brazilion
 
 		# loop through each node and reset it's transforms.  This avoids transforms carrying over from
 		# other animations. Need to cycle through _ALL_ bones and reset the transforms.
