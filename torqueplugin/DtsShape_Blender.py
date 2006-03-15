@@ -696,10 +696,13 @@ class BlenderShape(DtsShape):
 
 			# process translation
 			transVec = transVec - baseTransform[0]
+			# rotate the translation into the bone's local space.
+			transVec = self.defaultRotations[nodeIndex].inverse().apply(transVec)
 			if self.isTranslated(transVec):
 				sequence.matters_translation[nodeIndex] = True
 				sequence.has_loc = True				
 			loc = transVec
+
 
 			# process rotation
 			btqt = bMath.Quaternion(baseTransform[1][3],baseTransform[1][0], baseTransform[1][1], baseTransform[1][2])
@@ -725,7 +728,7 @@ class BlenderShape(DtsShape):
 
 			# process translation
 			if getRawValues:
-				loc = transVec
+				loc = transVec				
 			else:
 				if self.isTranslated(transVec):
 					sequence.matters_translation[nodeIndex] = True
