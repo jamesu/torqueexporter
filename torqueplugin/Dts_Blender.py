@@ -51,7 +51,7 @@ import os.path
   Blender Dts Classes for Python
 '''
 
-Version = "0.91RC5"
+Version = "0.91RC6"
 Prefs = None
 Prefs_keyname = ""
 export_tree = None
@@ -59,7 +59,7 @@ Debug = False
 textDocName = "TorqueExporter_SCONF"
 pathSeperator = "/"
 
-if Debug: import profile
+#if Debug: import profile
 
 '''
 Utility Functions
@@ -1708,9 +1708,9 @@ def exit_callback():
 '''
 #-------------------------------------------------------------------------------------------------
 
-if Debug:
-	import __main__
-	import pstats
+#if Debug:
+#	import __main__
+#	import pstats
 	
 def entryPoint(a):
 	getPathSeperator(Blender.Get("filename"))
@@ -1730,18 +1730,20 @@ def entryPoint(a):
 	if (a == 'quick'):
 		handleScene()
 		# some profiling stuff for debug mode
-		if Debug:
-			# make the entry point available from __main__
-			__main__.export = export
-			profile.run('export(),', 'd:/exporterProfilelog.txt')
-		else:
-			export()
+		#if Debug:
+		#	# make the entry point available from __main__
+		#	__main__.export = export
+		#	profile.run('export(),', 'd:/exporterProfilelog.txt')
+		#else:
+		
+		export()
+		
 		# dump out profiler stats for debug mode
-		if Debug:
-			# print out the profiler stats.
-			p = pstats.Stats('d:/exporterProfilelog.txt')
-			p.strip_dirs().sort_stats('cumulative').print_stats(60)
-			p.strip_dirs().sort_stats('time').print_stats(60)
+		#if Debug:
+		#	# print out the profiler stats.
+		#	p = pstats.Stats('d:/exporterProfilelog.txt')
+		#	p.strip_dirs().sort_stats('cumulative').print_stats(60)
+		#	p.strip_dirs().sort_stats('time').print_stats(60)
 	elif a == 'normal' or (a == None):
 		# Process scene and load configuration gui
 		handleScene()

@@ -32,185 +32,14 @@ import Blender
 from Blender import NMesh, Armature, Scene, Object, Material, Texture
 from Blender import Mathutils as bMath
 
+import DtsPoseUtil
+
 import gc
 
 '''
    Util functions used by class as well as exporter gui
 '''
 #-------------------------------------------------------------------------------------------------
-
-# Convert Bone pos to a MatrixF
-def blender_bone2matrixf(head, tail, roll):
-	'''
-		Convert bone rest state (defined by bone.head, bone.tail and bone.roll)
-		to a matrix (the more standard notation).
-		Taken from blenkernel/intern/armature.c in Blender source.
-		See also DNA_armature_types.h:47.
-	'''
-	target = Vector(0.0, 1.0, 0.0)
-	delta  = Vector(tail[0] - head[0], tail[1] - head[1], tail[2] - head[2])
-	nor    = delta.normalize()
-
-	# Find Axis & Amount for bone matrix
-	axis   = target.cross(nor)
-
-	if axis.dot(axis) > 0.0000000000001:
-		# if nor is *not* a multiple of target ...
-		axis    = axis.normalize()
-		theta   = math.acos(target.dot(nor))
-		# Make Bone matrix
-		bMatrix = MatrixF().rotate(axis, theta)
-	else:
-		# if nor is a multiple of target ...
-		# point same direction, or opposite?
-		if target.dot(nor) > 0.0:
-			updown =  1.0
-		else:
-			updown = -1.0
-
-		# I think this should work ...
-		dMatrix = [
-		updown, 0.0, 0.0, 0.0,
-		0.0, updown, 0.0, 0.0,
-		0.0, 0.0, 1.0, 0.0,
-		0.0, 0.0, 0.0, 1.0,
-		]
-		bMatrix = MatrixF(dMatrix)
-
-	# Make Roll matrix
-	rMatrix = MatrixF().rotate(nor, roll)
-	# Combine and output result
-	return (rMatrix * bMatrix)
-
-
-# Makes a ghost copy of an armature in blender, puts it in a
-# cannonical state, and uses it for the export, rather than
-# the user's armature.  This avoids many problems and will
-# allow the exporter code to be simplifed. - Joe
-def getGhostArmature(armOb, ghostName):
-	'''
-
-	Armature ghosting function
-	by J.S. Greenawalt
-
-	'''
-	# put the scene in object mode if it's not already there.
-	in_editmode = Blender.Window.EditMode()
- 	if in_editmode: Blender.Window.EditMode(0)
-	
-	# get the existing armature data.
-	arm = armOb.getData() # assumes 'Armature' exists
-
-	# get the current scene
-	scene = Blender.Scene.getCurrent()
-
-	# try to find an existing ghost object to recycle
-	# if not found make a new one
-	try:
-		ghostObject = Blender.Object.Get(ghostName + "-OB")
-		# in 2.40 returns none, in 2.41 throws ValueError
-		if ghostObject == None:
-			raise AttributeError
-	except:
-		ghostObject = Blender.Object.New('Armature', ghostName + "-OB")
-
-	# try to find an existing ghost data block to recycle
-	# if not found, make a new one.
-	try:
-		ghostData = Blender.Armature.Get(ghostName + "-DB")
-		if ghostData == None:
-			raise AttributeError
-	except:
-		ghostData = Blender.Armature.Armature(ghostName + "-DB")
-
-	# link the data with the object
-	ghostObject.link(ghostData)
-
-	# link the object with the scene
-	if ghostObject not in scene.getChildren():
-		scene.link(ghostObject)
-
-	# copy location from the real armature to the ghost.
-	ghostObject.setLocation(armOb.getLocation())
-
-	# begin data copy
-	ghostData.makeEditable()
-
-	# delete all existing data from the ghost armature
-	for bone in ghostData.bones.values():
-		del ghostData.bones[bone.name]
-
-	# copy all bones from the real armature to the ghost
-	for bone in arm.bones.values():
-		eb = Blender.Armature.Editbone()
-		# transform the bones to match the armature's rotation
-		rotMat = armOb.getMatrix().rotationPart() #.invert()
-		eb.head = bone.head['ARMATURESPACE'] * rotMat
-		eb.tail = bone.tail['ARMATURESPACE'] * rotMat
-		ghostData.bones[bone.name] = eb
-
-	# match bone roll angles to worldspace
-	for bone in arm.bones.values():
-		rotMat = armOb.getMatrix().rotationPart()
-		# which way is the z axis of the bone pointing in worldspace?
-		bWorld = bone.matrix['ARMATURESPACE'].rotationPart()  * rotMat
-		xVec = bMath.Vector(1.0,0.0,0.0) * bWorld
-		yVec = bMath.Vector(0.0,1.0,0.0) * bWorld
-		zVec = bMath.Vector(0.0,0.0,1.0) * bWorld
-		'''
-		# add some new bones to visualize these vectors
-		eb = A.Editbone()
-		eb.head = bone.tail['ARMATURESPACE'] * rotMat
-		eb.tail = (bone.tail['ARMATURESPACE'] * rotMat) + zVec
-		ghostData.bones['zVec'] = eb
-		eb = A.Editbone()
-		eb.head = bone.tail['ARMATURESPACE'] * rotMat
-		eb.tail = (bone.tail['ARMATURESPACE'] * rotMat) + xVec
-		ghostData.bones['xVec'] = eb
-		'''
-
-		# now, figure out what the roll angle should be.
-		# get the z vector for the new bone
-		zVecNew = bMath.Vector(0.0,0.0,1.0) * ghostData.bones[bone.name].matrix.rotationPart()
-		# and the y vector
-		yVecNew = bMath.Vector(0.0,1.0,0.0) * ghostData.bones[bone.name].matrix.rotationPart()
-		'''
-		# visualize the vector
-		eb = A.Editbone()
-		eb.head = bone.tail['ARMATURESPACE'] * rotMat
-		eb.tail = (bone.tail['ARMATURESPACE'] * rotMat) + zVecNew
-		ghostData.bones['zVecNEW'] = eb
-		'''
-
-		# now find the angle between zVec and zVecNew and set the roll angle 
-		# accordingly.
-		bRoll = bMath.AngleBetweenVecs(zVecNew, zVec)
-		# see if we need to reverse the roll
-		# rotate zVecNew around the bone's y axis by bRoll
-		zRotTest = zVecNew * bMath.RotationMatrix(bRoll, 3, 'r', yVecNew)
-		zRotDif = bMath.AngleBetweenVecs(zRotTest, zVec)
-		# if they don't match, reverse the roll angle
-		if zRotDif > 0.0001:
-			bRoll = 360.0 - bRoll
-
-		ghostData.bones[bone.name].roll = bRoll
-
-	# hook up parent/child relationships
-	for bone in arm.bones.values():
-		if bone.hasParent():
-			ghostData.bones[bone.name].parent = ghostData.bones[bone.parent.name]
-		else:
-			ghostData.bones[bone.name].clearParent()
-		# copy options
-		ghostData.bones[bone.name].options = bone.options
-
-	ghostData.update()
-	# end data copy
-
-	# must unlink the ghost from the scene when we are done with it!!!
-	return ghostObject
-
-
 # Helpful function to make a map of curve names
 def BuildCurveMap(ipo):
 	curvemap = {}
@@ -681,39 +510,25 @@ class BlenderShape(DtsShape):
 				return False
 		
 		startNode = len(self.nodes)
-		
 		parentBone = -1
 
-		ghostOb = getGhostArmature(armature, "DTS-EXP-GHOST")
-		ghostArm = ghostOb.getData()
-		# Get the fake armature's position, rotation, and scale
-		matf = self.collapseBlenderTransform(ghostOb)
-		pos, rot = Vector(matf.get(3,0),matf.get(3,1),matf.get(3,2)), Quaternion().fromMatrix(matf).inverse()
-		scale = [1.0, 1.0, 1.0]
-			
 		# Add each bone tree
-		for bone in ghostArm.bones.values():
+		#for bone in ghostArm.bones.values():
+		for bone in arm.bones.values():
 			if bone.parent == None:
-				self.addBones(bone, matf, scale, parentBone, True)
-		
-		# kill the ghost!
-		scene = Blender.Scene.getCurrent()
-		scene.unlink(ghostOb)
-			
+				self.addBones(bone, parentBone, armature)
 		
 		# Set armature index on all added nodes
 		for node in self.nodes[startNode:len(self.nodes)]:
 			node.armIdx = len(self.addedArmatures)
 
-		# now get the real armature transforms for animations
-		matf = self.collapseBlenderTransform(armature)
-		rot = Quaternion().fromMatrix(matf)
-		self.addedArmatures.append([armature, pos, rot, self.collapseBlenderScale(armature)])		
+		self.addedArmatures.append([armature])
 		
 		return True
-				
-	def addBones(self, bone, transformMat, scale, parentId, isOrphan):
-		'''
+		
+
+	def addBones(self, bone, parentId, arm):
+		'''		
 		This function recursively adds a bone from an armature to the shape as a node.
 		
 		The exporter exports each bone as a node, using the "head" position as where the
@@ -737,49 +552,50 @@ class BlenderShape(DtsShape):
 		One thing that blender does not take into account however is the scale of the root armature - 
 		to solve this, we need to pass down the scaling values for each axis from the addArmature() function.
 
-		
-		** Sadly getRestMatrix() is gone in blender 2.40, had to revert back to the old method - Joe G.
-
 		'''
-		real_name = bone.name
+
+		bonename = bone.name
+		
 		# Do not add bones on the "BannedBones" list
-		if real_name.upper() in self.preferences['BannedBones']:
+		if bonename.upper() in self.preferences['BannedBones']:
 			return False
 
-		# Blender bones are defined in their parent's rotational space, but relative to the parent's tail.
-		# Convert to vector
-                bhead = Vector(bone.head['BONESPACE'][0],bone.head['BONESPACE'][1],bone.head['BONESPACE'][2])
-                btail = Vector(bone.tail['BONESPACE'][0],bone.tail['BONESPACE'][1],bone.tail['BONESPACE'][2])
-		# Move into parent space & build rotation
-		head = transformMat.passPoint(bhead)
-		tail = transformMat.passPoint(btail)
-
-		# ... and add on scale
-		head[0], head[1], head[2] = scale[0]*head[0], scale[1]*head[1], scale[2]*head[2]
-		tail[0], tail[1], tail[2] = scale[0]*tail[0], scale[1]*tail[1], scale[2]*tail[2]
-		rot = Quaternion().fromMatrix(transformMat * blender_bone2matrixf(head, tail, bone.roll['BONESPACE']*0.017453293)).inverse()
-
+		
 		# Add a DTS bone to the shape
-		b = Node(self.sTable.addString(real_name), parentId, isOrphan)
-		self.defaultTranslations.append(head)
+		b = Node(self.sTable.addString(bonename), parentId)
+		b.isOrphan = False
+		if bone.parent == None:
+			b.isOrphan = True
+			loc = DtsPoseUtil.getBoneRestPosWS(arm, bonename)
+			rot = DtsPoseUtil.getBoneRestRotWS(arm, bonename).invert().toQuat()
+		elif not (Blender.Armature.CONNECTED in bone.options):
+			b.unConnected = True
+			loc = DtsPoseUtil.getBoneDefPosPS(arm, bonename, bone.parent.name)
+			rot = DtsPoseUtil.getBoneDefRotPS(arm, bonename, bone.parent.name)
+		else:
+			b.unConnected = False
+			loc = DtsPoseUtil.getBoneDefPosPS(arm, bonename, bone.parent.name)
+			rot = DtsPoseUtil.getBoneDefRotPS(arm, bonename, bone.parent.name)
+
+		loc = Vector(loc[0], loc[1], loc[2]) # convert to exporter's vector class
+		rot = Quaternion(rot[1],rot[2],rot[3],rot[0]) # convert to exporter's quat class
+				
+
+		self.defaultTranslations.append(loc)
 		self.defaultRotations.append(rot)
 		# need to get the bone's armature space transform and store it to use later with the pose stuff
 		b.armSpaceTransform = bone.matrix['ARMATURESPACE']
 		self.nodes.append(b)
 
+
 		# Add any children this bone may have
-		# Child nodes are always translated along the Y axis
-		nmat = transformMat.identity()
-		nmat.setRow(3,Vector(0,(btail - bhead).length(),0)) # Translation matrix
 		self.subshapes[0].numNodes += 1
 		# Add the rest of the bones
 		parentId = len(self.nodes)-1
 		if bone.hasChildren():
 			for bChild in bone.children:
-				# must add only IMMEDIATE children! bone.children gives us the whole branch in 2.40.
-				if bChild.parent.name == bone.name:
-					self.addBones(bChild, nmat, scale, parentId, False)
-			
+				self.addBones(bChild, parentId, arm)
+
 	def addNode(self, object):
 		# Adds generic node with object's name
 		Torque_Util.dump_writeln("     Node[%s]: %s" % (object.getType(), obj.getName()))
@@ -801,7 +617,7 @@ class BlenderShape(DtsShape):
 	# These three helper methods are used by getPoseTransform. They should probably be moved elsewhere.
 	def isRotated(self, quat):
 		delta = 0.0001
-		return not ((quat[0] < delta) and (quat[0] > 0.0 - delta) and (quat[1] < delta) and (quat[1] > 0.0 - delta) and (quat[2] < delta) and (quat[2] > 0.0 - delta))
+		return not ((quat[0] < delta) and (quat[0] > -delta) and (quat[1] < delta) and (quat[1] > -delta) and (quat[2] < delta) and (quat[2] > -delta))
 	
 	def isTranslated(self, vec):
 		delta = 0.00001
@@ -851,37 +667,21 @@ class BlenderShape(DtsShape):
 		parentname = self.sTable.get(parentNode.name)
 		
 
-
-		# our actual pose for this frame.
-		#pose = arm.getPose()
-		#del pose
-		#return loc, rot, scale
 		
-		# Begin complicated math :)
-		
-		# - determine the bone's rotation relative to it's default orientation.		
-		theMat = bMath.Matrix(pose.bones[bonename].localMatrix.rotationPart())
-		defMat = bMath.Matrix(self.nodes[nodeIndex].armSpaceTransform.rotationPart())
-		# take the armature's rotation into account.
-		defMat = defMat * bMath.Matrix(arm.getMatrix()).rotationPart().invert()
-		# get rid of parent rotation.
-		if not node.isOrphan:
-			theMat = theMat * bMath.Matrix(pose.bones[parentname].localMatrix.rotationPart()).invert()
-		# move rotation into bone's local frame of reference.
-		theMat = bMath.Matrix(defMat) * bMath.Matrix(theMat)
-		# find the difference between the default rotation and the rotation for this frame.
-		quat1 = defMat.toQuat()
-		quat2 = theMat.toQuat()
-		qt = bMath.DifferenceQuats(quat1, quat2)
+		# Get our values from the pose module		
+		qt, tp = None, None
+		if node.isOrphan:
+			qt = DtsPoseUtil.getOrphanBoneRotLS(arm, bonename, pose)
+			tp = DtsPoseUtil.getOrphanBoneLocLS(arm, bonename, pose)
+		elif node.unConnected:
+			qt = DtsPoseUtil.getUnconnectedBoneRotLS(arm, bonename, parentname, pose)
+			tp = DtsPoseUtil.getUnconnectedBoneLocLS(arm, bonename, parentname, pose)
+		else:
+			qt = DtsPoseUtil.getConnectedBoneRotLS(arm, bonename, parentname, pose)
+			tp = DtsPoseUtil.getConnectedBoneLocLS(arm, bonename, parentname, pose)
 
-		
-		# - determine the translation of the bone relative to it's parent.
-		tp = pose.bones[bonename].loc
-		# scale the translation by the armature's scale
-		armSize = arm.getSize()
-		tp[0],tp[1],tp[2] = tp[0] * armSize[0], tp[1] * armSize[1], tp[2] * armSize[2]
-		trans = Vector(tp[0], tp[1], tp[2])
-
+		transVec = Vector(tp[0], tp[1], tp[2])
+		quatRot = Quaternion(qt.x, qt.y, qt.z, qt.w)
 
 		# - determine the scale of the bone.
 		scaleVec = pose.bones[bonename].size
@@ -895,21 +695,20 @@ class BlenderShape(DtsShape):
 			# frames and store this
 
 			# process translation
-			trans = trans - baseTransform[0]
-			if self.isTranslated(trans):
+			transVec = transVec - baseTransform[0]
+			if self.isTranslated(transVec):
 				sequence.matters_translation[nodeIndex] = True
 				sequence.has_loc = True				
-			loc = trans
+			loc = transVec
 
 			# process rotation
 			btqt = bMath.Quaternion(baseTransform[1][3],baseTransform[1][0], baseTransform[1][1], baseTransform[1][2])
 			difqt = bMath.DifferenceQuats(qt, btqt)
-			quat = Quaternion(difqt.x, difqt.y, difqt.z, difqt.w)
-			rotation = quat
-			if self.isRotated(rotation):
+			quatRot = Quaternion(difqt.x, difqt.y, difqt.z, difqt.w)
+			if self.isRotated(quatRot):
 				sequence.matters_rotation[nodeIndex] = True
 				sequence.has_rot = True
-			rot = rotation
+			rot = quatRot
 
 			# process scale
 			scale = Vector(scaleVec[0], scaleVec[1], scaleVec[2])
@@ -921,35 +720,27 @@ class BlenderShape(DtsShape):
 				sequence.matters_scale[nodeIndex] = True
 				sequence.has_scale = True
 
-
-
 		else:
 			# Standard animations, so store total translations
 
 			# process translation
 			if getRawValues:
-				loc = trans
+				loc = transVec
 			else:
-				if self.isTranslated(trans):
+				if self.isTranslated(transVec):
 					sequence.matters_translation[nodeIndex] = True
 					sequence.has_loc = True				
-				loc = trans
-				# for orphan bones movement is relative to the bone's own rotation
-				if node.isOrphan:
-					loc = self.defaultRotations[nodeIndex].apply(loc)
+				loc = transVec
 				loc += self.defaultTranslations[nodeIndex]
 
-			
 			# process rotation
-			quat = Quaternion(qt.x, qt.y, qt.z, qt.w)
-			rotation = quat
 			if getRawValues:
-				rot = rotation
+				rot = quatRot
 			else:
-				if self.isRotated(rotation):
+				if self.isRotated(quatRot):
 					sequence.matters_rotation[nodeIndex] = True
 					sequence.has_rot = True
-				rot = rotation.inverse() * self.defaultRotations[nodeIndex]
+				rot = quatRot.inverse() * self.defaultRotations[nodeIndex]
 				
 			# process scale.
 			if getRawValues:

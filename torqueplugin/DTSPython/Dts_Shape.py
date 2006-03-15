@@ -35,10 +35,9 @@ from Dts_Stream import *
 
 # Node class - DTS tree node
 class Node:
-	def __init__(self, na=0, pa=-1, isO=False):
+	def __init__(self, na=0, pa=-1):
 		self.name = na		# index of its name in the DTS string table
-		self.parent = pa	# number of the parent node; -1 if root
-		self.isOrphan = isO	# Joe - if the node has no parent, used to correct translations on orphan nodes.
+		self.parent = pa	# number of the parent node; -1 if root		
 		self.firstObject = -1	# deprecated; set to -1
 		self.firstChild  = -1	# deprecated; set to -1
 		self.nextSibling = -1	# deprecated; set to -1
