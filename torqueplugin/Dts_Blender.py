@@ -51,7 +51,7 @@ import os.path
   Blender Dts Classes for Python
 '''
 
-Version = "0.91RC6"
+Version = "0.91RC7"
 Prefs = None
 Prefs_keyname = ""
 export_tree = None
