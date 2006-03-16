@@ -40,6 +40,8 @@ if ( fso.FileExists("Dts_Blender.py") && fso.FolderExists("DTSPython") ) {
 		fso.CopyFile("DtsShape_Blender.py", blenderPath + "\\scripts\\", true);
 		fso.CopyFile("DtsMesh_Blender.py", blenderPath + "\\scripts\\", true);
 		fso.CopyFile("Common_Gui.py", blenderPath + "\\scripts\\", true);
+		fso.CopyFile("DtsPoseUtil.py", blenderPath + "\\scripts\\", true);
+		fso.CopyFile("Dts_Blender_QuickExport.py", blenderPath + "\\scripts\\", true);
         fso.CopyFolder("DTSPython",   blenderPath + "\\scripts\\", true);
 		WSHShell.Popup("Scripts successfully copied.", 0, "Installation", 64);
 	} catch (jsException) {
