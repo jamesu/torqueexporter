@@ -127,6 +127,11 @@ class BlenderShape(DtsShape):
 		self.addedArmatures = []	# Armature object,  Armature matrix
 		self.externalSequences = []
 		self.scriptMaterials = []
+		
+		# this object is the interface through which we interact with the
+		# pose module and the blender armature system.
+		self.poseUtil = DtsPoseUtil.DtsPoseUtilClass()
+		
 		gc.enable()
 		
 	def __del__(self):
@@ -501,11 +506,10 @@ class BlenderShape(DtsShape):
 			The base node transform is collapsed by incorporating the transform of the armature object.
 		'''
 		# First, process armature
-		arm = armature.getData()
+		arm = self.poseUtil.armInfo[armature.name][DtsPoseUtil.ARMDATA]
 		# Don't add existing armatures
 		for added in self.addedArmatures:			
-			#added = added[0]
-			if added[0].getData().name == arm.name:
+			if self.poseUtil.armInfo[added[0].name][DtsPoseUtil.ARMDATA].name == arm.name:
 				#print "Note : ignoring attempt to process armature data '%s' again." % arm.name
 				return False
 		
@@ -516,7 +520,7 @@ class BlenderShape(DtsShape):
 		#for bone in ghostArm.bones.values():
 		for bone in arm.bones.values():
 			if bone.parent == None:
-				self.addBones(bone, parentBone, armature)
+				self.addBones(bone, parentBone, armature, arm)
 		
 		# Set armature index on all added nodes
 		for node in self.nodes[startNode:len(self.nodes)]:
@@ -527,7 +531,7 @@ class BlenderShape(DtsShape):
 		return True
 		
 
-	def addBones(self, bone, parentId, arm):
+	def addBones(self, bone, parentId, arm, armData):
 		'''		
 		This function recursively adds a bone from an armature to the shape as a node.
 		
@@ -563,19 +567,23 @@ class BlenderShape(DtsShape):
 		
 		# Add a DTS bone to the shape
 		b = Node(self.sTable.addString(bonename), parentId)
+
+		# get the bone's loc and rot, and set flags.
 		b.isOrphan = False
+		b.unConnected = False
 		if bone.parent == None:
 			b.isOrphan = True
-			loc = DtsPoseUtil.getBoneRestPosWS(arm, bonename)
-			rot = DtsPoseUtil.getBoneRestRotWS(arm, bonename).invert().toQuat()
-		elif not (Blender.Armature.CONNECTED in bone.options):
-			b.unConnected = True
-			loc = DtsPoseUtil.getBoneDefPosPS(arm, bonename, bone.parent.name)
-			rot = DtsPoseUtil.getBoneDefRotPS(arm, bonename, bone.parent.name)
+			loc = self.poseUtil.armBones[arm.name][bonename][DtsPoseUtil.BONERESTPOSWS]
+			rot = bMath.Matrix(self.poseUtil.armBones[arm.name][bonename][DtsPoseUtil.BONERESTROTWS]).invert().toQuat()
+			#loc = DtsPoseUtil.getBoneRestPosWS(arm, armData, bonename)
+			#rot = DtsPoseUtil.getBoneRestRotWS(arm, armData, bonename).invert().toQuat()
 		else:
-			b.unConnected = False
-			loc = DtsPoseUtil.getBoneDefPosPS(arm, bonename, bone.parent.name)
-			rot = DtsPoseUtil.getBoneDefRotPS(arm, bonename, bone.parent.name)
+			b.unConnected = True
+			loc = self.poseUtil.armBones[arm.name][bonename][DtsPoseUtil.BONEDEFPOSPS]
+			rot = self.poseUtil.armBones[arm.name][bonename][DtsPoseUtil.BONEDEFROTPS]
+			#loc = self.poseUtil.getBoneDefPosPS(arm.name, bonename)
+			#rot = self.poseUtil.getBoneDefRotPS(arm.name, bonename)
+
 
 		loc = Vector(loc[0], loc[1], loc[2]) # convert to exporter's vector class
 		rot = Quaternion(rot[1],rot[2],rot[3],rot[0]) # convert to exporter's quat class
@@ -594,7 +602,7 @@ class BlenderShape(DtsShape):
 		parentId = len(self.nodes)-1
 		if bone.hasChildren():
 			for bChild in bone.children:
-				self.addBones(bChild, parentId, arm)
+				self.addBones(bChild, parentId, arm, armData)
 
 	def addNode(self, object):
 		# Adds generic node with object's name
@@ -668,18 +676,9 @@ class BlenderShape(DtsShape):
 		
 
 		
-		# Get our values from the pose module		
-		qt, tp = None, None
-		if node.isOrphan:
-			qt = DtsPoseUtil.getOrphanBoneRotLS(arm, bonename, pose)
-			tp = DtsPoseUtil.getOrphanBoneLocLS(arm, bonename, pose)
-		elif node.unConnected:
-			qt = DtsPoseUtil.getUnconnectedBoneRotLS(arm, bonename, parentname, pose)
-			tp = DtsPoseUtil.getUnconnectedBoneLocLS(arm, bonename, parentname, pose)
-		else:
-			qt = DtsPoseUtil.getConnectedBoneRotLS(arm, bonename, parentname, pose)
-			tp = DtsPoseUtil.getConnectedBoneLocLS(arm, bonename, parentname, pose)
-
+		# Get our values from the poseUtil interface		
+		tp, qt = self.poseUtil.getBoneLocRotLS(arm.name, bonename, pose)
+		# convert to the exporter's math classes
 		transVec = Vector(tp[0], tp[1], tp[2])
 		quatRot = Quaternion(qt.x, qt.y, qt.z, qt.w)
 
@@ -793,7 +792,8 @@ class BlenderShape(DtsShape):
 		for armOb in Blender.Object.Get():
 			if (armOb.getType() != 'Armature') or (armOb.name == "DTS-EXP-GHOST-OB"): continue
 			tempPose = armOb.getPose()
-			for bonename in armOb.getData().bones.keys():
+			#for bonename in armOb.getData().bones.keys():
+			for bonename in self.poseUtil.armBones[armOb.name].keys():
 				# reset the bone's transform
 				tempPose.bones[bonename].quat = bMath.Quaternion().identity()
 				tempPose.bones[bonename].size = bMath.Vector(1.0, 1.0, 1.0)
@@ -993,7 +993,8 @@ class BlenderShape(DtsShape):
 			for armOb in Blender.Object.Get():
 				if (armOb.getType() != 'Armature') or (armOb.name == "DTS-EXP-GHOST-OB"): continue
 				tempPose = armOb.getPose()
-				for bonename in armOb.getData().bones.keys():
+				#for bonename in armOb.getData().bones.keys():
+				for bonename in self.poseUtil.armBones[armOb.name].keys():
 					# reset the bone's transform
 					tempPose.bones[bonename].quat = bMath.Quaternion().identity()
 					tempPose.bones[bonename].size = bMath.Vector(1.0, 1.0, 1.0)
