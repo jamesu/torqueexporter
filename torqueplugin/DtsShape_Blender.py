@@ -800,9 +800,6 @@ class BlenderShape(DtsShape):
 				tempPose.bones[bonename].loc = bMath.Vector(0.0, 0.0, 0.0)
 			# update the pose.
 			tempPose.update()
-		# Update the scene's state.
-		scene.update(1)
-
 
 		# now set the active action and move to the desired frame
 		for i in range(0, len(self.addedArmatures)):
@@ -988,12 +985,11 @@ class BlenderShape(DtsShape):
 			scene.update(1)				
 		# For normal animations, loop through each node and reset it's transforms.
 		# This avoids transforms carrying over from other animations.
-		else:
+		else:			
 			# need to cycle through ALL bones and reset the transforms.
 			for armOb in Blender.Object.Get():
 				if (armOb.getType() != 'Armature') or (armOb.name == "DTS-EXP-GHOST-OB"): continue
 				tempPose = armOb.getPose()
-				#for bonename in armOb.getData().bones.keys():
 				for bonename in self.poseUtil.armBones[armOb.name].keys():
 					# reset the bone's transform
 					tempPose.bones[bonename].quat = bMath.Quaternion().identity()
@@ -1001,8 +997,6 @@ class BlenderShape(DtsShape):
 					tempPose.bones[bonename].loc = bMath.Vector(0.0, 0.0, 0.0)
 				# update the pose.
 				tempPose.update()
-			# Update the scene's state.
-			scene.update(1)
 
 		
 		# create blank frames for each node
