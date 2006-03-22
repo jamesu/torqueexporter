@@ -571,23 +571,15 @@ class BlenderShape(DtsShape):
 		# get the bone's loc and rot, and set flags.
 		b.isOrphan = False
 		b.unConnected = False
+		loc, rot = None, None
 		if bone.parent == None:
 			b.isOrphan = True
 			loc = self.poseUtil.armBones[arm.name][bonename][DtsPoseUtil.BONERESTPOSWS]
-			rot = bMath.Matrix(self.poseUtil.armBones[arm.name][bonename][DtsPoseUtil.BONERESTROTWS]).invert().toQuat()
-			#loc = DtsPoseUtil.getBoneRestPosWS(arm, armData, bonename)
-			#rot = DtsPoseUtil.getBoneRestRotWS(arm, armData, bonename).invert().toQuat()
+			rot = self.poseUtil.armBones[arm.name][bonename][DtsPoseUtil.BONERESTROTWS]
 		else:
 			b.unConnected = True
 			loc = self.poseUtil.armBones[arm.name][bonename][DtsPoseUtil.BONEDEFPOSPS]
 			rot = self.poseUtil.armBones[arm.name][bonename][DtsPoseUtil.BONEDEFROTPS]
-			#loc = self.poseUtil.getBoneDefPosPS(arm.name, bonename)
-			#rot = self.poseUtil.getBoneDefRotPS(arm.name, bonename)
-
-
-		loc = Vector(loc[0], loc[1], loc[2]) # convert to exporter's vector class
-		rot = Quaternion(rot[1],rot[2],rot[3],rot[0]) # convert to exporter's quat class
-				
 
 		self.defaultTranslations.append(loc)
 		self.defaultRotations.append(rot)
@@ -677,10 +669,8 @@ class BlenderShape(DtsShape):
 
 		
 		# Get our values from the poseUtil interface		
-		tp, qt = self.poseUtil.getBoneLocRotLS(arm.name, bonename, pose)
+		transVec, quatRot = self.poseUtil.getBoneLocRotLS(arm.name, bonename, pose)
 		# convert to the exporter's math classes
-		transVec = Vector(tp[0], tp[1], tp[2])
-		quatRot = Quaternion(qt.x, qt.y, qt.z, qt.w)
 
 		# - determine the scale of the bone.
 		scaleVec = pose.bones[bonename].size

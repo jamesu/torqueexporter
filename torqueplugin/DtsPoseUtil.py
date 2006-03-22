@@ -26,13 +26,17 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 import Blender
 from Blender import Mathutils as bMath
 
+import DTSPython
+from DTSPython import *
+from DTSPython import Torque_Math
+
+
 import gc
 
 gc.enable()
 '''
-	Utility functions for dealing with Blender's pose module.
-	these functions allow us to move between the different
-	spaces involved
+	Utility class for dealing with Blender's pose module and armature system,
+	and the many memory leaks therein.
 '''
 #-------------------------------------------------------------------------------------------------
 
@@ -41,11 +45,10 @@ gc.enable()
 # indicies into armInfo's lists
 ARMOB = 0
 ARMDATA = 1
-ARMMAT = 2
-ARMROT = 3
-ARMROTINV = 4
-ARMLOC = 5
-ARMSIZE = 6
+ARMROT = 2
+ARMROTINV = 3
+ARMLOC = 4
+ARMSIZE = 5
 
 # indicies into armBone's lists
 BONE = 0
@@ -62,7 +65,15 @@ class DtsPoseUtilClass:
 	
 	DtsPoseUtilClass
 	
-	Insert documentation here.
+	This class provides one stop access to armature and bone data through the armInfo and
+	armBones dictionaries.  The rational behind this is to centralize all access to Blender's
+	armature and pose system to avoid some nasty memory leaks in the Blender Python API.  Basically
+	we store off all the static spatial data concerning armatures and bones and use them as needed.
+	
+	
+	
+	Every quat we get from blender must be inverted before it is correct in Torque's math system,
+	 except sometimes not. Confusing, eh?
 	
 	'''
 	def __init__(self):	
@@ -80,11 +91,11 @@ class DtsPoseUtilClass:
 			# armature in a list
 			armDb = armOb.getData()
 			armMat = bMath.Matrix(armOb.getMatrix())
-			armRot = bMath.Matrix(armMat).rotationPart()
-			armRotInv = bMath.Matrix(armRot).invert()
-			armLoc = armMat.translationPart()
-			armSize = bMath.Vector(armOb.getSize())
-			self.armInfo[armOb.name] = [ armOb, armDb, armMat, armRot, armRotInv, armLoc, armSize ]
+			armRot = self.toTorqueQuat(armMat.rotationPart().toQuat().normalize())
+			armRotInv = armRot.inverse()
+			armLoc = self.toTorqueVec(armMat.translationPart())
+			armSize = self.toTorqueVec(armOb.getSize())
+			self.armInfo[armOb.name] = [ armOb, armDb, armRot, armRotInv, armLoc, armSize ]
 			self.armBones[armOb.name] = {}			
 
 			# loop through the armature's bones
@@ -98,15 +109,15 @@ class DtsPoseUtilClass:
 				else:
 					parentName = None				
 				self.armBones[armOb.name][bName] = [ bone, bMat, None, None, parentName, None, None ]
-				self.armBones[armOb.name][bName][BONERESTPOSWS] = self.__getBoneRestPosWS(armOb.name, bName)
-				self.armBones[armOb.name][bName][BONERESTROTWS] = self.__getBoneRestRotWS(armOb.name, bName)
+				self.armBones[armOb.name][bName][BONERESTPOSWS] = self.getBoneRestPosWS(armOb.name, bName)
+				self.armBones[armOb.name][bName][BONERESTROTWS] = self.getBoneRestRotWS(armOb.name, bName)
 
 			# second pass for calculated static bone data
 			for bone in armDb.bones.values():
 				bName = bone.name				
 				if bone.hasParent():
-					self.armBones[armOb.name][bName][BONEDEFPOSPS] = self.__getBoneDefPosPS(armOb.name, bName)
-					self.armBones[armOb.name][bName][BONEDEFROTPS] = self.__getBoneDefRotPS(armOb.name, bName)
+					self.armBones[armOb.name][bName][BONEDEFPOSPS] = self.getBoneDefPosPS(armOb.name, bName)
+					self.armBones[armOb.name][bName][BONEDEFROTPS] = self.getBoneDefRotPS(armOb.name, bName)
 
 				
 
@@ -115,121 +126,120 @@ class DtsPoseUtilClass:
 
 
 	# *****
-	# This is our only exposed public function.
+	# This is our only exposed public method.
 	def getBoneLocRotLS(self, armName, bName, pose):
 		loc = None
 		rot = None
 		if self.armBones[armName][bName][PARENTNAME] == None:
-			loc = self.__getOrphanBoneLocLS(armName, bName, pose)
-			rot = self.__getOrphanBoneRotLS(armName, bName, pose)
+			loc = self.getOrphanBoneLocLS(armName, bName, pose)
+			rot = self.getOrphanBoneRotLS(armName, bName, pose)
 		else:
-			loc = self.__getBoneLocLS(armName, bName, pose)
-			rot = self.__getBoneRotLS(armName, bName, pose)
+			loc = self.getBoneLocLS(armName, bName, pose)
+			rot = self.getBoneRotLS(armName, bName, pose)
 		return loc, rot
 	# *****
 	
-	# ********  everything below this point is private
+	# -----  everything below this point is private
 	
 	# TESTED
-	def __getBoneLocLS(self, armName, bName, pose):
+	def getBoneLocLS(self, armName, bName, pose):
 		parentName = self.armBones[armName][bName][PARENTNAME]
 		if parentName == None: raise ValueError
 		# get the bone's location in parent space
-		whereIsBonePS = self.__getBonePosPS(armName, bName, pose)
+		whereIsBonePS = self.getBonePosPS(armName, bName, pose)
 		# get the bone's default location in parent space
 		# ( This is where the bone should be if it has not been explicitly moved or
 		# effected by a constraint.)
 		whereShouldBoneBePS = self.armBones[armName][bName][BONEDEFPOSPS]
-		#whereShouldBoneBePS = __getBoneDefPosPS(armName, bName, parentName)
 		# subtract out the position that the bone will end up in due to FK transforms
 		# from the parent bone, as these are already taken care of due to the nodes being
 		# in the parent's local space.
 		whereIsBonePS = whereIsBonePS - whereShouldBoneBePS
 		return whereIsBonePS
 
-
 	# Get the rotation from rest of a connected bone in the bone's local space.
 	# TESTED
-	def __getBoneRotLS(self, armName, bName, pose):
+	def getBoneRotLS(self, armName, bName, pose):
 		parentName = self.armBones[armName][bName][PARENTNAME]
 		if parentName == None: raise ValueError
 		# get the default rotation of the bone in parent space, this
 		# is what the bone's rotation should be if it has not been
 		# explicitly rotated or affected by a constraint.
-		bDefRotPS = self.armBones[armName][bName][BONEDEFROTPS]
+		bDefRotPS = self.armBones[armName][bName][BONEDEFROTPS].inverse()
 		# get the current rotation of the bone in parent space.
-		bCurRotPS = self.__getBoneRotPS(armName, bName, pose)
-		bRotLS = ( bCurRotPS.toMatrix().invert() * bDefRotPS.toMatrix()).toQuat()
-		return bRotLS
-
+		bCurRotPS = self.getBoneRotPS(armName, bName, pose)
+		#bRotLS = ( bCurRotPS.toMatrix().invert() * bDefRotPS.toMatrix()).toQuat()
+		bRotLS =   bCurRotPS.inverse() * bDefRotPS
+		return bRotLS.inverse()
 
 	# orphan bone translations are defined in worldspace
 	# relative to the default postion of the bone.
 	# TESTED
-	# MAY NEED TO TAKE ANOTHER LOOK AT THIS.
-	def __getOrphanBoneLocLS(self, armName, bName, pose):
+	def getOrphanBoneLocLS(self, armName, bName, pose):
 		# get the rest position of the bone
 		bRestPos = self.armBones[armName][bName][BONERESTPOSWS]
 		# get the bone's current position
-		bCurPos = self.__getBoneLocWS(armName, bName, pose)
+		bCurPos = self.getBoneLocWS(armName, bName, pose)
 		# subtract the rest postion from the current position to get
 		# the bone's local movement
 		bMovement = bCurPos - bRestPos
 		return bMovement
 
-
 	# get the difference between an orphan bone's rest rotation
 	# and it's current rotation; this is the bone's localspace
 	# rotation.
 	# TESTED
-	def __getOrphanBoneRotLS(self, armName, bName, pose):
+	def getOrphanBoneRotLS(self, armName, bName, pose):
 		# get the bone's rest rotation in worldspace
-		bRestRot = bMath.Matrix(self.armBones[armName][bName][BONERESTROTWS])
+		bRestRot = self.armBones[armName][bName][BONERESTROTWS]
 		# get the bone's worldspace rotation
-		bCurRot = self.__getBoneRotWS(armName, bName, pose)
+		bCurRot = self.getBoneRotWS(armName, bName, pose)
 		# get the differnce between the two, worldspace factors out
-		bRotDelta = bMath.DifferenceQuats(bRestRot.toQuat(), bCurRot.toQuat())
+		bRotDelta = (bCurRot.inverse() * bRestRot.inverse()).inverse()
 		return bRotDelta
+
 
 	# --------- (private) Parentspace getters ----------------
 
 	# determine the position of the bone in parentSpace
 	# (absolute parent space position, not relative to default position of the bone)
 	# TESTED
-	def __getBonePosPS(self, armName, bName, pose):
+	def getBonePosPS(self, armName, bName, pose):
 		parentName = self.armBones[armName][bName][PARENTNAME]
 		if parentName == None: raise ValueError
 		# find the parent's location in worldspace
-		whereIsParentWS = self.__getBoneLocWS(armName, parentName, pose)
+		whereIsParentWS = self.getBoneLocWS(armName, parentName, pose)
 		# find the child's location in worldspace
-		whereIsChildWS = self.__getBoneLocWS(armName, bName, pose)
+		whereIsChildWS = self.getBoneLocWS(armName, bName, pose)
 		# subtract out the parent's location
 		whereIsBonePS = whereIsChildWS - whereIsParentWS
-		# add on armature scale
-		armSize = self.armInfo[armName][ARMSIZE]
-		whereIsBonePS = bMath.Vector(whereIsBonePS[0] * armSize[0], whereIsBonePS[1] * armSize[1], whereIsBonePS[2]  * armSize[2])
 		# determine the transform needed to get to the same point in the parent's space.
-		whereIsBonePS = whereIsBonePS * self.__getBoneRotWS(armName, parentName, pose).invert()
+		whereIsBonePS = self.getBoneRotWS(armName, parentName, pose).apply(whereIsBonePS)
 		return whereIsBonePS
 
 	# Get a non-orphan bone's rotation in parent space
 	# TESTED
-	def __getBoneRotPS(self, armName, bName, pose):
+	def getBoneRotPS(self, armName, bName, pose):
 		parentName = self.armBones[armName][bName][PARENTNAME]
 		if parentName == None: raise ValueError
 		# get the bone's default rotation in worldspace
-		boneRotWS = self.__getBoneRotWS(armName, bName, pose)
+		boneRotWS = self.getBoneRotWS(armName, bName, pose)
 		# get the parent bone's default rotation in worldspace
-		parentBoneRotWS = self.__getBoneRotWS(armName, parentName, pose)
-		bRotPS = bMath.DifferenceQuats(boneRotWS.toQuat(), parentBoneRotWS.toQuat())
+		parentBoneRotWS = self.getBoneRotWS(armName, parentName, pose)
+		# get the difference
+		bRotPS = parentBoneRotWS.inverse() * boneRotWS
 		return bRotPS
 
+
+	# ***********************
+	# these next four functions are used to populate the armBones database, they should
+	# not be called by any other functions, only in init
 
 	# Determine a bone's default position for the current pose in the parent bone's space.
 	# This is where the bone should be if it has not been explicitly moved or
 	# effected by a constraint.
 	# TESTED
-	def __getBoneDefPosPS(self, armName, bName):
+	def getBoneDefPosPS(self, armName, bName):
 		parentName = self.armBones[armName][bName][PARENTNAME]
 		if parentName == None: raise ValueError
 		# get the bone's default position in worldspace
@@ -240,92 +250,124 @@ class DtsPoseUtilClass:
 		offsetWS = boneLocWS - parentBoneLocWS
 		# scale the offset by armature's scale
 		armSize = self.armInfo[armName][ARMSIZE]
-		offsetWS = bMath.Vector(offsetWS[0] * armSize[0], offsetWS[1] * armSize[1], offsetWS[2]  * armSize[2])
 		# rotate the offset into the parent bone's default local space		
-		offsetPS = offsetWS * bMath.Matrix(self.armBones[armName][parentName][BONERESTROTWS]).invert()
-
+		offsetPS = self.armBones[armName][parentName][BONERESTROTWS].inverse().apply(offsetWS)
 		return offsetPS
-
 
 	# determine a bone's default rotation in parent space
 	# This is what the bone's rotation should be, relative to the parent bone,
 	# if it has not been directly rotated or affected by a constraint.
 	# TESTED
-	def __getBoneDefRotPS(self, armName, bName):
+	def getBoneDefRotPS(self, armName, bName):
 		parentName = self.armBones[armName][bName][PARENTNAME]
 		if parentName == None: raise ValueError
 		# get the bone's default rotation in worldspace
-		boneRotWS = bMath.Matrix(self.armBones[armName][bName][BONERESTROTWS])
+		boneRotWS = self.armBones[armName][bName][BONERESTROTWS]
 		# get the parent bone's default rotation in worldspace
 		parentBoneRotWS = self.armBones[armName][parentName][BONERESTROTWS]
-		bDefRotPS = bMath.DifferenceQuats(boneRotWS.toQuat(), parentBoneRotWS.toQuat())
+		# get the difference (why backwards? because it works)
+		bDefRotPS = boneRotWS * parentBoneRotWS.inverse()
 		return bDefRotPS
 
 			
-	# --------- (private) Worldspace getters ----------------
+	# --------- Worldspace getters ----------------
+
+	# determine a bone's rest position in worldspace
+	# TESTED
+	def getBoneRestPosWS(self, armName, bName):
+		# get the armature's rotation
+		armRot = self.armInfo[armName][ARMROT]
+		# get the bone's location in armaturespace
+		bLoc = self.toTorqueVec(self.armBones[armName][bName][BONEMAT].translationPart())
+		# add on armature's scale
+		armSize = self.armInfo[armName][ARMSIZE]
+		bLoc = Vector( bLoc[0] * armSize[0], bLoc[1] * armSize[1], bLoc[2] * armSize[2] )
+		# rotate out of armature space
+		bLoc = armRot.apply(bLoc)
+		# add on armature's location
+		bLoc = bLoc + self.armInfo[armName][ARMLOC]
+		return bLoc
+
+	# determine a bone's rest rotation in worldspace
+	# TESTED
+	def getBoneRestRotWS(self, armName, bName):
+		# get the armature's rotation
+		armRot = self.armInfo[armName][ARMROT]
+		# get the bone's rotation in armaturespace
+		bRot = self.toTorqueQuat(self.armBones[armName][bName][BONEMAT].rotationPart().toQuat())
+		# rotate out of armature space
+		bRot = (bRot * armRot).normalize()
+		return bRot
+
+	# ***********************
+
 
 	# determine the position of any bone in worldspace
 	# TESTED
-	def __getBoneLocWS(self, armName, bName, pose):
+	def getBoneLocWS(self, armName, bName, pose):
 		# get the armature's rotation
 		armRot = self.armInfo[armName][ARMROT]
 		# and it's inverse
 		armRotInv = self.armInfo[armName][ARMROTINV]
 		# get the pose location
-		bTrans = armRotInv * pose.bones[bName].poseMatrix.translationPart()
+		#bTrans = armRotInv * pose.bones[bName].poseMatrix.translationPart()
+		bTrans = armRot.apply(self.toTorqueVec(pose.bones[bName].poseMatrix.translationPart()))
 		# Scale by armature's scale
-		armSize = bMath.Vector(self.armInfo[armName][ARMSIZE])
-		# have to square the scale  - this is stupid, but it works
-		armSize = armSize[0] * armSize[0], armSize[1] * armSize[1],  armSize[2] * armSize[2]
-		bTrans = bMath.Vector(bTrans[0] * armSize[0], bTrans[1] * armSize[1], bTrans[2]  * armSize[2])
+		armSize = self.armInfo[armName][ARMSIZE]
+		bTrans = Vector(bTrans[0] * armSize[0], bTrans[1] * armSize[1], bTrans[2]  * armSize[2])
 		# add on armature pivot to translate into worldspace
 		bTrans = bTrans + self.armInfo[armName][ARMLOC]
 		return bTrans
 
 	# determine the rotation of any bone in worldspace
 	# TESTED
-	def __getBoneRotWS(self, armName, bName, pose):
+	def getBoneRotWS(self, armName, bName, pose):
 		# get the armature's rotation
-		armRot = self.armInfo[armName][ARMROT]
-		# get the pose rotation
-		bRot = pose.bones[bName].poseMatrix.rotationPart() * armRot
-		return bMath.Matrix(bRot).rotationPart()
+		armRot = self.armInfo[armName][ARMROT].inverse()
+		# get the pose rotation and rotate into worldspace
+		bRot = ( armRot * self.toTorqueQuat(pose.bones[bName].poseMatrix.rotationPart().toQuat().inverse()) ).normalize()
+		return bRot
 
-	# determine a bone's rest position in worldspace (scaling is free)
-	# TESTED
-	def __getBoneRestPosWS(self, armName, bName):
-		# get the armature's rotation
-		armRot = self.armInfo[armName][ARMROT]
-		# get the bone's location in armaturespace
-		bLoc = self.armBones[armName][bName][BONEMAT].translationPart()
-		# rotate out of armature space
-		bLoc = bLoc * armRot
-		# add on armature's location
-		bLoc = bLoc + self.armInfo[armName][ARMLOC]
-		#bLoc = bLoc + arm.getMatrix().translationPart()
-		return bLoc
-
-
-
-	# determine a bone's rest rotation in worldspace
-	# TESTED
-	def __getBoneRestRotWS(self, armName, bName):
-		# get the armature's rotation
-		armRot = self.armInfo[armName][ARMROT]
-		# get the bone's rotation in armaturespace
-		bRot = self.armBones[armName][bName][BONEMAT].rotationPart()
-		# rotate out of armature space
-		bRot = bRot * armRot
-		return bMath.Matrix(bRot).rotationPart()
 
 		
+	def toTorqueVec(self, v):
+		return Vector(v[0], v[1], v[2])
+
+	def toBlenderVec(self, v):
+		return bMath.Vector(v[0], v[1], v[2])
+
+	def toTorqueQuat(self, q):
+		q = q.inverse().normalize()
+		return Quaternion(q[1],q[2],q[3],q[0])
+
+	def toBlenderQuat(self, q):
+		q = q.inverse().normalize()		
+		return bMath.Quaternion(q[3],q[0],q[1],q[2])
 
 	
 
 
 # --------- test functions ----------------
 
+
+'''
+def toTorqueVec(v):
+	return Vector(v[0], v[1], v[2])
+	
+def toBlenderVec(v):
+	return bMath.Vector(v[0], v[1], v[2])
+	
+def toTorqueQuat(q):
+	return Quaternion(q[1],q[2],q[3],q[0])
+	
+def toBlenderQuat(q):
+	#print "\nq = ", q
+	return bMath.Quaternion(q[3],q[0],q[1],q[2])
+
+
+
 def putEmptyAt(loc):
+	loc = toBlenderVec(loc)
 	try: Blender.Object.Get('Empty')
 	except:
 		Blender.Object.New('Empty', 'Empty')
@@ -336,38 +378,78 @@ def putEmptyAt(loc):
 	Blender.Window.RedrawAll()
 	
 def setEmptyRot(rot):
+	rot = toBlenderQuat(rot)
 	try: Blender.Object.Get('Empty')
 	except:
 		Blender.Object.New('Empty', 'Empty')
 	empty = Blender.Object.Get('Empty')
 	if not (empty in scene.getChildren()): scene.link(empty)
 	#print rot
-	#print rot
-	empty.setMatrix(bMath.Matrix(rot))
+	#print rot.toMatrix()
+	rot = rot.toMatrix().resize4x4()
+	empty.setMatrix(rot)
 	scene.update(1)
 	Blender.Window.RedrawAll()
-		
+
+
+'''		
 
 
 # *** entry point for getBoneLocWS testing ***
 if __name__ == "__main__":
-	arm = Blender.Object.Get('Armature')
+	arm = Blender.Object.Get('ArmatureObj')
 	armName = arm.name
 	scene = Blender.Scene.GetCurrent()
-	scene.getRenderingContext().currentFrame(1)
+	scene.getRenderingContext().currentFrame(40)
 	scene.update(1)
 	# get the pose
 	pose = arm.getPose()
 
 	PoseUtil = DtsPoseUtilClass()
 
-	bName = 'Bone.002'
+	bName = 'Thigh.L'
+	#bName = 'Pelvis.L'
+	#bName = 'FollowMe'
 	parentName = PoseUtil.armBones[armName][bName][PARENTNAME]
 
 	#PoseUtil.getBoneLocWS(armName, bName, pose)
-	POSWSFromPS = (PoseUtil.armBones[armName][bName][BONEDEFPOSPS] * bMath.Matrix(PoseUtil.armBones[armName][parentName][BONERESTROTWS])) + PoseUtil.armBones[armName][parentName][BONERESTPOSWS]
+	#POSWSFromPS = (PoseUtil.armBones[armName][bName][BONEDEFPOSPS] * bMath.Matrix(PoseUtil.armBones[armName][parentName][BONERESTROTWS])) + PoseUtil.armBones[armName][parentName][BONERESTPOSWS]
+	
+	#setEmptyRot(PoseUtil.armBones[armName][bName][BONERESTROTWS])
+	#putEmptyAt(PoseUtil.armBones[armName][bName][BONERESTPOSWS])
+	
+	setEmptyRot(PoseUtil.getBoneRestRotWS(armName, bName))
+	putEmptyAt(PoseUtil.getBoneRestPosWS(armName, bName))
 
-	setEmptyRot(PoseUtil.armBones[armName][bName][BONERESTROTWS])
-	putEmptyAt(POSWSFromPS)
+	#setEmptyRot(PoseUtil.getBoneRotWS(armName, bName, pose))
+	#putEmptyAt(PoseUtil.getBoneLocWS(armName, bName, pose))
+
+	#getBoneDefPosPS(self, armName, bName)
+	#dif = toBlenderQuat(PoseUtil.getBoneRotLS(armName, bName, pose)).toEuler()
+	#print "((((((((("
+	#print toBlenderVec(PoseUtil.getBoneDefPosPS(armName, bName))
+	#print toBlenderVec(PoseUtil.getBonePosPS(armName, bName, pose))
+
+	#print toBlenderQuat(PoseUtil.armBones[armName][bName][BONEDEFROTPS].normalize()).toEuler()
+	#print toBlenderQuat(PoseUtil.getBoneRotPS(armName, bName, pose).normalize()).toEuler()
+	#print "differnce = ", dif
+	#print "((((((((("
+	
+	#getBoneRotLS(self, armName, bName, pose)
+	#print "((((((((("
+	#print toBlenderVec(PoseUtil.getBoneDefPosPS(armName, bName))
+	#print toBlenderVec(PoseUtil.getBonePosPS(armName, bName, pose))
+
+	#print toBlenderQuat(PoseUtil.getBoneDefRotPS(armName, bName)).toEuler()
+	#print toBlenderQuat(PoseUtil.getBoneRotLS(armName, bName, pose)).toEuler()
+	#print "((((((((("
+	
+	
+	#PoseUtil.getBoneRotLS(armName, bName, pose)
+	#locWS = PoseUtil.armBones[armName][parentName][BONERESTROTWS].inverse().apply(PoseUtil.getBoneDefPosPS(armName, bName) + PoseUtil.armBones[armName][parentName][BONERESTPOSWS]) 
+	#rotWS = PoseUtil.getBoneDefRotPS(armName, bName) * PoseUtil.armBones[armName][parentName][BONERESTROTWS]
+	#setEmptyRot(rotWS)
+	#putEmptyAt(locWS)
+
 
 	print "Done!"
