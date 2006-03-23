@@ -85,10 +85,8 @@ class DtsPoseUtilClass:
 	def __populateData(self):
 		# go through each armature object
 		for armOb in Blender.Object.Get():
-			if (armOb.getType() != 'Armature') or (armOb.name == "DTS-EXP-GHOST-OB"): continue
-			
-			# add a dictionary entry for it, and store all data reguarding the
-			# armature in a list
+			if (armOb.getType() != 'Armature'): continue
+			# add a dictionary entry for the armature, and store all it's static data in a list
 			armDb = armOb.getData()
 			armMat = bMath.Matrix(armOb.getMatrix())
 			armRot = self.toTorqueQuat(armMat.rotationPart().toQuat().normalize())
@@ -296,7 +294,7 @@ class DtsPoseUtilClass:
 		# get the bone's rotation in armaturespace
 		bRot = self.toTorqueQuat(self.armBones[armName][bName][BONEMAT].rotationPart().toQuat())
 		# rotate out of armature space
-		bRot = (bRot * armRot).normalize()
+		bRot = (bRot * armRot)
 		return bRot
 
 	# ***********************
@@ -325,7 +323,7 @@ class DtsPoseUtilClass:
 		# get the armature's rotation
 		armRot = self.armInfo[armName][ARMROT].inverse()
 		# get the pose rotation and rotate into worldspace
-		bRot = ( armRot * self.toTorqueQuat(pose.bones[bName].poseMatrix.rotationPart().toQuat().inverse()) ).normalize()
+		bRot = ( armRot * self.toTorqueQuat(pose.bones[bName].poseMatrix.rotationPart().toQuat().inverse()) )
 		return bRot
 
 
