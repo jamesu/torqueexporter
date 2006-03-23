@@ -411,7 +411,7 @@ def getSequenceKey(value):
 		except:
 			maxNumFrames = 0
 		Prefs['Sequences'][value]['InterpolateFrames'] = maxNumFrames			
-		# Joe : added for ref pose of blend animations
+		# added for ref pose of blend animations
 		# default reference pose for blends is in the middle of the same action
 		Prefs['Sequences'][value]['BlendRefPoseAction'] = value			
 		Prefs['Sequences'][value]['BlendRefPoseFrame'] = maxNumFrames/2
@@ -645,6 +645,14 @@ class ShapeTree(SceneTree):
 					scene = Blender.Scene.getCurrent()
 					context = scene.getRenderingContext()
 					actions = Armature.NLA.GetActions()
+
+					# check the armatures to see if any are locked in rest position
+					for armOb in Blender.Object.Get():
+						if (armOb.getType() != 'Armature'): continue
+						if armOb.getData().restPosition:
+							Blender.Draw.PupMenu("Warning%t|One or more of your armatures is locked into rest position. This can cause problems with exported animations.")
+							break
+
 					# The ice be dammed, it's time to take action
 					if len(actions.keys()) > 0:
 						progressBar.pushTask("Adding Actions..." , len(actions.keys()*4), 0.8)
@@ -750,13 +758,18 @@ class ShapeTree(SceneTree):
 		
 	def getShapeBoneNames(self):
 		boneList = []
-		# We need a list of bone's for our gui, so find them
+		armBoneList = [] # temp list for bone sorting
+		# We need a list of bones for our gui, so find them
 		for obj in self.normalDetails:
 			for c in getAllChildren(obj[1]):
 				if c.getType() == "Armature":
-					#for bone in c.getData().getBones():
 					for bone in c.getData().bones.values():
-						boneList.append(bone.name)
+						armBoneList.append(bone.name)
+					# sort each armature's bone list before
+					# appending it to the main list.
+					armBoneList.sort()
+					for bone in armBoneList:
+						boneList.append(bone)
 		return boneList
 		
 	def find(self, name):
@@ -873,11 +886,11 @@ def createSequenceListitem(seq_name, startEvent):
 	guiDSQ.x, guiDSQ.y = 122, 5
 	guiDSQ.width, guiDSQ.height = 50, 15
 	guiDSQ.state = sequencePrefs['Dsq']
-	guiBlend = Common_Gui.ToggleButton("Blend", "Export Sequence as DSQ", startEvent+2, guiSequenceListItemCallback, None)
+	guiBlend = Common_Gui.ToggleButton("Blend", "Export Sequence as Blend", startEvent+2, guiSequenceListItemCallback, None)
 	guiBlend.x, guiBlend.y = 174, 5
 	guiBlend.width, guiBlend.height = 50, 15
 	guiBlend.state = sequencePrefs['Blend']
-	guiCyclic = Common_Gui.ToggleButton("Cyclic", "Export Sequence as DSQ", startEvent+3, guiSequenceListItemCallback, None)
+	guiCyclic = Common_Gui.ToggleButton("Cyclic", "Export Sequence as Cyclic", startEvent+3, guiSequenceListItemCallback, None)
 	guiCyclic.x, guiCyclic.y = 226, 5
 	guiCyclic.width, guiCyclic.height = 50, 15
 	guiCyclic.state = sequencePrefs['Cyclic']
@@ -894,17 +907,19 @@ def createSequenceListitem(seq_name, startEvent):
 def populateSequenceList():
 	global guiSequenceList
 	actions = Armature.NLA.GetActions()
+	keys = actions.keys()
+	keys.sort()
 	
 	#print "populateSequenceList: name of list : %s" % guiSequenceList.name
 	# There are a finite number of events we can allocate in blender, so we need to
 	# assign events in batches of the maximum number of visible list items.
 	startEvent = 40
-	for key in actions.keys():
+	for key in keys:
 		# skip the fake action (hack for blender 2.41 bug)
 		if key == "DTSEXPFAKEACT": continue		
 		guiSequenceList.addControl(createSequenceListitem(key, startEvent))
 		startEvent += 4
-		# Joe : add any new animations to the ref pose combo box
+		# add any new animations to the ref pose combo box
 		if not (key in guiSequenceOptions.controls[13].items):
 			guiSequenceOptions.controls[13].items.append(key)
 		
@@ -1070,7 +1085,7 @@ def guiSequenceCallback(control):
 				guiSequenceOptions.controls[3].state = sequencePrefs['AnimateMaterial']
 				guiSequenceOptions.controls[4].value = sequencePrefs['MaterialIpoStartFrame']
 				
-				# Joe : added for blend anim ref pose selection
+				# added for blend anim ref pose selection
 				# make sure the user didn't delete the action containing the refrence pose
 				# out from underneath us while we weren't looking.
 				try: blah = Blender.Armature.NLA.GetActions()[sequencePrefs['BlendRefPoseAction']]
@@ -1124,7 +1139,7 @@ def guiSequenceCallback(control):
 					sequencePrefs['AnimateMaterial'] = control.state
 				elif control.evt == 13:
 					sequencePrefs['MaterialIpoStartFrame'] = control.value
-				# Joe : added for blend ref pose selection
+				# added for blend ref pose selection
 				elif control.evt == 20:
 					#print "setting refernce pose action to: %s" % control.items[control.itemIndex]
 					sequencePrefs['BlendRefPoseAction'] = control.items[control.itemIndex]
@@ -1330,7 +1345,7 @@ def guiSequenceResize(control, newwidth, newheight):
 		control.x = (newwidth / 2)
 		control.y = newheight - 311
 		control.width = (newwidth / 2) - 6
-	# Joe - reference pose controls
+	# reference pose controls
 	elif control.evt == 20:
 		control.x = 5
 		control.y = newheight - 170
@@ -1501,7 +1516,7 @@ def initGui():
 	guiSequenceOptionsPriority.min = 0
 	guiSequenceOptionsPriority.max = 64 # this seems resonable
 	
-	# Joe : added this to allow the user to select an arbitrary frame from any action as the reference pose
+	# this allows the user to select an arbitrary frame from any action as the reference pose
 	# for blend animations.
 	guiSequenceOptionsRefposeTitle = Common_Gui.SimpleText("sequence.opts.rtitle", "Ref Pose for ", None, guiSequenceResize)
 	guiSequenceOptionsRefposeTitle.visible = False
@@ -1656,7 +1671,7 @@ def initGui():
 	guiSequenceOptions.addControl(guiSequenceOptionsTriggerAdd)
 	guiSequenceOptions.addControl(guiSequenceOptionsTriggerDel)
 
-	# Joe : added these for selection of ref pose.
+	# added these for selection of blend ref pose.
 	guiSequenceOptions.addControl(guiSequenceOptionsRefposeTitle)
 	guiSequenceOptions.addControl(guiSequenceOptionsRefposeMenu)
 	guiSequenceOptions.addControl(guiSequenceOptionsRefposeFrame)
