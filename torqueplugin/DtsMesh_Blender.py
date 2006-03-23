@@ -201,8 +201,8 @@ class BlenderMesh(DtsMesh):
 
 		# Add vert Normals
 		normal = Vector(vert.no[0], vert.no[1], vert.no[2])
-		#normal = matrix.passPoint(Vector(vert.no[0], vert.no[1], vert.no[2]))
-		#normal.normalize()
+		normal = matrix.passPoint(Vector(vert.no[0], vert.no[1], vert.no[2]))
+		normal.normalize()
 		self.normals.append(normal)
 		self.enormals.append(self.encodeNormal(normal))
 
