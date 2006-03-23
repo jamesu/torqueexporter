@@ -517,7 +517,6 @@ class BlenderShape(DtsShape):
 		parentBone = -1
 
 		# Add each bone tree
-		#for bone in ghostArm.bones.values():
 		for bone in arm.bones.values():
 			if bone.parent == None:
 				self.addBones(bone, parentBone, armature, arm)
@@ -670,8 +669,6 @@ class BlenderShape(DtsShape):
 		
 		# Get our values from the poseUtil interface		
 		transVec, quatRot = self.poseUtil.getBoneLocRotLS(arm.name, bonename, pose)
-		# convert to the exporter's math classes
-
 		# - determine the scale of the bone.
 		scaleVec = pose.bones[bonename].size
 
@@ -694,9 +691,10 @@ class BlenderShape(DtsShape):
 
 
 			# process rotation
-			btqt = bMath.Quaternion(baseTransform[1][3],baseTransform[1][0], baseTransform[1][1], baseTransform[1][2])
-			difqt = bMath.DifferenceQuats(qt, btqt)
-			quatRot = Quaternion(difqt.x, difqt.y, difqt.z, difqt.w)
+			# Get the difference between the current rotation and the base
+			# rotation.
+			btqt = baseTransform[1]
+			quatRot = (btqt.inverse() * quatRot).inverse()
 			if self.isRotated(quatRot):
 				sequence.matters_rotation[nodeIndex] = True
 				sequence.has_rot = True
@@ -978,7 +976,7 @@ class BlenderShape(DtsShape):
 		else:			
 			# need to cycle through ALL bones and reset the transforms.
 			for armOb in Blender.Object.Get():
-				if (armOb.getType() != 'Armature') or (armOb.name == "DTS-EXP-GHOST-OB"): continue
+				if (armOb.getType() != 'Armature'): continue
 				tempPose = armOb.getPose()
 				for bonename in self.poseUtil.armBones[armOb.name].keys():
 					# reset the bone's transform
