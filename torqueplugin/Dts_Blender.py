@@ -51,7 +51,7 @@ import os.path
   Blender Dts Classes for Python
 '''
 
-Version = "0.91RC8"
+Version = "0.91"
 Prefs = None
 Prefs_keyname = ""
 export_tree = None
@@ -1249,8 +1249,8 @@ def guiBaseResize(control, newwidth, newheight):
 			control.width, control.height = 490, 20
 		elif control.name == "tabs.version":
 			# TODO : adjust this whenever the version text changes
-			#control.x, control.y = newwidth-80, 10
-			control.x, control.y = newwidth-100, 10
+			control.x, control.y = newwidth-80, 10
+			#control.x, control.y = newwidth-100, 10
 	elif control.evt == 1:
 		control.x, control.y = 10, 5
 		control.width, control.height = 70, 20
