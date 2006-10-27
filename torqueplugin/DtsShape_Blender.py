@@ -798,6 +798,7 @@ class BlenderShape(DtsShape):
 		context.currentFrame(useFrame)
 		# Update the scene's state.
 		scene.update(1)
+		scene.makeCurrent()
 		
 		for armIdx in range(0, len(self.addedArmatures)):
 			arm = self.addedArmatures[armIdx][0]
@@ -970,7 +971,8 @@ class BlenderShape(DtsShape):
 			# Set the current frame in blender
 			context.currentFrame(useFrame)
 			# Update the scene's state.
-			scene.update(1)				
+			scene.update(1)
+			scene.makeCurrent()
 		# For normal animations, loop through each node and reset it's transforms.
 		# This avoids transforms carrying over from other animations.
 		else:			
@@ -1005,6 +1007,7 @@ class BlenderShape(DtsShape):
 			context.currentFrame(int(frame*interpolateInc))
 			# Update the scene's state.
 			scene.update(1)
+			scene.makeCurrent()
 			# loop through each armature
 			for armIdx in range(0, len(self.addedArmatures)):
 				arm = self.addedArmatures[armIdx][0]
@@ -1121,13 +1124,14 @@ class BlenderShape(DtsShape):
 		# as last action.  When they fix the bug this fake action crap can be removed from the code
 		# or surrounded with version checks.  I really hate this, but it seems to be the only possible
 		# workaround.
-		try:
-			# if fake action already exists reuse it.
-			act = Blender.Armature.NLA.GetActions()["DTSEXPFAKEACT"]
-		except:
-			# if it doesn't exist, create it.
-			act = Blender.Armature.NLA.NewAction("DTSEXPFAKEACT")
-		act.setActive(arm)
+		if Blender.Get('version') < 242:
+			try:
+				# if fake action already exists reuse it.
+				act = Blender.Armature.NLA.GetActions()["DTSEXPFAKEACT"]
+			except:
+				# if it doesn't exist, create it.
+				act = Blender.Armature.NLA.NewAction("DTSEXPFAKEACT")
+			act.setActive(arm)
 		
 		gc.collect()
 		
@@ -1232,6 +1236,7 @@ class BlenderShape(DtsShape):
 				
 				# Update the ipo's current value
 				scene.update(1)
+				scene.makeCurrent()
 				
 				# Add the frame(s)
 				# TODO: ifl frame would be useful here, if blender had a "Frame" value :)
