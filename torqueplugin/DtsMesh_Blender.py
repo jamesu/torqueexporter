@@ -64,7 +64,7 @@ class BlenderMesh(DtsMesh):
 				
 				useSticky = False
 				# Find the image associated with the face on the mesh, if any
-				if len(msh.materials) > 0:
+				if len(msh.materials) > 0 and face.mat < len(msh.materials):
 					# Also, use sticky coords if we were asked to
 					matIndex = shape.materials.findMaterial(msh.materials[face.mat].getName())
 					if matIndex == None: matIndex = shape.addMaterial(msh.materials[face.mat])
@@ -185,7 +185,9 @@ class BlenderMesh(DtsMesh):
 				# See if the texture coordinates match up.
 				tx = self.tverts[vi]
 				if tx[0] == texture[0] and tx[1] == texture[1]:
-					return vi
+					# no early out if face is set solid
+					if face.smooth:
+						return vi
 
 		'''
 			Add new mesh vert and texture
@@ -200,8 +202,11 @@ class BlenderMesh(DtsMesh):
 		self.vertsIndexMap.append(bvIndex)
 
 		# Add vert Normals
-		normal = Vector(vert.no[0], vert.no[1], vert.no[2])
-		normal = matrix.passPoint(Vector(vert.no[0], vert.no[1], vert.no[2]))
+		#normal = Vector(vert.no[0], vert.no[1], vert.no[2])
+		if face.smooth:
+			normal = matrix.passVector(Vector(vert.no[0], vert.no[1], vert.no[2]))
+		else:
+			normal = matrix.passVector(Vector(face.no[0], face.no[1], face.no[2]))
 		normal.normalize()
 		self.normals.append(normal)
 		self.enormals.append(self.encodeNormal(normal))
