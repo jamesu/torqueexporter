@@ -239,6 +239,11 @@ class BlenderShape(DtsShape):
 		polyCount = 0
 		# First, import meshes
 		for o in meshes:
+			# ************** TEST CODE **********************
+			# skip bounds mesh
+			if o.getName() == "Bounds":
+				continue
+			# ************ End of test code *****************
 			names = o.getName().split("_")
 			detail_name = names[0].split(".")[0]
 			obj = None
@@ -627,12 +632,8 @@ class BlenderShape(DtsShape):
 		return not ((vec[0] < 1.0 + delta) and (vec[0] > 1.0 - delta) and (vec[1] < 1.0 + delta) and (vec[1] > 1.0 - delta) and (vec[2] < 1.0 + delta) and (vec[2] > 1.0 - delta))
 
 	
-	# grab the pose transform of whatever frame we're currently at.  Frame must be set before calling this method.
-	def getPoseTransform(self, sequence, nodeIndex, frame_idx, pose, baseTransform=None, getRawValues=False):
-
-		loc, rot, scale = None, None, None
-		arm = self.addedArmatures[self.nodes[nodeIndex].armIdx][0]
-
+	# adds a ground frame to a sequence
+	def addGroundFrame(self, sequence, frame_idx):
 		# Add ground frames if enabled
 		if sequence.has_ground:
 			# Check if we have any more ground frames to add
@@ -641,17 +642,35 @@ class BlenderShape(DtsShape):
 				duration = sequence.numKeyFrames / sequence.ground_target
 				if frame_idx >= (duration * (sequence.numGroundFrames+1)):
 					# We are ready, lets stomp!
+					bound_obj = Blender.Object.Get("Bounds")
+					bound_parent = bound_obj.getParent()
 					try:
-						bound_obj = Blender.Object.Get("Bounds")
-						matf = self.collapseBlenderTransform(bound_obj)
-						rot = Quaternion().fromMatrix(matf).inverse()
-						pos = Vector(matf.get(3,0),matf.get(3,1),matf.get(3,2))
-						self.groundTranslations.append(pos)
-						self.groundRotations.append(rot)
+					
+						if bound_parent != None and bound_parent.getType() == 'Armature':
+							pose = bound_parent.getPose()
+							pos = self.poseUtil.getBoneLocWS(bound_parent.getName(), bound_obj.parentbonename, pose)
+							rot = self.poseUtil.getBoneRotWS(bound_parent.getName(), bound_obj.parentbonename, pose)
+							#pos, rot = self.poseUtil.getBoneLocRotLS(bound_parent.getName(), bound_obj.parentbonename, pose)
+							self.groundTranslations.append(pos)
+							self.groundRotations.append(rot)
+						else:
+							bound_obj = Blender.Object.Get("Bounds")
+							matf = self.collapseBlenderTransform(bound_obj)
+							rot = Quaternion().fromMatrix(matf).inverse()
+							pos = Vector(matf.get(3,0),matf.get(3,1),matf.get(3,2))
+							self.groundTranslations.append(pos)
+							self.groundRotations.append(rot)
 						sequence.numGroundFrames += 1
 					except:
 						Torque_Util.dump_writeln("Warning: Error getting ground frame %d" % sequence.numGroundFrames)
 						Torque_Util.dump_writeln("  You must have an object named Bounds in your scene to export ground frames.")
+
+	
+	# grab the pose transform of whatever frame we're currently at.  Frame must be set before calling this method.
+	def getPoseTransform(self, sequence, nodeIndex, frame_idx, pose, baseTransform=None, getRawValues=False):
+
+		loc, rot, scale = None, None, None
+		arm = self.addedArmatures[self.nodes[nodeIndex].armIdx][0]
 
 		# Convert time units from Blender's frame (starting at 1) to second
 		# (using sequence FPS)
@@ -1008,6 +1027,8 @@ class BlenderShape(DtsShape):
 			# Update the scene's state.
 			scene.update(1)
 			scene.makeCurrent()
+			# add ground frames
+			self.addGroundFrame(sequence,(frame*interpolateInc))
 			# loop through each armature
 			for armIdx in range(0, len(self.addedArmatures)):
 				arm = self.addedArmatures[armIdx][0]
@@ -1054,7 +1075,7 @@ class BlenderShape(DtsShape):
 					sequence.frames[nodeIndex][frame][2] = None
 		
 		remove_translation, remove_rotation, remove_scale = True, True, True
-		if isCyclic:
+		if isCyclic:			
 			for nodeIndex in range(1, len(self.nodes)):
 				# If we added any new translations, and the first frame is equal to the last,
 				# allow the next pass of nodes to happen, to remove the last frame.
@@ -1062,7 +1083,7 @@ class BlenderShape(DtsShape):
 				if len(sequence.frames[nodeIndex]) != 0:
 					if (sequence.frames[nodeIndex][0][0] != None) and (sequence.frames[nodeIndex][-1][0] != None) and not sequence.frames[nodeIndex][0][0].eqDelta(sequence.frames[nodeIndex][-1][0], 0.000001):
 						remove_translation = False
-					if (sequence.frames[nodeIndex][0][1] != None) and (sequence.frames[nodeIndex][-1][1] != None) and not sequence.frames[nodeIndex][0][1].eqDelta(sequence.frames[nodeIndex][-1][1], 0.000001):
+					if (sequence.frames[nodeIndex][0][1] != None) and (sequence.frames[nodeIndex][-1][1] != None) and not sequence.frames[nodeIndex][0][1].eqDelta(sequence.frames[nodeIndex][-1][1], 0.0001):
 						remove_rotation = False
 					if (sequence.frames[nodeIndex][0][2] != None) and (sequence.frames[nodeIndex][-1][2] != None) and not sequence.frames[nodeIndex][0][2].eqDelta(sequence.frames[nodeIndex][-1][2], 0.000001):
 						remove_scale = False
