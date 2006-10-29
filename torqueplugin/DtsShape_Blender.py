@@ -239,11 +239,9 @@ class BlenderShape(DtsShape):
 		polyCount = 0
 		# First, import meshes
 		for o in meshes:
-			# ************** TEST CODE **********************
 			# skip bounds mesh
 			if o.getName() == "Bounds":
 				continue
-			# ************ End of test code *****************
 			names = o.getName().split("_")
 			detail_name = names[0].split(".")[0]
 			obj = None
