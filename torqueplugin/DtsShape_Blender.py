@@ -194,6 +194,7 @@ class BlenderShape(DtsShape):
 		
 		# Import the mesh - make sure its static
 		mat = self.collapseBlenderTransform(mesh)
+
 		# last parameter tells BlenderMesh to ignore the double sided flag, double sided meshes are harmful to convexity :)
 		tmsh = BlenderMesh(self, mesh.getData(), 0 ,  1.0, mat, self.preferences['StripMeshes'], True)
 		tmsh.mtype = tmsh.T_Standard
@@ -245,8 +246,7 @@ class BlenderShape(DtsShape):
 			names = o.getName().split("_")
 			detail_name = names[0].split(".")[0]
 			obj = None
-			sorted = False
-			
+			sorted = False			
 			# Identify corresponding master object
 			if self.subshapes[0].numObjects != 0:
 				subshape = self.subshapes[self.detaillevels[self.numBaseDetails-1].subshape]
@@ -259,7 +259,14 @@ class BlenderShape(DtsShape):
 					continue
 			else:
 				# Must be unique
-				obj = dObject(self.addName(detail_name), -1, -1, -1)
+				pNodeIdx = -1
+				# Check to see if the mesh is parented to a bone				
+				if o.getParent() != None and o.getParent().getType() == 'Armature' and o.parentbonename != None:
+					for node in self.nodes[0:len(self.nodes)]:
+						if self.sTable.get(node.name) == o.parentbonename:
+							pNodeIdx = node.name
+							break
+				obj = dObject(self.addName(detail_name), -1, -1, pNodeIdx)
 				obj.tempMeshes = []
 				self.objects.append(obj)
 				
@@ -277,7 +284,8 @@ class BlenderShape(DtsShape):
 			mat = self.collapseBlenderTransform(o)
 			
 			# Import Mesh, process flags
-			tmsh = BlenderMesh(self, mesh_data, 0 , 1.0, mat, self.preferences['StripMeshes'])
+
+			tmsh = BlenderMesh(self, mesh_data, 0, 1.0, mat, self.preferences['StripMeshes'])
 			if len(names) > 1: tmsh.setBlenderMeshFlags(names[1:])
 			
 			# If we ended up being a Sorted Mesh, sort the faces
@@ -287,7 +295,6 @@ class BlenderShape(DtsShape):
 				
 			# Increment polycount metric
 			polyCount += tmsh.getPolyCount()
-				
 			obj.tempMeshes.append(tmsh)
 			numAddedMeshes += 1
 		
@@ -349,7 +356,7 @@ class BlenderShape(DtsShape):
 		return True
 		
 	def finalizeObjects(self):
-		# Go through object's, add meshes, set transforms
+		# Go through objects, add meshes, set transforms
 		for o in self.objects:
 			o.numMeshes = len(o.tempMeshes)
 			o.firstMesh = len(self.meshes)
@@ -369,17 +376,14 @@ class BlenderShape(DtsShape):
 			
 			# Determine mesh type for these objects (assumed by first entry)
 			if o.tempMeshes[0].mtype != o.tempMeshes[0].T_Skin:
-				o.node = o.tempMeshes[0].getNodeIndex(0)
-				if o.node == None:
-						# Collision Meshes have to have nodes assigned to them
-						# In addition, all orphaned meshes need to be attatched to a root bone
-						o.node = 0 # Root is the first bone
-						#Torque_Util.dump_writeln("Object %s node %d, Rigid" % (self.sTable.get(o.name),o.node))				
+				if o.tempMeshes[0].getNodeIndex(0) != None:
+					o.node = o.tempMeshes[0].getNodeIndex(0)
+				elif o.node < 1:
+					o.node = 0
 			else:
 				o.node = -1
 				isSkinned = True
-				#Torque_Util.dump_writeln("Object %s, Skinned" % (self.sTable.get(o.name)))
-			
+				Torque_Util.dump_writeln("Object %s, Skinned" % (self.sTable.get(o.name)))
 			for tmsh in o.tempMeshes:
 				'''
 					We need to assign nodes to objects and set transforms.
