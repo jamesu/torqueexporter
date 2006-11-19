@@ -106,6 +106,13 @@ if accelerator == "BLENDER":
 			((other[0] - self.object.x)/2 + self.object.x),
 			((other[1] - self.object.y)/2 + self.object.y),
 			((other[2] - self.object.z)/2 + self.object.z))
+		# eqDelta function for 3 component vectors
+		def eqDelta(self, vec2, delta):
+			vec1 = self
+			# tests for equality with another vector, using delta as the margin of error
+			return fabs(vec1[0] - vec2[0]) < delta\
+			and fabs(vec1[1] - vec2[1]) < delta\
+			and fabs(vec1[2] - vec2[2]) < delta
 		def length(self):
 			return self.object.length
 		def cross(self, other):
@@ -222,6 +229,12 @@ if accelerator == "BLENDER":
 			res = Vector2(self.object.x, self.object.y)
 			res.object /= other
 			return res
+		# eqDelta function for 2 component vectors
+		def eqDelta(self, vec2, delta):
+			vec1 = self
+			# tests for equality with another vector, using delta as the margin of error
+			return fabs(vec1[0] - vec2[0]) < delta\
+			and fabs(vec1[1] - vec2[1]) < delta
 		def x(self):
 			return self.object.z
 		def y(self):
