@@ -729,6 +729,8 @@ class ShapeTree(SceneTree):
 		except Exception, msg:
 			Torque_Util.dump_writeln("Error: Exception encountered, bailing out.")
 			Torque_Util.dump_writeln(Exception)
+			import traceback
+			Torque_Util.dump_writeln(traceback.format_exc())
 			Torque_Util.dump_setout("stdout")
 			if self.Shape: del self.Shape
 			progressBar.popTask()
