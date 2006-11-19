@@ -171,20 +171,30 @@ class BlenderMesh(DtsMesh):
 				texture = Vector2(float(0.0),float(0.0))
 			else:
 				texture = Vector2(face.uv[faceIndex][0], 1.0 - face.uv[faceIndex][1])
+				
 		# Add sticky coords *if* they are available
 		elif msh.hasVertexUV():
 			texture = Vector2(msh.verts[face.v[faceIndex].index].uvco[0],msh.verts[face.v[faceIndex].index].uvco[1])
 		# We were supposed to use sticky coords, but none were found
 		else:
 			texture = Vector2(float(0.0),float(0.0))
-
-		# See if the vertex/texture combo already exists..
+		
+		# Compute vert normals
+		vert = msh.verts[face.v[faceIndex].index]
+		if face.smooth:
+			normal = matrix.passVector(Vector(vert.no[0], vert.no[1], vert.no[2]))
+		else:
+			normal = matrix.passVector(Vector(face.no[0], face.no[1], face.no[2]))
+		normal.normalize()
+		
+		# See if the vertex/texture/normal combo already exists..
 		bvIndex = face.v[faceIndex].index
 		for vi in range(0,len(self.vertsIndexMap)):
 			if bvIndex == self.vertsIndexMap[vi]:
-				# See if the texture coordinates match up.
+				# See if the texture coordinates and normals match up.
 				tx = self.tverts[vi]
-				if tx[0] == texture[0] and tx[1] == texture[1]:
+				no = self.normals[vi]
+				if tx.eqDelta(texture, 0.0001) and no.eqDelta(normal, 0.001):
 					# no early out if face is set solid
 					if face.smooth:
 						return vi
@@ -194,7 +204,7 @@ class BlenderMesh(DtsMesh):
 			Get Vert in world coordinates using object matrix
 			Texture needs to be flipped to work in torque
 		'''
-		vert = msh.verts[face.v[faceIndex].index]
+		
 		nvert = matrix.passPoint(Vector(vert.co[0], vert.co[1], vert.co[2])) * scaleFactor
 		vindex = len(self.verts)
 		self.verts.append(nvert)
@@ -202,12 +212,6 @@ class BlenderMesh(DtsMesh):
 		self.vertsIndexMap.append(bvIndex)
 
 		# Add vert Normals
-		#normal = Vector(vert.no[0], vert.no[1], vert.no[2])
-		if face.smooth:
-			normal = matrix.passVector(Vector(vert.no[0], vert.no[1], vert.no[2]))
-		else:
-			normal = matrix.passVector(Vector(face.no[0], face.no[1], face.no[2]))
-		normal.normalize()
 		self.normals.append(normal)
 		self.enormals.append(self.encodeNormal(normal))
 
