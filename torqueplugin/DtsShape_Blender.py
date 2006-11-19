@@ -88,7 +88,7 @@ def getNumFrames(ipos, useKey = False):
 					if i.getCurveBeztriple(0, i.getNBezPoints(0)-1)[3] > numFrames:
 						#numframes = int(i.getRctf()[1])
 						numFrames = int(i.getCurveBeztriple(0, i.getNBezPoints(0)-1)[3])
-				except TypeError:
+				except:
 					# no IPO curve...
 					continue
 	else:
@@ -889,7 +889,7 @@ class BlenderShape(DtsShape):
 		nodeIndex = None
 		channels = action.getAllChannelIpos()
 		for channel_name in channels:
-			if channels[channel_name].getNcurves() == 0: continue
+			if channels[channel_name] == None or channels[channel_name].getNcurves() == 0: continue
 			nodeIndex = self.getNodeIndex(channel_name)
 			# Determine if this node is in the shape
 			if nodeIndex == None: continue
