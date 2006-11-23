@@ -24,6 +24,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 '''
 
 import struct, math
+from math import fabs
 from struct import *
 
 #############################
@@ -106,13 +107,6 @@ if accelerator == "BLENDER":
 			((other[0] - self.object.x)/2 + self.object.x),
 			((other[1] - self.object.y)/2 + self.object.y),
 			((other[2] - self.object.z)/2 + self.object.z))
-		# eqDelta function for 3 component vectors
-		def eqDelta(self, vec2, delta):
-			vec1 = self
-			# tests for equality with another vector, using delta as the margin of error
-			return fabs(vec1[0] - vec2[0]) < delta\
-			and fabs(vec1[1] - vec2[1]) < delta\
-			and fabs(vec1[2] - vec2[2]) < delta
 		def length(self):
 			return self.object.length
 		def cross(self, other):
@@ -229,12 +223,6 @@ if accelerator == "BLENDER":
 			res = Vector2(self.object.x, self.object.y)
 			res.object /= other
 			return res
-		# eqDelta function for 2 component vectors
-		def eqDelta(self, vec2, delta):
-			vec1 = self
-			# tests for equality with another vector, using delta as the margin of error
-			return fabs(vec1[0] - vec2[0]) < delta\
-			and fabs(vec1[1] - vec2[1]) < delta
 		def x(self):
 			return self.object.z
 		def y(self):
@@ -312,6 +300,11 @@ if accelerator == "BLENDER":
 			return Vector(r.x(), r.y(), r.z())
 		def eqDelta(self, quat, delta):
 			# tests for equality with another Quaternion, using delta as the margin of error
+			return fabs(self.members[0] - quat.members[0]) < delta\
+			and fabs(self.members[1] - quat.members[1]) < delta\
+			and fabs(self.members[2] - quat.members[2]) < delta
+			and fabs(self.members[3] - quat.members[3]) < delta
+			'''
 			return (((self[0] - quat[0]) < delta)\
 			and ((self[0] - quat[0]) > -delta)\
 			and ((self[1] - quat[1]) < delta)\
@@ -320,6 +313,7 @@ if accelerator == "BLENDER":
 			and ((self[2] - quat[2]) > -delta)\
 			and ((self[3] - quat[3]) < delta)\
 			and ((self[3] - quat[3]) > -delta))
+			'''
 
 	# The Matrix Class
 	class MatrixF:
@@ -460,10 +454,19 @@ else:
 			self.members = [float(x), float(y), float(z)]
 		def __del__(self):
 			del self.members
+		
+		# Optimized version of __getitem__ is below the original
+		'''
 		def __getitem__(self, key):
-			if key > (len(self.members)-1):
+			if key < len(self.members):
+				return(self.members[key])
+			else:
 				return 0
-			return(self.members[key])
+		'''
+		# Optimized version of getitem
+		def __getitem__(self,key):
+			return self.members[key]
+			
 		def __setitem__(self, key, value):
 			self.members[key] = value
 		def __neg__(self):
@@ -471,16 +474,38 @@ else:
 				-float(self[0]),
 				-float(self[1]),
 				-float(self[2]))
+		
+		# Optimized version of __add__ is below the original
+		'''
 		def __add__(self, other):
 			return Vector(
 				float(self[0]) + float(other[0]),
 				float(self[1]) + float(other[1]),
 				float(self[2]) + float(other[2]))
+		'''		
+		# Optimized version of add
+		# direct member access is about 7 times faster in this case
+		def __add__(self, other):
+			return Vector(
+				float(self.members[0]) + float(other.members[0]),
+				float(self.members[1]) + float(other.members[1]),
+				float(self.members[2]) + float(other.members[2]))
+
+		# Optimized version of __sub__ is below the original
+		'''
 		def __sub__(self, other):
 			return Vector(
 				float(self[0]) - float(other[0]),
 				float(self[1]) - float(other[1]),
 				float(self[2]) - float(other[2]))
+		'''		
+		# Optimized version of __sub__
+		def __sub__(self,other):
+			return Vector(
+				float(self.members[0]) - float(other.members[0]),
+				float(self.members[1]) - float(other.members[1]),
+				float(self.members[2]) - float(other.members[2]))
+		
 		def __mul__(self, other):
 			return Vector(
 				self[0] * float(other),
@@ -503,13 +528,12 @@ else:
 				if other.members[i] != self.members[i]:
 					return False
 			return True
-		def eqDelta(self, vec, delta):
-			return (((self[0] - vec[0]) < delta)\
-			and ((self[0] - vec[0]) > -delta)\
-			and ((self[1] - vec[1]) < delta)\
-			and ((self[1] - vec[1]) > -delta)\
-			and ((self[2] - vec[2]) < delta)\
-			and ((self[2] - vec[2]) > -delta))
+		# eqDelta function for 3 component vectors
+		def eqDelta(self, vec2, delta):
+			# tests for equality with another vector, using delta as the margin of error
+			return fabs(self.members[0] - vec2.members[0]) < delta\
+			and fabs(self.members[1] - vec2.members[1]) < delta\
+			and fabs(self.members[2] - vec2.members[2]) < delta
 
 		def x(self):
 			return self.members[0]
@@ -659,6 +683,11 @@ else:
 				else:
 					result[i] = .0
 			return result
+		# eqDelta function for 2 component vectors
+		def eqDelta(self, vec2, delta):
+			# tests for equality with another vector, using delta as the margin of error
+			return fabs(self.members[0] - vec2.members[0]) < delta\
+			and fabs(self.members[1] - vec2.members[1]) < delta
 		def length(self):
 			return math.sqrt(
 			(self[0] * self[0]) +
@@ -671,8 +700,16 @@ else:
 
 	# Quaternion Class (4 members)
 	class Quaternion(Vector4):
+		
+		# we're spending a lot of time in __mul__ so it's worth optimizing
+		'''
 		def __mul__(self, other): # against another quat
 			return (Quaternion(+self[0]*other[3] +self[1]*other[2] -self[2]*other[1] +self[3]*other[0], -self[0]*other[2] +self[1]*other[3] +self[2]*other[0] +self[3]*other[1], +self[0]*other[1] -self[1]*other[0] +self[2]*other[3] +self[3]*other[2], -self[0]*other[0] -self[1]*other[1] -self[2]*other[2] +self[3]*other[3]))
+		'''		
+		# optimized version of __mul__
+		def __mul__(self, other): # against another quat
+			return (Quaternion(+self.members[0]*other.members[3] +self.members[1]*other.members[2] -self.members[2]*other.members[1] +self.members[3]*other.members[0], -self.members[0]*other.members[2] +self.members[1]*other.members[3] +self.members[2]*other.members[0] +self.members[3]*other.members[1], +self.members[0]*other.members[1] -self.members[1]*other.members[0] +self.members[2]*other.members[3] +self.members[3]*other.members[2], -self.members[0]*other.members[0] -self.members[1]*other.members[1] -self.members[2]*other.members[2] +self.members[3]*other.members[3]))
+		
 		def conjugate(self):
 			return Quaternion(-self.x(), -self.y(), -self.z(), self.w())
 		def inverse(self):
@@ -769,6 +806,9 @@ else:
 			return acos(self.x()*quat.x() + self.y()*quat.y() + self.z()*quat.z() + self.w()*quat.w())
 		def toQuat16(self):
 			return Quat16(self.members)
+
+		# Optimized version of apply is below the original
+		'''
 		def apply(self, v):
 			# Apply. Returns a point(or rather Vector).
 			# Torque uses column vectors, which means quaternions
@@ -776,6 +816,36 @@ else:
 			q = Quaternion(v.x(), v.y(), v.z(), 0)
 			r = self.conjugate() * q * self
 			return Vector(r.x(), r.y(), r.z())
+		'''
+
+		# Optimized version of apply, It's crazy but it works and speeds up export a bit - Joe G.
+		def apply(self, v):
+			# Apply. Returns a point(or rather Vector).
+			# Torque uses column vectors, which means quaternions
+			# rotate backwards from what you might normally expect.
+			v0 = v.members[0]
+			v1 = v.members[1]
+			v2 = v.members[2]
+			v3 = 0.0
+			c0 = -self.members[0]
+			c1 = -self.members[1]
+			c2 = -self.members[2]
+			c3 = self.members[3]
+			s0 = self.members[0]
+			s1 = self.members[1]
+			s2 = self.members[2]
+			s3 = self.members[3]
+			ir0 = +c0*v3 +c1*v2 -c2*v1 +c3*v0
+			ir1 = -c0*v2 +c1*v3 +c2*v0 +c3*v1
+			ir2 = +c0*v1 -c1*v0 +c2*v3 +c3*v2
+			ir3 = -c0*v0 -c1*v1 -c2*v2 +c3*v3
+			r0 = +ir0*s3 +ir1*s2 -ir2*s1 +ir3*s0
+			r1 = -ir0*s2 +ir1*s3 +ir2*s0 +ir3*s1
+			r2 = +ir0*s1 -ir1*s0 +ir2*s3 +ir3*s2
+			#r3 = -ir0*s0 -ir1*s1 -ir2*s2 +ir3*s3
+			return Vector(r0, r1, r2)
+			
+
 		def eqDelta(self, quat, delta):
 			# tests for equality with another Quaternion, using delta as the margin of error
 			return (((self[0] - quat[0]) < delta)\
