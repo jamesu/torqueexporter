@@ -36,7 +36,9 @@ from Blender import NMesh
 class BlenderMesh(DtsMesh):
 	def __init__(self, shape, msh,  rootBone, scaleFactor, matrix, triStrips=False, ignoreDblSided=False):
 		DtsMesh.__init__(self)
-		self.vertsIndexMap = []		# Map of TexCoord index <> Vertex index map
+		#self.vertsIndexMap = []		# Map of TexCoord index <> Vertex index map
+		self.bVertList = [] # list of blender mesh vertex indices ordered by value, for fast searching
+		self.dVertList = [] # list containing lists of dts vertex indices, the outer list elements correspond to the bVertList element in the same position.
 		self.mainMaterial = None	# For determining material ipo track to use for ObjectState visibility animation
 		self.weightDictionary = self.createWeightDictionary(msh);
 		materialGroups = [[]]
@@ -138,7 +140,8 @@ class BlenderMesh(DtsMesh):
 		self.calculateCenter()
 		self.calculateRadius()
 
-		del self.vertsIndexMap
+		del self.bVertList
+		del self.dVertList
 		
 	def __del__(self):
 		DtsMesh.__del__(self)
@@ -189,15 +192,20 @@ class BlenderMesh(DtsMesh):
 		
 		# See if the vertex/texture/normal combo already exists..
 		bvIndex = face.v[faceIndex].index
-		for vi in range(0,len(self.vertsIndexMap)):
-			if bvIndex == self.vertsIndexMap[vi]:
+		# if the bVertList already contains this blender vert,
+		sharedVertsIdx = bisect_left(self.bVertList, bvIndex)
+		#if self.bVertList[sharedVertsIdx] == bvIndex:
+		if sharedVertsIdx < len(self.bVertList) and self.bVertList[sharedVertsIdx] == bvIndex:
+			# check the already added dts verts to if this one even needs to be added				
+			for dVert in self.dVertList[sharedVertsIdx]:
 				# See if the texture coordinates and normals match up.
-				tx = self.tverts[vi]
-				no = self.normals[vi]
+				tx = self.tverts[dVert]
+				no = self.normals[dVert]
 				if tx.eqDelta(texture, 0.0001) and no.eqDelta(normal, 0.001):
-					# no early out if face is set solid
-					if face.smooth:
-						return vi
+					# use the existing dts vert with the same tex coords and normal
+					return dVert
+				
+
 
 		'''
 			Add new mesh vert and texture
@@ -208,8 +216,21 @@ class BlenderMesh(DtsMesh):
 		nvert = matrix.passPoint(Vector(vert.co[0], vert.co[1], vert.co[2])) * scaleFactor
 		vindex = len(self.verts)
 		self.verts.append(nvert)
-		self.tverts.append(texture)
-		self.vertsIndexMap.append(bvIndex)
+		self.tverts.append(texture)		
+		
+		# see if the blender vertex is already in our bVertList
+		pos = bisect_left(self.bVertList, bvIndex)
+		if pos < len(self.bVertList) and self.bVertList[pos] == bvIndex:
+			# if it is, just add the new dts vert to the end of it's corresponding dVertList entry		
+			self.dVertList[pos].append(len(self.verts)-1)
+		else:
+			# this is the first time we've seen this blender vert
+			# insert the bVert into the correct location in our bVertList
+			insort_left(self.bVertList, bvIndex)
+			# insert a new list (containing the current dts vert) into the dVertList
+			# at the corresponding location.
+			self.dVertList.insert(pos-1, [len(self.verts)-1])
+			
 
 		# Add vert Normals
 		self.normals.append(normal)
