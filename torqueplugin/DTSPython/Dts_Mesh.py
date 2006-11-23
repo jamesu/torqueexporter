@@ -229,7 +229,7 @@ class DtsMesh:
 	
 	def getNodeIndex(self, node):
 		if (node >= 0) and (node < len(self.nodeIndex)):
-				return self.nodeIndex[node]
+			return self.nodeIndex[node]
 		return None
 	
 	def setNodeTransform(self, node, t, q):
