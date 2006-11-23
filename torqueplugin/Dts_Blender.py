@@ -56,10 +56,11 @@ Prefs = None
 Prefs_keyname = ""
 export_tree = None
 Debug = False
+Profiling = False
 textDocName = "TorqueExporter_SCONF"
 pathSeperator = "/"
 
-#if Debug: import profile
+
 
 '''
 Utility Functions
@@ -1725,9 +1726,13 @@ def exit_callback():
 '''
 #-------------------------------------------------------------------------------------------------
 
-#if Debug:
-#	import __main__
-#	import pstats
+if Profiling:
+	try:
+		import profile
+		import __main__
+		import pstats
+	except:
+		Profiling = False
 	
 def entryPoint(a):
 	getPathSeperator(Blender.Get("filename"))
@@ -1737,30 +1742,32 @@ def entryPoint(a):
 		Torque_Util.dump_setout("%s.log" % noext(Blender.Get("filename")))
 	Torque_Util.dump_writeln("Torque Exporter %s " % Version)
 	Torque_Util.dump_writeln("Using blender, version %s" % Blender.Get('version'))
-	if Torque_Util.Torque_Math.accelerator != None:
-		Torque_Util.dump_writeln("Using accelerated math interface '%s'" % Torque_Util.Torque_Math.accelerator)
-	else:
-		Torque_Util.dump_writeln("Using unaccelerated math code, performance may be suboptimal")
-	Torque_Util.dump_writeln("**************************")
+	
+	#if Torque_Util.Torque_Math.accelerator != None:
+	#	Torque_Util.dump_writeln("Using accelerated math interface '%s'" % Torque_Util.Torque_Math.accelerator)
+	#else:
+	#	Torque_Util.dump_writeln("Using unaccelerated math code, performance may be suboptimal")
+	#Torque_Util.dump_writeln("**************************")
+	
 	loadPrefs()
 	
 	if (a == 'quick'):
 		handleScene()
-		# some profiling stuff for debug mode
-		#if Debug:
-		#	# make the entry point available from __main__
-		#	__main__.export = export
-		#	profile.run('export(),', 'd:/exporterProfilelog.txt')
-		#else:
+		# Use the profiler, if enabled.
+		if Profiling:
+			# make the entry point available from __main__
+			__main__.export = export
+			profile.run('export(),', 'exporterProfilelog.txt')
+		else:
+			export()
 		
-		export()
-		
-		# dump out profiler stats for debug mode
-		#if Debug:
-		#	# print out the profiler stats.
-		#	p = pstats.Stats('d:/exporterProfilelog.txt')
-		#	p.strip_dirs().sort_stats('cumulative').print_stats(60)
-		#	p.strip_dirs().sort_stats('time').print_stats(60)
+		# dump out profiler stats if enabled
+		if Profiling:
+			# print out the profiler stats.
+			p = pstats.Stats('exporterProfilelog.txt')
+			p.strip_dirs().sort_stats('cumulative').print_stats(60)
+			p.strip_dirs().sort_stats('time').print_stats(60)
+			p.strip_dirs().print_callers('__getitem__', 20)
 	elif a == 'normal' or (a == None):
 		# Process scene and load configuration gui
 		handleScene()
