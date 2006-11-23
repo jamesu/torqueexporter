@@ -33,3 +33,4 @@ from Dts_Stripper import *
 from Dts_Mesh import *
 from Dts_TranslucentSort import *
 from Dts_Shape import *
+from pyBisect import *
