@@ -695,7 +695,7 @@ class BlenderShape(DtsShape):
 
 
 		# We dump out every transform regardless of whether it matters or not.  This avoids having to
-		# make multiple passes through the frames to deterime what's animated.  Unused tracks and channels
+		# make multiple passes through the frames to determine what's animated.  Unused tracks and channels
 		# are cleaned up later.
 		if baseTransform != None:
 			# Blended animation, so find the difference between
