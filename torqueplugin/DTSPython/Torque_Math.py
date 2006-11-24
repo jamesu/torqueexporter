@@ -707,6 +707,7 @@ else:
 			#return (self.conjugate().vecmul(norm / 1.0))
 			# Hmm... which way? =/
 			
+			'''
 			res = Quaternion()
 			mag = float(self.x()*self.x() + self.y()*self.y() + self.z()*self.z() + self.w()*self.w())
 			invMag = 0.0
@@ -726,6 +727,19 @@ else:
 				res[2] = self[2] * -invMag
 				res[3] = self[3] * invMag
 			return res
+			'''
+			# Optimized version
+			mag = float(self.members[0]*self.members[0] + self.members[1]*self.members[1] + self.members[2]*self.members[2] + self.members[3]*self.members[3])
+			invMag = 0.0
+			if mag == 0.0: invMag = 1.0
+			else: invMag = 1.0 / mag
+			r0 = self.members[0] * -invMag
+			r1 = self.members[1] * -invMag
+			r2 = self.members[2] * -invMag
+			r3 = self.members[3] * invMag
+			return Quaternion(r0, r1, r2, r3)
+
+			
 		def vecmul(self, other): # Vector Version
 			result = Quaternion()
 			# iterate through the members
