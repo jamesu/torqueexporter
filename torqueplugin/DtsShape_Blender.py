@@ -236,6 +236,23 @@ class BlenderShape(DtsShape):
 		have HeadMesh(128) animated by bone1 and HeadMesh(32) animated by bone12 - they all need to be attached to the same bone!
 		This limitation can of course be worked around if you use skinned meshes instead.
 		'''
+		
+		# before we do anything else, reset the transforms of all bones.
+		# loop through each node and reset it's transforms.  This avoids transforms carrying over from
+		# other animations. Need to cycle through _ALL_ bones and reset the transforms.
+		for armOb in Blender.Object.Get():
+			if (armOb.getType() != 'Armature') or (armOb.name == "DTS-EXP-GHOST-OB"): continue
+			tempPose = armOb.getPose()
+			#for bonename in armOb.getData().bones.keys():
+			for bonename in self.poseUtil.armBones[armOb.name].keys():
+				# reset the bone's transform
+				tempPose.bones[bonename].quat = bMath.Quaternion().identity()
+				tempPose.bones[bonename].size = bMath.Vector(1.0, 1.0, 1.0)
+				tempPose.bones[bonename].loc = bMath.Vector(0.0, 0.0, 0.0)
+			# update the pose.
+			tempPose.update()
+		#Blender.Scene.GetCurrent().makeCurrent()		
+		
 		numAddedMeshes = 0
 		polyCount = 0
 		# First, import meshes
@@ -396,7 +413,6 @@ class BlenderShape(DtsShape):
 					
 					# Transform the mesh into node space. The Mesh vertices
 					# must all be relative to the bone they're attached to
-					
 					world_trans, world_rot = self.getNodeWorldPosRot(o.node)
 					tmsh.translate(-world_trans)
 					tmsh.rotate(world_rot.inverse())
