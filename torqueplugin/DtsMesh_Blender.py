@@ -114,6 +114,7 @@ class BlenderMesh(DtsMesh):
 					self.primitives.append(Primitive(pr.firstElement+pr.numElements,pr.numElements,pr.matindex))
 
 
+		
 		# Determine shape type based on vertex weights
 		if len(self.bindex) <= 1:
 			self.mtype = self.T_Standard
@@ -194,7 +195,6 @@ class BlenderMesh(DtsMesh):
 		bvIndex = face.v[faceIndex].index
 		# if the bVertList already contains this blender vert,
 		sharedVertsIdx = bisect_left(self.bVertList, bvIndex)
-		#if self.bVertList[sharedVertsIdx] == bvIndex:
 		if sharedVertsIdx < len(self.bVertList) and self.bVertList[sharedVertsIdx] == bvIndex:
 			# check the already added dts verts to if this one even needs to be added				
 			for dVert in self.dVertList[sharedVertsIdx]:
@@ -226,10 +226,11 @@ class BlenderMesh(DtsMesh):
 		else:
 			# this is the first time we've seen this blender vert
 			# insert the bVert into the correct location in our bVertList
-			insort_left(self.bVertList, bvIndex)
+			self.bVertList.insert(pos, bvIndex)
+			#insort_left(self.bVertList, bvIndex)
 			# insert a new list (containing the current dts vert) into the dVertList
 			# at the corresponding location.
-			self.dVertList.insert(pos-1, [len(self.verts)-1])
+			self.dVertList.insert(pos, [len(self.verts)-1])
 			
 
 		# Add vert Normals
