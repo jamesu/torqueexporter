@@ -45,6 +45,14 @@ from DtsShape_Blender import *
 
 import os.path
 
+tracebackImported = True
+try:
+	import traceback	
+except:
+	print "Could not import exception traceback module."
+	tracebackImported = False
+
+
 '''
   Blender Exporter For Torque
 -------------------------------
@@ -730,12 +738,13 @@ class ShapeTree(SceneTree):
 		except Exception, msg:
 			Torque_Util.dump_writeln("Error: Exception encountered, bailing out.")
 			Torque_Util.dump_writeln(Exception)
-			import traceback
-			Torque_Util.dump_writeln(traceback.format_exc())
+			if tracebackImported:
+				print "Dumping traceback to log..."
+				Torque_Util.dump_writeln(traceback.format_exc())
 			Torque_Util.dump_setout("stdout")
 			if self.Shape: del self.Shape
 			progressBar.popTask()
-			if Debug: raise
+			raise
 
 	# Handles the whole branch
 	def handleObject(self):
