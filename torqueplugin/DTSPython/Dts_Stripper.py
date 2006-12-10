@@ -26,12 +26,15 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 from Torque_Util import *
 import math
 import copy
+from QADTriStripper import *
+
 
 '''
 	Generic Triangle Stripper Interface
 '''
 
-use_stripper = "VTK"
+use_stripper = "QAD"
+#use_stripper = "VTK"
 #use_stripper = "NVIDIA"
 
 class Stripper:
@@ -53,5 +56,6 @@ from Stripper_VTK import *
 def chooseStripper():
 	global use_stripper
 	if use_stripper == "VTK" and vtk != None: return VTKStripper()
+	elif use_stripper == "QAD": return QADTriStripper(Stripper.maxStripSize)
 	#elif use_stripper == "NVIDIA": return NVIDIAStripper()
 	else: return None
