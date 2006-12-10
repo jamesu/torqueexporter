@@ -218,7 +218,9 @@ class QADTriStripper:
 
 	# create triangle strips
 	def strip(self):	
+		
 		# convert the faces into a vertlist
+		self.verts = []
 		for f in self.faces:
 			#print "Adding face: ", f
 			#print "Adding face: ", f[0]
@@ -255,7 +257,7 @@ class QADTriStripper:
 			self.strips[-1][0].append(self.triList[orphan].vertIndex[1])
 			self.strips[-1][0].append(self.triList[orphan].vertIndex[2])
 			
-		Torque_Util.dump_writeln("    Created " + `len(self.strips)` + " strips.")
+		Torque_Util.dump_writeln("    Created " + `len(self.strips)-len(orphans)` + " strips.")
 		Torque_Util.dump_writeln("     with " + `len(orphans)` + " trianges left over.")
 
 	
