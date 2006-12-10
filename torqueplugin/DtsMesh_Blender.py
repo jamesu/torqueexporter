@@ -80,30 +80,30 @@ class BlenderMesh(DtsMesh):
 				pr.matindex |= matIndex
 				# Add an extra element if using triangle strips, else add a new primitive
 				#if (len(face.v) > 3) and (triStrips == False):
-				if (len(face.v) > 3) and (triStrips == True):
-					pr.numElements = 4
+				if (len(face.v) > 3):
+					# convert the quad into two triangles
 					self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,2, useSticky))
 					self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,1, useSticky))
+					self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,0, useSticky))
+
+					# add the first triangle to the primitives and duplicate if doublesided.
+					self.primitives.append(pr)
+					# Duplicate primitive in reverse order if doublesided
+					if ((msh.mode & NMesh.Modes.TWOSIDED) or (face.mode & NMesh.FaceModes.TWOSIDE)) and not ignoreDblSided:
+						for i in range((pr.firstElement+pr.numElements)-1,pr.firstElement-1,-1):							
+							self.indices.append(self.indices[i])
+						self.primitives.append(Primitive(pr.firstElement+pr.numElements,pr.numElements,pr.matindex))
+
+					pr = Primitive(len(self.indices), 3, pr.matindex)
 					self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,3, useSticky))
-					self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,0, useSticky))
+					self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,2, useSticky))
+					self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,0, useSticky))						
 				else:
+					# add the triangle normally.
 					self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,2, useSticky))
 					self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,1, useSticky))
 					self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,0, useSticky))
 					
-					if len(face.v) > 3:
-						self.primitives.append(pr)
-						# Duplicate primitive in reverse order if doublesided
-						if ((msh.mode & NMesh.Modes.TWOSIDED) or (face.mode & NMesh.FaceModes.TWOSIDE)) and not ignoreDblSided:
-							for i in range((pr.firstElement+pr.numElements)-1,pr.firstElement-1,-1):							
-								self.indices.append(self.indices[i])
-							self.primitives.append(Primitive(pr.firstElement+pr.numElements,pr.numElements,pr.matindex))
-					
-						pr = Primitive(len(self.indices), 3, pr.matindex)
-						self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,3, useSticky))
-						self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,2, useSticky))
-						self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,0, useSticky))
-				
 				# Finally add primitive
 				self.primitives.append(pr)
 						
