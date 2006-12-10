@@ -86,9 +86,12 @@ class DtsStream:
 		self.fs.close()
 	def storeCheck(self, checkPoint= -1):
 		# Write checkpoints (unsigned presumably)
-		self.writeu8(self.checkCount)
-		self.writeu16(self.checkCount)
-		self.writeu32(self.checkCount)
+		a = self.checkCount % 256
+      		b = self.checkCount % 65536
+      		c = self.checkCount % (2**32)
+		self.writeu8(a)
+		self.writeu16(b)
+		self.writeu32(c)
 		self.checkCount += 1
 	def readCheck(self):
 		# Read Checkpoints (unsigned presumably)
