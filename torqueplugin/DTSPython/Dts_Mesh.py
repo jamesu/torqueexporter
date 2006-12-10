@@ -766,15 +766,15 @@ class DtsMesh:
 			Torque_Util.dump_writeln("   Stripping Mesh : Disabled (No Stripper Found)")
 			return
 		else:
-			Torque_Util.dump_writeln("   Stripping Mesh : ...")
-		stripper.verts = self.verts
+			Torque_Util.dump_writeln("   Stripping Mesh :")
+		#stripper.verts = self.verts
 
 		# Convert primitives in different batches if we are a cluster, else, do it normally
 		if self.mtype == self.T_Sorted:
 			newPrimitives = []
 			newIndices = []
 			for c in self.clusters:
-				# We need to update offsets for primitives when we strip (since there will be less of them)
+				# We need to	 update offsets for primitives when we strip (since there will be less of them)
 				c.startPrimitive = len(newPrimitives)
 				for p in self.primitives[c.startPrimitive:c.endPrimitive]:
 					stripper.faces.append([self.indices[p.firstElement:p.firstElement+p.numElements], p.matindex])
