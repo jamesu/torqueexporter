@@ -767,7 +767,7 @@ class DtsMesh:
 			return
 		else:
 			Torque_Util.dump_writeln("   Stripping Mesh :")
-		#stripper.verts = self.verts
+		stripper.verts = self.verts
 
 		# Convert primitives in different batches if we are a cluster, else, do it normally
 		if self.mtype == self.T_Sorted:
