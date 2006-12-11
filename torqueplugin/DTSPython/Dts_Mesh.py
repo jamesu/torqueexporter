@@ -791,12 +791,20 @@ class DtsMesh:
 		else:
 			# All we need to do is convert the whole set of primitives
 			for p in self.primitives:
-				stripper.faces.append([self.indices[p.firstElement:p.firstElement+p.numElements], p.matindex])
+				if p.numElements > 3:					
+					if (p.numElements % 3) != 0: raise "Error: Wrong number of verts in Triangles primitive!"
+					for i in range(p.firstElement,p.firstElement+p.numElements, 3):	
+						print `self.indices[i:i+3]` + (" %x" % p.matindex)
+						stripper.faces.append([self.indices[i:i+3], p.matindex])
+				else:				
+					stripper.faces.append([self.indices[p.firstElement:p.firstElement+p.numElements], p.matindex])
+			
 			stripper.strip()
 			
 			self.indices = []
 			self.primitives = []
-			for strip in stripper.strips:
+			for strip in stripper.strips:					
+				strip[1] = (strip[1] & Primitive.MaterialMask) | (Primitive.NoMaterial & strip[1]) | Primitive.Strip | Primitive.Indexed
 				self.primitives.append(Primitive(len(self.indices),len(strip[0]),strip[1]))
 				#print "STRIP:",strip[0]
 				for ind in strip[0]:
