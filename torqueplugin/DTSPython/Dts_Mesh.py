@@ -85,6 +85,9 @@ class DtsMesh:
 	EncodedNormals = 0x10000000	# Mesh has encoded normals
 
 	def __init__(self, t=4):
+		# Joe - ugly hack
+		self.isCollision = False
+		
 		self.radius = float(0.0)	# Radius of mesh
 		self.numFrames = 1		# Number of frames in mesh
 		self.matFrames = 1		# Number of IFL material frames in mesh
@@ -760,6 +763,7 @@ class DtsMesh:
 	'''
 
 	def windStrip(self, max_stripsize):
+		if self.isCollision: return
 		Dts_Stripper.Stripper.maxStripSize = max_stripsize
 		stripper = Dts_Stripper.chooseStripper()
 		if not stripper: 
