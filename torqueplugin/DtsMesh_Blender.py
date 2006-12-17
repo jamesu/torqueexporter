@@ -34,9 +34,9 @@ from Blender import NMesh
 #-------------------------------------------------------------------------------------------------
 
 class BlenderMesh(DtsMesh):
-	def __init__(self, shape, msh,  rootBone, scaleFactor, matrix, triStrips=False, ignoreDblSided=False):
+	def __init__(self, shape, msh,  rootBone, scaleFactor, matrix, ignoreDblSided=False, useLists = True):
 		DtsMesh.__init__(self)
-		#self.vertsIndexMap = []		# Map of TexCoord index <> Vertex index map
+		self.isCollision = ignoreDblSided
 		self.bVertList = [] # list of blender mesh vertex indices ordered by value, for fast searching
 		self.dVertList = [] # list containing lists of dts vertex indices, the outer list elements correspond to the bVertList element in the same position.
 		self.mainMaterial = None	# For determining material ipo track to use for ObjectState visibility animation
@@ -55,19 +55,27 @@ class BlenderMesh(DtsMesh):
 		
 		# Then, we can add in batches
 		for group in materialGroups: 
-			self.bVertList = []
-			self.dVertList = []
 			# Insert Polygons
+			# if we're using triangle lists, insert one primitive first since that's all we'll need.
+			if useLists:
+				# Insert primitive
+				pr = Primitive(len(self.indices), 3, 0)
+				pr.matindex = pr.Strip | pr.Indexed
+				# clear our duplicate vertex search structures
+				if not self.isCollision:
+					self.bVertList = []
+					self.dVertList = []
 
-			# Insert primitive
-			pr = Primitive(len(self.indices), 3, 0)
-			#pr.matindex = pr.Strip | pr.Indexed
-			pr.matindex = pr.Triangles | pr.Indexed
 
 			for face in group:
 				if len(face.v) < 3:
 					continue # skip to next face
 
+				# if we're not using triangle lists, insert one primitive per face
+				if not useLists:
+					# Insert primitive
+					pr = Primitive(len(self.indices), 3, 0)
+					pr.matindex = pr.Strip | pr.Indexed
 				
 				useSticky = False
 				# Find the image associated with the face on the mesh, if any
@@ -83,6 +91,7 @@ class BlenderMesh(DtsMesh):
 					matIndex = pr.NoMaterial # Nope, no material
 					
 				pr.matindex |= matIndex
+
 				if (len(face.v) > 3):
 					# convert the quad into two triangles
 					# first triangle
@@ -91,10 +100,19 @@ class BlenderMesh(DtsMesh):
 					self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,0, useSticky))
 
 					# Duplicate first triangle in reverse order if doublesided
+					# if we're not using triangle lists, first insert a new primitive for the first triangle
+					if not useLists: self.primitives.append(pr)
 					if ((msh.mode & NMesh.Modes.TWOSIDED) or (face.mode & NMesh.FaceModes.TWOSIDE)) and not ignoreDblSided:
-						for i in range((len(self.indices)-1),(len(self.indices)-4),-1):
-							self.indices.append(self.indices[i])
-
+						if not useLists:
+							for i in range((pr.firstElement+pr.numElements)-1,pr.firstElement-1,-1):
+								self.indices.append(self.indices[i])
+							# insert a new primitive for the back facing triangle
+							self.primitives.append(Primitive(pr.firstElement+pr.numElements,pr.numElements,pr.matindex))
+						else:
+							for i in range((len(self.indices)-1),(len(self.indices)-4),-1):
+								self.indices.append(self.indices[i])
+					
+					if not useLists: pr = Primitive(len(self.indices), 3, pr.matindex)							
 					# second triangle
 					self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,3, useSticky))
 					self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,2, useSticky))
@@ -104,19 +122,25 @@ class BlenderMesh(DtsMesh):
 					self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,2, useSticky))
 					self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,1, useSticky))
 					self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,0, useSticky))
-					
+				
+				if not useLists:
+					self.primitives.append(pr)					
 						
 				# Duplicate triangle in reverse order if doublesided
 				if ((msh.mode & NMesh.Modes.TWOSIDED) or (face.mode & NMesh.FaceModes.TWOSIDE)) and not ignoreDblSided: 
-					for i in range((len(self.indices)-1),(len(self.indices)-4),-1):
-						self.indices.append(self.indices[i])
+					if not useLists:
+						for i in range((pr.firstElement+pr.numElements)-1,pr.firstElement-1,-1):
+							self.indices.append(self.indices[i])
+						self.primitives.append(Primitive(pr.firstElement+pr.numElements,pr.numElements,pr.matindex))
+					else:
+						for i in range((len(self.indices)-1),(len(self.indices)-4),-1):
+							self.indices.append(self.indices[i])
 
+			if useLists:
+				# Finally add the primitive
+				pr.numElements = (len(self.indices) - pr.firstElement) #-1
+				self.primitives.append(pr)
 
-			# Finally add primitive
-			pr.numElements = (len(self.indices) - pr.firstElement) #-1
-			self.primitives.append(pr)
-
-		
 		# Determine shape type based on vertex weights
 		if len(self.bindex) <= 1:
 			self.mtype = self.T_Standard
@@ -188,9 +212,12 @@ class BlenderMesh(DtsMesh):
 		# Compute vert normals
 		vert = msh.verts[face.v[faceIndex].index]
 		if face.smooth:
-			normal = matrix.passVector(Vector(vert.no[0], vert.no[1], vert.no[2]))
+			#normal = matrix.passVector(Vector(vert.no[0], vert.no[1], vert.no[2]))
+			normal = Torque_Math.Matrix3x3(matrix).transpose().inverse().passVector(Vector(vert.no[0], vert.no[1], vert.no[2]))
 		else:
-			normal = matrix.passVector(Vector(face.no[0], face.no[1], face.no[2]))
+			#normal = matrix.passVector(Vector(face.no[0], face.no[1], face.no[2]))
+			normal = Torque_Math.Matrix3x3(matrix).transpose().inverse().passVector(Vector(face.no[0], face.no[1], face.no[2]))
+			
 		normal.normalize()
 		
 		# See if the vertex/texture/normal combo already exists..
@@ -203,7 +230,7 @@ class BlenderMesh(DtsMesh):
 				# See if the texture coordinates and normals match up.
 				tx = self.tverts[dVert]
 				no = self.normals[dVert]
-				if tx.eqDelta(texture, 0.0001) and no.eqDelta(normal, 0.001):
+				if (tx.eqDelta(texture, 0.0001) and no.eqDelta(normal, 0.001)) or self.isCollision:
 					# use the existing dts vert with the same tex coords and normal
 					return dVert
 				
