@@ -622,11 +622,11 @@ class ShapeTree(SceneTree):
 						progressBar.update()
 					for marker in self.collisionMeshes:
 						meshes = getAllChildren(marker)
-						for mesh in meshes: self.Shape.addCollisionMesh(mesh, False)
+						self.Shape.addCollisionDetailLevel(meshes, False, -1)
 						progressBar.update()					
 					for marker in self.losCollisionMeshes:
 						meshes = getAllChildren(marker)
-						for mesh in meshes: self.Shape.addCollisionMesh(mesh, True)
+						self.Shape.addCollisionDetailLevel(meshes, True, -1)
 						progressBar.update()
 					
 					# We have finished adding the regular detail levels. Now add the billboard if required.
