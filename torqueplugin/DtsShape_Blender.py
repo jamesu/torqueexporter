@@ -140,70 +140,118 @@ class BlenderShape(DtsShape):
 		del self.externalSequences
 		del self.scriptMaterials
 		
-	# Adds collision mesh
-	def addCollisionMesh(self, mesh, LOS=False):
+	
+	# Adds collision detail levels
+	def addCollisionDetailLevel(self, meshes, LOS=False, size=-1):
 		'''
-		This adds a collision mesh to the shape.
-		Each collision mesh has its own detail level, and is packed into objects in the second subshape.
+		This adds a collison or LOS detail level to the shape.
+
+		The end result is a set of objects in the first subshape something like this:
 		
-		Like normal details, the objectDetail property is used to differentiate between collision meshes,
-		which results in dummy T_Null type meshes being inserted into the objects, like so:
-		
-			FirstObject : FirstMesh NULL NULL
-			SecondObject: NULL SecondMesh NULL
-			ThirdObject : NULL NULL ThirdMesh
-		
-		Alternatively, we could have packed the meshes into a single object:
-		
-		Objects: FirstMesh SecondMesh ThirdMesh
-		
-		However, this approach only allows 1 node to animate all of the collision meshes, rather than
-		multiple nodes with the previous method. But as an advantage, this allows for a much more packed file.
-		
-		NOTE: this function needs to be called AFTER all of the calls to addDetailLevel()!
+			Head: HeadMesh(128) HeadMesh(64) HeadMesh(32) NULL NULL
+			Body: BodyMesh(128) BodyMesh(64) HeadMesh(32) NULL NULL
+			RightLeg: RightLegMesh(128) RightLegMesh(64) RightLegMesh(32) NULL NULL
+			RightArm: RightArmMesh(128) RightArmMesh(64) RightArmMesh(32) NULL NULL
+			LeftLeg: LeftLegMesh(128) LeftLegMesh(64) LeftLegMesh(32) NULL NULL
+			LeftArm: LeftArmMesh(128) LeftArmMesh(64) LeftArmMesh(32) NULL NULL
+			Bag: BagMesh(128) NULL NULL NULL NULL
+			ColMesh1: NULL NULL NULL ColMesh1 NULL
+			LOSMesh1: NULL NULL NULL NULL LosMesh1
+			
 		'''
 		
-		# Add or get the collision object
+		# before we do anything else, reset the transforms of all bones.
+		# loop through each node and reset it's transforms.  This avoids transforms carrying over from
+		# other animations. Need to cycle through _ALL_ bones and reset the transforms.
+		for armOb in Blender.Object.Get():
+			if (armOb.getType() != 'Armature') or (armOb.name == "DTS-EXP-GHOST-OB"): continue
+			tempPose = armOb.getPose()
+			#for bonename in armOb.getData().bones.keys():
+			for bonename in self.poseUtil.armBones[armOb.name].keys():
+				# reset the bone's transform
+				tempPose.bones[bonename].quat = bMath.Quaternion().identity()
+				tempPose.bones[bonename].size = bMath.Vector(1.0, 1.0, 1.0)
+				tempPose.bones[bonename].loc = bMath.Vector(0.0, 0.0, 0.0)
+			# update the pose.
+			tempPose.update()
+		#Blender.Scene.GetCurrent().makeCurrent()		
 		
-		obj = dObject(0, -1, -1, -1)
-		obj.tempMeshes = []
-		objectDetail = self.numCollisionDetails+self.numLOSCollisionDetails
-		
-		# Prefix objects meshes
-		for c in range(0, self.numCollisionDetails+self.numLOSCollisionDetails):
-			obj.tempMeshes.append(DtsMesh(DtsMesh.T_Null))
-		
-		if self.subshapes[1].numObjects == 0:
-			self.subshapes[1].firstObject = len(self.objects)
-		else:
-			# Postfix everyone else's objects
-			for itr in self.objects[self.subshapes[1].firstObject:self.subshapes[1].firstObject+self.subshapes[1].numObjects]:
-				itr.tempMeshes.append(DtsMesh(DtsMesh.T_Null))
+		numAddedMeshes = 0
+		polyCount = 0
+		# First, import meshes
+		for o in meshes:
+			# skip bounds mesh
+			if o.getName() == "Bounds":
+				continue
+
+			pNodeIdx = -1
+			for con in o.constraints:
+				if con[Blender.Constraint.Settings.BONE] != None:
+					pNodeIdx = self.getNodeIndex(con[Blender.Constraint.Settings.BONE])
+
+			# Check to see if the mesh is parented to a bone				
+			if o.getParent() != None and o.getParent().getType() == 'Armature' and o.parentbonename != None:
+				for node in self.nodes[0:len(self.nodes)]:
+					if self.sTable.get(node.name) == o.parentbonename:
+						pNodeIdx = node.name
+						break
+			obj = dObject(self.addName(o.getName()), -1, -1, pNodeIdx)
+			obj.tempMeshes = []
+			self.objects.append(obj)
 				
-		self.subshapes[1].numObjects += 1
+			# Kill the clones
+			if (self.subshapes[0].numObjects != 0) and (len(obj.tempMeshes) > self.numBaseDetails):
+				Torque_Util.dump_writeln("Warning: Too many clone's of mesh found in detail level, object '%s' skipped!" % o.getName())
+				continue
+			
+			
+			# Now we can import as normal
+			mesh_data = o.getData();
+			mesh_data.update()
+				
+			# Get Object's Matrix
+			mat = self.collapseBlenderTransform(o)
+			
+			# Import Mesh, process flags
+			tmsh = BlenderMesh(self, mesh_data, 0, 1.0, mat, True, False)
+			
+			# Increment polycount metric
+			polyCount += tmsh.getPolyCount()
+			# prefix with null meshes so we're in the right objectDetail
+			for i in range(0, len(self.detaillevels)):
+				obj.tempMeshes.append(DtsMesh(DtsMesh.T_Null))
+			obj.tempMeshes.append(tmsh)
+			numAddedMeshes += 1
 		
-		# Assign name to object and update totals
+		# Update the number of meshes in the first subshape
+		self.subshapes[0].numObjects += numAddedMeshes
+		
+		# Get name, do housekeeping
+		self.numBaseDetails += 1
+		
+		#detailName = "Detail-%d" % (self.numBaseDetails)
 		if LOS:
 			self.numLOSCollisionDetails += 1
-			detailName = "LOS-%d" % (8+self.numLOSCollisionDetails)
-			obj.name = self.addName("LOS-%d" % (self.numLOSCollisionDetails))
+			detailName = "LOSCollision-%d" % (8+self.numLOSCollisionDetails)
 		else:
 			self.numCollisionDetails += 1
 			detailName = "Collision-%d" % (self.numCollisionDetails)
-			obj.name = self.addName("Col-%d" % (self.numCollisionDetails))
-		
-		# Import the mesh - make sure its static
-		mat = self.collapseBlenderTransform(mesh)
 
-		# last parameter tells BlenderMesh to ignore the double sided flag, double sided meshes are harmful to convexity :)
-		tmsh = BlenderMesh(self, mesh.getData(), 0 ,  1.0, mat, self.preferences['StripMeshes'], True)
-		tmsh.mtype = tmsh.T_Standard
+		if self.subshapes[0].numObjects != numAddedMeshes:
+			# The following condition should NEVER happen
+			if self.subshapes[0].numObjects < numAddedMeshes:
+				print "PANIC!! PANIC!! RUN!!!"
+				return False
+			# Ok, so we have an object with not enough meshes - find the odd one out
+			for obj in self.objects[self.subshapes[0].firstObject:self.subshapes[0].firstObject+self.subshapes[0].numObjects]:
+				if len(obj.tempMeshes) != self.numBaseDetails:
+					# Add dummy mesh (presumed non-existant)
+					obj.tempMeshes.append(DtsMesh(DtsMesh.T_Null))
 		
 		# Store constructed detail level info into shape
-		self.detaillevels.append(DetailLevel(self.addName(detailName), 1, objectDetail, -1, -1, -1, tmsh.getPolyCount()))
-		
-		obj.tempMeshes.append(tmsh)
-		self.objects.append(obj)
+		self.detaillevels.append(DetailLevel(self.addName(detailName), 0, self.numBaseDetails-1, size, -1, -1, polyCount))
+			
+		return True
 	
 	# Adds non-specific detail levels
 	def addDetailLevel(self, meshes, size=-1):
@@ -302,12 +350,11 @@ class BlenderShape(DtsShape):
 			
 			# Import Mesh, process flags
 
-			tmsh = BlenderMesh(self, mesh_data, 0, 1.0, mat, self.preferences['StripMeshes'])
+			tmsh = BlenderMesh(self, mesh_data, 0, 1.0, mat)
 			if len(names) > 1: tmsh.setBlenderMeshFlags(names[1:])
 			
 			# If we ended up being a Sorted Mesh, sort the faces
 			if tmsh.mtype == tmsh.T_Sorted:
-				#tmsh.sortMesh(Prefs['AlwaysWriteDepth'], Prefs['ClusterDepth'])
 				tmsh.sortMesh(self.preferences['AlwaysWriteDepth'], self.preferences['ClusterDepth'])
 				
 			# Increment polycount metric
@@ -348,7 +395,7 @@ class BlenderShape(DtsShape):
 		self.detaillevels.append(DetailLevel(self.addName(detailName), 0, self.numBaseDetails-1, calcSize, -1, -1, polyCount))
 			
 		return True
-		
+
 	def addBillboardDetailLevel(self, dispDetail, equator, polar, polarangle, dim, includepoles, size):
 		self.numBaseDetails += 1
 		bb = DetailLevel(self.addName("BILLBOARD-%d" % (self.numBaseDetails)),-1,
