@@ -862,6 +862,96 @@ else:
 			and ((self[3] - quat[3]) > -delta))
 
 			
+	# The Matrix3x3 Class
+	class Matrix3x3:
+		def __init__(self, dat=None):
+			if dat == None:
+				self.members = [
+				0.0, 0.0, 0.0,
+				0.0, 0.0, 0.0,
+				0.0, 0.0, 0.0]
+			elif len(dat.members) == 9:
+				self.members = [
+				dat[0],  dat[1],  dat[2],
+				dat[3],  dat[4],  dat[5],
+				dat[6],  dat[7],  dat[8]]
+			elif len(dat.members) == 16:
+				self.members = [
+				dat[0],  dat[1],  dat[2],
+				dat[4],  dat[5],  dat[6],
+				dat[8],  dat[9],  dat[10]]
+			else: raise "Error: Matrix3x3 initialized with incorrect data!"
+		def __del__(self):
+			del self.members
+		def setData(self, dat):
+			self.members = dat
+		def __getitem__(self, key):
+			if key > (len(self.members)-1):
+				return 0
+			return(self.members[key])
+		def __setitem__(self, key, value):
+			self.members[key] = value
+		def get(self, x, y):
+			# x = row, y = col
+			return self.members[(x*3)+y]
+		def set(self, x, y, val):
+			# x = row, y = col
+			self.members[(x*3)+y] = val
+		def col(self, no):
+			result = Vector()
+			for r in range(0, 3):
+				result[r] = self.get(r, no)
+			return result
+		def identity(self):
+			return MatrixF(
+			[1.0, 0.0, 0.0,
+			0.0, 1.0, 0.0,
+			0.0, 0.0, 1.0])
+		def transpose(self):
+			result = MatrixF()
+			for r in range(0, 3):
+				for c in range(0, 3):
+					result.set(c, r, self.get(r, c))
+			return result
+		def setCol(self, no, col):
+			for c in range(0, 3):
+				self.set(c, no, col[c]) # self.members[(x*3)+y] = val
+		def setRow(self, no, row):
+			for r in range(0, 3):
+				self.set(no, r, row[r])
+		def getRow(self, no):
+			for r in range(0, 3):
+				result.append(self.get(no, r))
+			return result
+		def passVector(self, vec):
+			return Vector(vec[0] * self.get(0, 0) + vec[1] * self.get(1, 0) + vec[2] * self.get(2, 0),
+				vec[0] * self.get(0, 1) + vec[1] * self.get(1, 1) + vec[2] * self.get(2, 1),
+				vec[0] * self.get(0, 2) + vec[1] * self.get(1, 2) + vec[2] * self.get(2, 2))
+		def determinant(self):
+			return ( (self[0] * (self[4] * self[8] - self[5] * self[7])) - \
+				 (self[1] * (self[3] * self[8] - self[5] * self[6])) + \
+				 (self[2] * (self[3] * self[7] - self[4] * self[6])) )
+		def inverse(self):
+			return self.invert()
+		def invert(self):
+			det = self.determinant()
+			if det == 0.0:
+				return None
+			det = 1.0 / det
+			# Transpose the matrix of cofactors, construct a 3x3 matrix and return
+			r = [
+			det * (self.get(1, 1) * self.get(2, 2) - self.get(2, 1) * self.get(1, 2)),
+			- det * (self.get(0, 1) * self.get(2, 2) - self.get(2, 1) * self.get(0, 2)),
+			det * (self.get(0, 1) * self.get(1, 2) - self.get(1, 1) * self.get(0, 2)),
+			- det * (self.get(1, 0) * self.get(2, 2) - self.get(2, 0) * self.get(1, 2)),
+			det * (self.get(0, 0) * self.get(2, 2) - self.get(2, 0) * self.get(0, 2)),
+			- det * (self.get(0, 0) * self.get(1, 2) - self.get(1, 0) * self.get(0, 2)),
+			det * (self.get(1, 0) * self.get(2, 1) - self.get(2, 0) * self.get(1, 1)),
+			- det * (self.get(0, 0) * self.get(2, 1) - self.get(2, 0) * self.get(0, 1)),
+			det * (self.get(0, 0) * self.get(1, 1) - self.get(1, 0) * self.get(0, 1))]
+			mat = Matrix3x3(r)
+			return mat
+
 			
 
 	# The Matrix Class
@@ -909,7 +999,7 @@ else:
 		def transpose(self):
 			result = MatrixF()
 			for r in range(0, 4):
-				for r in range(0, 4):
+				for c in range(0, 4):
 					result.set(c, r, self.get(r, c))
 			return result
 		def setCol(self, no, col):
