@@ -139,8 +139,6 @@ class BlenderShape(DtsShape):
 		del self.addedArmatures
 		del self.externalSequences
 		del self.scriptMaterials
-		
-	
 	# Adds collision detail levels
 	def addCollisionDetailLevel(self, meshes, LOS=False, size=-1):
 		'''
@@ -213,7 +211,7 @@ class BlenderShape(DtsShape):
 			mat = self.collapseBlenderTransform(o)
 			
 			# Import Mesh, process flags
-			tmsh = BlenderMesh(self, mesh_data, 0, 1.0, mat, True, False)
+			tmsh = BlenderMesh(self, mesh_data, 0, 1.0, mat, True)
 			
 			# Increment polycount metric
 			polyCount += tmsh.getPolyCount()
@@ -349,12 +347,12 @@ class BlenderShape(DtsShape):
 			mat = self.collapseBlenderTransform(o)
 			
 			# Import Mesh, process flags
-
 			tmsh = BlenderMesh(self, mesh_data, 0, 1.0, mat)
 			if len(names) > 1: tmsh.setBlenderMeshFlags(names[1:])
 			
 			# If we ended up being a Sorted Mesh, sort the faces
 			if tmsh.mtype == tmsh.T_Sorted:
+				#tmsh.sortMesh(Prefs['AlwaysWriteDepth'], Prefs['ClusterDepth'])
 				tmsh.sortMesh(self.preferences['AlwaysWriteDepth'], self.preferences['ClusterDepth'])
 				
 			# Increment polycount metric
@@ -395,7 +393,7 @@ class BlenderShape(DtsShape):
 		self.detaillevels.append(DetailLevel(self.addName(detailName), 0, self.numBaseDetails-1, calcSize, -1, -1, polyCount))
 			
 		return True
-
+		
 	def addBillboardDetailLevel(self, dispDetail, equator, polar, polarangle, dim, includepoles, size):
 		self.numBaseDetails += 1
 		bb = DetailLevel(self.addName("BILLBOARD-%d" % (self.numBaseDetails)),-1,
@@ -410,13 +408,22 @@ class BlenderShape(DtsShape):
 		self.detaillevels.insert(self.numBaseDetails-1, bb)
 		
 	def stripMeshes(self, maxsize):
+		#return True
 		# Take into account triangle strips ONLY on non-collision meshes
-		for d in self.detaillevels:
-			if (d.size < 0) or (d.subshape < 0): continue
-			subshape = self.subshapes[d.subshape]
-			for obj in self.objects[subshape.firstObject:subshape.firstObject+subshape.numObjects]:
-				for tmsh in self.meshes[obj.firstMesh:obj.firstMesh+obj.numMeshes]:
-					tmsh.windStrip(maxsize)
+		#for d in self.detaillevels:
+		#	if (d.size < 0) or (d.subshape < 0): continue
+		subshape = self.subshapes[0]
+		for obj in self.objects[subshape.firstObject:subshape.firstObject+subshape.numObjects]:				
+			for i in range(obj.firstMesh,(obj.firstMesh+obj.numMeshes)-1):
+				tmsh = self.meshes[i]
+				# collision meshes are added last, so if we're past the end of the regular
+				# detail levels, skip stripping the extra nulls and collision meshes.
+				if i >= len(self.detaillevels) or len(tmsh.primitives) == 0: continue
+				#if i > 0: continue
+				#d = self.detaillevels[i]
+				#if (d.size < 0) or (d.subshape < 0): continue
+				#for tmsh in self.meshes[obj.firstMesh:obj.firstMesh+obj.numMeshes]:
+				tmsh.windStrip(maxsize)
 		return True
 		
 	def finalizeObjects(self):
