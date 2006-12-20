@@ -253,9 +253,11 @@ class BlenderMesh(DtsMesh):
 		# Compute vert normals
 		vert = msh.verts[face.v[faceIndex].index]
 		if face.smooth:
-			normal = matrix.passVector(Vector(vert.no[0], vert.no[1], vert.no[2]))
+			#normal = matrix.passVector(Vector(vert.no[0], vert.no[1], vert.no[2]))
+			normal = Torque_Math.Matrix3x3(matrix).transpose().inverse().passVector(Vector(vert.no[0], vert.no[1], vert.no[2]))
 		else:
-			normal = matrix.passVector(Vector(face.no[0], face.no[1], face.no[2]))
+			#normal = matrix.passVector(Vector(face.no[0], face.no[1], face.no[2]))
+			normal = Torque_Math.Matrix3x3(matrix).transpose().inverse().passVector(Vector(face.no[0], face.no[1], face.no[2]))
 		normal.normalize()
 		
 		# See if the vertex/texture/normal combo already exists..
