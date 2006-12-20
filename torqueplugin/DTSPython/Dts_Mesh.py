@@ -85,9 +85,6 @@ class DtsMesh:
 	EncodedNormals = 0x10000000	# Mesh has encoded normals
 
 	def __init__(self, t=4):
-		# Joe - ugly hack
-		self.isCollision = False
-		
 		self.radius = float(0.0)	# Radius of mesh
 		self.numFrames = 1		# Number of frames in mesh
 		self.matFrames = 1		# Number of IFL material frames in mesh
@@ -763,7 +760,6 @@ class DtsMesh:
 	'''
 
 	def windStrip(self, max_stripsize):
-		if self.isCollision: return
 		Dts_Stripper.Stripper.maxStripSize = max_stripsize
 		stripper = Dts_Stripper.chooseStripper()
 		if not stripper: 
@@ -778,7 +774,7 @@ class DtsMesh:
 			newPrimitives = []
 			newIndices = []
 			for c in self.clusters:
-				# We need to	 update offsets for primitives when we strip (since there will be less of them)
+				# We need to update offsets for primitives when we strip (since there will be less of them)
 				c.startPrimitive = len(newPrimitives)
 				for p in self.primitives[c.startPrimitive:c.endPrimitive]:
 					stripper.faces.append([self.indices[p.firstElement:p.firstElement+p.numElements], p.matindex])
@@ -795,11 +791,13 @@ class DtsMesh:
 		else:
 			# All we need to do is convert the whole set of primitives
 			for p in self.primitives:
-				if p.numElements > 3:					
+				if p.numElements > 3:
+					# we should be dealing with a triangle list
 					if (p.numElements % 3) != 0: raise "Error: Wrong number of verts in Triangles primitive!"
 					for i in range(p.firstElement,p.firstElement+p.numElements, 3):	
 						stripper.faces.append([self.indices[i:i+3], p.matindex])
 				else:				
+					# we're dealing a list or strip containing only one triangle
 					stripper.faces.append([self.indices[p.firstElement:p.firstElement+p.numElements], p.matindex])
 			
 			stripper.strip()
@@ -808,10 +806,12 @@ class DtsMesh:
 			self.primitives = []
 			for strip in stripper.strips:					
 				strip[1] = (strip[1] & Primitive.MaterialMask) | (Primitive.NoMaterial & strip[1]) | Primitive.Strip | Primitive.Indexed
+				#strip[1] = (strip[1] & Primitive.MaterialMask) | (Primitive.NoMaterial & strip[1]) | Primitive.Triangles | Primitive.Indexed
 				self.primitives.append(Primitive(len(self.indices),len(strip[0]),strip[1]))
 				#print "STRIP:",strip[0]
 				for ind in strip[0]:
 					self.indices.append(ind)
+			
 		del stripper
 
 	def passMatrix(self, matrix):
