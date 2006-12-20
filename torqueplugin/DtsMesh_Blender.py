@@ -89,9 +89,7 @@ class BlenderMesh(DtsMesh):
 						useSticky = shape.materials.get(matIndex).sticky
 				else:
 					matIndex = pr.NoMaterial # Nope, no material
-				#pr.matindex = (pr.matindex & Primitive.MaterialMask & matIndex) | (Primitive.NoMaterial & pr.matindex) | Primitive.Strip | Primitive.Indexed
-				pr.matindex = (pr.matindex & Primitive.MaterialMask & matIndex) | (Primitive.NoMaterial & pr.matindex) | Primitive.Triangles | Primitive.Indexed
-				#pr.matindex |= matIndex
+				pr.matindex |= matIndex
 				if (len(face.v) > 3):
 					# convert the quad into two triangles
 					# first triangle
