@@ -408,21 +408,11 @@ class BlenderShape(DtsShape):
 		self.detaillevels.insert(self.numBaseDetails-1, bb)
 		
 	def stripMeshes(self, maxsize):
-		#return True
-		# Take into account triangle strips ONLY on non-collision meshes
-		#for d in self.detaillevels:
-		#	if (d.size < 0) or (d.subshape < 0): continue
 		subshape = self.subshapes[0]
-		for obj in self.objects[subshape.firstObject:subshape.firstObject+subshape.numObjects]:				
-			for i in range(obj.firstMesh,(obj.firstMesh+obj.numMeshes)-1):
+		for obj in self.objects[subshape.firstObject:subshape.firstObject+(subshape.numObjects-(self.numCollisionDetails+self.numLOSCollisionDetails))]:
+			for i in range(obj.firstMesh,(obj.firstMesh+obj.numMeshes)):
 				tmsh = self.meshes[i]
-				# collision meshes are added last, so if we're past the end of the regular
-				# detail levels, skip stripping the extra nulls and collision meshes.
-				if i >= len(self.detaillevels) or len(tmsh.primitives) == 0: continue
-				#if i > 0: continue
-				#d = self.detaillevels[i]
-				#if (d.size < 0) or (d.subshape < 0): continue
-				#for tmsh in self.meshes[obj.firstMesh:obj.firstMesh+obj.numMeshes]:
+				if len(tmsh.primitives) == 0: continue
 				tmsh.windStrip(maxsize)
 		return True
 		
