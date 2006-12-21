@@ -107,7 +107,7 @@ def getChildren(obj):
 # Gets all the children of an object (recursive)
 def getAllChildren(obj):
 	obj_children = getChildren(obj)
-	for child in obj_children:
+	for child in obj_children[:]:
 		obj_children += getAllChildren(child)
 	return obj_children
 
