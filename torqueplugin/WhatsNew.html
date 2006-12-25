@@ -7,6 +7,48 @@
 </head>
 <body>
 <h1>Torque Exporter Plug in for Blender</h1>
+<h2>What's New for version 0.93</h2>
+<ul>
+  <li>Added a Built-in triangle stripper&nbsp; "QADTriStripper" (Quick
+and Dirty Triangle Stripper)</li>
+  <li>VTK Triangle stripping is also tested and working now.</li>
+  <li>New Changed mesh export code to allow multiple triangles all
+belonging to the same material group to be stored inside a single
+"Triangles" (triangle list) primitive. Previously the exporter was
+storing each tri in a separate primitive, resulting in tons of unneeded
+gl calls.</li>
+  <li>Added Vincent BILLET's storeCheck fix that allows larger shapes
+to be exported.</li>
+  <li>Changed the way collision meshes are exported.&nbsp; They are now
+packed into the first subshape along with everything else.<br>
+  </li>
+  <li>Added the ability to animate collision meshes.&nbsp; This is
+accomplished by setting a "Copy Location" constraint on the mesh, with
+an armature bone as a target.&nbsp; Make sure you are exporting the
+constraint target bone or it won't work.&nbsp; Don't be surprised if
+this doesn't work the way you want it to in Torque.&nbsp; The player
+can collide with an animated mesh, but an animated mesh will not
+collide with or push the player around.&nbsp; Play around with it
+in-game before getting too fancy with it; you'll see what I mean.&nbsp;
+Also, projectile collision with a mesh while it is animating is
+unreliable.&nbsp; It seems to work OK once the mesh has stopped moving
+though.&nbsp; Your millage may vary.</li>
+  <li>Changed the way mesh normals are calculated, as per Alberto
+Ganesh Barbati's suggestion.</li>
+  <li>Fixed an exporter crash when exporting a mesh object with no
+vertices.<br>
+  </li>
+  <li>Fixed a bug that would under some conditions cause duplicate
+objects to be exported.<br>
+  </li>
+  <li>Fixed a bug in appendVertex that was causing incorrect geometry
+to be exported.</li>
+  <li>Fixed a bug that caused animated rigid meshes to have incorrect
+offsets from their parent bones</li>
+  <li>Fixed a small bug when writing exception tracebacks to the log
+that manifests when a full version of python is not available</li>
+  <li>Other small fixes</li>
+</ul>
 <h2>What's New for version 0.92</h2>
 <ul>
   <li>Fixed broken animation export in Blender 2.42</li>
@@ -34,7 +76,6 @@ slot.<br>
   <li>Other small fixes and enhancements<br>
   </li>
 </ul>
-<br>
 <h2>What's New for version 0.91<br>
 </h2>
 <ul>
