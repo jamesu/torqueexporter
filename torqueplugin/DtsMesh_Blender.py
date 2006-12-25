@@ -69,7 +69,6 @@ class BlenderMesh(DtsMesh):
 
 			# Create primitive
 			pr = Primitive(len(self.indices), 3, 0)
-			#pr.matindex = pr.Strip | pr.Indexed			
 			pr.matindex = pr.Triangles | pr.Indexed
 
 			for face in group:
@@ -197,7 +196,9 @@ class BlenderMesh(DtsMesh):
 
 		# Final stuff...
 		# Total number of frames. For a non animated mesh, this will always be 1
-		self.numFrames = len(self.verts) / self.vertsPerFrame
+		if self.vertsPerFrame != 0: self.numFrames = len(self.verts) / self.vertsPerFrame
+		else: self.numFrames = 0
+		#self.numFrames = len(self.verts) / self.vertsPerFrame
 
 		# Mesh parent
 		self.parent = -1
