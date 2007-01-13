@@ -293,6 +293,7 @@ class DtsMesh:
 				self.bounds.max[1] = vertex[1]
 			if vertex[2] > self.bounds.max[2]:
 				self.bounds.max[2] = vertex[2]
+
 	
 	def calculateCenter(self):
 		self.center[0] = ((self.bounds.min[0] - self.bounds.max[0])/2) + self.bounds.max[0]
@@ -310,7 +311,7 @@ class DtsMesh:
 			(tV[2] * tV[2]))
 			if distance > self.radius:
 				self.radius = distance
-	
+
 	def getVertexBone(self, node):
 		# Finds the bone index in the table, or adds it if it's
 		# not there.  The vertex bone & nodeIndex list are here to
