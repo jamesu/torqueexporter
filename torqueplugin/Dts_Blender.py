@@ -651,7 +651,7 @@ class ShapeTree(SceneTree):
 				
 				# Add all actions (will ignore ones not belonging to shape)
 				if True:
-					scene = Blender.Scene.getCurrent()
+					scene = Blender.Scene.GetCurrent()
 					context = scene.getRenderingContext()
 					actions = Armature.NLA.GetActions()
 
@@ -801,7 +801,7 @@ def handleScene():
 	if export_tree != None: export_tree.clear()
 	scn = Blender.Scene.GetCurrent()
 	scn.update(1)
-	export_tree = SceneTree(None,Blender.Scene.getCurrent())
+	export_tree = SceneTree(None,Blender.Scene.GetCurrent())
 	Torque_Util.dump_writeln("Cleaning Preference Keys")
 	cleanKeys()
 
@@ -1522,7 +1522,7 @@ def initGui():
 	guiSequenceOptionsAnimateMaterials = Common_Gui.ToggleButton("Mat Anim", "Animate Materials", 12, guiSequenceCallback, guiSequenceResize)
 	guiSequenceOptionsMaterialStartFrame = Common_Gui.NumberPicker("Start", "Frame to start exporting material track", 13, guiSequenceCallback, guiSequenceResize)
 	guiSequenceOptionsMaterialStartFrame.min = 1
-	guiSequenceOptionsMaterialStartFrame.max = Blender.Scene.getCurrent().getRenderingContext().endFrame()	
+	guiSequenceOptionsMaterialStartFrame.max = Blender.Scene.GetCurrent().getRenderingContext().endFrame()	
 	
 	guiSequenceOptionsPriority = Common_Gui.NumberPicker("Priority", "Sequence playback priority", 23, guiSequenceCallback, guiSequenceResize)
 	guiSequenceOptionsPriority.min = 0
