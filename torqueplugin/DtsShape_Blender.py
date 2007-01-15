@@ -217,7 +217,8 @@ class BlenderShape(DtsShape):
 			# Increment polycount metric
 			polyCount += tmsh.getPolyCount()
 			# prefix with null meshes so we're in the right objectDetail
-			for i in range(0, len(self.detaillevels)):
+			#for i in range(0, len(self.detaillevels)-(self.numCollisionDetails + self.numLOSCollisionDetails) ):
+			for i in range(0, len(self.detaillevels) ):
 				obj.tempMeshes.append(DtsMesh(DtsMesh.T_Null))
 			obj.tempMeshes.append(tmsh)
 			numAddedMeshes += 1
@@ -241,11 +242,13 @@ class BlenderShape(DtsShape):
 			if self.subshapes[0].numObjects < numAddedMeshes:
 				print "PANIC!! PANIC!! RUN!!!"
 				return False
+			'''
 			# Ok, so we have an object with not enough meshes - find the odd one out
 			for obj in self.objects[self.subshapes[0].firstObject:self.subshapes[0].firstObject+self.subshapes[0].numObjects]:
 				if len(obj.tempMeshes) != self.numBaseDetails:
 					# Add dummy mesh (presumed non-existant)
 					obj.tempMeshes.append(DtsMesh(DtsMesh.T_Null))
+			'''
 		
 		# Store constructed detail level info into shape
 		self.detaillevels.append(DetailLevel(self.addName(detailName), 0, self.numBaseDetails-1, size, -1, -1, polyCount))
@@ -443,7 +446,8 @@ class BlenderShape(DtsShape):
 				elif o.node < 1:
 					o.node = 0
 			else:
-				o.node = -1
+				#o.node = -1
+				o.node = 0
 				isSkinned = True
 				Torque_Util.dump_writeln("Object %s, Skinned" % (self.sTable.get(o.name)))
 			for tmsh in o.tempMeshes:
