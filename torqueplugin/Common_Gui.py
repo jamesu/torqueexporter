@@ -761,6 +761,20 @@ class BasicGrid(BasicContainer):
 			curY += 1
 			
 
+
+#class ScrollableGridContainer(BasicGrid, ListContainer):
+class BoneListContainer(ListContainer):
+	'''
+	This class implements a fancy grid control.
+	
+	All controls are resized during the resize event,
+	taking into account properties set.
+	'''
+	def __init__(self, name=None, callback=None, resize_callback=None):
+		ListContainer.__init__(self, name, callback, resize_callback)
+		self.minimumChildHeight = 20
+		self.childHeight = 20	# Height of each child item
+
 # Util class for blender progress bar
 '''
 	The progress management is quite simple.
