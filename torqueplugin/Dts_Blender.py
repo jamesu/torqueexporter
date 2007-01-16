@@ -883,6 +883,39 @@ def guiSequenceListItemCallback(control):
 	elif realItem == 3:
 		sequencePrefs['Cyclic'] = control.state
 
+# New
+def guiBoneListItemCallback(control):
+	global Prefs, guiSequenceList
+	
+	# Determine id of clicked button
+	
+	if control.evt == 40:
+		calcIdx = 0
+	else:
+		calcIdx = (control.evt - 40) #/ 4
+
+	#sequenceName = guiSequenceList.controls[calcIdx].controls[0].label
+	#print "calcIDx"
+	#boneName = guiBoneList.controls[calcIdx].controls[0].name
+	#realItem = control.evt - 40 #- (calcIdx*4)
+	#sequencePrefs = getSequenceKey(sequenceName)
+	
+
+	
+	real_name = control.name.upper()
+	print "real_name = ", real_name
+	if control.state:
+		# Remove entry from BannedBones
+		for i in range(0, len(Prefs['BannedBones'])):
+			if Prefs['BannedBones'][i] == real_name:
+				print "Removed banned bone %s" % real_name
+				del Prefs['BannedBones'][i]
+				break
+	else:
+		Prefs['BannedBones'].append(real_name)
+		print "Added banned bone %s" % real_name
+
+
 
 def createSequenceListitem(seq_name, startEvent):
 	sequencePrefs = getSequenceKey(seq_name)
@@ -920,6 +953,44 @@ def createSequenceListitem(seq_name, startEvent):
 	
 	return guiContainer
 
+# new
+def createBoneListitem(bone1, bone2, bone3, bone4, startEvent):
+	#sequencePrefs = getSequenceKey(seq_name)
+	# Note on positions:
+	# It quicker to assign these here, as there is no realistic chance scaling being required.
+	guiContainer = Common_Gui.BasicContainer("", None, None)
+	
+	# testing new fade modes for sequence list items
+	guiContainer.fade_mode = 8  # same as 2 but with a brighter endcolor, easier on the eyes.
+	#guiName = Common_Gui.SimpleText("", seq_name, None, None)
+	#guiName.x, guiName.y = 5, 5
+	if bone1 != None:
+		guiBone1 = Common_Gui.ToggleButton(bone1, bone1, startEvent, guiBoneListItemCallback, None)
+		guiBone1.x, guiBone1.y = 0, 0
+		guiBone1.width, guiBone1.height = 70, 19
+		guiBone1.state = True
+		guiContainer.addControl(guiBone1)
+	if bone2 != None:
+		guiBone2 = Common_Gui.ToggleButton(bone2, bone2, startEvent+1, guiBoneListItemCallback, None)
+		guiBone2.x, guiBone2.y = 71, 0
+		guiBone2.width, guiBone2.height = 70, 19
+		guiBone2.state = True
+		guiContainer.addControl(guiBone2)
+	if bone3 != None:
+		guiBone3 = Common_Gui.ToggleButton(bone3, bone3, startEvent+3, guiBoneListItemCallback, None)
+		guiBone3.x, guiBone3.y = 142, 0
+		guiBone3.width, guiBone3.height = 70, 19
+		guiBone3.state = True
+		guiContainer.addControl(guiBone3)
+	if bone4 != None:
+		guiBone4 = Common_Gui.ToggleButton(bone4, bone4, startEvent+4, guiBoneListItemCallback, None)
+		guiBone4.x, guiBone4.y = 213, 0
+		guiBone4.width, guiBone4.height = 70, 19
+		guiBone4.state = True
+		guiContainer.addControl(guiBone4)	
+	return guiContainer
+
+
 def populateSequenceList():
 	global guiSequenceList
 	actions = Armature.NLA.GetActions()
@@ -955,10 +1026,20 @@ def populateBoneGrid():
 	shapeTree = export_tree.find("SHAPE")
 	if shapeTree == None: return
 	evtNo = 40
+	count = 0
+	names = []
 	for name in shapeTree.getShapeBoneNames():
-		guiBoneList.addControl(Common_Gui.ToggleButton(name, "Toggle Status of " + name, evtNo, guiBoneGridCallback, None))
-		guiBoneList.controls[-1].state = not (name.upper() in Prefs['BannedBones'])
-		evtNo += 1
+		names.append(name)
+		if len(names) == 4:
+			guiBoneList.addControl(createBoneListitem(names[0],names[1],names[2],names[3], evtNo))
+			#guiBoneList.addControl(Common_Gui.ToggleButton(name, "Toggle Status of " + name, evtNo, guiBoneGridCallback, None))
+			guiBoneList.controls[count].controls[0].state = not (guiBoneList.controls[count].controls[0].name.upper() in Prefs['BannedBones'])
+			guiBoneList.controls[count].controls[1].state = not (guiBoneList.controls[count].controls[1].name.upper() in Prefs['BannedBones'])
+			guiBoneList.controls[count].controls[2].state = not (guiBoneList.controls[count].controls[2].name.upper() in Prefs['BannedBones'])
+			guiBoneList.controls[count].controls[3].state = not (guiBoneList.controls[count].controls[3].name.upper() in Prefs['BannedBones'])
+			evtNo += 5
+			count += 1
+			names = []
 		
 def clearBoneGrid():
 	global guiBoneList
@@ -1555,7 +1636,8 @@ def initGui():
 	
 	# Armature tab controls
 	guiBoneText =  Common_Gui.SimpleText("armature.bantitle", "Bones that should be exported :", None, guiArmatureResize)
-	guiBoneList = Common_Gui.BasicGrid("armature.banlist", None, guiArmatureResize)
+	#guiBoneList = Common_Gui.BasicGrid("armature.banlist", None, guiArmatureResize)
+	guiBoneList = Common_Gui.BoneListContainer("armature.banlist", None, guiArmatureResize)
 	guiArmatureRootToggle = Common_Gui.ToggleButton("Collapse Root Transform", "Collapse root transform when exporting Armature's", 6, guiArmatureCallback, guiArmatureResize)
 	guiArmatureRootToggle.state = False # Prefs['CollapseRootTransform']
 	guiArmatureRootToggle.visible = False # TODO: remove this control - Joe.
