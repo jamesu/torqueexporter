@@ -34,7 +34,7 @@ from Blender import NMesh
 #-------------------------------------------------------------------------------------------------
 
 class BlenderMesh(DtsMesh):
-	def __init__(self, shape, msh,  rootBone, scaleFactor, matrix, isCollision=False):
+	def __init__(self, shape, msh,  rootBone, scaleFactor, matrix, isCollision=False, useLists = False):
 		DtsMesh.__init__(self)
 		#self.vertsIndexMap = []		# Map of TexCoord index <> Vertex index map
 		self.bVertList = [] # list of blender mesh vertex indices ordered by value, for fast searching
@@ -67,14 +67,29 @@ class BlenderMesh(DtsMesh):
 			self.dVertList = []
 			# Insert Polygons
 
+			# if we're using triangle lists, insert one primitive first since that's all we'll need.
+			if useLists:
+				# Insert primitive
+				pr = Primitive(len(self.indices), 3, 0)
+				pr.matindex = pr.Triangles | pr.Indexed
+				# clear our duplicate vertex search structures
+				#if not isCollision:
+				#	self.bVertList = []
+				#	self.dVertList = []
+			
 			# Create primitive
-			pr = Primitive(len(self.indices), 3, 0)
-			pr.matindex = pr.Triangles | pr.Indexed
+			#pr = Primitive(len(self.indices), 3, 0)
+			#pr.matindex = pr.Triangles | pr.Indexed
 
 			for face in group:
 				if len(face.v) < 3:
 					continue # skip to next face
 
+				# if we're not using triangle lists, insert one primitive per face
+				if not useLists:
+					# Insert primitive
+					pr = Primitive(len(self.indices), 3, 0)
+					pr.matindex = pr.Triangles | pr.Indexed
 				
 				useSticky = False
 				# Find the image associated with the face on the mesh, if any
@@ -89,6 +104,8 @@ class BlenderMesh(DtsMesh):
 				else:
 					matIndex = pr.NoMaterial # Nope, no material
 				pr.matindex |= matIndex
+				
+				# we've got a quad
 				if (len(face.v) > 3):
 					# convert the quad into two triangles
 					# first triangle
@@ -96,10 +113,27 @@ class BlenderMesh(DtsMesh):
 					self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,1, useSticky))
 					self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,0, useSticky))
 
+					# if we're not using triangle lists, first insert the primitive for the first triangle
+					if not useLists: self.primitives.append(pr)
+
 					# Duplicate first triangle in reverse order if doublesided
 					if ((msh.mode & NMesh.Modes.TWOSIDED) or (face.mode & NMesh.FaceModes.TWOSIDE)) and not ignoreDblSided:
-						for i in range((len(self.indices)-1),(len(self.indices)-4),-1):
-							self.indices.append(self.indices[i])
+						#for i in range((len(self.indices)-1),(len(self.indices)-4),-1):
+						#	self.indices.append(self.indices[i])
+						if not useLists:
+							#for i in range((pr.firstElement+pr.numElements)-1,pr.firstElement-1,-1):
+							print "*** Adding backfacing triangle..."
+							for i in range((pr.firstElement+pr.numElements)-1,pr.firstElement-1,-1):
+								print "appending index", i
+								self.indices.append(self.indices[i])
+							# insert a new primitive for the back facing triangle
+							self.primitives.append(Primitive((pr.firstElement+pr.numElements),pr.numElements,pr.matindex))
+							print "*** Done adding backfacing triangle..."
+						else:
+							for i in range((len(self.indices)-1),(len(self.indices)-4),-1):
+								self.indices.append(self.indices[i])
+					
+					if not useLists: pr = Primitive(len(self.indices), 3, pr.matindex)							
 
 					# second triangle
 					self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,3, useSticky))
@@ -111,16 +145,31 @@ class BlenderMesh(DtsMesh):
 					self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,1, useSticky))
 					self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,0, useSticky))
 					
+				if not useLists:
+					self.primitives.append(pr)					
 						
 				# Duplicate triangle in reverse order if doublesided
 				if ((msh.mode & NMesh.Modes.TWOSIDED) or (face.mode & NMesh.FaceModes.TWOSIDE)) and not ignoreDblSided: 
-					for i in range((len(self.indices)-1),(len(self.indices)-4),-1):
-						self.indices.append(self.indices[i])
+					#for i in range((len(self.indices)-1),(len(self.indices)-4),-1):
+					#	self.indices.append(self.indices[i])
+					if not useLists:
+						#for i in range((pr.firstElement+pr.numElements)-1,pr.firstElement,-1):
+						for i in range((pr.firstElement+pr.numElements)-1,pr.firstElement-1,-1):
+							self.indices.append(self.indices[i])
+						self.primitives.append(Primitive(pr.firstElement+pr.numElements,pr.numElements,pr.matindex))
+					else:
+						for i in range((len(self.indices)-1),(len(self.indices)-4),-1):
+							self.indices.append(self.indices[i])
+
+			if useLists:
+				# Finally add the primitive
+				pr.numElements = (len(self.indices) - pr.firstElement) #-1
+				self.primitives.append(pr)
 
 
 			# Finally add primitive
-			pr.numElements = (len(self.indices) - pr.firstElement) #-1			
-			if pr.numElements != 0: self.primitives.append(pr)
+			#pr.numElements = (len(self.indices) - pr.firstElement) #-1			
+			#if pr.numElements != 0: self.primitives.append(pr)
 
 		
 		# Determine shape type based on vertex weights
