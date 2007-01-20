@@ -762,7 +762,6 @@ class BasicGrid(BasicContainer):
 			
 
 
-#class ScrollableGridContainer(BasicGrid, ListContainer):
 class BoneListContainer(ListContainer):
 	'''
 	This class implements a fancy grid control.
@@ -774,6 +773,32 @@ class BoneListContainer(ListContainer):
 		ListContainer.__init__(self, name, callback, resize_callback)
 		self.minimumChildHeight = 20
 		self.childHeight = 20	# Height of each child item
+
+	def selectItem(self, idx):
+		return
+		if len(self.controls) == 0: return
+		
+		if self.itemIndex != -1: 
+			curCol = curTheme.get('ui').menu_item
+			curTextCol = curTheme.get('ui').menu_text
+			self.controls[self.itemIndex].color = [curCol[0]/255.0, curCol[1]/255.0, curCol[2]/255.0, curCol[3]/255.0]
+			if self.controls[self.itemIndex].nested:
+				for c in self.controls[self.itemIndex].controls:
+					if c.__class__ == SimpleText:
+							c.color = [curTextCol[0]/255.0, curTextCol[1]/255.0, curTextCol[2]/255.0, curTextCol[3]/255.0]
+		
+		if (idx >= len(self.controls)): return
+		self.itemIndex = idx
+		if idx != -1:
+			curCol = curTheme.get('ui').menu_hilite
+			curTextCol = curTheme.get('ui').menu_text_hi
+			self.controls[idx].color = [curCol[0]/255.0, curCol[1]/255.0, curCol[2]/255.0, curCol[3]/255.0]
+			if self.controls[self.itemIndex].nested:
+				for c in self.controls[self.itemIndex].controls:
+					if c.__class__ == SimpleText:
+						c.color = [curTextCol[0]/255.0, curTextCol[1]/255.0, curTextCol[2]/255.0, curTextCol[3]/255.0]
+
+
 
 # Util class for blender progress bar
 '''
