@@ -122,13 +122,10 @@ class BlenderMesh(DtsMesh):
 						#	self.indices.append(self.indices[i])
 						if not useLists:
 							#for i in range((pr.firstElement+pr.numElements)-1,pr.firstElement-1,-1):
-							print "*** Adding backfacing triangle..."
 							for i in range((pr.firstElement+pr.numElements)-1,pr.firstElement-1,-1):
-								print "appending index", i
 								self.indices.append(self.indices[i])
 							# insert a new primitive for the back facing triangle
 							self.primitives.append(Primitive((pr.firstElement+pr.numElements),pr.numElements,pr.matindex))
-							print "*** Done adding backfacing triangle..."
 						else:
 							for i in range((len(self.indices)-1),(len(self.indices)-4),-1):
 								self.indices.append(self.indices[i])
