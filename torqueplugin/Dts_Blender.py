@@ -154,6 +154,9 @@ def loadOldTextPrefs(text_doc):
 				elif cur_token == "DTSVersion":
 					tok.advanceToken(False)
 					Prefs['DTSVersion'] = int(tok.getToken())
+				#elif cur_token == "PrimType":
+				#	tok.advanceToken(False)
+				#	Prefs['PrimType'] = (tok.getToken())
 				elif cur_token == "StripMeshes":
 					tok.advanceToken(False)
 					Prefs['StripMeshes'] = int(tok.getToken())
@@ -303,7 +306,8 @@ def initPrefs():
 	Prefs['DTSVersion'] = 24
 	Prefs['WriteShapeScript'] = False
 	Prefs['Sequences'] = {}
-	Prefs['StripMeshes'] = False
+	#Prefs['StripMeshes'] = False
+	Prefs['PrimType'] = 'Tris'
 	Prefs['MaxStripSize'] = 6
 	Prefs['ClusterDepth'] = 1
 	Prefs['AlwaysWriteDepth'] = False
@@ -337,7 +341,7 @@ def loadPrefs():
 				
 		if not success:
 			# No registry, no text, so need a new Prefs
-			print "No Registry and no text object's, must be new."
+			print "No Registry and no text objects, must be new."
 		else:
 			# Ok, so now we can load the text document
 			if newConfig:
@@ -649,7 +653,7 @@ class ShapeTree(SceneTree):
 				# Finalize static meshes, do triangle strips
 				self.Shape.finalizeObjects()
 				progressBar.update()
-				if Prefs['StripMeshes']:
+				if Prefs['PrimType'] == "TriStrips":
 					self.Shape.stripMeshes(Prefs['MaxStripSize'])
 				progressBar.update()
 				
@@ -1276,24 +1280,39 @@ def guiGeneralSelectorCallback(filename):
 def guiGeneralCallback(control):
 	global Prefs
 	global guiGeneralTab
-	
+	global guiTriListsButton
+	global guiStripMeshesButton
+	global guiTriMeshesButton
 	if control.evt == 6:
-		Prefs['StripMeshes'] = control.state
-	elif control.evt == 7:
-		Prefs['MaxStripSize'] = control.value
-	elif control.evt == 8:
-		Prefs['AlwaysWriteDepth'] = control.state
+		Prefs['PrimType'] = "Tris"
+		guiTriListsButton.state = False
+		guiStripMeshesButton.state = False
+		guiTriMeshesButton.state = True
+	if control.evt == 7:
+		Prefs['PrimType'] = "TriLists"
+		guiTriListsButton.state = True
+		guiStripMeshesButton.state = False
+		guiTriMeshesButton.state = False
+	if control.evt == 8:
+		Prefs['PrimType'] = "TriStrips"
+		guiTriListsButton.state = False
+		guiStripMeshesButton.state = True
+		guiTriMeshesButton.state = False
 	elif control.evt == 9:
-		Prefs['ClusterDepth'] = control.value
+		Prefs['MaxStripSize'] = control.value
 	elif control.evt == 10:
-		Prefs['Billboard']['Enabled'] = control.state
+		Prefs['AlwaysWriteDepth'] = control.state
 	elif control.evt == 11:
-		Prefs['Billboard']['Equator'] = control.value
+		Prefs['ClusterDepth'] = control.value
 	elif control.evt == 12:
-		Prefs['Billboard']['Polar'] = control.value
+		Prefs['Billboard']['Enabled'] = control.state
 	elif control.evt == 13:
-		Prefs['Billboard']['PolarAngle'] = control.value
+		Prefs['Billboard']['Equator'] = control.value
 	elif control.evt == 14:
+		Prefs['Billboard']['Polar'] = control.value
+	elif control.evt == 15:
+		Prefs['Billboard']['PolarAngle'] = control.value
+	elif control.evt == 16:
 		val = int(control.value)
 		# need to constrain this to be a power of 2
 		# it would be easier just to use a combo box, but this is more fun.
@@ -1306,18 +1325,18 @@ def guiGeneralCallback(control):
 			val = int(2**math.floor(math.log(control.value,2)))
 		control.value = val
 		Prefs['Billboard']['Dim'] = control.value
-	elif control.evt == 15:
+	elif control.evt == 17:
 		Prefs['Billboard']['IncludePoles'] = control.state
-	elif control.evt == 16:
-		Prefs['Billboard']['Size'] = control.value
-	if control.evt == 17:
-		Prefs['WriteShapeScript'] = control.state
 	elif control.evt == 18:
+		Prefs['Billboard']['Size'] = control.value
+	if control.evt == 19:
+		Prefs['WriteShapeScript'] = control.state
+	elif control.evt == 20:
 		Prefs['exportBasename'] = basename(control.value)
 		Prefs['exportBasepath'] = basepath(control.value)
-	elif control.evt == 19:
+	elif control.evt == 21:
 		Blender.Window.FileSelector (guiGeneralSelectorCallback, 'Select destination and filename')
-	elif control.evt == 20:
+	elif control.evt == 22:
 		Prefs['exportBasename'] = basename(Blender.Get("filename"))
 		Prefs['exportBasepath'] = basepath(Blender.Get("filename"))
 		
@@ -1327,9 +1346,9 @@ def guiGeneralCallback(control):
 		else:
 			pathSep = "/"
 		guiGeneralTab.controls[16].value = Prefs['exportBasepath'] + pathSep + Prefs['exportBasename']
-	elif control.evt == 21:
+	elif control.evt == 23:
 		Prefs['DTSVersion'] = control.value
-	elif control.evt == 22:
+	elif control.evt == 24:
 		Prefs['TSEMaterial'] = control.state
 
 def guiBaseResize(control, newwidth, newheight):
@@ -1491,68 +1510,76 @@ def guiGeneralResize(control, newwidth, newheight):
 	elif control.evt == 6:
 		control.x = 10
 		control.y = newheight - 30 - control.height
-		control.width = 50
+		control.width = 90
 	elif control.evt == 7:
-		control.x = 62
+		control.x = 102
 		control.y = newheight - 30 - control.height
-		control.width = 180
+		control.width = 90
 	elif control.evt == 8:
-		control.x = 10
-		control.y = newheight - 80 - control.height
-		control.width = 80
+		control.x = 194
+		control.y = newheight - 30 - control.height
+		control.width = 90
 	elif control.evt == 9:
-		control.x = 92
-		control.y = newheight - 80 - control.height
+		control.x = 286
+		control.y = newheight - 30 - control.height
 		control.width = 180
 	elif control.evt == 10:
 		control.x = 10
+		control.y = newheight - 80 - control.height
+		control.width = 80
+	elif control.evt == 11:
+		control.x = 92
+		control.y = newheight - 80 - control.height
+		control.width = 180
+	elif control.evt == 12:
+		control.x = 10
 		control.y = newheight - 130 - control.height
 		control.width = 50
-	elif control.evt == 11:
-		control.x = 62
-		control.y = newheight - 130 - control.height
-		control.width = 100
-	elif control.evt == 12:
-		control.x = 62
-		control.y = newheight - 152 - control.height
-		control.width = 100
 	elif control.evt == 13:
-		control.x = 164
-		control.y = newheight - 152 - control.height
-		control.width = 200
-	elif control.evt == 14:
-		control.x = 366
+		control.x = 62
 		control.y = newheight - 130 - control.height
+		control.width = 100
+	elif control.evt == 14:
+		control.x = 62
+		control.y = newheight - 152 - control.height
 		control.width = 100
 	elif control.evt == 15:
+		control.x = 164
+		control.y = newheight - 152 - control.height
+		control.width = 200
+	elif control.evt == 16:
+		control.x = 366
+		control.y = newheight - 130 - control.height
+		control.width = 100
+	elif control.evt == 17:
 		control.x = 366
 		control.y = newheight - 152 - control.height
 		control.width = 100
-	elif control.evt == 16:
+	elif control.evt == 18:
 		control.x = 164
 		control.y = newheight - 130 - control.height
 		control.width = 200
-	elif control.evt == 17:
+	elif control.evt == 19:
 		control.x = 356
 		control.y = newheight - 260 - control.height
 		control.width = 122
-	elif control.evt == 18:
+	elif control.evt == 20:
 		control.x = 10
 		control.y = newheight - 260 - control.height
 		control.width = 220
-	elif control.evt == 19:
+	elif control.evt == 21:
 		control.x = 232
 		control.y = newheight - 260 - control.height
 		control.width = 50
-	elif control.evt == 20:
+	elif control.evt == 22:
 		control.x = 284
 		control.y = newheight - 260 - control.height
 		control.width = 70
-	elif control.evt == 21:
+	elif control.evt == 23:
 		control.x = 356
 		control.y = newheight - 304 - control.height
 		control.width = 122
-	elif control.evt == 22:
+	elif control.evt == 24:
 		control.x = 356
 		control.y = newheight - 282 - control.height
 		control.width = 122
@@ -1572,7 +1599,8 @@ def initGui():
 	global Version, Prefs
 	global guiSequenceTab, guiArmatureTab, guiGeneralTab, guiAboutTab, guiTabBar, guiHeaderTab
 	global guiSequenceList, guiSequenceOptions, guiBoneList
-		
+	global guiTriListsButton, guiStripMeshesButton, guiTriMeshesButton
+
 	Common_Gui.initGui(exit_callback)
 	
 	# Main tab controls
@@ -1643,57 +1671,67 @@ def initGui():
 	guiArmatureRootToggle.visible = False # TODO: remove this control - Joe.
 	
 	# General tab controls
-	guiStripText = Common_Gui.SimpleText("shape.strip", "Triangle Stripping", None, guiGeneralResize)
-	guiStripMeshesButton = Common_Gui.ToggleButton("Enable", "Generate triangle strips for meshes", 6, guiGeneralCallback, guiGeneralResize)
-	guiStripMeshesButton.state = Prefs['StripMeshes']
-	guiMaxStripSizeSlider = Common_Gui.NumberSlider("Strip Size ", "Maximum size of generated triangle strips", 7, guiGeneralCallback, guiGeneralResize)
+	guiStripText = Common_Gui.SimpleText("shape.strip", "Geometry type", None, guiGeneralResize)
+	# Joe - Ugly but effective
+	try: x = Prefs['PrimType']
+	except KeyError: Prefs['PrimType'] = "Tris"
+	guiTriMeshesButton = Common_Gui.ToggleButton("Triangles", "Generate individual triangles for meshes", 6, guiGeneralCallback, guiGeneralResize)
+	if Prefs['PrimType'] == "Tris": guiTriMeshesButton.state = True
+	else: guiTriMeshesButton.state = False
+	guiTriListsButton = Common_Gui.ToggleButton("Triangle Lists", "Generate triangle lists for meshes", 7, guiGeneralCallback, guiGeneralResize)
+	if Prefs['PrimType'] == "TriLists": guiTriListsButton.state = True
+	else: guiTriListsButton.state = False
+	guiStripMeshesButton = Common_Gui.ToggleButton("Triangle Strips", "Generate triangle strips for meshes", 8, guiGeneralCallback, guiGeneralResize)
+	if Prefs['PrimType'] == "TriStrips": guiStripMeshesButton.state = True
+	else: guiStripMeshesButton.state = False
+	guiMaxStripSizeSlider = Common_Gui.NumberSlider("Strip Size ", "Maximum size of generated triangle strips", 9, guiGeneralCallback, guiGeneralResize)
 	guiMaxStripSizeSlider.min, guiMaxStripSizeSlider.max = 3, 30
 	guiMaxStripSizeSlider.value = Prefs['MaxStripSize']
 	# --
 	guiClusterText = Common_Gui.SimpleText("shape.cluster", "Cluster Mesh", None, guiGeneralResize)
-	guiClusterWriteDepth = Common_Gui.ToggleButton("Write Depth ", "Always Write the Depth on Cluster meshes", 8, guiGeneralCallback, guiGeneralResize)
+	guiClusterWriteDepth = Common_Gui.ToggleButton("Write Depth ", "Always Write the Depth on Cluster meshes", 10, guiGeneralCallback, guiGeneralResize)
 	guiClusterWriteDepth.state = Prefs['AlwaysWriteDepth']
-	guiClusterDepth = Common_Gui.NumberSlider("Depth", "Maximum depth Clusters meshes should be calculated to", 9, guiGeneralCallback, guiGeneralResize)
+	guiClusterDepth = Common_Gui.NumberSlider("Depth", "Maximum depth Clusters meshes should be calculated to", 11, guiGeneralCallback, guiGeneralResize)
 	guiClusterDepth.min, guiClusterDepth.max = 3, 30
 	guiClusterDepth.value = Prefs['ClusterDepth']
 	# --
 	guiBillboardText = Common_Gui.SimpleText("shape.billboard", "Billboard", None, guiGeneralResize)
-	guiBillboardButton = Common_Gui.ToggleButton("Enable", "Add a billboard detail level to the shape", 10, guiGeneralCallback, guiGeneralResize)
+	guiBillboardButton = Common_Gui.ToggleButton("Enable", "Add a billboard detail level to the shape", 12, guiGeneralCallback, guiGeneralResize)
 	guiBillboardButton.state = Prefs['Billboard']['Enabled']
-	guiBillboardEquator = Common_Gui.NumberPicker("Equator", "Number of images around the equator", 11, guiGeneralCallback, guiGeneralResize)
+	guiBillboardEquator = Common_Gui.NumberPicker("Equator", "Number of images around the equator", 13, guiGeneralCallback, guiGeneralResize)
 	guiBillboardEquator.min, guiBillboardEquator.max = 2, 64
 	guiBillboardEquator.value = Prefs['Billboard']['Equator']
-	guiBillboardPolar = Common_Gui.NumberPicker("Polar", "Number of images around the polar", 12, guiGeneralCallback, guiGeneralResize)
+	guiBillboardPolar = Common_Gui.NumberPicker("Polar", "Number of images around the polar", 14, guiGeneralCallback, guiGeneralResize)
 	guiBillboardPolar.min, guiBillboardPolar.max = 3, 64
 	guiBillboardPolar.value = Prefs['Billboard']['Polar']
-	guiBillboardPolarAngle = Common_Gui.NumberSlider("Polar Angle", "Angle to take polar images at", 13, guiGeneralCallback, guiGeneralResize)
+	guiBillboardPolarAngle = Common_Gui.NumberSlider("Polar Angle", "Angle to take polar images at", 15, guiGeneralCallback, guiGeneralResize)
 	guiBillboardPolarAngle.min, guiBillboardPolarAngle.max = 0.0, 45.0
 	guiBillboardPolarAngle.value = Prefs['Billboard']['PolarAngle']
-	guiBillboardDim = Common_Gui.NumberPicker("Dim", "Dimensions of billboard images", 14, guiGeneralCallback, guiGeneralResize)
+	guiBillboardDim = Common_Gui.NumberPicker("Dim", "Dimensions of billboard images", 16, guiGeneralCallback, guiGeneralResize)
 	guiBillboardDim.min, guiBillboardDim.max = 16, 128
 	guiBillboardDim.value = Prefs['Billboard']['Dim']
-	guiBillboardPoles = Common_Gui.ToggleButton("Poles", "Take images at the poles", 15, guiGeneralCallback, guiGeneralResize)
+	guiBillboardPoles = Common_Gui.ToggleButton("Poles", "Take images at the poles", 17, guiGeneralCallback, guiGeneralResize)
 	guiBillboardPoles.state = Prefs['Billboard']['IncludePoles']
-	guiBillboardSize = Common_Gui.NumberSlider("Size", "Size of billboard's detail level", 16, guiGeneralCallback, guiGeneralResize)
+	guiBillboardSize = Common_Gui.NumberSlider("Size", "Size of billboard's detail level", 18, guiGeneralCallback, guiGeneralResize)
 	guiBillboardSize.min, guiBillboardSize.max = 0.0, 128.0
 	guiBillboardSize.value = Prefs['Billboard']['Size']
 	# --
 	guiOutputText = Common_Gui.SimpleText("shape.output", "Output", None, guiGeneralResize)
-	guiShapeScriptButton =  Common_Gui.ToggleButton("Write Shape Script", "Write .cs script that details the .dts and all .dsq sequences", 17, guiGeneralCallback, guiGeneralResize)
-	guiCustomFilename = Common_Gui.TextBox("Filename: ", "Filename to write to", 18, guiGeneralCallback, guiGeneralResize)
+	guiShapeScriptButton =  Common_Gui.ToggleButton("Write Shape Script", "Write .cs script that details the .dts and all .dsq sequences", 19, guiGeneralCallback, guiGeneralResize)
+	guiCustomFilename = Common_Gui.TextBox("Filename: ", "Filename to write to", 20, guiGeneralCallback, guiGeneralResize)
 	guiCustomFilename.length = 255
 	if "\\" in Prefs['exportBasepath']:
 		pathSep = "\\"
 	else:
 		pathSep = "/"
 	guiCustomFilename.value = Prefs['exportBasepath'] + pathSep + Prefs['exportBasename'] + ".dts"
-	guiCustomFilenameSelect = Common_Gui.BasicButton("Select...", "Select a filename and destination for export", 19, guiGeneralCallback, guiGeneralResize)
-	guiCustomFilenameDefaults = Common_Gui.BasicButton("Default", "Reset filename and destination to defaults", 20, guiGeneralCallback, guiGeneralResize)
+	guiCustomFilenameSelect = Common_Gui.BasicButton("Select...", "Select a filename and destination for export", 21, guiGeneralCallback, guiGeneralResize)
+	guiCustomFilenameDefaults = Common_Gui.BasicButton("Default", "Reset filename and destination to defaults", 22, guiGeneralCallback, guiGeneralResize)
 	
-	guiCustomDTSVersion = Common_Gui.NumberPicker("Dts Version", "Version of DTS file to export", 21, guiGeneralCallback, guiGeneralResize)
+	guiCustomDTSVersion = Common_Gui.NumberPicker("Dts Version", "Version of DTS file to export", 23, guiGeneralCallback, guiGeneralResize)
 	guiCustomDTSVersion.min, guiCustomDTSVersion.max = 24, 25
 	
-	guiTSEMaterial = Common_Gui.ToggleButton("Write TSE Materials", "Write materials and scripts geared for TSE", 22, guiGeneralCallback, guiGeneralResize)
+	guiTSEMaterial = Common_Gui.ToggleButton("Write TSE Materials", "Write materials and scripts geared for TSE", 24, guiGeneralCallback, guiGeneralResize)
 	guiTSEMaterial.state = Prefs['TSEMaterial']
 	
 	# About tab controls
@@ -1786,7 +1824,9 @@ def initGui():
 	
 	Common_Gui.addGuiControl(guiGeneralTab)
 	guiGeneralTab.addControl(guiStripText)
-	guiGeneralTab.addControl(guiStripMeshesButton)
+	guiGeneralTab.addControl(guiTriMeshesButton)
+	guiGeneralTab.addControl(guiTriListsButton)
+	guiGeneralTab.addControl(guiStripMeshesButton)	
 	guiGeneralTab.addControl(guiMaxStripSizeSlider)
 	guiGeneralTab.addControl(guiClusterText)
 	guiGeneralTab.addControl(guiClusterDepth)
@@ -1815,6 +1855,7 @@ def exit_callback():
 	Torque_Util.dump_setout("stdout")
 	clearSequenceList()
 	clearBoneGrid()
+	savePrefs()
 
 '''
 	Entry Point
