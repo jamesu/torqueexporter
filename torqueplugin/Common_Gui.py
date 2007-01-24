@@ -595,7 +595,8 @@ class ListContainer(BasicContainer):
 			
 	def getIdealThumbPosition(self):
 		if len(self.controls) <= self.maxVisibleControls(): self.thumbPosition = self.thumbHeight
-		else: self.thumbPosition = self.height - int(( ((self.height - self.thumbHeight) / (len(self.controls) - self.maxVisibleControls()) ) * self.scrollPosition))
+		#else: self.thumbPosition = self.height - int(( ((self.height - self.thumbHeight) / (len(self.controls) - self.maxVisibleControls()) ) * self.scrollPosition))
+		else: self.thumbPosition = self.height - self.thumbHeight - int(( ((self.height - (self.thumbHeight * 3)) / (len(self.controls) - self.maxVisibleControls()) ) * self.scrollPosition))
 			
 	def selectItem(self, idx):
 		if len(self.controls) == 0: return
@@ -637,29 +638,58 @@ class ListContainer(BasicContainer):
 		# Distinguished area
 		BGL.glColor4f(self.borderColor[0],self.borderColor[1],self.borderColor[2], self.borderColor[3])
 		BGL.glRecti(real_x+self.width-self.barWidth, real_y, real_x+self.width, real_y+self.height)
-		
 		BGL.glDisable(BGL.GL_BLEND)
+
+		# Draw the arrowheads for the scrolling list
+		BGL.glColor4f(self.color[0],self.color[1],self.color[2], self.color[3])
+		BGL.glBegin(BGL.GL_TRIANGLES)
+		BGL.glVertex2i (real_x + self.width - self.barWidth, real_y + self.height - self.thumbHeight)
+		BGL.glVertex2i (real_x + self.width - (self.barWidth >> 1), real_y + self.height)
+		BGL.glVertex2i (real_x + self.width, real_y + self.height - self.thumbHeight)
+
+		BGL.glVertex2i (real_x + self.width - self.barWidth, real_y + self.thumbHeight)
+		BGL.glVertex2i (real_x + self.width - (self.barWidth >> 1), real_y)
+		BGL.glVertex2i (real_x + self.width, real_y + self.thumbHeight)
+		BGL.glEnd()
 		 
 		# Now draw the scrollbar, if required
 		if self.needYScroll():
 			# Marker
+			# Draw a line around the thumb to highlight it better.
+			BGL.glColor4f(self.color[0] - 0.2,self.color[1] - 0.2,self.color[2] - 0.2, self.color[3])
+			BGL.glRecti(real_x+self.width-self.barWidth, real_y+self.thumbPosition-self.thumbHeight, real_x+self.width, real_y+self.thumbPosition)
 			BGL.glColor4f(self.color[0],self.color[1],self.color[2], self.color[3])
 			#print "!!"+str(self.scrollPosition)
-			BGL.glRecti(real_x+self.width-self.barWidth, real_y+self.thumbPosition-self.thumbHeight, real_x+self.width, real_y+self.thumbPosition)
+			#BGL.glRecti(real_x+self.width-self.barWidth, real_y+self.thumbPosition-self.thumbHeight, real_x+self.width, real_y+self.thumbPosition)
+			BGL.glRecti(real_x+self.width-self.barWidth + 2, real_y+self.thumbPosition-self.thumbHeight + 1, real_x+self.width - 1, real_y+self.thumbPosition - 1)
+
 		else:
 			self.scrollPosition = 0
 		
 		# Draw items we need
 		curY = self.height - self.childHeight
+		idx = 0
 		for control in self.getVisibleControls():
 			control.y = curY
+			orgColor = control.color
+			if idx != self.itemIndex:
+				if control.fade_mode == 0:
+					if (idx & 1) == 0:
+						control.color = [ orgColor [0] - 0.05, orgColor [1] - 0.05,
+								  orgColor [2] - 0.05, orgColor [3] ]
+					else:
+						control.color = [ orgColor [0] + 0.05, orgColor [1] + 0.05,
+								  orgColor [2] + 0.05, orgColor [3] ]
 			control.onDraw([real_x, real_y])
+			control.color = orgColor
 			curY -= self.childHeight
+			idx += 1
 			
 		# Draw border
 		if self.borderColor != None:
 			BGL.glBegin(BGL.GL_LINES)
-			BGL.glColor4f(self.borderColor[0],self.borderColor[1],self.borderColor[2], self.borderColor[3])
+			BGL.glColor4f(self.borderColor[0] - 0.2,self.borderColor[1] - 0.2, self.borderColor[2] - 0.2, self.borderColor[3])
+			#BGL.glColor4f(self.borderColor[0],self.borderColor[1],self.borderColor[2], self.borderColor[3])
 			# Left up
 			BGL.glVertex2d(real_x,real_y)
 			BGL.glVertex2d(real_x,real_y+self.height)

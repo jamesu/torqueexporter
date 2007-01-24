@@ -918,7 +918,8 @@ def createSequenceListitem(seq_name, startEvent):
 	guiContainer = Common_Gui.BasicContainer("", None, None)
 	
 	# testing new fade modes for sequence list items
-	guiContainer.fade_mode = 8  # same as 2 but with a brighter endcolor, easier on the eyes.
+	#guiContainer.fade_mode = 8  # same as 2 but with a brighter endcolor, easier on the eyes.
+	guiContainer.fade_mode = 0  # flat color
 	guiName = Common_Gui.SimpleText("", seq_name, None, None)
 	guiName.x, guiName.y = 5, 5
 	guiExport = Common_Gui.ToggleButton("Export", "Export Sequence", startEvent, guiSequenceListItemCallback, None)
@@ -1429,7 +1430,8 @@ def guiSequenceResize(control, newwidth, newheight):
 		if control.name == "sequence.list":
 			control.x = 10
 			control.y = 30
-			control.height = newheight - 55
+			#control.height = newheight - 55
+			control.height = newheight - 70
 			control.width = 300
 		elif control.name == "sequence.title":
 			control.x = 10
