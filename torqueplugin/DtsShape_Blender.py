@@ -351,6 +351,8 @@ class BlenderShape(DtsShape):
 			mat = self.collapseBlenderTransform(o)
 			
 			# Import Mesh, process flags
+			try: x = self.preferences['PrimType']
+			except KeyError: self.preferences['PrimType'] = "Tris"
 			tmsh = BlenderMesh( self, mesh_data, 0, 1.0, mat, False, (self.preferences['PrimType'] == "TriLists" or self.preferences['PrimType'] == "TriStrips") )
 			if len(names) > 1: tmsh.setBlenderMeshFlags(names[1:])
 			
