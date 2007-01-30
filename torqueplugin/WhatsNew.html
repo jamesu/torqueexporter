@@ -7,6 +7,34 @@
 </head>
 <body>
 <h1>Torque Exporter Plug in for Blender</h1>
+<br>
+<h2>What's New for version 0.94</h2>
+<ul>
+  <li>Animation export code updated to work with the Blender 2.43 (is
+still compatible with Blender 2.42 as well).<br>
+  </li>
+  <li>Changed the bone grid control in the Armatures panel of the
+exporter GUI into a scrollable list, and added wildcard matching to
+turn bones on and off.&nbsp; Thanks go out to Todd&nbsp; Koeckeritz for
+providing ideas and feedback for this.<br>
+  </li>
+  <li>Added a new "Geometry Type" section to the general tab to replace
+the old "triangle strip" section.&nbsp; New buttons allow the user to
+choose between exporting single triangles, triangle lists, and triangle
+strips.&nbsp; Defaults to single triangles.<br>
+  </li>
+  <li>Better scrollbars in the exporter GUI, adjustments to the size of
+the sequences list, changed coloring of sequence list items, and
+general visual improvements all courtesy of Todd Koeckeritz.</li>
+  <li>Fixed a problem with skinned meshes that caused a crash when
+using a blender-exported dts in TGE as a static shape.&nbsp; Thanks go
+out to Jari for finding and helping to diagnose the problem.<br>
+  </li>
+  <li>Fixed erroneous collision mesh name console warning (must start
+with "col") due to incorrect null mesh padding on visible detail level
+objects.&nbsp; Thanks go out to Jari for finding the problem.<br>
+  </li>
+</ul>
 <h2>What's New for version 0.93</h2>
 <ul>
   <li>Added a Built-in triangle stripper&nbsp; "QADTriStripper" (Quick
