@@ -302,7 +302,7 @@ if accelerator == "BLENDER":
 			# tests for equality with another Quaternion, using delta as the margin of error
 			return fabs(self.members[0] - quat.members[0]) < delta\
 			and fabs(self.members[1] - quat.members[1]) < delta\
-			and fabs(self.members[2] - quat.members[2]) < delta\
+			and fabs(self.members[2] - quat.members[2]) < delta \
 			and fabs(self.members[3] - quat.members[3]) < delta
 
 	# The Matrix Class
