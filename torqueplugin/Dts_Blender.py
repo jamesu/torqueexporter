@@ -554,7 +554,7 @@ class ShapeTree(SceneTree):
 		global Prefs
 	
 		# Set scene frame to 1 in case we have any problems
-		Scene.getCurrent().getRenderingContext().currentFrame(1)
+		Scene.GetCurrent().getRenderingContext().currentFrame(1)
 		try:
 			# double check the base path before opening the stream
 			if not os.path.exists(Prefs['exportBasepath']):
