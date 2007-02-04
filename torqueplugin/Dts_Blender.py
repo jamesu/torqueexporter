@@ -59,7 +59,7 @@ except:
   Blender Dts Classes for Python
 '''
 
-Version = "0.931"
+Version = "0.94"
 Prefs = None
 Prefs_keyname = ""
 export_tree = None
