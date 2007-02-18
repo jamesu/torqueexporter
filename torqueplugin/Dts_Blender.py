@@ -1317,7 +1317,12 @@ def guiGeneralSelectorCallback(filename):
 		
 		pathSep = "/"
 		if "\\" in Prefs['exportBasepath']: pathSep = "\\"
-		guiGeneralTab.controls[16].value = Prefs['exportBasepath'] + pathSep + Prefs['exportBasename']
+
+		guiGeneralTab.controls[18].value = Prefs['exportBasepath'] + pathSep + Prefs['exportBasename']
+		if guiGeneralTab.controls[18].value[len(guiGeneralTab.controls[18].value)-4:] != ".dts":
+			guiGeneralTab.controls[18].value += ".dts"
+
+
 
 def guiGeneralCallback(control):
 	global Prefs
@@ -1387,7 +1392,11 @@ def guiGeneralCallback(control):
 			pathSep = "\\"
 		else:
 			pathSep = "/"
-		guiGeneralTab.controls[16].value = Prefs['exportBasepath'] + pathSep + Prefs['exportBasename']
+
+		guiGeneralTab.controls[18].value = Prefs['exportBasepath'] + pathSep + Prefs['exportBasename']
+		if guiGeneralTab.controls[18].value[len(guiGeneralTab.controls[18].value)-4:] != ".dts":
+			guiGeneralTab.controls[18].value += ".dts"
+
 	elif control.evt == 23:
 		Prefs['DTSVersion'] = control.value
 	elif control.evt == 24:
