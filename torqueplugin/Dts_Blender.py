@@ -1397,8 +1397,8 @@ def guiGeneralCallback(control):
 		if guiGeneralTab.controls[18].value[len(guiGeneralTab.controls[18].value)-4:] != ".dts":
 			guiGeneralTab.controls[18].value += ".dts"
 
-	elif control.evt == 23:
-		Prefs['DTSVersion'] = control.value
+	#elif control.evt == 23:
+	#	Prefs['DTSVersion'] = control.value
 	elif control.evt == 24:
 		Prefs['TSEMaterial'] = control.state
 
@@ -1796,8 +1796,8 @@ def initGui():
 	guiCustomFilenameSelect = Common_Gui.BasicButton("Select...", "Select a filename and destination for export", 21, guiGeneralCallback, guiGeneralResize)
 	guiCustomFilenameDefaults = Common_Gui.BasicButton("Default", "Reset filename and destination to defaults", 22, guiGeneralCallback, guiGeneralResize)
 	
-	guiCustomDTSVersion = Common_Gui.NumberPicker("Dts Version", "Version of DTS file to export", 23, guiGeneralCallback, guiGeneralResize)
-	guiCustomDTSVersion.min, guiCustomDTSVersion.max = 24, 25
+	#guiCustomDTSVersion = Common_Gui.NumberPicker("Dts Version", "Version of DTS file to export", 23, guiGeneralCallback, guiGeneralResize)
+	#guiCustomDTSVersion.min, guiCustomDTSVersion.max = 24, 25
 	
 	guiTSEMaterial = Common_Gui.ToggleButton("Write TSE Materials", "Write materials and scripts geared for TSE", 24, guiGeneralCallback, guiGeneralResize)
 	guiTSEMaterial.state = Prefs['TSEMaterial']
@@ -1915,7 +1915,7 @@ def initGui():
 	guiGeneralTab.addControl(guiCustomFilename)
 	guiGeneralTab.addControl(guiCustomFilenameSelect)
 	guiGeneralTab.addControl(guiCustomFilenameDefaults)
-	guiGeneralTab.addControl(guiCustomDTSVersion)
+	#guiGeneralTab.addControl(guiCustomDTSVersion)
 	guiGeneralTab.addControl(guiTSEMaterial)
 
 	Common_Gui.addGuiControl(guiAboutTab)
