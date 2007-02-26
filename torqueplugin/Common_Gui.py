@@ -188,11 +188,8 @@ class TabButton(BasicButton):
 		self.state = False
 
 	def onAction(self, evt, mousepos, value):	
-		print "onAction called..."
-		print "event = ", evt
 		if value == Draw.LEFTMOUSE:
 			if not (Window.GetMouseButtons() & Window.MButs.L):
-				print "Left Mouse Clicked."
 				if not self.state: self.state = True
 				if self.state: self.color = self.selectedColor
 				else: self.color = self.unselectedColor
@@ -1074,7 +1071,7 @@ def event(evt, val):
 			#print("out of window")
 		#print (dragOffset)		
 	elif (evt in acceptedEvents):
-		print "EVT: Unaccepted general event,checking controls for action..."
+		#print "EVT: Unaccepted general event,checking controls for action..."
 		# Move the mouse position into window space
 		areaBounds = Window.GetScreenInfo(Window.Types["SCRIPT"])[0]["vertices"]
 		curMousePos[0] -= areaBounds[0]
@@ -1086,16 +1083,16 @@ def event(evt, val):
 		
 		for control in Controls:
 			if control.enabled == False:
-				print "Control %s [disabled]" % control.name
+				#print "Control %s [disabled]" % control.name
 				continue
 			
 			# Might have a usable control here...
 			if (control.positionInControl(curMousePos)):
-				print "Control %s [accepted]" % control.name
+				#print "Control %s [accepted]" % control.name
 				control.onAction(None, curMousePos, evt)
 				break
 			#else:
-			print "Control %s [incorrect position]" % control.name
+			#print "Control %s [incorrect position]" % control.name
 	if (not (evt in [Draw.MOUSEX, Draw.MOUSEY])) or dragState:
 		Draw.Redraw(1)
 

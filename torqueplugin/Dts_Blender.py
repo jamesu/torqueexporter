@@ -1086,7 +1086,6 @@ def guiBaseCallback(control):
 	global guiSequenceTab, guiArmatureTab, guiGeneralTab, guiAboutTab, guiTabBar
 	global guiSequenceButton, guiMeshButton, guiArmatureButton, guiAboutButton
 	if control.name == "guiSequenceButton":
-		print "guiSequenceButton callback called."
 		guiSequenceTab.visible = True
 		guiGeneralTab.visible = False
 		guiAboutTab.visible = False
