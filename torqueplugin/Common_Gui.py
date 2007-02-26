@@ -60,6 +60,24 @@ The value handler gets the value for control(when drawing) with value id "val" f
 
 Please be warned that the blender gui system sometimes sends the wrong event number when using menu's, so watch out.
 '''
+#----------------------------------------------------------------------------
+# Event server/table class
+#----------------------------------------------------------------------------
+class EventTable:
+	def __init__(self, startID = 1):
+		#print "*** Init called."
+		self.NextID = None
+		self.NextID = startID
+		self.IDs = {}
+		#print "1. self.NextID = ", self.NextID
+	def getNewID(self, objectName):
+		#print "2. self.NextID = ", self.NextID
+		self.IDs[objectName] = self.NextID
+		self.NextID += 1
+		return self.IDs[objectName]
+		
+	
+
 
 #----------------------------------------------------------------------------
 # Main Gui Classes
@@ -108,10 +126,11 @@ Please be warned that the blender gui system sometimes sends the wrong event num
 
 
 class BasicControl:
-	def __init__(self, name=None, tooltip=None, evt=None, callback=None, resize_callback=None):
-		self.name = name			# Internal name of control
-		self.callback = callback	# Funcion called onAction()
-		self.tooltip = tooltip		# Tooltip
+	def __init__(self, name=None, text=None, tooltip=None, evt=None, callback=None, resize_callback=None):
+		self.name = name			# Internal name of control, used for event lookup
+		self.text = text			# Control's text, if any.
+		self.callback = callback		# Funcion called onAction()
+		self.tooltip = tooltip			# Tooltip
 		self.visible = True			# Is the control visible?
 		self.data = None			# Control's blender data (or array of controls if nested)
 		self.nested = False			# Control nests other controls
@@ -147,17 +166,116 @@ class BasicControl:
 		return False
 
 class BasicButton(BasicControl):
-	def __init__(self, name=None, tooltip=None, evt=None, callback=None, resize_callback=None):
-		BasicControl.__init__(self, name, tooltip, evt, callback, resize_callback)
+	def __init__(self, name=None, text=None, tooltip=None, evt=None, callback=None, resize_callback=None):
+		BasicControl.__init__(self, name, text, tooltip, evt, callback, resize_callback)
 		self.width = 100
 		self.height = 20
 		
 	def onDraw(self, offset):
-		self.data = Draw.Button(self.name, self.evt, self.x+offset[0], self.y+offset[1], self.width, self.height, self.tooltip)
+		#print "self.* = ", self.text, self.evt, self.x+offset[0], self.y+offset[1], self.width, self.height, self.tooltip
+		self.data = Draw.Button(self.text, self.evt, self.x+offset[0], self.y+offset[1], self.width, self.height, self.tooltip)
+
+class TabButton(BasicButton):
+	def __init__(self, name=None, text=None, tooltip=None, evt=None, callback=None, resize_callback=None):
+		global curTheme
+		BasicButton.__init__(self, name, text, tooltip, evt, callback, resize_callback)		
+		self.height = 25		
+		self.selectedColor = [169.0/255.0, 169.0/255.0, 169.0/255.0, 169.0/255.0]
+		self.unselectedColor = [146.0/255.0, 146.0/255.0, 146.0/255.0, 146.0/255.0]
+		self.color = self.unselectedColor
+		self.borderColor = [0.0,0.0,0.0,0.0]
+		self.textColor = [0.0,0.0,0.0,0.0]
+		self.state = False
+
+	def onAction(self, evt, mousepos, value):	
+		print "onAction called..."
+		print "event = ", evt
+		if value == Draw.LEFTMOUSE:
+			if not (Window.GetMouseButtons() & Window.MButs.L):
+				print "Left Mouse Clicked."
+				if not self.state: self.state = True
+				if self.state: self.color = self.selectedColor
+				else: self.color = self.unselectedColor
+				if (self.callback): self.callback(self)
+		#else:
+				# mouseover highlight
+				#if self.state: self.color = [175.0/255.0, 175.0/255.0, 175.0/255.0, 175.0/255.0]
+				#else: self.color = [152.0/255.0, 152.0/255.0, 152.0/255.0, 152.0/255.0]
+
+		self.onDraw([self.x,self.y])
+		return True
+	
+	def onContainerResize(self, newwidth, newheight):
+		if self.resize_callback: self.resize_callback(self, newwidth, newheight)
+		
+	def onDraw(self, offset):
+		if self.state: self.color = self.selectedColor
+		else: self.color = self.unselectedColor
+		real_x = offset[0] + self.x
+		real_y = offset[1] + self.y
+		# set color
+		BGL.glBegin(BGL.GL_QUADS)
+		BGL.glColor4f(self.color[0], self.color[1], self.color[2], self.color[3])		
+		BGL.glEnd()
+		BGL.glRecti(real_x, real_y, real_x+self.width, real_y+self.height)
+		
+		# Draw border
+		BGL.glBegin(BGL.GL_LINES)
+		BGL.glColor4f(self.borderColor[0],self.borderColor[1],self.borderColor[2], self.borderColor[3])
+		# Left up
+		BGL.glVertex2i(real_x,real_y)
+		BGL.glVertex2i(real_x,real_y+self.height)
+		# Top right
+		BGL.glVertex2i(real_x,real_y+self.height)
+		BGL.glVertex2i(real_x+self.width-1,real_y+self.height)
+		# Right down
+		BGL.glVertex2i(real_x+self.width,real_y+self.height)
+		BGL.glVertex2i(real_x+self.width,real_y)
+		if self.state:
+			BGL.glColor4f(self.color[0],self.color[1],self.color[2], self.color[3])
+		# Bottom left
+		BGL.glVertex2i(real_x+self.width,real_y)
+		BGL.glVertex2i(real_x,real_y)
+		
+		# draw inside shading		
+		BGL.glColor4f(self.color[0]+0.075,self.color[1]+0.075,self.color[2]+0.075, self.color[3]+0.075)
+		# top
+		BGL.glVertex2i(real_x+1,real_y+self.height-1)
+		BGL.glVertex2i(real_x+self.width-1,real_y+self.height-1)
+		# left
+		BGL.glColor4f(self.color[0]+0.075,self.color[1]+0.075,self.color[2]+0.075, self.color[3]+0.075)
+		BGL.glVertex2i(real_x+self.width-1,real_y+self.height-1)
+		BGL.glColor4f(self.color[0]-0.075,self.color[1]-0.075,self.color[2]-0.075, self.color[3]-0.075)
+		BGL.glVertex2i(real_x+self.width-1,real_y)
+		# right
+		BGL.glColor4f(self.color[0]+0.075,self.color[1]+0.075,self.color[2]+0.075, self.color[3]+0.075)
+		BGL.glVertex2i(real_x+1,real_y+self.height-1)
+		BGL.glColor4f(self.color[0]-0.075,self.color[1]-0.075,self.color[2]-0.075, self.color[3]-0.075)
+		BGL.glVertex2i(real_x+1,real_y)
+		
+		BGL.glEnd()
+		
+		
+		
+
+		BGL.glBegin(BGL.GL_QUADS)
+		BGL.glColor4f(self.textColor[0], self.textColor[1], self.textColor[2], self.textColor[3])
+		BGL.glEnd()
+		# draw text
+		# crazy hack, we have to draw the text in order to get the pixel width of the text,
+		# so draw it off in nowhereland in order to determine the width >:-/
+		BGL.glRasterPos2i(-99999, -99999)
+		width = Draw.Text(self.text, 'normal')
+		if width < self.width: drawText_x = (self.width - width) / 2		
+		BGL.glRasterPos2i(real_x + drawText_x, real_y + (self.height/2)-3)
+		width = Draw.Text(self.text, 'normal')
+		
+
+
 
 class ToggleButton(BasicButton):
-	def __init__(self, name=None, tooltip=None, evt=None, callback=None, resize_callback=None):
-		BasicButton.__init__(self, name, tooltip, evt, callback, resize_callback)
+	def __init__(self, name=None, text=None, tooltip=None, evt=None, callback=None, resize_callback=None):
+		BasicButton.__init__(self, name, text, tooltip, evt, callback, resize_callback)
 		self.state = False
 
 	def onAction(self, evt, mousepos, value):
@@ -166,11 +284,12 @@ class ToggleButton(BasicButton):
 		return True
 		
 	def onDraw(self, offset):
-		self.data = Draw.Toggle(self.name, self.evt, self.x+offset[0], self.y+offset[1], self.width, self.height, self.state, self.tooltip)
+		#print "self.text = ", self.text
+		self.data = Draw.Toggle(self.text, self.evt, self.x+offset[0], self.y+offset[1], self.width, self.height, self.state, self.tooltip)
 
 class ComboBox(BasicControl):
-	def __init__(self, name=None, tooltip=None, evt=None, callback=None, resize_callback=None):
-		BasicControl.__init__(self, name, tooltip, evt, callback, resize_callback)
+	def __init__(self, name=None, text=None, tooltip=None, evt=None, callback=None, resize_callback=None):
+		BasicControl.__init__(self, name, text, tooltip, evt, callback, resize_callback)
 		self.width = 150
 		self.height = 20
 		self.itemIndex = -1
@@ -178,7 +297,7 @@ class ComboBox(BasicControl):
 
 	# Constructs a menu out of a list of strings
 	def constructString(self):
-		ret = self.name+"%t|"
+		ret = self.text+"%t|"
 		count = 0
 		for i in self.items:
 			ret += str(i) + " %x" + str(count) + "|"
@@ -202,8 +321,8 @@ class ComboBox(BasicControl):
 		self.data = Draw.Menu(self.constructString(), self.evt, self.x+offset[0], self.y+offset[1], self.width, self.height, self.itemIndex)
 		
 class TextBox(BasicControl):
-	def __init__(self, name=None, tooltip=None, evt=None, callback=None, resize_callback=None):
-		BasicControl.__init__(self, name, tooltip, evt, callback, resize_callback)
+	def __init__(self, name=None, text=None, tooltip=None, evt=None, callback=None, resize_callback=None):
+		BasicControl.__init__(self, name, text, tooltip, evt, callback, resize_callback)
 		self.width = 150
 		self.height = 20
 		self.value = ""
@@ -215,11 +334,11 @@ class TextBox(BasicControl):
 		return True
 
 	def onDraw(self, offset):
-		self.data = Draw.String(self.name, self.evt, self.x+offset[0], self.y+offset[1], self.width, self.height, self.value, self.length, self.tooltip)
+		self.data = Draw.String(self.text, self.evt, self.x+offset[0], self.y+offset[1], self.width, self.height, self.value, self.length, self.tooltip)
 
 class NumberPicker(BasicControl):
-	def __init__(self, name=None, tooltip=None, evt=None, callback=None, resize_callback=None):
-		BasicControl.__init__(self, name, tooltip, evt, callback, resize_callback)
+	def __init__(self, name=None, text=None, tooltip=None, evt=None, callback=None, resize_callback=None):
+		BasicControl.__init__(self, name, text, tooltip, evt, callback, resize_callback)
 		self.width = 150
 		self.height = 20
 		self.value = 0
@@ -232,19 +351,19 @@ class NumberPicker(BasicControl):
 		return True
 		
 	def onDraw(self, offset):
-		self.data = Draw.Number(self.name, self.evt, self.x+offset[0], self.y+offset[1], self.width, self.height, self.value, self.min, self.max)
+		self.data = Draw.Number(self.text, self.evt, self.x+offset[0], self.y+offset[1], self.width, self.height, self.value, self.min, self.max)
 		
 class NumberSlider(NumberPicker):
-	def __init__(self, name=None, tooltip=None, evt=None, callback=None, resize_callback=None):
-		NumberPicker.__init__(self, name, tooltip, evt, callback, resize_callback)
+	def __init__(self, name=None, text=None, tooltip=None, evt=None, callback=None, resize_callback=None):
+		NumberPicker.__init__(self, name, text, tooltip, evt, callback, resize_callback)
 
 	def onDraw(self, offset):
-		self.data = Draw.Slider(self.name, self.evt, self.x+offset[0], self.y+offset[1], self.width, self.height, self.value, self.min, self.max)
+		self.data = Draw.Slider(self.text, self.evt, self.x+offset[0], self.y+offset[1], self.width, self.height, self.value, self.min, self.max)
 												
 class SimpleText(BasicControl):
 	def __init__(self, name=None, label="", callback=None, resize_callback=None):
 		global curTheme
-		BasicControl.__init__(self, name, None, None, callback, resize_callback)
+		BasicControl.__init__(self, name, label, None, None, callback, resize_callback)
 		self.enabled = False
 		
 		curTextCol = curTheme.get('buts').text
@@ -284,8 +403,8 @@ class MultilineText(SimpleText):
 			curY += incY
 							
 class SimpleLine(BasicControl):
-	def __init__(self, name=None, callback=None, resize_callback=None):
-		BasicControl.__init__(self, name, None, None, callback, resize_callback)
+	def __init__(self, name=None, text=None, callback=None, resize_callback=None):
+		BasicControl.__init__(self, name, text, None, None, callback, resize_callback)
 		self.enabled = False
 		self.color = [1.0,1.0,1.0,1.0]
 		self.width = 100
@@ -299,8 +418,8 @@ class SimpleLine(BasicControl):
 		BGL.glEnd()
 		
 class SimpleImage(BasicControl):
-	def __init__(self, name=None, image=None, callback=None, resize_callback=None):
-		BasicControl.__init__(self, name, None, None, callback, resize_callback)
+	def __init__(self, name=None, text=None, image=None, callback=None, resize_callback=None):
+		BasicControl.__init__(self, name, text, None, None, callback, resize_callback)
 		self.enabled = False
 		self.color = [1.0,1.0,1.0,1.0]
 		self.image = image
@@ -313,11 +432,10 @@ class SimpleImage(BasicControl):
 		BGL.glDisable(BGL.GL_BLEND)
 
 class BasicContainer(BasicControl):
-	def __init__(self, name=None, callback=None, resize_callback=None):
+	def __init__(self, name=None, text=None, callback=None, resize_callback=None):
 		global curTheme
-		BasicControl.__init__(self, name, None, None, callback, resize_callback)
-		self.nested = True
-		
+		BasicControl.__init__(self, name, text, None, None, callback, resize_callback)
+		self.nested = True		
 		curBg = curTheme.get('buts').panel
 		curBorder = curTheme.get('ui').outline
 		self.color = [curBg[0]/255.0,curBg[1]/255.0,curBg[2]/255.0,curBg[3]/255.0]
@@ -329,6 +447,7 @@ class BasicContainer(BasicControl):
 		del self.controls
 	
 	def onAction(self, evt, mousepos, value):
+		#print "onAction called... (basiccontainer)"
 		#print "BASICCONTAINER CHECKING FOR evt=" + str(evt)
 		newpos = [mousepos[0]-self.x, mousepos[1]-self.y]
 				
@@ -459,6 +578,47 @@ class BasicContainer(BasicControl):
 					break
 		return res
 
+class TabContainer(BasicContainer):
+	def __init__(self, name=None, text=None, tabButton=None, callback=None, resize_callback=None):
+		global curTheme		
+		BasicContainer.__init__(self, name, text, callback, resize_callback)
+		self.borderColor = None
+		self.tabButton = tabButton
+	def onDraw(self, offset):
+		self.borderColor = None
+		BasicContainer.onDraw(self, offset)
+		real_x = offset[0] + self.x
+		real_y = offset[1] + self.y
+		# Draw border
+		BGL.glBegin(BGL.GL_LINES)
+		BGL.glColor4f(0.0,0.0,0.0,0.0)
+		# Top right
+		BGL.glVertex2d(real_x,real_y+self.height)
+		BGL.glVertex2d(real_x+self.width,real_y+self.height)
+		# Right down
+		BGL.glVertex2d(real_x+self.width,real_y+self.height)
+		BGL.glVertex2d(real_x+self.width,real_y)
+		# Bottom left
+		BGL.glVertex2d(real_x+self.width,real_y)
+		BGL.glVertex2d(real_x,real_y)
+		# Left up
+		BGL.glVertex2d(real_x,real_y)
+		BGL.glVertex2d(real_x,real_y+self.height)
+		# draw to edge of tab button
+		BGL.glVertex2d(real_x,real_y+self.height)
+		BGL.glVertex2d(real_x + self.tabButton.x,real_y+self.height)
+		BGL.glColor4f(169.0/255.0, 169.0/255.0, 169.0/255.0, 169.0/255.0)
+		# draw to other side of tab button
+		BGL.glVertex2d(real_x + self.tabButton.x,real_y+self.height)
+		BGL.glVertex2d(real_x + self.tabButton.x + self.tabButton.width,real_y+self.height)
+		BGL.glColor4f(0.0,0.0,0.0,0.0)
+		# draw from far edge of tab button to top right
+		BGL.glVertex2d(real_x + self.tabButton.x + self.tabButton.width,real_y+self.height)
+		BGL.glVertex2d(real_x+self.width,real_y+self.height)
+		BGL.glEnd()
+		
+
+
 class ListContainer(BasicContainer):
 	'''
 	This class implements a scrollable list container.
@@ -473,9 +633,9 @@ class ListContainer(BasicContainer):
 	To simplify things, the container only maintains one field.
 	'''
 	
-	def __init__(self, name=None, callback=None, resize_callback=None):
+	def __init__(self, name=None, text=None, callback=None, resize_callback=None):
 		global curTheme
-		BasicContainer.__init__(self, name, callback, resize_callback)
+		BasicContainer.__init__(self, name, text, callback, resize_callback)
 		
 		curTextCol = curTheme.get('ui').menu_back
 		self.color = [curTextCol[0]/255.0,curTextCol[1]/255.0,curTextCol[2]/255.0,curTextCol[3]/255.0]
@@ -752,8 +912,8 @@ class BasicGrid(BasicContainer):
 	All controls are resized during the resize event,
 	taking into account properties set.
 	'''
-	def __init__(self, name=None, callback=None, resize_callback=None):
-		BasicContainer.__init__(self, name, callback, resize_callback)
+	def __init__(self, name=None, text=None, callback=None, resize_callback=None):
+		BasicContainer.__init__(self, name, text, callback, resize_callback)
 		
 		self.minimumChildHeight = 20
 		
@@ -799,8 +959,8 @@ class BoneListContainer(ListContainer):
 	All controls are resized during the resize event,
 	taking into account properties set.
 	'''
-	def __init__(self, name=None, callback=None, resize_callback=None):
-		ListContainer.__init__(self, name, callback, resize_callback)
+	def __init__(self, name=None, text=None, callback=None, resize_callback=None):
+		ListContainer.__init__(self, name, text, callback, resize_callback)
 		self.minimumChildHeight = 20
 		self.childHeight = 20	# Height of each child item
 
@@ -893,7 +1053,7 @@ def event(evt, val):
 			dragInitial[0] = curMousePos[0] - dragOffset[0]
 			dragInitial[1] = curMousePos[1] - dragOffset[1]
 		return
-	elif evt == Draw.RIGHTMOUSE:		
+	elif evt == Draw.RIGHTMOUSE:
 		if Draw.PupMenu("Display%t|Reset Gui Offset%x1") == 1:
 			 dragOffset = [0,0]
 	elif dragState and (evt in [Draw.MOUSEX, Draw.MOUSEY]):
@@ -914,7 +1074,7 @@ def event(evt, val):
 			#print("out of window")
 		#print (dragOffset)		
 	elif (evt in acceptedEvents):
-		#print "EVT: Unaccepted general event,checking controls for action..."
+		print "EVT: Unaccepted general event,checking controls for action..."
 		# Move the mouse position into window space
 		areaBounds = Window.GetScreenInfo(Window.Types["SCRIPT"])[0]["vertices"]
 		curMousePos[0] -= areaBounds[0]
@@ -926,16 +1086,16 @@ def event(evt, val):
 		
 		for control in Controls:
 			if control.enabled == False:
-				#print "Control %s [disabled]" % control.name
+				print "Control %s [disabled]" % control.name
 				continue
 			
 			# Might have a usable control here...
 			if (control.positionInControl(curMousePos)):
-				#print "Control %s [accepted]" % control.name
+				print "Control %s [accepted]" % control.name
 				control.onAction(None, curMousePos, evt)
 				break
 			#else:
-			#print "Control %s [incorrect position]" % control.name
+			print "Control %s [incorrect position]" % control.name
 	if (not (evt in [Draw.MOUSEX, Draw.MOUSEY])) or dragState:
 		Draw.Redraw(1)
 
