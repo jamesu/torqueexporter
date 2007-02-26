@@ -856,6 +856,9 @@ guiSequenceOptions = None
 guiSequenceList = None
 guiBoneList = None
 
+# Global control event table.  Containers have their own event tables for child controls
+globalEvents = Common_Gui.EventTable(1)
+
 def guiSequenceListItemCallback(control):
 	global Prefs, guiSequenceList
 	
@@ -888,7 +891,6 @@ def guiSequenceListItemCallback(control):
 	elif realItem == 3:
 		sequencePrefs['Cyclic'] = control.state
 
-# New
 def guiBoneListItemCallback(control):
 	global Prefs, guiSequenceList
 	
@@ -922,19 +924,19 @@ def createSequenceListitem(seq_name, startEvent):
 	guiContainer.fade_mode = 0  # flat color
 	guiName = Common_Gui.SimpleText("", seq_name, None, None)
 	guiName.x, guiName.y = 5, 5
-	guiExport = Common_Gui.ToggleButton("Export", "Export Sequence", startEvent, guiSequenceListItemCallback, None)
+	guiExport = Common_Gui.ToggleButton("guiExport", "Export", "Export Sequence", startEvent, guiSequenceListItemCallback, None)
 	guiExport.x, guiExport.y = 70, 5
 	guiExport.width, guiExport.height = 50, 15
 	guiExport.state = not sequencePrefs['NoExport']
-	guiDSQ = Common_Gui.ToggleButton("Dsq", "Export Sequence as DSQ", startEvent+1, guiSequenceListItemCallback, None)
+	guiDSQ = Common_Gui.ToggleButton("guiDSQ", "Dsq", "Export Sequence as DSQ", startEvent+1, guiSequenceListItemCallback, None)
 	guiDSQ.x, guiDSQ.y = 122, 5
 	guiDSQ.width, guiDSQ.height = 50, 15
 	guiDSQ.state = sequencePrefs['Dsq']
-	guiBlend = Common_Gui.ToggleButton("Blend", "Export Sequence as Blend", startEvent+2, guiSequenceListItemCallback, None)
+	guiBlend = Common_Gui.ToggleButton("guiBlend", "Blend", "Export Sequence as Blend", startEvent+2, guiSequenceListItemCallback, None)
 	guiBlend.x, guiBlend.y = 174, 5
 	guiBlend.width, guiBlend.height = 50, 15
 	guiBlend.state = sequencePrefs['Blend']
-	guiCyclic = Common_Gui.ToggleButton("Cyclic", "Export Sequence as Cyclic", startEvent+3, guiSequenceListItemCallback, None)
+	guiCyclic = Common_Gui.ToggleButton("guiCyclic", "Cyclic", "Export Sequence as Cyclic", startEvent+3, guiSequenceListItemCallback, None)
 	guiCyclic.x, guiCyclic.y = 226, 5
 	guiCyclic.width, guiCyclic.height = 50, 15
 	guiCyclic.state = sequencePrefs['Cyclic']
@@ -957,31 +959,31 @@ def createBoneListitem(bone1, bone2, bone3, bone4, bone5, startEvent):
 	guiContainer.fade_mode = 0
 	guiContainer.borderColor = None
 	if bone1 != None:
-		guiBone1 = Common_Gui.ToggleButton(bone1, "Toggle Status of " + bone1, startEvent, guiBoneListItemCallback, None)
+		guiBone1 = Common_Gui.ToggleButton("guiBone_" + bone1, bone1, "Toggle Status of " + bone1, startEvent, guiBoneListItemCallback, None)
 		guiBone1.x, guiBone1.y = 1, 0
 		guiBone1.width, guiBone1.height = 90, 19
 		guiBone1.state = True
 		guiContainer.addControl(guiBone1)
 	if bone2 != None:
-		guiBone2 = Common_Gui.ToggleButton(bone2, "Toggle Status of " + bone2, startEvent+1, guiBoneListItemCallback, None)
+		guiBone2 = Common_Gui.ToggleButton("guiBone_" + bone2, bone2, "Toggle Status of " + bone2, startEvent+1, guiBoneListItemCallback, None)
 		guiBone2.x, guiBone2.y = 92, 0
 		guiBone2.width, guiBone2.height = 90, 19
 		guiBone2.state = True
 		guiContainer.addControl(guiBone2)
 	if bone3 != None:
-		guiBone3 = Common_Gui.ToggleButton(bone3, "Toggle Status of " + bone3, startEvent+3, guiBoneListItemCallback, None)
+		guiBone3 = Common_Gui.ToggleButton("guiBone_" + bone3, bone3, "Toggle Status of " + bone3, startEvent+3, guiBoneListItemCallback, None)
 		guiBone3.x, guiBone3.y = 183, 0
 		guiBone3.width, guiBone3.height = 90, 19
 		guiBone3.state = True
 		guiContainer.addControl(guiBone3)
 	if bone4 != None:
-		guiBone4 = Common_Gui.ToggleButton(bone4, "Toggle Status of " + bone4, startEvent+4, guiBoneListItemCallback, None)
+		guiBone4 = Common_Gui.ToggleButton("guiBone_" + bone4, bone4, "Toggle Status of " + bone4, startEvent+4, guiBoneListItemCallback, None)
 		guiBone4.x, guiBone4.y = 274, 0
 		guiBone4.width, guiBone4.height = 89, 19
 		guiBone4.state = True
 		guiContainer.addControl(guiBone4)	
 	if bone5 != None:
-		guiBone5 = Common_Gui.ToggleButton(bone5, "Toggle Status of " + bone5, startEvent+5, guiBoneListItemCallback, None)
+		guiBone5 = Common_Gui.ToggleButton("guiBone_" + bone5, bone5, "Toggle Status of " + bone5, startEvent+5, guiBoneListItemCallback, None)
 		guiBone5.x, guiBone5.y = 364, 0
 		guiBone5.width, guiBone5.height = 89, 19
 		guiBone5.state = True
@@ -1039,11 +1041,11 @@ def populateBoneGrid():
 		names.append(name)
 		if len(names) == 5:
 			guiBoneList.addControl(createBoneListitem(names[0],names[1],names[2],names[3],names[4], evtNo))			
-			guiBoneList.controls[count].controls[0].state = not (guiBoneList.controls[count].controls[0].name.upper() in Prefs['BannedBones'])
-			guiBoneList.controls[count].controls[1].state = not (guiBoneList.controls[count].controls[1].name.upper() in Prefs['BannedBones'])
-			guiBoneList.controls[count].controls[2].state = not (guiBoneList.controls[count].controls[2].name.upper() in Prefs['BannedBones'])
-			guiBoneList.controls[count].controls[3].state = not (guiBoneList.controls[count].controls[3].name.upper() in Prefs['BannedBones'])
-			guiBoneList.controls[count].controls[4].state = not (guiBoneList.controls[count].controls[4].name.upper() in Prefs['BannedBones'])
+			guiBoneList.controls[count].controls[0].state = not (guiBoneList.controls[count].controls[0].text.upper() in Prefs['BannedBones'])
+			guiBoneList.controls[count].controls[1].state = not (guiBoneList.controls[count].controls[1].text.upper() in Prefs['BannedBones'])
+			guiBoneList.controls[count].controls[2].state = not (guiBoneList.controls[count].controls[2].text.upper() in Prefs['BannedBones'])
+			guiBoneList.controls[count].controls[3].state = not (guiBoneList.controls[count].controls[3].text.upper() in Prefs['BannedBones'])
+			guiBoneList.controls[count].controls[4].state = not (guiBoneList.controls[count].controls[4].text.upper() in Prefs['BannedBones'])
 			
 			evtNo += 6
 			count += 1
@@ -1053,11 +1055,11 @@ def populateBoneGrid():
 		for i in range(len(names)-1, 5):
 			names.append(None)
 		guiBoneList.addControl(createBoneListitem(names[0],names[1],names[2],names[3], names[4], evtNo))
-		if names[0] != None: guiBoneList.controls[count].controls[0].state = not (guiBoneList.controls[count].controls[0].name.upper() in Prefs['BannedBones'])
-		if names[1] != None: guiBoneList.controls[count].controls[1].state = not (guiBoneList.controls[count].controls[1].name.upper() in Prefs['BannedBones'])
-		if names[2] != None: guiBoneList.controls[count].controls[2].state = not (guiBoneList.controls[count].controls[2].name.upper() in Prefs['BannedBones'])
-		if names[3] != None: guiBoneList.controls[count].controls[3].state = not (guiBoneList.controls[count].controls[3].name.upper() in Prefs['BannedBones'])
-		if names[4] != None: guiBoneList.controls[count].controls[4].state = not (guiBoneList.controls[count].controls[4].name.upper() in Prefs['BannedBones'])
+		if names[0] != None: guiBoneList.controls[count].controls[0].state = not (guiBoneList.controls[count].controls[0].text.upper() in Prefs['BannedBones'])
+		if names[1] != None: guiBoneList.controls[count].controls[1].state = not (guiBoneList.controls[count].controls[1].text.upper() in Prefs['BannedBones'])
+		if names[2] != None: guiBoneList.controls[count].controls[2].state = not (guiBoneList.controls[count].controls[2].text.upper() in Prefs['BannedBones'])
+		if names[3] != None: guiBoneList.controls[count].controls[3].state = not (guiBoneList.controls[count].controls[3].text.upper() in Prefs['BannedBones'])
+		if names[4] != None: guiBoneList.controls[count].controls[4].state = not (guiBoneList.controls[count].controls[4].text.upper() in Prefs['BannedBones'])
 			
 			
 		
@@ -1081,8 +1083,10 @@ def guiBoneGridCallback(control):
 		#print "Added banned bone %s" % real_name
 
 def guiBaseCallback(control):
-	global guiSequenceTab, guiArmatureTab, guiGeneralTab, guiAboutTab
-	if control.evt == 1:
+	global guiSequenceTab, guiArmatureTab, guiGeneralTab, guiAboutTab, guiTabBar
+	global guiSequenceButton, guiMeshButton, guiArmatureButton, guiAboutButton
+	if control.name == "guiSequenceButton":
+		print "guiSequenceButton callback called."
 		guiSequenceTab.visible = True
 		guiGeneralTab.visible = False
 		guiAboutTab.visible = False
@@ -1091,7 +1095,10 @@ def guiBaseCallback(control):
 		guiGeneralTab.enabled = False
 		guiAboutTab.enabled = False
 		guiArmatureTab.enabled = False
-	elif control.evt == 2:
+		guiMeshButton.state = False
+		guiArmatureButton.state = False
+		guiAboutButton.state = False
+	elif control.name == "guiMeshButton":
 		guiSequenceTab.visible = False
 		guiGeneralTab.visible = True
 		guiAboutTab.visible = False
@@ -1100,7 +1107,10 @@ def guiBaseCallback(control):
 		guiGeneralTab.enabled = True
 		guiAboutTab.enabled = False
 		guiArmatureTab.enabled = False
-	elif control.evt == 3:
+		guiSequenceButton.state = False
+		guiArmatureButton.state = False
+		guiAboutButton.state = False
+	elif control.name == "guiArmatureButton":
 		guiSequenceTab.visible = False
 		guiGeneralTab.visible = False
 		guiAboutTab.visible = False
@@ -1109,7 +1119,10 @@ def guiBaseCallback(control):
 		guiGeneralTab.enabled = False
 		guiAboutTab.enabled = False
 		guiArmatureTab.enabled = True
-	elif control.evt == 4:
+		guiSequenceButton.state = False
+		guiMeshButton.state = False
+		guiAboutButton.state = False
+	elif control.name == "guiAboutButton":
 		guiSequenceTab.visible = False
 		guiGeneralTab.visible = False
 		guiAboutTab.visible = True
@@ -1118,7 +1131,10 @@ def guiBaseCallback(control):
 		guiGeneralTab.enabled = False
 		guiAboutTab.enabled = True
 		guiArmatureTab.enabled = False
-	elif control.evt == 5:
+		guiSequenceButton.state = False
+		guiMeshButton.state = False
+		guiArmatureButton.state = False
+	elif control.name == "guiExportButton":
 		export()
 		
 def guiSequenceUpdateTriggers(triggerList, itemIndex):
@@ -1143,22 +1159,22 @@ def guiSequenceTriggersCallback(control):
 	sequencePrefs = getSequenceKey(sequenceName)
 	itemIndex = guiSequenceOptions.controls[6].itemIndex
 				
-	if control.evt == 14:
+	if control.name == "guiSequenceOptionsTriggerMenu":
 		guiSequenceUpdateTriggers(sequencePrefs['Triggers'], itemIndex)
-	elif control.evt == 18:
+	elif control.name == "guiSequenceOptionsTriggerAdd":
 		# Add
 		sequencePrefs['Triggers'].append([1, 1, True])
 		guiSequenceOptions.controls[6].items.append((triggerMenuTemplate % (1, 1)) + "(ON)")
 		guiSequenceOptions.controls[6].itemIndex = len(sequencePrefs['Triggers'])-1
 		guiSequenceUpdateTriggers(sequencePrefs['Triggers'], guiSequenceOptions.controls[6].itemIndex)
 	elif (len(guiSequenceOptions.controls[6].items) != 0):
-		if control.evt == 15:
+		if control.evt == "guiSequenceOptionsTriggerState":
 			sequencePrefs['Triggers'][itemIndex][0] = control.value
-		elif control.evt == 16:
+		elif control.name == "guiSequenceOptionsTriggerStateOn":
 			sequencePrefs['Triggers'][itemIndex][2] = control.state
-		elif control.evt == 17:
+		elif control.name == "guiSequenceOptionsTriggerFrame":
 			sequencePrefs['Triggers'][itemIndex][1] = control.value
-		elif control.evt == 19:
+		elif control.name == "guiSequenceOptionsTriggerDel":
 			# Remove
 			del sequencePrefs['Triggers'][itemIndex]
 			del guiSequenceOptions.controls[6].items[itemIndex]
@@ -1178,110 +1194,105 @@ def guiSequenceTriggersCallback(control):
 def guiSequenceCallback(control):
 	global guiSequenceOptions, guiSequenceList
 	
-	if control.evt == None:
-		if control.name == "sequence.list":
-			# Clear triggers menu
-			del guiSequenceOptions.controls[6].items[:]
-			if control.itemIndex != -1:
-				sequenceName = control.controls[control.itemIndex].controls[0].label
-				sequencePrefs = getSequenceKey(sequenceName)
-				guiSequenceOptions.controls[0].label = "Sequence '%s'" % sequenceName
-				
-				try:
-					action = Blender.Armature.NLA.GetActions()[sequenceName]
-					maxNumFrames = DtsShape_Blender.getNumFrames(action.getAllChannelIpos().values(), False)
-				except:
-					maxNumFrames = 0
-				
-				# Update gui control states
-				guiSequenceOptions.enabled = True
-				guiSequenceOptions.controls[1].value = sequencePrefs['InterpolateFrames']
-				guiSequenceOptions.controls[1].max = maxNumFrames
-				guiSequenceOptions.controls[2].value = sequencePrefs['NumGroundFrames']
-				guiSequenceOptions.controls[2].max = maxNumFrames
-				guiSequenceOptions.controls[3].state = sequencePrefs['AnimateMaterial']
-				guiSequenceOptions.controls[4].value = sequencePrefs['MaterialIpoStartFrame']
-				
-				# added for blend anim ref pose selection
-				# make sure the user didn't delete the action containing the refrence pose
-				# out from underneath us while we weren't looking.
-				try: blah = Blender.Armature.NLA.GetActions()[sequencePrefs['BlendRefPoseAction']]
-				except: sequencePrefs['BlendRefPoseAction'] = sequenceName
-				guiSequenceOptions.controls[12].label = "Ref pose for '%s'" % sequenceName
-				guiSequenceOptions.controls[13].setTextValue(sequencePrefs['BlendRefPoseAction'])
-				guiSequenceOptions.controls[14].min = 1
-				guiSequenceOptions.controls[14].max = DtsShape_Blender.getNumFrames(Blender.Armature.NLA.GetActions()[sequencePrefs['BlendRefPoseAction']].getAllChannelIpos().values(), False)
-				guiSequenceOptions.controls[14].value = sequencePrefs['BlendRefPoseFrame']
-				# hack, there must be a better way to handle this.
-				try:
-					guiSequenceOptions.controls[15].value = sequencePrefs['Priority']
-				except KeyError:
-					guiSequenceOptions.controls[15].value = 0
-				
-				
-				# Triggers
-				for t in sequencePrefs['Triggers']:
-					if t[2]: stateStr = "(ON)"
-					else: stateStr = "(OFF)"
-					guiSequenceOptions.controls[6].items.append((triggerMenuTemplate % (t[1], t[0])) + stateStr)
-				
-				guiSequenceOptions.controls[6].itemIndex = 0
-				guiSequenceOptions.controls[9].max = maxNumFrames
-				guiSequenceUpdateTriggers(sequencePrefs['Triggers'], 0)
-				# show/hide ref pose stuff.
-				if sequencePrefs['Blend'] == True:
-					guiSequenceOptions.controls[12].visible = True
-					guiSequenceOptions.controls[13].visible = True
-					guiSequenceOptions.controls[14].visible = True
-				else:
-					guiSequenceOptions.controls[12].visible = False
-					guiSequenceOptions.controls[13].visible = False
-					guiSequenceOptions.controls[14].visible = False
+	if control.name == "guiSequenceToggle":
+		for child in guiSequenceList.controls:
+			child.controls[1].state = control.state
+			getSequenceKey(child.controls[0].label)['NoExport'] = not control.state
+	elif control.name == "guiSequenceRefresh":
+		clearSequenceList()
+		populateSequenceList()
+	elif control.name == "guiSequenceList":
+		# Clear triggers menu
+		del guiSequenceOptions.controls[6].items[:]
+		if control.itemIndex != -1:
+			sequenceName = control.controls[control.itemIndex].controls[0].label
+			sequencePrefs = getSequenceKey(sequenceName)
+			guiSequenceOptions.controls[0].label = "Sequence '%s'" % sequenceName
 
+			try:
+				action = Blender.Armature.NLA.GetActions()[sequenceName]
+				maxNumFrames = DtsShape_Blender.getNumFrames(action.getAllChannelIpos().values(), False)
+			except:
+				maxNumFrames = 0
+
+			# Update gui control states
+			guiSequenceOptions.enabled = True
+			guiSequenceOptions.controls[1].value = sequencePrefs['InterpolateFrames']
+			guiSequenceOptions.controls[1].max = maxNumFrames
+			guiSequenceOptions.controls[2].value = sequencePrefs['NumGroundFrames']
+			guiSequenceOptions.controls[2].max = maxNumFrames
+			guiSequenceOptions.controls[3].state = sequencePrefs['AnimateMaterial']
+			guiSequenceOptions.controls[4].value = sequencePrefs['MaterialIpoStartFrame']
+
+			# added for blend anim ref pose selection
+			# make sure the user didn't delete the action containing the refrence pose
+			# out from underneath us while we weren't looking.
+			try: blah = Blender.Armature.NLA.GetActions()[sequencePrefs['BlendRefPoseAction']]
+			except: sequencePrefs['BlendRefPoseAction'] = sequenceName
+			guiSequenceOptions.controls[12].label = "Ref pose for '%s'" % sequenceName
+			guiSequenceOptions.controls[13].setTextValue(sequencePrefs['BlendRefPoseAction'])
+			guiSequenceOptions.controls[14].min = 1
+			guiSequenceOptions.controls[14].max = DtsShape_Blender.getNumFrames(Blender.Armature.NLA.GetActions()[sequencePrefs['BlendRefPoseAction']].getAllChannelIpos().values(), False)
+			guiSequenceOptions.controls[14].value = sequencePrefs['BlendRefPoseFrame']
+			# hack, there must be a better way to handle this.
+			try:
+				guiSequenceOptions.controls[15].value = sequencePrefs['Priority']
+			except KeyError:
+				guiSequenceOptions.controls[15].value = 0
+
+
+			# Triggers
+			for t in sequencePrefs['Triggers']:
+				if t[2]: stateStr = "(ON)"
+				else: stateStr = "(OFF)"
+				guiSequenceOptions.controls[6].items.append((triggerMenuTemplate % (t[1], t[0])) + stateStr)
+
+			guiSequenceOptions.controls[6].itemIndex = 0
+			guiSequenceOptions.controls[9].max = maxNumFrames
+			guiSequenceUpdateTriggers(sequencePrefs['Triggers'], 0)
+			# show/hide ref pose stuff.
+			if sequencePrefs['Blend'] == True:
+				guiSequenceOptions.controls[12].visible = True
+				guiSequenceOptions.controls[13].visible = True
+				guiSequenceOptions.controls[14].visible = True
 			else:
-				guiSequenceOptions.enabled = False
-				guiSequenceOptions.controls[0].label = "Sequence"
+				guiSequenceOptions.controls[12].visible = False
+				guiSequenceOptions.controls[13].visible = False
+				guiSequenceOptions.controls[14].visible = False
 
-	else:
-		if control.evt >= 10:
-			if guiSequenceList.itemIndex != -1:
-				sequenceName = guiSequenceList.controls[guiSequenceList.itemIndex].controls[0].label
-				sequencePrefs = getSequenceKey(sequenceName)
-				if control.evt == 10:
-					sequencePrefs['InterpolateFrames'] = control.value
-				elif control.evt == 11:
-					#print "setting number of ground frames to: %i" % control.value
-					sequencePrefs['NumGroundFrames'] = control.value
-				elif control.evt == 12:
-					sequencePrefs['AnimateMaterial'] = control.state
-				elif control.evt == 13:
-					sequencePrefs['MaterialIpoStartFrame'] = control.value
-				# added for blend ref pose selection
-				elif control.evt == 20:
-					#print "setting refernce pose action to: %s" % control.items[control.itemIndex]
-					sequencePrefs['BlendRefPoseAction'] = control.items[control.itemIndex]
-					sequencePrefs['BlendRefPoseFrame'] = 1
-					guiSequenceOptions.controls[14].value = sequencePrefs['BlendRefPoseFrame']
-				elif control.evt == 21:
-					#print "setting refernce pose frame to: %i" % control.value
-					sequencePrefs['BlendRefPoseFrame'] = control.value
-				elif control.evt == 23:
-					#print "setting priority"
-					sequencePrefs['Priority'] = control.value
-				
 		else:
-			if control.evt == 6:
-				for child in guiSequenceList.controls:
-					child.controls[1].state = control.state
-					getSequenceKey(child.controls[0].label)['NoExport'] = not control.state
-			elif control.evt == 7:
-				clearSequenceList()
-				populateSequenceList()
+			guiSequenceOptions.enabled = False
+			guiSequenceOptions.controls[0].label = "Sequence"
+	else:
+		if guiSequenceList.itemIndex != -1:
+			sequenceName = guiSequenceList.controls[guiSequenceList.itemIndex].controls[0].label
+			sequencePrefs = getSequenceKey(sequenceName)
+			if control.name == "guiSequenceOptionsFramecount":
+				sequencePrefs['InterpolateFrames'] = control.value
+			elif control.name == "guiSequenceOptionsGroundFramecount":
+				#print "setting number of ground frames to: %i" % control.value
+				sequencePrefs['NumGroundFrames'] = control.value
+			elif control.name == "guiSequenceOptionsAnimateMaterials":
+				sequencePrefs['AnimateMaterial'] = control.state
+			elif control.name == "guiSequenceOptionsMaterialStartFrame":
+				sequencePrefs['MaterialIpoStartFrame'] = control.value
+			# added for blend ref pose selection
+			elif control.name == "guiSequenceOptionsRefposeMenu":
+				#print "setting refernce pose action to: %s" % control.items[control.itemIndex]
+				sequencePrefs['BlendRefPoseAction'] = control.items[control.itemIndex]
+				sequencePrefs['BlendRefPoseFrame'] = 1
+				guiSequenceOptions.controls[14].value = sequencePrefs['BlendRefPoseFrame']
+			elif control.name == "guiSequenceOptionsRefposeFrame":
+				#print "setting refernce pose frame to: %i" % control.value
+				sequencePrefs['BlendRefPoseFrame'] = control.value
+			elif control.name == "guiSequenceOptionsPriority":
+				#print "setting priority"
+				sequencePrefs['Priority'] = control.value
+
 			
 def guiArmatureCallback(control):
 	global Prefs, export_tree, guiBoneList, guiBonePatternText
-	if control.evt == 7 or control.evt == 8:
-		# turn on matches
+	if control.name == "guiBonePatternOnButton" or control.name == "guiBonePatternOffButton":
 		userPattern = guiBonePatternText.value
 		# convert to uppercase
 		userPattern = userPattern.upper()
@@ -1294,23 +1305,22 @@ def guiArmatureCallback(control):
 			name = name.upper()
 			if re.match(newPat, name) != None:				
 					#print "Matched", name
-					if control.evt == 7:
+					if control.name == "guiBonePatternOnButton":
 						for i in range(len(Prefs['BannedBones'])-1, -1, -1):
 							boneName = Prefs['BannedBones'][i].upper()
 							if name == boneName:
 								del Prefs['BannedBones'][i]
 								#print "Deleted", name, "from banned bones list."
-					elif control.evt == 8:
+					elif control.name == "guiBonePatternOffButton":
 						Prefs['BannedBones'].append(name)
-						#print "Added", name, "to banned bones list."
-						
+						#print "Added", name, "to banned bones list."						
 		clearBoneGrid()
 		populateBoneGrid()
 	
 
 
 def guiGeneralSelectorCallback(filename):
-	global guiGeneralTab
+	global guiGeneralSubtab
 	if filename != "":
 		Prefs['exportBasename'] = basename(filename)
 		Prefs['exportBasepath'] = basepath(filename)
@@ -1318,48 +1328,48 @@ def guiGeneralSelectorCallback(filename):
 		pathSep = "/"
 		if "\\" in Prefs['exportBasepath']: pathSep = "\\"
 
-		guiGeneralTab.controls[18].value = Prefs['exportBasepath'] + pathSep + Prefs['exportBasename']
-		if guiGeneralTab.controls[18].value[len(guiGeneralTab.controls[18].value)-4:] != ".dts":
-			guiGeneralTab.controls[18].value += ".dts"
+		guiGeneralSubtab.controls[18].value = Prefs['exportBasepath'] + pathSep + Prefs['exportBasename']
+		if guiGeneralSubtab.controls[18].value[len(guiGeneralSubtab.controls[18].value)-4:] != ".dts":
+			guiGeneralSubtab.controls[18].value += ".dts"
 
 
 
 def guiGeneralCallback(control):
 	global Prefs
-	global guiGeneralTab
+	global guiGeneralSubtab
 	global guiTriListsButton
 	global guiStripMeshesButton
 	global guiTriMeshesButton
-	if control.evt == 6:
+	if control.name == "guiTriMeshesButton":
 		Prefs['PrimType'] = "Tris"
 		guiTriListsButton.state = False
 		guiStripMeshesButton.state = False
 		guiTriMeshesButton.state = True
-	if control.evt == 7:
+	elif control.name == "guiTriListsButton":
 		Prefs['PrimType'] = "TriLists"
 		guiTriListsButton.state = True
 		guiStripMeshesButton.state = False
 		guiTriMeshesButton.state = False
-	if control.evt == 8:
+	elif control.name == "guiStripMeshesButton":
 		Prefs['PrimType'] = "TriStrips"
 		guiTriListsButton.state = False
 		guiStripMeshesButton.state = True
 		guiTriMeshesButton.state = False
-	elif control.evt == 9:
+	elif control.name == "guiMaxStripSizeSlider":
 		Prefs['MaxStripSize'] = control.value
-	elif control.evt == 10:
+	elif control.name == "guiClusterWriteDepth":
 		Prefs['AlwaysWriteDepth'] = control.state
-	elif control.evt == 11:
+	elif control.name == "guiClusterDepth":
 		Prefs['ClusterDepth'] = control.value
-	elif control.evt == 12:
+	elif control.name == "guiBillboardButton":
 		Prefs['Billboard']['Enabled'] = control.state
-	elif control.evt == 13:
+	elif control.name == "guiBillboardEquator":
 		Prefs['Billboard']['Equator'] = control.value
-	elif control.evt == 14:
+	elif control.name == "guiBillboardPolar":
 		Prefs['Billboard']['Polar'] = control.value
-	elif control.evt == 15:
+	elif control.name == "guiBillboardPolarAngle":
 		Prefs['Billboard']['PolarAngle'] = control.value
-	elif control.evt == 16:
+	elif control.name == "guiBillboardDim":
 		val = int(control.value)
 		# need to constrain this to be a power of 2
 		# it would be easier just to use a combo box, but this is more fun.
@@ -1372,18 +1382,18 @@ def guiGeneralCallback(control):
 			val = int(2**math.floor(math.log(control.value,2)))
 		control.value = val
 		Prefs['Billboard']['Dim'] = control.value
-	elif control.evt == 17:
+	elif control.name == "guiBillboardPoles":
 		Prefs['Billboard']['IncludePoles'] = control.state
-	elif control.evt == 18:
+	elif control.name == "guiBillboardSize":
 		Prefs['Billboard']['Size'] = control.value
-	if control.evt == 19:
+	elif control.name == "guiShapeScriptButton":
 		Prefs['WriteShapeScript'] = control.state
-	elif control.evt == 20:
+	elif control.name == "guiCustomFilename":
 		Prefs['exportBasename'] = basename(control.value)
 		Prefs['exportBasepath'] = basepath(control.value)
-	elif control.evt == 21:
+	elif control.name == "guiCustomFilenameSelect":
 		Blender.Window.FileSelector (guiGeneralSelectorCallback, 'Select destination and filename')
-	elif control.evt == 22:
+	elif control.name == "guiCustomFilenameDefaults":
 		Prefs['exportBasename'] = basename(Blender.Get("filename"))
 		Prefs['exportBasepath'] = basepath(Blender.Get("filename"))
 		
@@ -1393,417 +1403,409 @@ def guiGeneralCallback(control):
 		else:
 			pathSep = "/"
 
-		guiGeneralTab.controls[18].value = Prefs['exportBasepath'] + pathSep + Prefs['exportBasename']
-		if guiGeneralTab.controls[18].value[len(guiGeneralTab.controls[18].value)-4:] != ".dts":
-			guiGeneralTab.controls[18].value += ".dts"
+		guiGeneralSubtab.controls[18].value = Prefs['exportBasepath'] + pathSep + Prefs['exportBasename']
+		if guiGeneralSubtab.controls[18].value[len(guiGeneralSubtab.controls[18].value)-4:] != ".dts":
+			guiGeneralSubtab.controls[18].value += ".dts"
 
-	#elif control.evt == 23:
-	#	Prefs['DTSVersion'] = control.value
-	elif control.evt == 24:
+	elif control.name == "guiTSEMaterial":
 		Prefs['TSEMaterial'] = control.state
 
 def guiBaseResize(control, newwidth, newheight):
-	tabContainers = ["content.sequence", "content.general", "content.armature", "content.about"]
-	if control.evt == None:
-		if control.name == "tabs":
-			control.x, control.y = 0, 335
-			control.width, control.height = 490, 55
-		elif control.name in tabContainers:
-			control.x, control.y = 0, 0
-			control.width, control.height = 490, 335
-		elif control.name == "header":
-			control.x, control.y = 0, newheight - 20
-			control.width, control.height = 490, 20
-		elif control.name == "tabs.version":
-			# TODO : adjust this whenever the version text changes
-			control.x, control.y = newwidth-80, 10
-			#control.x, control.y = newwidth-100, 10
-	elif control.evt == 1:
-		control.x, control.y = 10, 5
-		control.width, control.height = 70, 20
-	elif control.evt == 2:
-		control.x, control.y = 160, 5
-		control.width, control.height = 70, 20
-	elif control.evt == 3:
-		control.x, control.y = 85, 5
-		control.width, control.height = 70, 20
-	elif control.evt == 4:
-		control.x, control.y = 235, 5
-		control.width, control.height = 70, 20
-	elif control.evt == 5:
-		control.x, control.y = 310, 5
-		control.width, control.height = 70, 20
+	tabContainers = ["guiSequenceTab", "guiGeneralTab", "guiArmatureTab", "guiAboutTab"]
+	tabSubContainers = ["guiSequenceActionsSubtab", "guiSequenceNLASubtab", "guiGeneralSubtab", "guiArmatureSubtab", "guiAboutSubtab"]
+	if control.name == "guiTabBar":
+		control.x, control.y = 0, 378
+		control.width, control.height = 506, 55
+	elif control.name in tabContainers:
+		control.x, control.y = 0, 0
+		control.width, control.height = 506, 378
+	elif control.name in tabSubContainers:
+		control.x, control.y = 8, 8
+		control.width, control.height = 490, 335
+	elif control.name == "guiHeaderBar":
+		control.x, control.y = 0, newheight - 20
+		control.width, control.height = 506, 20
+	elif control.name == "guiSequenceButton":
+		control.x, control.y = 10, 0
+		control.width, control.height = 70, 25
+	elif control.name == "guiArmatureButton":
+		control.x, control.y = 82, 0
+		control.width, control.height = 65, 25
+	elif control.name == "guiMeshButton":
+		control.x, control.y = 149, 0
+		control.width, control.height = 55, 25
+	elif control.name == "guiAboutButton":
+		control.x, control.y = 206, 0
+		control.width, control.height = 45, 25
+	elif control.name == "guiExportButton":
+		control.x, control.y = 414, -30
+		control.width, control.height = 70, 25
 
 def guiSequenceResize(control, newwidth, newheight):
-	if control.evt == None:
-		if control.name == "sequence.list":
-			control.x = 10
-			control.y = 30
-			#control.height = newheight - 55
-			control.height = newheight - 70
-			control.width = 300
-		elif control.name == "sequence.title":
-			control.x = 10
-			control.y = newheight-15
-		elif control.name == "sequence.prefs":
-			control.x = newwidth - 180
-			control.y = 0
-			control.width = 180
-			control.height = newheight
-		elif control.name == "sequence.opts.title":
-			control.x = 5
-			control.y = newheight - 15
-		elif control.name == "sequence.opts.btitle":
-			control.x = 5
-			control.y = newheight - 110
-		elif control.name == "sequence.opts.ttitle":
-			control.x = 5
-			control.y = newheight - 215
-		elif control.name == "sequence.opts.rtitle":
-			control.x = 5
-			control.y = newheight - 140
+
+	if control.name == "guiSequenceList":
+		control.x = 10
+		control.y = 30
+		control.height = newheight - 70
+		control.width = 300
+	elif control.name == "guiSequenceTitle":
+		control.x = 10
+		control.y = newheight-15
+	elif control.name == "guiSequenceOptions":
+		control.x = newwidth - 180
+		control.y = 0
+		control.width = 180
+		control.height = newheight
+	elif control.name == "guiSequenceOptionsTitle":
+		control.x = 5
+		control.y = newheight - 15
+	# Joe - ?
+	elif control.name == "sequence.opts.btitle":
+		control.x = 5
+		control.y = newheight - 110
+	elif control.name == "guiSequenceOptionsTriggerTitle":
+		control.x = 5
+		control.y = newheight - 215
+	elif control.name == "guiSequenceOptionsRefposeTitle":
+		control.x = 5
+		control.y = newheight - 140
 	# Sequence list buttons
-	elif control.evt == 6:
+	elif control.name == "guiSequenceToggle":
 		control.x = 10
 		control.y = 5
 		control.width = 100
-	elif control.evt == 7:
+	elif control.name == "guiSequenceRefresh":
 		control.x = 112
 		control.y = 5
 		control.width = 100
 	# Sequence options
-	elif control.evt == 10:
+	elif control.name == "guiSequenceOptionsFramecount":
 		control.x = 5
 		control.y = newheight - 45
 		control.width = newwidth - 10
-	elif control.evt == 11:
+	elif control.name == "guiSequenceOptionsGroundFramecount":
 		control.x = 5
 		control.y = newheight - 70
 		control.width = newwidth - 10
-	elif control.evt == 12:
+	elif control.name == "guiSequenceOptionsAnimateMaterials":
 		control.x = 5
 		control.y = newheight - 95
 		control.width = 65
-	elif control.evt == 13:
+	elif control.name == "guiSequenceOptionsMaterialStartFrame":
 		control.x = 72
 		control.y = newheight - 95
 		control.width = 102
 	# Triggers
-	elif control.evt == 14:
+	elif control.name == "guiSequenceOptionsTriggerMenu":
 		control.x = 5
 		control.y = newheight - 245
 		control.width = newwidth - 10
-	elif control.evt == 15:
+	elif control.name == "guiSequenceOptionsTriggerState":
 		control.x = 5
 		control.y = newheight - 267
 		control.width = newwidth - 50
-	elif control.evt == 16:
+	elif control.name == "guiSequenceOptionsTriggerStateOn":
 		control.x = 137
 		control.y = newheight - 267
 		control.width = newwidth - 142
-	elif control.evt == 17:
+	elif control.name == "guiSequenceOptionsTriggerFrame":
 		control.x = 5
 		control.y = newheight - 289
 		control.width = newwidth - 10
-	elif control.evt == 18:
+	elif control.name == "guiSequenceOptionsTriggerAdd":
 		control.x = 5
 		control.y = newheight - 311
 		control.width = (newwidth / 2) - 6
-	elif control.evt == 19:
+	elif control.name == "guiSequenceOptionsTriggerDel":
 		control.x = (newwidth / 2)
 		control.y = newheight - 311
 		control.width = (newwidth / 2) - 6
 	# reference pose controls
-	elif control.evt == 20:
+	elif control.name == "guiSequenceOptionsRefposeMenu":
 		control.x = 5
 		control.y = newheight - 170
 		control.width = (newwidth) - 10
-	elif control.evt == 21:
+	elif control.name == "guiSequenceOptionsRefposeFrame":
 		control.x = 5
 		control.y = newheight - 195
 		control.width = (newwidth) - 10
 	# sequence priority
-	elif control.evt == 23:
+	elif control.name == "guiSequenceOptionsPriority":
 		control.x = 5
 		control.y = newheight - 120
 		control.width = newwidth - 10
-	
 
 def guiArmatureResize(control, newwidth, newheight):
-	if control.evt == None:
-		if control.name == "armature.bantitle":
-			control.x = 10
-			control.y = newheight-15
-		elif control.name == "armature.banlist":
-			control.x = 10
-			control.y = 70
-			control.width = 470
-			control.height = 242
-		elif control.name == "armature.bonematchtitle":
-			control.x = 10
-			control.y = newheight-285
-	else:
-		if control.evt == 6:
-			control.width = 70
-			control.x = 10
-			control.y = newheight-315
-		if control.evt == 7:
-			control.width = 35
-			control.x = 84
-			control.y = newheight-315
-		if control.evt == 8:
-			control.width = 35
-			control.x = 121
-			control.y = newheight-315
-		
+
+	if control.name == "guiBoneText":
+		control.x = 10
+		control.y = newheight-15
+	elif control.name == "guiBoneList":
+		control.x = 10
+		control.y = 70
+		control.width = 470
+		control.height = 242
+	elif control.name == "guiBoneMatchText":
+		control.x = 10
+		control.y = newheight-285
+	elif control.name == "guiBonePatternText":
+		control.width = 70
+		control.x = 10
+		control.y = newheight-315
+	elif control.name == "guiBonePatternOnButton":
+		control.width = 35
+		control.x = 84
+		control.y = newheight-315
+	elif control.name == "guiBonePatternOffButton":
+		control.width = 35
+		control.x = 121
+		control.y = newheight-315
+	
 
 def guiGeneralResize(control, newwidth, newheight):
-	if control.evt == None:
-		if control.name == "shape.strip":
-			control.x = 10
-			control.y = newheight - 20
-		elif control.name == "shape.cluster":
-			control.x = 10
-			control.y = newheight - 70
-		elif control.name == "shape.billboard":
-			control.x = 10
-			control.y = newheight - 120
-		elif control.name == "shape.output":
-			control.x = 10
-			control.y = newheight - 250
-	elif control.evt == 6:
+	if control.name == "guiStripText":
+		control.x = 10
+		control.y = newheight - 20
+	elif control.name == "guiClusterText":
+		control.x = 10
+		control.y = newheight - 70
+	elif control.name == "guiBillboardText":
+		control.x = 10
+		control.y = newheight - 120
+	elif control.name == "guiOutputText":
+		control.x = 10
+		control.y = newheight - 250
+	elif control.name == "guiTriMeshesButton":
 		control.x = 10
 		control.y = newheight - 30 - control.height
 		control.width = 90
-	elif control.evt == 7:
+	elif control.name == "guiTriListsButton":
 		control.x = 102
 		control.y = newheight - 30 - control.height
 		control.width = 90
-	elif control.evt == 8:
+	elif control.name == "guiStripMeshesButton":
 		control.x = 194
 		control.y = newheight - 30 - control.height
 		control.width = 90
-	elif control.evt == 9:
+	elif control.name == "guiMaxStripSizeSlider":
 		control.x = 286
 		control.y = newheight - 30 - control.height
 		control.width = 180
-	elif control.evt == 10:
+	elif control.name == "guiClusterWriteDepth":
 		control.x = 10
 		control.y = newheight - 80 - control.height
 		control.width = 80
-	elif control.evt == 11:
+	elif control.name == "guiClusterDepth":
 		control.x = 92
 		control.y = newheight - 80 - control.height
 		control.width = 180
-	elif control.evt == 12:
+	elif control.name == "guiBillboardButton":
 		control.x = 10
 		control.y = newheight - 130 - control.height
 		control.width = 50
-	elif control.evt == 13:
+	elif control.name == "guiBillboardEquator":
 		control.x = 62
 		control.y = newheight - 130 - control.height
 		control.width = 100
-	elif control.evt == 14:
+	elif control.name == "guiBillboardPolar":
 		control.x = 62
 		control.y = newheight - 152 - control.height
 		control.width = 100
-	elif control.evt == 15:
+	elif control.name == "guiBillboardPolarAngle":
 		control.x = 164
 		control.y = newheight - 152 - control.height
 		control.width = 200
-	elif control.evt == 16:
+	elif control.name == "guiBillboardDim":
 		control.x = 366
 		control.y = newheight - 130 - control.height
 		control.width = 100
-	elif control.evt == 17:
+	elif control.name == "guiBillboardPoles":
 		control.x = 366
 		control.y = newheight - 152 - control.height
 		control.width = 100
-	elif control.evt == 18:
+	elif control.name == "guiBillboardSize":
 		control.x = 164
 		control.y = newheight - 130 - control.height
 		control.width = 200
-	elif control.evt == 19:
+	elif control.name == "guiShapeScriptButton":
 		control.x = 356
 		control.y = newheight - 260 - control.height
 		control.width = 122
-	elif control.evt == 20:
+	elif control.name == "guiCustomFilename":
 		control.x = 10
 		control.y = newheight - 260 - control.height
 		control.width = 220
-	elif control.evt == 21:
+	elif control.name == "guiCustomFilenameSelect":
 		control.x = 232
 		control.y = newheight - 260 - control.height
 		control.width = 50
-	elif control.evt == 22:
+	elif control.name == "guiCustomFilenameDefaults":
 		control.x = 284
 		control.y = newheight - 260 - control.height
 		control.width = 70
-	elif control.evt == 23:
-		control.x = 356
-		control.y = newheight - 304 - control.height
-		control.width = 122
-	elif control.evt == 24:
+	elif control.name == "guiTSEMaterial":
 		control.x = 356
 		control.y = newheight - 282 - control.height
 		control.width = 122
 
 def guiAboutResize(control, newwidth, newheight):
-	if control.evt == None:
-		if control.name == "about.text":
-			control.x = 10
-			control.y = 120
+	if control.name == "guiAboutText":
+		control.x = 10
+		control.y = 120
 			
 def guiHeaderResize(control, newwidth, newheight):
-	if control.name == "header.title":
+	if control.name == "guiHeaderText":
 		control.x = 5
 		control.y = 5
+	elif control.name == "guiVersionText":
+		control.x = newwidth-80
+		control.y = 5
+
 
 def initGui():
 	global Version, Prefs
 	global guiSequenceTab, guiArmatureTab, guiGeneralTab, guiAboutTab, guiTabBar, guiHeaderTab
+	global guiSequenceSubtab, guiArmatureSubtab, guiGeneralSubtab, guiAboutSubtab
+	global guiSequenceButton, guiMeshButton, guiArmatureButton, guiAboutButton
 	global guiSequenceList, guiSequenceOptions, guiBoneList
 	global guiTriListsButton, guiStripMeshesButton, guiTriMeshesButton
 	global guiBonePatternText
+	global GlobalEvents	
 	
 	Common_Gui.initGui(exit_callback)
 	
 	# Main tab controls
-	guiSequenceButton = Common_Gui.BasicButton("Sequences", "Sequence options", 1, guiBaseCallback, guiBaseResize)
-	guiMeshButton = Common_Gui.BasicButton("General", "Mesh and other options", 2, guiBaseCallback, guiBaseResize)
-	guiArmatureButton = Common_Gui.BasicButton("Armatures", "Armature options", 3, guiBaseCallback, guiBaseResize)
-	guiAboutButton = Common_Gui.BasicButton("About", "About", 4, guiBaseCallback, guiBaseResize)
-	guiExportButton = Common_Gui.BasicButton("Export", "Export .dts shape", 5, guiBaseCallback, guiBaseResize)
-	guiVersionText = Common_Gui.SimpleText("tabs.version", "Version %s" % Version, None, guiBaseResize)
+	guiSequenceButton = Common_Gui.TabButton("guiSequenceButton", "Sequences", "Sequence options", None, guiBaseCallback, guiBaseResize)
+	guiSequenceButton.state = True
+	guiMeshButton = Common_Gui.TabButton("guiMeshButton", "General", "Mesh and other options", None, guiBaseCallback, guiBaseResize)
+	guiArmatureButton = Common_Gui.TabButton("guiArmatureButton", "Armatures", "Armature options", None, guiBaseCallback, guiBaseResize)
+	guiAboutButton = Common_Gui.TabButton("guiAboutButton", "About", "About", None, guiBaseCallback, guiBaseResize)
+	guiExportButton = Common_Gui.BasicButton("guiExportButton", "Export", "Export .dts shape", globalEvents.getNewID("Export"), guiBaseCallback, guiBaseResize)
+
+	
+	# Sub tab controls
+	
 
 	# Sequence tab controls
-	guiSequenceTitle = Common_Gui.SimpleText("sequence.title", "Action Sequences :", None, guiSequenceResize)
-	guiSequenceList = Common_Gui.ListContainer("sequence.list", guiSequenceCallback, guiSequenceResize)
+	guiSequenceTitle = Common_Gui.SimpleText("guiSequenceTitle", "Action Sequences :", None, guiSequenceResize)
+	guiSequenceList = Common_Gui.ListContainer("guiSequenceList", "sequence.list", guiSequenceCallback, guiSequenceResize)
 	guiSequenceList.fade_mode = 0
-	guiSequenceToggle = Common_Gui.ToggleButton("Toggle All", "Toggle export of all sequences", 6, guiSequenceCallback, guiSequenceResize)
+	guiSequenceToggle = Common_Gui.ToggleButton("guiSequenceToggle", "Toggle All", "Toggle export of all sequences", 6, guiSequenceCallback, guiSequenceResize)
 	guiSequenceToggle.state = False
-	guiSequenceRefresh = Common_Gui.BasicButton("Refresh", "Refresh list of sequences", 7, guiSequenceCallback, guiSequenceResize)
-	guiSequenceOptions = Common_Gui.BasicContainer("sequence.prefs", None, guiSequenceResize)
+	guiSequenceRefresh = Common_Gui.BasicButton("guiSequenceRefresh", "Refresh", "Refresh list of sequences", 7, guiSequenceCallback, guiSequenceResize)
+	guiSequenceOptions = Common_Gui.BasicContainer("guiSequenceOptions", "sequence.prefs", None, guiSequenceResize)
 	guiSequenceOptions.enabled = False
 	guiSequenceOptions.fade_mode = 5
 	guiSequenceOptions.borderColor = None
-	
-	# Sequence tab, list controls test
-	#for i in range(0, 20):
-		#guiSequenceList.addControl(Common_Gui.BasicContainer("l%d" % i, None, None))
+
 	
 	# Sequence tab, sequence options controls
-	guiSequenceOptionsTitle = Common_Gui.SimpleText("sequence.opts.title", "Sequence", None, guiSequenceResize)
-	guiSequenceOptionsFramecount = Common_Gui.NumberPicker("Frames", "Amount of frames to export", 10, guiSequenceCallback, guiSequenceResize)
+	guiSequenceOptionsTitle = Common_Gui.SimpleText("guiSequenceOptionsTitle", "Sequence", None, guiSequenceResize)
+	guiSequenceOptionsFramecount = Common_Gui.NumberPicker("guiSequenceOptionsFramecount", "Frames", "Amount of frames to export", 10, guiSequenceCallback, guiSequenceResize)
 	guiSequenceOptionsFramecount.min = 1
-	guiSequenceOptionsGroundFramecount = Common_Gui.NumberPicker("Ground Frames", "Amount of ground frames to export", 11, guiSequenceCallback, guiSequenceResize)
-	guiSequenceOptionsAnimateMaterials = Common_Gui.ToggleButton("Mat Anim", "Animate Materials", 12, guiSequenceCallback, guiSequenceResize)
-	guiSequenceOptionsMaterialStartFrame = Common_Gui.NumberPicker("Start", "Frame to start exporting material track", 13, guiSequenceCallback, guiSequenceResize)
+	guiSequenceOptionsGroundFramecount = Common_Gui.NumberPicker("guiSequenceOptionsGroundFramecount", "Ground Frames", "Amount of ground frames to export", 11, guiSequenceCallback, guiSequenceResize)
+	guiSequenceOptionsAnimateMaterials = Common_Gui.ToggleButton("guiSequenceOptionsAnimateMaterials", "Mat Anim", "Animate Materials", 12, guiSequenceCallback, guiSequenceResize)
+	guiSequenceOptionsMaterialStartFrame = Common_Gui.NumberPicker("guiSequenceOptionsMaterialStartFrame", "Start", "Frame to start exporting material track", 13, guiSequenceCallback, guiSequenceResize)
 	guiSequenceOptionsMaterialStartFrame.min = 1
 	guiSequenceOptionsMaterialStartFrame.max = Blender.Scene.GetCurrent().getRenderingContext().endFrame()	
 	
-	guiSequenceOptionsPriority = Common_Gui.NumberPicker("Priority", "Sequence playback priority", 23, guiSequenceCallback, guiSequenceResize)
+	guiSequenceOptionsPriority = Common_Gui.NumberPicker("guiSequenceOptionsPriority", "Priority", "Sequence playback priority", 23, guiSequenceCallback, guiSequenceResize)
 	guiSequenceOptionsPriority.min = 0
 	guiSequenceOptionsPriority.max = 64 # this seems resonable
 	
 	# this allows the user to select an arbitrary frame from any action as the reference pose
 	# for blend animations.
-	guiSequenceOptionsRefposeTitle = Common_Gui.SimpleText("sequence.opts.rtitle", "Ref Pose for ", None, guiSequenceResize)
+	guiSequenceOptionsRefposeTitle = Common_Gui.SimpleText("guiSequenceOptionsRefposeTitle", "Ref Pose for ", None, guiSequenceResize)
 	guiSequenceOptionsRefposeTitle.visible = False
-	guiSequenceOptionsRefposeMenu = Common_Gui.ComboBox("Use Action", "Select an action containing your refernce pose for this blend.", 20, guiSequenceCallback, guiSequenceResize)
+	guiSequenceOptionsRefposeMenu = Common_Gui.ComboBox("guiSequenceOptionsRefposeMenu", "Use Action", "Select an action containing your refernce pose for this blend.", 20, guiSequenceCallback, guiSequenceResize)
 	guiSequenceOptionsRefposeMenu.visible = False
-	guiSequenceOptionsRefposeFrame = Common_Gui.NumberPicker("Frame", "Frame to use for reference pose", 21, guiSequenceCallback, guiSequenceResize)
+	guiSequenceOptionsRefposeFrame = Common_Gui.NumberPicker("guiSequenceOptionsRefposeFrame", "Frame", "Frame to use for reference pose", 21, guiSequenceCallback, guiSequenceResize)
 	guiSequenceOptionsRefposeFrame.visible = False
 	guiSequenceOptionsRefposeFrame.min = 1
 	
 	
-	guiSequenceOptionsTriggerTitle = Common_Gui.SimpleText("sequence.opts.ttitle", "Triggers", None, guiSequenceResize)
-	guiSequenceOptionsTriggerMenu = Common_Gui.ComboBox("Trigger List", "Select a trigger from this list to edit its properties", 14, guiSequenceTriggersCallback, guiSequenceResize)
-	guiSequenceOptionsTriggerState = Common_Gui.NumberPicker("State", "State of trigger to alter", 15, guiSequenceTriggersCallback, guiSequenceResize)
+	guiSequenceOptionsTriggerTitle = Common_Gui.SimpleText("guiSequenceOptionsTriggerTitle", "Triggers", None, guiSequenceResize)
+	guiSequenceOptionsTriggerMenu = Common_Gui.ComboBox("guiSequenceOptionsTriggerMenu", "Trigger List", "Select a trigger from this list to edit its properties", 14, guiSequenceTriggersCallback, guiSequenceResize)
+	guiSequenceOptionsTriggerState = Common_Gui.NumberPicker("guiSequenceOptionsTriggerState", "State", "State of trigger to alter", 15, guiSequenceTriggersCallback, guiSequenceResize)
 	guiSequenceOptionsTriggerState.min, guiSequenceOptionsTriggerState.max = 1, 32
-	guiSequenceOptionsTriggerStateOn = Common_Gui.ToggleButton("On", "Determines if state will be activated or deactivated", 16, guiSequenceTriggersCallback, guiSequenceResize)
-	guiSequenceOptionsTriggerFrame = Common_Gui.NumberPicker("Frame", "Frame to activate trigger on", 17, guiSequenceTriggersCallback, guiSequenceResize)
+	guiSequenceOptionsTriggerStateOn = Common_Gui.ToggleButton("guiSequenceOptionsTriggerStateOn", "On", "Determines if state will be activated or deactivated", 16, guiSequenceTriggersCallback, guiSequenceResize)
+	guiSequenceOptionsTriggerFrame = Common_Gui.NumberPicker("guiSequenceOptionsTriggerFrame", "Frame", "Frame to activate trigger on", 17, guiSequenceTriggersCallback, guiSequenceResize)
 	guiSequenceOptionsTriggerFrame.min = 1
-	guiSequenceOptionsTriggerAdd = Common_Gui.BasicButton("Add", "Add new trigger", 18, guiSequenceTriggersCallback, guiSequenceResize)
-	guiSequenceOptionsTriggerDel = Common_Gui.BasicButton("Del", "Delete currently selected trigger", 19, guiSequenceTriggersCallback, guiSequenceResize)
+	guiSequenceOptionsTriggerAdd = Common_Gui.BasicButton("guiSequenceOptionsTriggerAdd", "Add", "Add new trigger", 18, guiSequenceTriggersCallback, guiSequenceResize)
+	guiSequenceOptionsTriggerDel = Common_Gui.BasicButton("guiSequenceOptionsTriggerDel", "Del", "Delete currently selected trigger", 19, guiSequenceTriggersCallback, guiSequenceResize)
 	
 	# Armature tab controls
-	guiBoneText =  Common_Gui.SimpleText("armature.bantitle", "Bones that should be exported :", None, guiArmatureResize)
-	#guiBoneList = Common_Gui.BasicGrid("armature.banlist", None, guiArmatureResize)
-	guiBoneList = Common_Gui.BoneListContainer("armature.banlist", None, guiArmatureResize)
-	guiBoneMatchText =  Common_Gui.SimpleText("armature.bonematchtitle", "Match pattern", None, guiArmatureResize)
-	#Common_Gui.TextBox("Filename: ", "Filename to write to", 20, guiGeneralCallback, guiGeneralResize)
-	guiBonePatternText = Common_Gui.TextBox("", "pattern to match bone names, asterix is wildcard", 6, guiArmatureCallback, guiArmatureResize)
+	guiBoneText = Common_Gui.SimpleText("guiBoneText", "Bones that should be exported :", None, guiArmatureResize)
+	guiBoneList = Common_Gui.BoneListContainer("guiBoneList", None, None, guiArmatureResize)
+	guiBoneMatchText =  Common_Gui.SimpleText("guiBoneMatchText", "Match pattern", None, guiArmatureResize)
+	guiBonePatternText = Common_Gui.TextBox("guiBonePatternText", "", "pattern to match bone names, asterix is wildcard", 6, guiArmatureCallback, guiArmatureResize)
 	guiBonePatternText.value = "*"
-	guiBonePatternOnButton = Common_Gui.BasicButton("On", "Turn on export of bones matching pattern", 7, guiArmatureCallback, guiArmatureResize)
-	guiBonePatternOffButton = Common_Gui.BasicButton("Off", "Turn off export of bones matching pattern", 8, guiArmatureCallback, guiArmatureResize)
+	guiBonePatternOnButton = Common_Gui.BasicButton("guiBonePatternOnButton", "On", "Turn on export of bones matching pattern", 7, guiArmatureCallback, guiArmatureResize)
+	guiBonePatternOffButton = Common_Gui.BasicButton("guiBonePatternOffButton", "Off", "Turn off export of bones matching pattern", 8, guiArmatureCallback, guiArmatureResize)
 	
 	# General tab controls
-	guiStripText = Common_Gui.SimpleText("shape.strip", "Geometry type", None, guiGeneralResize)
+	guiStripText = Common_Gui.SimpleText("guiStripText", "Geometry type", None, guiGeneralResize)
 	# Joe - Ugly but effective
 	try: x = Prefs['PrimType']
 	except KeyError: Prefs['PrimType'] = "Tris"
-	guiTriMeshesButton = Common_Gui.ToggleButton("Triangles", "Generate individual triangles for meshes", 6, guiGeneralCallback, guiGeneralResize)
+	guiTriMeshesButton = Common_Gui.ToggleButton("guiTriMeshesButton", "Triangles", "Generate individual triangles for meshes", 6, guiGeneralCallback, guiGeneralResize)
 	if Prefs['PrimType'] == "Tris": guiTriMeshesButton.state = True
 	else: guiTriMeshesButton.state = False
-	guiTriListsButton = Common_Gui.ToggleButton("Triangle Lists", "Generate triangle lists for meshes", 7, guiGeneralCallback, guiGeneralResize)
+	guiTriListsButton = Common_Gui.ToggleButton("guiTriListsButton", "Triangle Lists", "Generate triangle lists for meshes", 7, guiGeneralCallback, guiGeneralResize)
 	if Prefs['PrimType'] == "TriLists": guiTriListsButton.state = True
 	else: guiTriListsButton.state = False
-	guiStripMeshesButton = Common_Gui.ToggleButton("Triangle Strips", "Generate triangle strips for meshes", 8, guiGeneralCallback, guiGeneralResize)
+	guiStripMeshesButton = Common_Gui.ToggleButton("guiStripMeshesButton", "Triangle Strips", "Generate triangle strips for meshes", 8, guiGeneralCallback, guiGeneralResize)
 	if Prefs['PrimType'] == "TriStrips": guiStripMeshesButton.state = True
 	else: guiStripMeshesButton.state = False
-	guiMaxStripSizeSlider = Common_Gui.NumberSlider("Strip Size ", "Maximum size of generated triangle strips", 9, guiGeneralCallback, guiGeneralResize)
+	guiMaxStripSizeSlider = Common_Gui.NumberSlider("guiMaxStripSizeSlider", "Strip Size ", "Maximum size of generated triangle strips", 9, guiGeneralCallback, guiGeneralResize)
 	guiMaxStripSizeSlider.min, guiMaxStripSizeSlider.max = 3, 30
 	guiMaxStripSizeSlider.value = Prefs['MaxStripSize']
 	# --
-	guiClusterText = Common_Gui.SimpleText("shape.cluster", "Cluster Mesh", None, guiGeneralResize)
-	guiClusterWriteDepth = Common_Gui.ToggleButton("Write Depth ", "Always Write the Depth on Cluster meshes", 10, guiGeneralCallback, guiGeneralResize)
+	guiClusterText = Common_Gui.SimpleText("guiClusterText", "Cluster Mesh", None, guiGeneralResize)
+	guiClusterWriteDepth = Common_Gui.ToggleButton("guiClusterWriteDepth", "Write Depth ", "Always Write the Depth on Cluster meshes", 10, guiGeneralCallback, guiGeneralResize)
 	guiClusterWriteDepth.state = Prefs['AlwaysWriteDepth']
-	guiClusterDepth = Common_Gui.NumberSlider("Depth", "Maximum depth Clusters meshes should be calculated to", 11, guiGeneralCallback, guiGeneralResize)
+	guiClusterDepth = Common_Gui.NumberSlider("guiClusterDepth", "Depth", "Maximum depth Clusters meshes should be calculated to", 11, guiGeneralCallback, guiGeneralResize)
 	guiClusterDepth.min, guiClusterDepth.max = 3, 30
 	guiClusterDepth.value = Prefs['ClusterDepth']
 	# --
-	guiBillboardText = Common_Gui.SimpleText("shape.billboard", "Billboard", None, guiGeneralResize)
-	guiBillboardButton = Common_Gui.ToggleButton("Enable", "Add a billboard detail level to the shape", 12, guiGeneralCallback, guiGeneralResize)
+	guiBillboardText = Common_Gui.SimpleText("guiBillboardText", "Billboard", None, guiGeneralResize)
+	guiBillboardButton = Common_Gui.ToggleButton("guiBillboardButton", "Enable", "Add a billboard detail level to the shape", 12, guiGeneralCallback, guiGeneralResize)
 	guiBillboardButton.state = Prefs['Billboard']['Enabled']
-	guiBillboardEquator = Common_Gui.NumberPicker("Equator", "Number of images around the equator", 13, guiGeneralCallback, guiGeneralResize)
+	guiBillboardEquator = Common_Gui.NumberPicker("guiBillboardEquator", "Equator", "Number of images around the equator", 13, guiGeneralCallback, guiGeneralResize)
 	guiBillboardEquator.min, guiBillboardEquator.max = 2, 64
 	guiBillboardEquator.value = Prefs['Billboard']['Equator']
-	guiBillboardPolar = Common_Gui.NumberPicker("Polar", "Number of images around the polar", 14, guiGeneralCallback, guiGeneralResize)
+	guiBillboardPolar = Common_Gui.NumberPicker("guiBillboardPolar", "Polar", "Number of images around the polar", 14, guiGeneralCallback, guiGeneralResize)
 	guiBillboardPolar.min, guiBillboardPolar.max = 3, 64
 	guiBillboardPolar.value = Prefs['Billboard']['Polar']
-	guiBillboardPolarAngle = Common_Gui.NumberSlider("Polar Angle", "Angle to take polar images at", 15, guiGeneralCallback, guiGeneralResize)
+	guiBillboardPolarAngle = Common_Gui.NumberSlider("guiBillboardPolarAngle", "Polar Angle", "Angle to take polar images at", 15, guiGeneralCallback, guiGeneralResize)
 	guiBillboardPolarAngle.min, guiBillboardPolarAngle.max = 0.0, 45.0
 	guiBillboardPolarAngle.value = Prefs['Billboard']['PolarAngle']
-	guiBillboardDim = Common_Gui.NumberPicker("Dim", "Dimensions of billboard images", 16, guiGeneralCallback, guiGeneralResize)
+	guiBillboardDim = Common_Gui.NumberPicker("guiBillboardDim", "Dim", "Dimensions of billboard images", 16, guiGeneralCallback, guiGeneralResize)
 	guiBillboardDim.min, guiBillboardDim.max = 16, 128
 	guiBillboardDim.value = Prefs['Billboard']['Dim']
-	guiBillboardPoles = Common_Gui.ToggleButton("Poles", "Take images at the poles", 17, guiGeneralCallback, guiGeneralResize)
+	guiBillboardPoles = Common_Gui.ToggleButton("guiBillboardPoles", "Poles", "Take images at the poles", 17, guiGeneralCallback, guiGeneralResize)
 	guiBillboardPoles.state = Prefs['Billboard']['IncludePoles']
-	guiBillboardSize = Common_Gui.NumberSlider("Size", "Size of billboard's detail level", 18, guiGeneralCallback, guiGeneralResize)
+	guiBillboardSize = Common_Gui.NumberSlider("guiBillboardSize", "Size", "Size of billboard's detail level", 18, guiGeneralCallback, guiGeneralResize)
 	guiBillboardSize.min, guiBillboardSize.max = 0.0, 128.0
 	guiBillboardSize.value = Prefs['Billboard']['Size']
 	# --
-	guiOutputText = Common_Gui.SimpleText("shape.output", "Output", None, guiGeneralResize)
-	guiShapeScriptButton =  Common_Gui.ToggleButton("Write Shape Script", "Write .cs script that details the .dts and all .dsq sequences", 19, guiGeneralCallback, guiGeneralResize)
-	guiCustomFilename = Common_Gui.TextBox("Filename: ", "Filename to write to", 20, guiGeneralCallback, guiGeneralResize)
+	guiOutputText = Common_Gui.SimpleText("guiOutputText", "Output", None, guiGeneralResize)
+	guiShapeScriptButton =  Common_Gui.ToggleButton("guiShapeScriptButton", "Write Shape Script", "Write .cs script that details the .dts and all .dsq sequences", 19, guiGeneralCallback, guiGeneralResize)
+	guiCustomFilename = Common_Gui.TextBox("guiCustomFilename", "Filename: ", "Filename to write to", 20, guiGeneralCallback, guiGeneralResize)
 	guiCustomFilename.length = 255
 	if "\\" in Prefs['exportBasepath']:
 		pathSep = "\\"
 	else:
 		pathSep = "/"
 	guiCustomFilename.value = Prefs['exportBasepath'] + pathSep + Prefs['exportBasename'] + ".dts"
-	guiCustomFilenameSelect = Common_Gui.BasicButton("Select...", "Select a filename and destination for export", 21, guiGeneralCallback, guiGeneralResize)
-	guiCustomFilenameDefaults = Common_Gui.BasicButton("Default", "Reset filename and destination to defaults", 22, guiGeneralCallback, guiGeneralResize)
+	guiCustomFilenameSelect = Common_Gui.BasicButton("guiCustomFilenameSelect", "Select...", "Select a filename and destination for export", 21, guiGeneralCallback, guiGeneralResize)
+	guiCustomFilenameDefaults = Common_Gui.BasicButton("guiCustomFilenameDefaults", "Default", "Reset filename and destination to defaults", 22, guiGeneralCallback, guiGeneralResize)
 	
-	#guiCustomDTSVersion = Common_Gui.NumberPicker("Dts Version", "Version of DTS file to export", 23, guiGeneralCallback, guiGeneralResize)
-	#guiCustomDTSVersion.min, guiCustomDTSVersion.max = 24, 25
-	
-	guiTSEMaterial = Common_Gui.ToggleButton("Write TSE Materials", "Write materials and scripts geared for TSE", 24, guiGeneralCallback, guiGeneralResize)
+	guiTSEMaterial = Common_Gui.ToggleButton("guiTSEMaterial", "Write TSE Materials", "Write materials and scripts geared for TSE", 24, guiGeneralCallback, guiGeneralResize)
 	guiTSEMaterial.state = Prefs['TSEMaterial']
 	
 	# About tab controls
-	guiAboutText = Common_Gui.MultilineText("about.text", 
+	guiAboutText = Common_Gui.MultilineText("guiAboutText", 
 	"Torque Exporter Plugin for Blender\n" +
 	"\n"
 	"Written by James Urquhart, with assistance from Tim Gift, Clark Fagot, Wes Beary,\n" +
@@ -1815,35 +1817,48 @@ def initGui():
 	"Visit GarageGames at http://www.garagegames.com", None, guiAboutResize)
 	
 	# Header controls
-	guiHeaderText = Common_Gui.SimpleText("header.title", "Torque Exporter Plugin", None, guiHeaderResize)
+	guiHeaderText = Common_Gui.SimpleText("guiHeaderText", "Torque Exporter Plugin", None, guiHeaderResize)
 	headerTextColor = headerColor = Common_Gui.curTheme.get('buts').text_hi
 	guiHeaderText.color = [headerTextColor[0]/255.0, headerTextColor[1]/255.0, headerTextColor[2]/255.0, headerTextColor[3]/255.0]
+	guiVersionText = Common_Gui.SimpleText("guiVersionText", "Version %s" % Version, None, guiHeaderResize)
 	
 	# Container Controls
-	guiHeaderBar = Common_Gui.BasicContainer("header", None, guiBaseResize)
+	guiHeaderBar = Common_Gui.BasicContainer("guiHeaderBar", "header", None, guiBaseResize)
 	guiHeaderBar.borderColor = None
 	headerColor = Common_Gui.curTheme.get('buts').header
 	guiHeaderBar.color = [headerColor[0]/255.0, headerColor[1]/255.0, headerColor[2]/255.0, headerColor[3]/255.0]
 	guiHeaderBar.fade_mode = 0
-	guiTabBar = Common_Gui.BasicContainer("tabs", None, guiBaseResize)
+	guiTabBar = Common_Gui.BasicContainer("guiTabBar", "tabs", None, guiBaseResize)
 	guiTabBar.fade_mode = 0
-	#guiTabBar.borderColor = None
-	guiSequenceTab = Common_Gui.BasicContainer("content.sequence", None, guiBaseResize)
+	guiSequenceTab = Common_Gui.TabContainer("guiSequenceTab", "content.sequence", guiSequenceButton, None, guiBaseResize)
 	guiSequenceTab.fade_mode = 1
 	guiSequenceTab.enabled, guiSequenceTab.visible = True, True
-	guiGeneralTab = Common_Gui.BasicContainer("content.general", None, guiBaseResize)
+	guiGeneralTab = Common_Gui.TabContainer("guiGeneralTab", "content.general", guiMeshButton, None, guiBaseResize)
 	guiGeneralTab.fade_mode = 1
 	guiGeneralTab.enabled, guiGeneralTab.visible = False, False
-	guiArmatureTab = Common_Gui.BasicContainer("content.armature", None, guiBaseResize)
+	guiArmatureTab = Common_Gui.TabContainer("guiArmatureTab", "content.armature", guiArmatureButton, None, guiBaseResize)
 	guiArmatureTab.fade_mode = 1
 	guiArmatureTab.enabled, guiArmatureTab.visible = False, False
-	guiAboutTab = Common_Gui.BasicContainer("content.about", None, guiBaseResize)
+	guiAboutTab = Common_Gui.TabContainer("guiAboutTab", "content.about", guiAboutButton, None, guiBaseResize)
 	guiAboutTab.fade_mode = 1
 	guiAboutTab.enabled, guiAboutTab.visible = False, False
+	
+	# Sub-container Controls
+	guiSequenceActionsSubtab = Common_Gui.BasicContainer("guiSequenceActionsSubtab", None, None, guiBaseResize)
+	guiSequenceActionsSubtab.fade_mode = 1
+	guiGeneralSubtab = Common_Gui.BasicContainer("guiGeneralSubtab", None, None, guiBaseResize)
+	guiGeneralSubtab.fade_mode = 1
+	guiArmatureSubtab = Common_Gui.BasicContainer("guiArmatureSubtab", None, None, guiBaseResize)
+	guiArmatureSubtab.fade_mode = 1
+	guiAboutSubtab = Common_Gui.BasicContainer("guiAboutSubtab", None, None, guiBaseResize)
+	guiAboutSubtab.fade_mode = 1
+	#guiSequenceNLASubtab = Common_Gui.BasicContainer("guiSequenceNLASubtab", None, None, guiBaseResize)
+	#guiSequenceActionsSubtab.fade_mode = 1
 	
 	# Add all controls to respective containers
 	
 	guiHeaderBar.addControl(guiHeaderText)
+	guiHeaderBar.addControl(guiVersionText)
 	
 	Common_Gui.addGuiControl(guiTabBar)
 	guiTabBar.addControl(guiHeaderBar) # Here to get the blend from panel color
@@ -1852,15 +1867,19 @@ def initGui():
 	guiTabBar.addControl(guiArmatureButton)
 	guiTabBar.addControl(guiAboutButton)
 	guiTabBar.addControl(guiExportButton)
-	guiTabBar.addControl(guiVersionText)
 	
+		
 	Common_Gui.addGuiControl(guiSequenceTab)
-	guiSequenceTab.addControl(guiSequenceTitle)
-	guiSequenceTab.addControl(guiSequenceList)
-	guiSequenceTab.addControl(guiSequenceToggle)
-	guiSequenceTab.addControl(guiSequenceRefresh)
-	guiSequenceTab.addControl(guiSequenceOptions)
-	
+	guiSequenceTab.borderColor = [0,0,0,0]
+	guiSequenceTab.addControl(guiSequenceActionsSubtab)
+	guiSequenceActionsSubtab.borderColor = [0,0,0,0]
+
+	guiSequenceActionsSubtab.addControl(guiSequenceTitle)
+	guiSequenceActionsSubtab.addControl(guiSequenceList)
+	guiSequenceActionsSubtab.addControl(guiSequenceToggle)
+	guiSequenceActionsSubtab.addControl(guiSequenceRefresh)
+	guiSequenceActionsSubtab.addControl(guiSequenceOptions)
+
 	guiSequenceOptions.addControl(guiSequenceOptionsTitle)
 	guiSequenceOptions.addControl(guiSequenceOptionsFramecount)
 	guiSequenceOptions.addControl(guiSequenceOptionsGroundFramecount)
@@ -1875,51 +1894,60 @@ def initGui():
 	guiSequenceOptions.addControl(guiSequenceOptionsTriggerAdd)
 	guiSequenceOptions.addControl(guiSequenceOptionsTriggerDel)
 
-	# added these for selection of blend ref pose.
 	guiSequenceOptions.addControl(guiSequenceOptionsRefposeTitle)
 	guiSequenceOptions.addControl(guiSequenceOptionsRefposeMenu)
 	guiSequenceOptions.addControl(guiSequenceOptionsRefposeFrame)
-	
 	guiSequenceOptions.addControl(guiSequenceOptionsPriority)
 	
 	populateSequenceList()
 	
 	Common_Gui.addGuiControl(guiArmatureTab)
-	guiArmatureTab.addControl(guiBoneText)
-	guiArmatureTab.addControl(guiBoneList)
-	guiArmatureTab.addControl(guiBoneMatchText)
-	guiArmatureTab.addControl(guiBonePatternText)
-	guiArmatureTab.addControl(guiBonePatternOnButton)
-	guiArmatureTab.addControl(guiBonePatternOffButton)
+	guiArmatureTab.borderColor = [0,0,0,0]
+	guiArmatureTab.addControl(guiArmatureSubtab)
+	guiArmatureSubtab.borderColor = [0,0,0,0]
+	
+	guiArmatureSubtab.addControl(guiBoneText)
+	guiArmatureSubtab.addControl(guiBoneList)
+	guiArmatureSubtab.addControl(guiBoneMatchText)
+	guiArmatureSubtab.addControl(guiBonePatternText)
+	guiArmatureSubtab.addControl(guiBonePatternOnButton)
+	guiArmatureSubtab.addControl(guiBonePatternOffButton)
+
 	populateBoneGrid()
 	
 	Common_Gui.addGuiControl(guiGeneralTab)
-	guiGeneralTab.addControl(guiStripText)
-	guiGeneralTab.addControl(guiTriMeshesButton)
-	guiGeneralTab.addControl(guiTriListsButton)
-	guiGeneralTab.addControl(guiStripMeshesButton)	
-	guiGeneralTab.addControl(guiMaxStripSizeSlider)
-	guiGeneralTab.addControl(guiClusterText)
-	guiGeneralTab.addControl(guiClusterDepth)
-	guiGeneralTab.addControl(guiClusterWriteDepth)
-	guiGeneralTab.addControl(guiBillboardText)
-	guiGeneralTab.addControl(guiBillboardButton)
-	guiGeneralTab.addControl(guiBillboardEquator)
-	guiGeneralTab.addControl(guiBillboardPolar)
-	guiGeneralTab.addControl(guiBillboardPolarAngle)
-	guiGeneralTab.addControl(guiBillboardDim)
-	guiGeneralTab.addControl(guiBillboardPoles)
-	guiGeneralTab.addControl(guiBillboardSize)
-	guiGeneralTab.addControl(guiOutputText)
-	guiGeneralTab.addControl(guiShapeScriptButton)
-	guiGeneralTab.addControl(guiCustomFilename)
-	guiGeneralTab.addControl(guiCustomFilenameSelect)
-	guiGeneralTab.addControl(guiCustomFilenameDefaults)
-	#guiGeneralTab.addControl(guiCustomDTSVersion)
-	guiGeneralTab.addControl(guiTSEMaterial)
+	guiGeneralTab.borderColor = [0,0,0,0]
+	guiGeneralTab.addControl(guiGeneralSubtab)
+	guiGeneralSubtab.borderColor = [0,0,0,0]
+	
+	guiGeneralSubtab.addControl(guiStripText)
+	guiGeneralSubtab.addControl(guiTriMeshesButton)
+	guiGeneralSubtab.addControl(guiTriListsButton)
+	guiGeneralSubtab.addControl(guiStripMeshesButton)	
+	guiGeneralSubtab.addControl(guiMaxStripSizeSlider)
+	guiGeneralSubtab.addControl(guiClusterText)
+	guiGeneralSubtab.addControl(guiClusterDepth)
+	guiGeneralSubtab.addControl(guiClusterWriteDepth)
+	guiGeneralSubtab.addControl(guiBillboardText)
+	guiGeneralSubtab.addControl(guiBillboardButton)
+	guiGeneralSubtab.addControl(guiBillboardEquator)
+	guiGeneralSubtab.addControl(guiBillboardPolar)
+	guiGeneralSubtab.addControl(guiBillboardPolarAngle)
+	guiGeneralSubtab.addControl(guiBillboardDim)
+	guiGeneralSubtab.addControl(guiBillboardPoles)
+	guiGeneralSubtab.addControl(guiBillboardSize)
+	guiGeneralSubtab.addControl(guiOutputText)
+	guiGeneralSubtab.addControl(guiShapeScriptButton)
+	guiGeneralSubtab.addControl(guiCustomFilename)
+	guiGeneralSubtab.addControl(guiCustomFilenameSelect)
+	guiGeneralSubtab.addControl(guiCustomFilenameDefaults)
+	guiGeneralSubtab.addControl(guiTSEMaterial)
 
 	Common_Gui.addGuiControl(guiAboutTab)
-	guiAboutTab.addControl(guiAboutText)
+	guiAboutTab.borderColor = [0,0,0,0]
+	guiAboutTab.addControl(guiAboutSubtab)
+	guiAboutSubtab.borderColor = [0,0,0,0]
+	guiAboutSubtab.addControl(guiAboutText)
 
 # Called when gui exits
 def exit_callback():
