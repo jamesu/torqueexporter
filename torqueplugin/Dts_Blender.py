@@ -1143,7 +1143,7 @@ def guiSequenceUpdateTriggers(triggerList, itemIndex):
 		guiSequenceOptions.controls[8].state = False
 		guiSequenceOptions.controls[9].value = 0
 	else:
-		guiSequenceOptions.controls[7].value = triggerList[itemIndex][0] # State
+		guiSequenceOptions.controls[7].value = triggerList[itemIndex][0] # Trigger State
 		guiSequenceOptions.controls[9].value = triggerList[itemIndex][1] # Time
 		guiSequenceOptions.controls[8].state = triggerList[itemIndex][2] # On
 
@@ -1215,6 +1215,10 @@ def guiSequenceCallback(control):
 				maxNumFrames = 0
 
 			# Update gui control states
+			if sequencePrefs['InterpolateFrames'] > maxNumFrames:
+				sequencePrefs['InterpolateFrames'] = maxNumFrames
+			if sequencePrefs['NumGroundFrames'] > maxNumFrames:
+				sequencePrefs['NumGroundFrames'] = maxNumFrames
 			guiSequenceOptions.enabled = True
 			guiSequenceOptions.controls[1].value = sequencePrefs['InterpolateFrames']
 			guiSequenceOptions.controls[1].max = maxNumFrames
