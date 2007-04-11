@@ -411,7 +411,7 @@ def addBillboardDetailLevel(self, dispDetail, equator, polar, polarangle, dim, i
 					dim,
 					includepoles),
 					size,-1,-1,0)	
-	[b]self.detaillevels.insert((self.numBaseDetails-self.numLOSCollisionDetails-self.numCollisionDetails-1), bb)[/b]
+	self.detaillevels.insert((self.numBaseDetails-self.numLOSCollisionDetails-self.numCollisionDetails-1), bb)
 		
 		
 	def stripMeshes(self, maxsize):
