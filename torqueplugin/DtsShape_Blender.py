@@ -400,20 +400,19 @@ class BlenderShape(DtsShape):
 			
 		return True
 		
-def addBillboardDetailLevel(self, dispDetail, equator, polar, polarangle, dim, includepoles, size):
-	self.numBaseDetails += 1
-	bb = DetailLevel(self.addName("BILLBOARD-%d" % (self.numBaseDetails-self.numLOSCollisionDetails-self.numCollisionDetails-1)),-1,
-				encodeBillBoard(
-					equator,
-					polar,
-					polarangle,
-					dispDetail,
-					dim,
-					includepoles),
-					size,-1,-1,0)	
-	self.detaillevels.insert((self.numBaseDetails-self.numLOSCollisionDetails-self.numCollisionDetails-1), bb)
-		
-		
+	def addBillboardDetailLevel(self, dispDetail, equator, polar, polarangle, dim, includepoles, size):
+		self.numBaseDetails += 1
+		bb = DetailLevel(self.addName("BILLBOARD-%d" % (self.numBaseDetails)),-1,
+					encodeBillBoard(
+						equator,
+						polar,
+						polarangle,
+						dispDetail,
+						dim,
+						includepoles),
+						size,-1,-1,0)
+		self.detaillevels.insert(self.numBaseDetails-1, bb)
+
 	def stripMeshes(self, maxsize):
 		subshape = self.subshapes[0]
 		for obj in self.objects[subshape.firstObject:subshape.firstObject+(subshape.numObjects-(self.numCollisionDetails+self.numLOSCollisionDetails))]:
