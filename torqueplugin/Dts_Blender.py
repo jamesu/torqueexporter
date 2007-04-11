@@ -900,7 +900,7 @@ def guiBoneListItemCallback(control):
 		calcIdx = 0
 	else:
 		calcIdx = (control.evt - 40) #/ 4
-	real_name = control.name.upper()
+	real_name = control.text.upper()
 	if control.state:
 		# Remove entry from BannedBones
 		for i in range(0, len(Prefs['BannedBones'])):
