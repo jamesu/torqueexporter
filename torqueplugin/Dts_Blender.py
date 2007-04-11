@@ -1147,7 +1147,7 @@ def guiSequenceUpdateTriggers(triggerList, itemIndex):
 		guiSequenceOptions.controls[9].value = triggerList[itemIndex][1] # Time
 		guiSequenceOptions.controls[8].state = triggerList[itemIndex][2] # On
 
-triggerMenuTemplate = "[%d] state=%d"
+triggerMenuTemplate = "Frame:%d Trigger:%d "
 
 def guiSequenceTriggersCallback(control):
 	global guiSequenceOptions, guiSequenceList, triggerMenuTemplate
@@ -1167,7 +1167,7 @@ def guiSequenceTriggersCallback(control):
 		guiSequenceOptions.controls[6].itemIndex = len(sequencePrefs['Triggers'])-1
 		guiSequenceUpdateTriggers(sequencePrefs['Triggers'], guiSequenceOptions.controls[6].itemIndex)
 	elif (len(guiSequenceOptions.controls[6].items) != 0):
-		if control.evt == "guiSequenceOptionsTriggerState":
+		if control.name == "guiSequenceOptionsTriggerState":
 			sequencePrefs['Triggers'][itemIndex][0] = control.value
 		elif control.name == "guiSequenceOptionsTriggerStateOn":
 			sequencePrefs['Triggers'][itemIndex][2] = control.state
@@ -1725,7 +1725,7 @@ def initGui():
 	
 	guiSequenceOptionsTriggerTitle = Common_Gui.SimpleText("guiSequenceOptionsTriggerTitle", "Triggers", None, guiSequenceResize)
 	guiSequenceOptionsTriggerMenu = Common_Gui.ComboBox("guiSequenceOptionsTriggerMenu", "Trigger List", "Select a trigger from this list to edit its properties", 14, guiSequenceTriggersCallback, guiSequenceResize)
-	guiSequenceOptionsTriggerState = Common_Gui.NumberPicker("guiSequenceOptionsTriggerState", "State", "State of trigger to alter", 15, guiSequenceTriggersCallback, guiSequenceResize)
+	guiSequenceOptionsTriggerState = Common_Gui.NumberPicker("guiSequenceOptionsTriggerState", "Trigger", "Trigger state to alter", 15, guiSequenceTriggersCallback, guiSequenceResize)
 	guiSequenceOptionsTriggerState.min, guiSequenceOptionsTriggerState.max = 1, 32
 	guiSequenceOptionsTriggerStateOn = Common_Gui.ToggleButton("guiSequenceOptionsTriggerStateOn", "On", "Determines if state will be activated or deactivated", 16, guiSequenceTriggersCallback, guiSequenceResize)
 	guiSequenceOptionsTriggerFrame = Common_Gui.NumberPicker("guiSequenceOptionsTriggerFrame", "Frame", "Frame to activate trigger on", 17, guiSequenceTriggersCallback, guiSequenceResize)
