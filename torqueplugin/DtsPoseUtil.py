@@ -343,7 +343,7 @@ class DtsPoseUtilClass:
 # --------- test functions ----------------
 
 
-'''
+
 def toTorqueVec(v):
 	return Vector(v[0], v[1], v[2])
 	
@@ -360,6 +360,7 @@ def toBlenderQuat(q):
 
 
 def putEmptyAt(loc):
+	scene = Blender.Scene.GetCurrent()
 	loc = toBlenderVec(loc)
 	try: Blender.Object.Get('Empty')
 	except:
@@ -371,6 +372,7 @@ def putEmptyAt(loc):
 	Blender.Window.RedrawAll()
 	
 def setEmptyRot(rot):
+	scene = Blender.Scene.GetCurrent()
 	rot = toBlenderQuat(rot)
 	try: Blender.Object.Get('Empty')
 	except:
@@ -385,7 +387,7 @@ def setEmptyRot(rot):
 	Blender.Window.RedrawAll()
 
 
-'''		
+
 
 
 # *** entry point for getBoneLocWS testing ***
