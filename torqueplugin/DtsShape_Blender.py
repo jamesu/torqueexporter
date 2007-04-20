@@ -702,14 +702,14 @@ class BlenderShape(DtsShape):
 
 	
 	# adds a ground frame to a sequence
-	def addGroundFrame(self, sequence, frame_idx):
+	def addGroundFrame(self, sequence, frame_idx, boundsStartMat):
 		# Add ground frames if enabled
 		if sequence.has_ground:
 			# Check if we have any more ground frames to add
 			if sequence.ground_target != sequence.numGroundFrames:
 				# Ok, we can add a ground frame, but do we add it now?
 				duration = sequence.numKeyFrames / sequence.ground_target
-				if frame_idx >= (duration * (sequence.numGroundFrames+1)):
+				if frame_idx >= (duration * (sequence.numGroundFrames+1))-1:
 					# We are ready, lets stomp!
 					bound_obj = Blender.Object.Get("Bounds")
 					bound_parent = bound_obj.getParent()
@@ -718,21 +718,26 @@ class BlenderShape(DtsShape):
 						if bound_parent != None and bound_parent.getType() == 'Armature':
 							pose = bound_parent.getPose()
 							pos = self.poseUtil.getBoneLocWS(bound_parent.getName(), bound_obj.parentbonename, pose)
+							pos = pos - self.poseUtil.getBoneRestPosWS(bound_parent.name, bound_obj.parentbonename)
 							rot = self.poseUtil.getBoneRotWS(bound_parent.getName(), bound_obj.parentbonename, pose)
-							#pos, rot = self.poseUtil.getBoneLocRotLS(bound_parent.getName(), bound_obj.parentbonename, pose)
+							rot = self.poseUtil.getBoneRestRotWS(bound_parent.name, bound_obj.parentbonename).inverse() * rot
 							self.groundTranslations.append(pos)
 							self.groundRotations.append(rot)
 						else:
-							bound_obj = Blender.Object.Get("Bounds")
+							bound_obj = Blender.Object.Get("Bounds")							
 							matf = self.collapseBlenderTransform(bound_obj)
-							rot = Quaternion().fromMatrix(matf).inverse()
 							pos = Vector(matf.get(3,0),matf.get(3,1),matf.get(3,2))
+							pos = pos - Vector(boundsStartMat.get(3,0),boundsStartMat.get(3,1),boundsStartMat.get(3,2))
+							matf = boundsStartMat.inverse() * matf 
+							rot = Quaternion().fromMatrix(matf).inverse()
 							self.groundTranslations.append(pos)
 							self.groundRotations.append(rot)
+							
 						sequence.numGroundFrames += 1
-					except:
+					except ValueError:
 						Torque_Util.dump_writeln("Warning: Error getting ground frame %d" % sequence.numGroundFrames)
 						Torque_Util.dump_writeln("  You must have an object named Bounds in your scene to export ground frames.")
+
 
 	
 	# grab the pose transform of whatever frame we're currently at.  Frame must be set before calling this method.
@@ -1073,6 +1078,14 @@ class BlenderShape(DtsShape):
 				# update the pose.
 				tempPose.update()
 
+		# store off the default position of the bounds box
+		try:
+			Blender.Set('curframe', 1)
+			bound_obj = Blender.Object.Get("Bounds")
+			boundsStartMat = self.collapseBlenderTransform(bound_obj)
+		except ValueError:
+			boundsStartMat = MatrixF()
+			
 		
 		# create blank frames for each node
 		for nodeIndex in range(1, len(self.nodes)):
@@ -1092,7 +1105,7 @@ class BlenderShape(DtsShape):
 			#context.currentFrame(int(frame*interpolateInc))
 			Blender.Set('curframe', int(frame*interpolateInc))
 			# add ground frames
-			self.addGroundFrame(sequence,(frame*interpolateInc))
+			self.addGroundFrame(sequence,(frame*interpolateInc), boundsStartMat)
 			# loop through each armature
 			for armIdx in range(0, len(self.addedArmatures)):
 				arm = self.addedArmatures[armIdx][0]
