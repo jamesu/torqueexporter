@@ -444,7 +444,12 @@ else:
 			self.members = [float(x), float(y), float(z)]
 		def __del__(self):
 			del self.members
-		
+		def __str__(self):
+			retVal = ""
+			retVal += ""  + `self[0]`
+			retVal += "," + `self[1]`
+			retVal += "," + `self[2]`
+			return retVal
 		# Optimized version of __getitem__ is below the original
 		'''
 		def __getitem__(self, key):
@@ -571,6 +576,13 @@ else:
 	class Vector4(Vector):
 		def __init__(self, x=0, y=0, z=0, w=0):
 			self.members = [float(x), float(y), float(z), float(w)]
+		def __str__(self):
+			retVal = ""
+			retVal += ""  + `self[0]`
+			retVal += "," + `self[1]`
+			retVal += "," + `self[2]`
+			retVal += "," + `self[3]`
+			return retVal
 		def __add__(self, other):
 			return Vector4(
 			float(self[0]) + float(other[0]),
@@ -637,6 +649,11 @@ else:
 	class Vector2(Vector):
 		def __init__(self, x=0, y=0):
 			self.members = [float(x), float(y)]
+		def __str__(self):
+			retVal = ""
+			retVal += ""  + `self[0]`
+			retVal += "," + `self[1]`
+			return retVal
 		def __add__(self, other):
 			result = Vector2()
 			# iterate through the members
@@ -691,6 +708,13 @@ else:
 	# Quaternion Class (4 members)
 	class Quaternion(Vector4):
 		
+		def __str__(self):
+			retVal = ""
+			retVal += ""  + `self[0]`
+			retVal += "," + `self[1]`
+			retVal += "," + `self[2]`
+			retVal += "," + `self[3]`
+			return retVal
 		# we're spending a lot of time in __mul__ so it's worth optimizing
 		'''
 		def __mul__(self, other): # against another quat
