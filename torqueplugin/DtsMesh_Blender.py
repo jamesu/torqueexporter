@@ -93,6 +93,19 @@ class BlenderMesh(DtsMesh):
 				
 				useSticky = False
 				# Find the image associated with the face on the mesh, if any
+				if msh.hasFaceUV:
+					imageName = face.image.getName().split(".")[0]
+					matIndex = shape.materials.findMaterial(imageName)
+					if matIndex == None: matIndex = shape.addMaterial(imageName)
+					if matIndex == None: matIndex = pr.NoMaterial
+					if matIndex != pr.NoMaterial: 
+						self.mainMaterial = matIndex
+						#useSticky = shape.materials.get(matIndex).sticky
+				else:
+					matIndex = pr.NoMaterial # Nope, no material
+				pr.matindex |= matIndex
+
+				'''
 				if len(msh.materials) > 0 and face.mat < len(msh.materials):
 					# Also, use sticky coords if we were asked to
 					matIndex = shape.materials.findMaterial(msh.materials[face.mat].getName())
@@ -104,6 +117,7 @@ class BlenderMesh(DtsMesh):
 				else:
 					matIndex = pr.NoMaterial # Nope, no material
 				pr.matindex |= matIndex
+				'''
 				
 				# we've got a quad
 				if (len(face.v) > 3):

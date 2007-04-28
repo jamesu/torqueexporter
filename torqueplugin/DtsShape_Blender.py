@@ -1398,7 +1398,83 @@ class BlenderShape(DtsShape):
 			return False
 	
 	# Material addition
-	def addMaterial(self, bmat):
+	def addMaterial(self, imageName):
+		if imageName == None: return None
+		if self.preferences['TSEMaterial']:
+			return self.addTSEMaterial(imageName)
+		
+		# find the material associated with the texture image file name
+		material = None
+		try:
+			mat = self.preferences['Materials'][imageName]
+			print "*********************************"
+			print "Adding Material ", imageName
+
+			flags = 0x00000000
+			if mat['SWrap'] == True: flags |= dMaterial.SWrap
+			if mat['TWrap'] == True: flags |= dMaterial.TWrap
+			if mat['Translucent'] == True: flags |= dMaterial.Translucent
+			if mat['Additive'] == True: flags |= dMaterial.Additive
+			if mat['Subtractive'] == True: flags |= dMaterial.Subtractive
+			if mat['SelfIlluminating'] == True: flags |= dMaterial.SelfIlluminating
+			if mat['NeverEnvMap'] == True: flags |= dMaterial.NeverEnvMap
+			if mat['NoMipMap'] == True: flags |= dMaterial.NoMipMap
+			if mat['MipMapZeroBorder'] == True: flags |= dMaterial.MipMapZeroBorder
+
+			material = dMaterial(mat['BaseTex'], flags,-1,-1,-1,mat['detailScale'],mat['reflectance'])
+			# Must have something in the reflectance slot to prevent TGE from
+			# crashing when env mapping without a reflectance map.
+			material.reflectance = len(self.materials.materials)
+
+			print "Created Main material."
+
+			if mat['DetailMapFlag'] == True:
+				print "  Adding Detail map to material."
+				dmFlags = 0x00000000
+				if mat['SWrap'] == True: dmFlags |= dMaterial.SWrap
+				if mat['TWrap'] == True: dmFlags |= dMaterial.TWrap
+				dmFlags |= dMaterial.DetailMap
+				#detail_map = dMaterial(mat['DetailTex'], dmFlags,-1,-1,-1,1.0,mat['reflectance'])
+				detail_map = dMaterial(mat['DetailTex'], dmFlags,-1,-1,-1,1.0,0.0)
+				material.detail = self.materials.add(detail_map)
+				if mat['NeverEnvMap'] == False:
+					Torque_Util.dump_writeln("    Warning: Material (%s) is using environment mapping with a detail map, strange things may happen!" % imageName)
+				print "  Added detail map ", mat['DetailTex']
+
+			if mat['BumpMapFlag'] == True:
+				print "  Adding Bump map to material."
+				bmFlags = 0x00000000
+				if mat['SWrap'] == True: bmFlags |= dMaterial.SWrap
+				if mat['TWrap'] == True: bmFlags |= dMaterial.TWrap
+				bmFlags |= dMaterial.BumpMap
+				bump_map = dMaterial(mat['BumpMapTex'], bmFlags,-1,-1,-1,1.0,mat['reflectance'])
+				material.bump = self.materials.add(bump_map)
+				print "  Added bump map ", mat['BumpMapTex']
+
+			if mat['ReflectanceMapFlag'] == True:
+				print "  Adding Refl map to material."
+				rmFlags = 0x00000000
+				if mat['SWrap'] == True: rmFlags |= dMaterial.SWrap
+				if mat['TWrap'] == True: rmFlags |= dMaterial.TWrap
+				rmFlags |= dMaterial.ReflectanceMap
+				refl_map = dMaterial(mat['RefMapTex'], rmFlags,-1,-1,-1,1.0,mat['reflectance'])
+				material.reflectance = self.materials.add(refl_map)
+				print "  Added refl map ", mat['RefMapTex']
+				
+		except KeyError:
+			Torque_Util.dump_writeln("    Warning: Texture Image (%s) is used on a mesh but is not set as the base texture for any material!" % imageName)
+			return None
+
+		retVal = self.materials.add(material)
+		print "returning Index:", retVal
+		print "*********************************"
+		return retVal
+		
+	
+	
+	
+	# Material addition
+	def addMaterialOld(self, bmat):
 		if bmat == None: return None
 		if self.preferences['TSEMaterial']:
 			return self.addTSEMaterial(bmat)
