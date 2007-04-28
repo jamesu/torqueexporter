@@ -165,6 +165,39 @@ class BasicControl:
 		print "Error: Control does not support nested items!"
 		return False
 
+class BasicFrame(BasicControl):
+	def __init__(self, name=None, text=None, tooltip=None, evt=None, callback=None, resize_callback=None):
+		BasicControl.__init__(self, name, text, tooltip, evt, callback, resize_callback)
+		self.width = 100
+		self.height = 20
+		self.borderColor = [0.0,0.0,0.0,0.0]
+		
+	def onDraw(self, offset):
+		print offset
+		print self.x, self.y
+		print self.width, self.height
+		real_x = offset[0] + self.x
+		real_y = offset[1] + self.y
+		
+		# Draw border
+		BGL.glBegin(BGL.GL_LINES)
+		BGL.glColor4f(self.borderColor[0],self.borderColor[1],self.borderColor[2], self.borderColor[3])
+		# Left up
+		BGL.glVertex2i(real_x,real_y)
+		BGL.glVertex2i(real_x,real_y+self.height)
+		# Top right
+		BGL.glVertex2i(real_x,real_y+self.height)
+		BGL.glVertex2i(real_x+self.width-1,real_y+self.height)
+		# Right down
+		BGL.glVertex2i(real_x+self.width,real_y+self.height)
+		BGL.glVertex2i(real_x+self.width,real_y)
+		# Bottom left
+		BGL.glVertex2i(real_x+self.width,real_y)
+		BGL.glVertex2i(real_x,real_y)
+		
+		BGL.glEnd()
+
+
 class BasicButton(BasicControl):
 	def __init__(self, name=None, text=None, tooltip=None, evt=None, callback=None, resize_callback=None):
 		BasicControl.__init__(self, name, text, tooltip, evt, callback, resize_callback)
@@ -308,7 +341,22 @@ class ComboBox(BasicControl):
 				self.itemIndex = i
 				return
 		self.itemIndex = 0
+		
+	# get the string corresponding to the selected item
+	def getSelectedItemString(self):
+		return self.items[self.itemIndex]
+		
+	# find a string in the list of items and return it's index
+	def getItemIndexFromString(self, string):
+		print "Searching for item: ", string
+		for i in range(0, len(self.items)):
+			if self.items[i] == string:
+				return i
+		return -1
 
+	def selectStringItem(self, string):
+		self.itemIndex = self.getItemIndexFromString(string)
+	
 	def onAction(self, evt, mousepos, value):
 		self.itemIndex = int(self.data.val)
 		if self.callback: self.callback(self)
@@ -439,6 +487,7 @@ class BasicContainer(BasicControl):
 		self.borderColor = [curBorder[0]/255.0, curBorder[1]/255.0, curBorder[2]/255.0, curBorder[3]/255.0]
 		self.fade_mode = 0
 		self.controls = []
+		self.controlDict = {}
 		
 	def __del__(self):
 		del self.controls
@@ -561,6 +610,7 @@ class BasicContainer(BasicControl):
 
 	def addControl(self, control):
 		self.controls.append(control)
+		self.controlDict[control.name] = control
 		
 	def removeControl(self, control):
 		res = False
