@@ -987,8 +987,9 @@ def createBoneListitem(bone1, bone2, bone3, bone4, bone5, startEvent):
 		guiBone5.x, guiBone5.y = 364, 0
 		guiBone5.width, guiBone5.height = 89, 19
 		guiBone5.state = True
-		guiContainer.addControl(guiBone5)	
+		guiContainer.addControl(guiBone5)
 	return guiContainer
+
 
 
 def populateSequenceList():
@@ -1020,6 +1021,167 @@ def clearSequenceList():
 	guiSequenceList.itemIndex = -1
 	guiSequenceList.scrollPosition = 0
 	if guiSequenceList.callback: guiSequenceList.callback(guiSequenceList) # Bit of a hack, but works
+
+def createMaterialListItem(matName, startEvent):
+	guiContainer = Common_Gui.BasicContainer("", None, None)
+	guiContainer.fade_mode = 0  # flat color
+	guiName = Common_Gui.SimpleText("", matName, None, None)
+	guiName.x, guiName.y = 5, 5
+	guiContainer.addControl(guiName)
+	return guiContainer
+
+
+def importMaterialList(populateWith="BMats"):
+	global guiMaterialList, Prefs, guiMaterialOptions
+	print "You are here..."
+	if populateWith=="BMats":
+		try:
+			materials = Prefs['Materials']
+		except:			
+			Prefs['Materials'] = {}
+			materials = Prefs['Materials']
+		# populate materials list with all blender materials
+		for bmat in Blender.Material.Get():			
+			try:blah = Prefs['Materials'][bmat.name]
+			except KeyError:
+				Prefs['Materials'][bmat.name] = {}
+				# init everything to make sure all keys exist with sane values
+				Prefs['Materials'][bmat.name]['SWrap'] = True
+				Prefs['Materials'][bmat.name]['TWrap'] = True
+				Prefs['Materials'][bmat.name]['Translucent'] = False
+				Prefs['Materials'][bmat.name]['Additive'] = False
+				Prefs['Materials'][bmat.name]['Subtractive'] = False
+				Prefs['Materials'][bmat.name]['SelfIlluminating'] = False
+				Prefs['Materials'][bmat.name]['NeverEnvMap'] = True
+				Prefs['Materials'][bmat.name]['NoMipMap'] = False
+				Prefs['Materials'][bmat.name]['MipMapZeroBorder'] = True
+				Prefs['Materials'][bmat.name]['DetailMapFlag'] = False
+				Prefs['Materials'][bmat.name]['BumpMapFlag'] = False
+				Prefs['Materials'][bmat.name]['ReflectanceMapFlag'] = False
+				Prefs['Materials'][bmat.name]['BaseTex'] = None
+				Prefs['Materials'][bmat.name]['DetailTex'] = None
+				Prefs['Materials'][bmat.name]['BumpMapTex'] = None
+				Prefs['Materials'][bmat.name]['RefMapTex'] = None
+				Prefs['Materials'][bmat.name]['reflectance'] = 0.0
+				Prefs['Materials'][bmat.name]['detailScale'] = 1.0
+				Prefs['Materials'][bmat.name]['reflectance'] = bmat.getRef()
+				
+				if bmat.getRef() > 0:
+					Prefs['Materials'][bmat.name]['NeverEnvMap'] = False
+				else: Prefs['Materials'][bmat.name]['NeverEnvMap'] = True
+				
+				if bmat.getEmit() > 0.0: Prefs['Materials'][bmat.name]['SelfIlluminating'] = True
+				else: Prefs['Materials'][bmat.name]['SelfIlluminating'] = False
+
+				Prefs['Materials'][bmat.name]['RefMapTex'] = None
+				Prefs['Materials'][bmat.name]['BumpMapTex'] = None
+				Prefs['Materials'][bmat.name]['DetailTex'] = None
+
+				# Look at the texture channels if they exist
+				textures = bmat.getTextures()
+				if len(textures) > 0:
+					
+					if textures[0].tex.image != None:
+						Prefs['Materials'][bmat.name]['BaseTex'] = textures[0].tex.image.getName().split(".")[0]
+						guiMaterialOptions.controlDict['guiMaterialBaseTexMenu'].selectStringItem(textures[0].tex.image.getName().split(".")[0])
+						print "Setting basetex to:", textures[0].tex.image.getName().split(".")[0]
+					else:
+						Prefs['Materials'][bmat.name]['BaseTex'] = None
+					
+					if (textures[0] != None) and (textures[0].tex.type == Texture.Types.IMAGE):
+						# Translucency?
+						if textures[0].mapto & Texture.MapTo.ALPHA:
+							Prefs['Materials'][bmat.name]['Translucent'] = True
+							if bmat.getAlpha() < 1.0: Prefs['Materials'][bmat.name]['Additive'] = True
+							else: Prefs['Materials'][bmat.name]['Additive'] = False
+						else:
+							Prefs['Materials'][bmat.name]['Translucent'] = False
+							Prefs['Materials'][bmat.name]['Additive'] = False
+						# Disable mipmaps?
+						if not (textures[0].tex.imageFlags & Texture.ImageFlags.MIPMAP):
+							Prefs['Materials'][bmat.name]['NoMipMap'] = True
+						else:Prefs['Materials'][bmat.name]['NoMipMap'] = False
+
+					Prefs['Materials'][bmat.name]['ReflectanceMapFlag'] = False
+					Prefs['Materials'][bmat.name]['DetailMapFlag'] = False
+					Prefs['Materials'][bmat.name]['BumpMapFlag'] = False
+					for i in range(1, len(textures)):
+						texture_obj = textures[i]
+						if texture_obj == None: continue
+						# Figure out if we have an Image
+						if texture_obj.tex.type != Texture.Types.IMAGE:
+							continue
+
+						# Determine what this texture is used for
+						# A) We have a reflectance map
+						if (texture_obj.mapto & Texture.MapTo.REF):
+							# We have a reflectance map
+							Prefs['Materials'][bmat.name]['ReflectanceMapFlag'] = True
+							Prefs['Materials'][bmat.name]['NeverEnvMap'] = False
+							if textures[0].tex.image != None:
+								Prefs['Materials'][bmat.name]['RefMapTex'] = textures[i].tex.image.getName().split(".")[0]						
+								guiMaterialOptions.controlDict['guiMaterialReflectanceMapMenu'].selectStringItem(textures[i].tex.image.getName().split(".")[0])
+							else:
+								Prefs['Materials'][bmat.name]['RefMapTex'] = None
+						# B) We have a normal map (basically a 3d bump map)
+						elif (texture_obj.mapto & Texture.MapTo.NOR):
+							Prefs['Materials'][bmat.name]['BumpMapFlag'] = True
+							if textures[0].tex.image != None:
+								Prefs['Materials'][bmat.name]['BumpMapTex'] = textures[i].tex.image.getName().split(".")[0]							
+								guiMaterialOptions.controlDict['guiMaterialBumpMapMenu'].selectStringItem(textures[i].tex.image.getName().split(".")[0])
+							else:
+								Prefs['Materials'][bmat.name]['BumpMapTex'] = None
+						# C) We have a texture; Lets presume its a detail map (since its laid on top after all)
+						else:
+							Prefs['Materials'][bmat.name]['DetailMapFlag'] = True
+							if textures[0].tex.image != None:
+								Prefs['Materials'][bmat.name]['DetailTex'] = textures[i].tex.image.getName().split(".")[0]							
+								guiMaterialOptions.controlDict['guiMaterialDetailMapMenu'].selectStringItem(textures[i].tex.image.getName().split(".")[0])
+							else:
+								Prefs['Materials'][bmat.name]['DetailTex'] = None
+							
+
+				
+				#Prefs['Materials'][bmat.name]['SWrap'] = True
+				#Prefs['Materials'][bmat.name]['TWrap'] = True
+				#Prefs['Materials'][bmat.name]['Subtractive'] = False
+				#Prefs['Materials'][bmat.name]['MipMapZeroBorder'] = True
+				#Prefs['Materials'][bmat.name]['detailScale'] = 1.0
+
+				
+	elif populateWith=="Btex":
+		toDo = 1
+
+
+def populateMaterialList():
+	global guiMaterialList, Prefs, guiSequenceOptions
+
+	# populate the texture pulldowns first.
+	for img in Blender.Image.Get():
+		guiMaterialOptions.controlDict['guiMaterialBaseTexMenu'].items.append(img.getName().split(".")[0])
+		guiMaterialOptions.controlDict['guiMaterialDetailMapMenu'].items.append(img.getName().split(".")[0])
+		guiMaterialOptions.controlDict['guiMaterialBumpMapMenu'].items.append(img.getName().split(".")[0])
+		guiMaterialOptions.controlDict['guiMaterialReflectanceMapMenu'].items.append(img.getName().split(".")[0])
+
+
+	# import blender materials, temp.
+	importMaterialList("BMats")
+	try:
+		materials = Prefs['Materials']
+	except:
+		# autoimport blender materials?
+		toDo = 1
+		Prefs['Materials'] = {'test1':{'someData':'testData1'}}
+		materials = Prefs['Materials']
+		#return
+
+	startEvent = 40
+	for mat in materials.keys():
+		print "mat: ", mat
+		guiMaterialList.addControl(createMaterialListItem(mat, startEvent))
+		startEvent += 1
+	
+
 
 def clearBoneGrid():
 	global guiBoneGrid
@@ -1061,6 +1223,7 @@ def populateBoneGrid():
 		if names[3] != None: guiBoneList.controls[count].controls[3].state = not (guiBoneList.controls[count].controls[3].text.upper() in Prefs['BannedBones'])
 		if names[4] != None: guiBoneList.controls[count].controls[4].state = not (guiBoneList.controls[count].controls[4].text.upper() in Prefs['BannedBones'])
 			
+
 			
 		
 def clearBoneGrid():
@@ -1083,58 +1246,26 @@ def guiBoneGridCallback(control):
 		#print "Added banned bone %s" % real_name
 
 def guiBaseCallback(control):
-	global guiSequenceTab, guiArmatureTab, guiGeneralTab, guiAboutTab, guiTabBar
-	global guiSequenceButton, guiMeshButton, guiArmatureButton, guiAboutButton
-	if control.name == "guiSequenceButton":
-		guiSequenceTab.visible = True
-		guiGeneralTab.visible = False
-		guiAboutTab.visible = False
-		guiArmatureTab.visible = False
-		guiSequenceTab.enabled = True
-		guiGeneralTab.enabled = False
-		guiAboutTab.enabled = False
-		guiArmatureTab.enabled = False
-		guiMeshButton.state = False
-		guiArmatureButton.state = False
-		guiAboutButton.state = False
-	elif control.name == "guiMeshButton":
-		guiSequenceTab.visible = False
-		guiGeneralTab.visible = True
-		guiAboutTab.visible = False
-		guiArmatureTab.visible = False
-		guiSequenceTab.enabled = False
-		guiGeneralTab.enabled = True
-		guiAboutTab.enabled = False
-		guiArmatureTab.enabled = False
-		guiSequenceButton.state = False
-		guiArmatureButton.state = False
-		guiAboutButton.state = False
-	elif control.name == "guiArmatureButton":
-		guiSequenceTab.visible = False
-		guiGeneralTab.visible = False
-		guiAboutTab.visible = False
-		guiArmatureTab.visible = True
-		guiSequenceTab.enabled = False
-		guiGeneralTab.enabled = False
-		guiAboutTab.enabled = False
-		guiArmatureTab.enabled = True
-		guiSequenceButton.state = False
-		guiMeshButton.state = False
-		guiAboutButton.state = False
-	elif control.name == "guiAboutButton":
-		guiSequenceTab.visible = False
-		guiGeneralTab.visible = False
-		guiAboutTab.visible = True
-		guiArmatureTab.visible = False
-		guiSequenceTab.enabled = False
-		guiGeneralTab.enabled = False
-		guiAboutTab.enabled = True
-		guiArmatureTab.enabled = False
-		guiSequenceButton.state = False
-		guiMeshButton.state = False
-		guiArmatureButton.state = False
-	elif control.name == "guiExportButton":
+	global guiSequenceTab, guiArmatureTab, guiMaterialsTab, guiGeneralTab, guiAboutTab, guiTabBar
+	global guiSequenceButton, guiMeshButton, guiArmatureButton, guiMaterialsButton, guiAboutButton
+
+	if control.name == "guiExportButton":
 		export()
+		return
+
+	# Need to associate the button with it's corresponding tab container.
+	ctrls = [[guiSequenceButton,guiSequenceTab], [guiMeshButton,guiGeneralTab], [guiMaterialsButton,guiMaterialsTab], [guiArmatureButton,guiArmatureTab], [guiAboutButton,guiAboutTab]]
+	for ctrl in ctrls:
+		if control.name == ctrl[0].name:
+			# turn on the tab button, show and enable the tab container
+			control.state = True
+			ctrl[1].visible = True
+			ctrl[1].enabled = True
+			continue
+		# disable all other tab containers and set tab button states to false.
+		ctrl[0].state = False
+		ctrl[1].visible = False
+		ctrl[1].enabled = False
 		
 def guiSequenceUpdateTriggers(triggerList, itemIndex):
 	global guiSequenceOptions, guiSequenceList
@@ -1190,6 +1321,112 @@ def guiSequenceTriggersCallback(control):
 		else: stateStr = "(OFF)"
 		guiSequenceOptions.controls[6].items[itemIndex] = (triggerMenuTemplate % (sequencePrefs['Triggers'][itemIndex][1], sequencePrefs['Triggers'][itemIndex][0])) + stateStr
 		
+def guiMaterialCallback(control):
+	global guiMaterialList, Prefs, guiMaterialOptions
+	
+	try:matList = Prefs['Materials']
+	except:
+		Prefs['Materials'] = {}
+		matList = Prefs['Materials']
+	
+	materialName = guiMaterialList.controls[guiMaterialList.itemIndex].controls[0].label
+	
+	if control.name == "guiMaterialImportBMatButton":
+		# import Blender materials and settings
+		importMaterialList("BMats")
+	elif control.name == "guiMaterialImportUVTexButton":
+		# import UV Mapped textures as materials
+		toDo = 1
+	
+	elif control.name == "guiMaterialList":
+		if control.itemIndex != -1:
+			print "control.itemIndex =", control.itemIndex
+			print "len(controls) =", len(guiMaterialList.controls)
+			materialName = guiMaterialList.controls[control.itemIndex].controls[0].label
+			
+			# referesh and repopulate the material option controls
+			guiMaterialOptions.controlDict['guiMaterialSWrapButton'].state = matList[materialName]['SWrap']
+			guiMaterialOptions.controlDict['guiMaterialTWrapButton'].state = matList[materialName]['TWrap']
+			guiMaterialOptions.controlDict['guiMaterialTransButton'].state = matList[materialName]['Translucent']
+			guiMaterialOptions.controlDict['guiMaterialAddButton'].state = matList[materialName]['Additive']
+			guiMaterialOptions.controlDict['guiMaterialSubButton'].state = matList[materialName]['Subtractive']
+			guiMaterialOptions.controlDict['guiMaterialSelfIllumButton'].state = matList[materialName]['SelfIlluminating']
+			guiMaterialOptions.controlDict['guiMaterialEnvMapButton'].state = not matList[materialName]['NeverEnvMap']
+			guiMaterialOptions.controlDict['guiMaterialMipMapButton'].state = not matList[materialName]['NoMipMap']
+			guiMaterialOptions.controlDict['guiMaterialMipMapZBButton'].state = matList[materialName]['MipMapZeroBorder']
+			guiMaterialOptions.controlDict['guiMaterialDetailMapButton'].state = matList[materialName]['DetailMapFlag']
+			guiMaterialOptions.controlDict['guiMaterialBumpMapButton'].state = matList[materialName]['BumpMapFlag']
+			guiMaterialOptions.controlDict['guiMaterialRefMapButton'].state = matList[materialName]['ReflectanceMapFlag']
+			guiMaterialOptions.controlDict['guiMaterialBaseTexMenu'].selectStringItem(matList[materialName]['BaseTex'])
+			guiMaterialOptions.controlDict['guiMaterialDetailMapMenu'].selectStringItem(matList[materialName]['DetailTex'])
+			guiMaterialOptions.controlDict['guiMaterialBumpMapMenu'].selectStringItem(matList[materialName]['BumpMapTex'])
+			guiMaterialOptions.controlDict['guiMaterialReflectanceMapMenu'].selectStringItem(matList[materialName]['RefMapTex'])
+			guiMaterialOptions.controlDict['guiMaterialReflectanceSlider'].value = matList[materialName]['reflectance'] * 100.0
+			guiMaterialOptions.controlDict['guiMaterialDetailScaleSlider'].value = matList[materialName]['detailScale'] * 100.0
+			
+			
+	elif control.name == "guiMaterialSWrapButton":
+		Prefs['Materials'][materialName]['SWrap'] = control.state
+		print "Prefs:", Prefs['Materials']
+	elif control.name == "guiMaterialTWrapButton":
+		Prefs['Materials'][materialName]['TWrap'] = control.state
+		print "Prefs:", Prefs['Materials']
+	elif control.name == "guiMaterialTransButton":
+		Prefs['Materials'][materialName]['Translucent'] = control.state
+		print "Prefs:", Prefs['Materials']
+	elif control.name == "guiMaterialAddButton":
+		Prefs['Materials'][materialName]['Additive'] = control.state
+		print "Prefs:", Prefs['Materials']
+	elif control.name == "guiMaterialSubButton":
+		Prefs['Materials'][materialName]['Subtractive'] = control.state
+		print "Prefs:", Prefs['Materials']
+	elif control.name == "guiMaterialSelfIllumButton":
+		Prefs['Materials'][materialName]['SelfIlluminating'] = control.state
+		print "Prefs:", Prefs['Materials']
+	elif control.name == "guiMaterialEnvMapButton":
+		Prefs['Materials'][materialName]['NeverEnvMap'] = not control.state
+		print "Prefs:", Prefs['Materials']
+	elif control.name == "guiMaterialMipMapButton":
+		Prefs['Materials'][materialName]['NoMipMap'] = not control.state
+		print "Prefs:", Prefs['Materials']
+	elif control.name == "guiMaterialMipMapZBButton":
+		Prefs['Materials'][materialName]['MipMapZeroBorder'] = control.state
+		print "Prefs:", Prefs['Materials']
+	elif control.name == "guiMaterialDetailMapButton":
+		Prefs['Materials'][materialName]['DetailMapFlag'] = control.state
+		print "Prefs:", Prefs['Materials']
+	elif control.name == "guiMaterialBumpMapButton":
+		Prefs['Materials'][materialName]['BumpMapFlag'] = control.state
+		print "Prefs:", Prefs['Materials']
+	elif control.name == "guiMaterialRefMapButton":
+		Prefs['Materials'][materialName]['ReflectanceMapFlag'] = control.state
+		print "Prefs:", Prefs['Materials']
+	elif control.name == "guiMaterialBaseTexMenu":
+		Prefs['Materials'][materialName]['BaseTex'] = control.getSelectedItemString()
+		print "Prefs:", Prefs['Materials']
+	elif control.name == "guiMaterialDetailMapMenu":
+		Prefs['Materials'][materialName]['DetailTex'] = control.getSelectedItemString()
+		print "Prefs:", Prefs['Materials']
+	elif control.name == "guiMaterialBumpMapMenu":
+		Prefs['Materials'][materialName]['BumpMapTex'] = control.getSelectedItemString()
+		print "Prefs:", Prefs['Materials']
+	elif control.name == "guiMaterialReflectanceMapMenu":
+		Prefs['Materials'][materialName]['RefMapTex'] = control.getSelectedItemString()
+		print "Prefs:", Prefs['Materials']
+	elif control.name == "guiMaterialReflectanceSlider":
+		Prefs['Materials'][materialName]['reflectance'] = control.value / 100.0
+		print "Prefs:", Prefs['Materials']
+	elif control.name == "guiMaterialDetailScaleSlider":
+		Prefs['Materials'][materialName]['detailScale'] = control.value / 100.0
+		print "Prefs:", Prefs['Materials']
+	elif control.name == "guiMaterialRenameButton":
+		# rename selected material and refresh
+		toDo = 1
+	elif control.name == "guiMaterialDeleteButton":
+		# delete selected material and refresh
+		toDo = 1
+
+
 def guiSequenceCallback(control):
 	global guiSequenceOptions, guiSequenceList
 	
@@ -1414,8 +1651,8 @@ def guiGeneralCallback(control):
 		Prefs['TSEMaterial'] = control.state
 
 def guiBaseResize(control, newwidth, newheight):
-	tabContainers = ["guiSequenceTab", "guiGeneralTab", "guiArmatureTab", "guiAboutTab"]
-	tabSubContainers = ["guiSequenceActionsSubtab", "guiSequenceNLASubtab", "guiGeneralSubtab", "guiArmatureSubtab", "guiAboutSubtab"]
+	tabContainers = ["guiSequenceTab", "guiGeneralTab", "guiArmatureTab", "guiAboutTab", "guiMaterialsTab"]
+	tabSubContainers = ["guiSequenceActionsSubtab", "guiSequenceNLASubtab", "guiMaterialsSubtab", "guiGeneralSubtab", "guiArmatureSubtab", "guiAboutSubtab"]
 	if control.name == "guiTabBar":
 		control.x, control.y = 0, 378
 		control.width, control.height = 506, 55
@@ -1434,15 +1671,131 @@ def guiBaseResize(control, newwidth, newheight):
 	elif control.name == "guiArmatureButton":
 		control.x, control.y = 82, 0
 		control.width, control.height = 65, 25
-	elif control.name == "guiMeshButton":
+	elif control.name == "guiMaterialsButton":
 		control.x, control.y = 149, 0
+		control.width, control.height = 60, 25
+	elif control.name == "guiMeshButton":
+		control.x, control.y = 211, 0
 		control.width, control.height = 55, 25
 	elif control.name == "guiAboutButton":
-		control.x, control.y = 206, 0
+		control.x, control.y = 268, 0
 		control.width, control.height = 45, 25
 	elif control.name == "guiExportButton":
 		control.x, control.y = 414, -30
 		control.width, control.height = 70, 25
+
+def guiMaterialResize(control, newwidth, newheight):
+	if control.name == "guiMaterialList":
+		control.x = 10
+		control.y = 30
+		control.height = newheight - 70
+		control.width = 150
+	elif control.name == "guiMaterialOptions":
+		control.x = 161
+		control.y = 0
+		control.width = 328
+		control.height = 335	
+	
+	elif control.name == "guiMaterialTransFrame":
+		control.x = 5
+		control.y = newheight-105
+		control.width = 170
+		control.height = 50
+	
+	elif control.name == "guiMaterialImportBMatButton":
+		control.x = 60
+		control.y = newheight-30
+		control.width = 50
+	elif control.name == "guiMaterialImportText":
+		control.x = 10
+		control.y = newheight-25
+	elif control.name == "guiMaterialImportUVTexButton":
+		control.x = 115
+		control.y = newheight-30
+		control.width = 50
+	elif control.name == "guiMaterialSWrapButton":
+		control.x = 5
+		control.y = newheight-328
+		control.width = 50
+	elif control.name == "guiMaterialTWrapButton":
+		control.x = 59
+		control.y = newheight-328
+		control.width = 50
+	elif control.name == "guiMaterialTransButton":
+		control.x = 15
+		control.y = newheight-65
+		control.width = 75
+	elif control.name == "guiMaterialAddButton":
+		control.x = 15
+		control.y = newheight-95
+		control.width = 75
+	elif control.name == "guiMaterialSubButton":
+		control.x = 92
+		control.y = newheight-95
+		control.width = 75
+	elif control.name == "guiMaterialSelfIllumButton":
+		control.x = 5
+		control.y = newheight-183
+		control.width = 50
+	elif control.name == "guiMaterialEnvMapButton":
+		control.x = 5
+		control.y = newheight-137
+		control.width = 125
+	elif control.name == "guiMaterialMipMapButton":
+		control.x = 5
+		control.y = newheight-255
+		control.width = 50
+	elif control.name == "guiMaterialMipMapZBButton":
+		control.x = 57
+		control.y = newheight-255
+		control.width = 50
+	elif control.name == "guiMaterialDetailMapButton":
+		control.x = 5
+		control.y = newheight-207
+		control.width = 100
+	elif control.name == "guiMaterialBumpMapButton":
+		control.x = 5
+		control.y = newheight-231
+		control.width = 100
+	elif control.name == "guiMaterialRefMapButton":
+		control.x = 5
+		control.y = newheight-159
+		control.width = 125
+	elif control.name == "guiMaterialBaseTexMenu":
+		control.x = 110
+		control.y = newheight-378
+		control.width = 150
+	elif control.name == "guiMaterialDetailMapMenu":
+		control.x = 110
+		control.y = newheight-207
+		control.width = 150
+	elif control.name == "guiMaterialBumpMapMenu":
+		control.x = 110
+		control.y = newheight-231
+		control.width = 150
+	elif control.name == "guiMaterialReflectanceMapMenu":
+		control.x = 132
+		control.y = newheight-159
+		control.width = 150
+	elif control.name == "guiMaterialReflectanceSlider":
+		control.x = 132
+		control.y = newheight-137
+		control.width = 150
+	elif control.name == "guiMaterialDetailScaleSlider":
+		control.x = 5
+		control.y = newheight-303
+		control.width = 150
+	elif control.name == "guiMaterialRenameButton":
+		control.x = 10
+		control.y = newheight-328
+		control.width = 65
+	elif control.name == "guiMaterialDeleteButton":
+		control.x = 80
+		control.y = newheight-328
+		control.width = 65
+
+
+
 
 def guiSequenceResize(control, newwidth, newheight):
 
@@ -1667,26 +2020,28 @@ def guiHeaderResize(control, newwidth, newheight):
 
 def initGui():
 	global Version, Prefs
-	global guiSequenceTab, guiArmatureTab, guiGeneralTab, guiAboutTab, guiTabBar, guiHeaderTab
+	global guiSequenceTab, guiArmatureTab, guiMaterialsTab, guiGeneralTab, guiAboutTab, guiTabBar, guiHeaderTab
 	global guiSequenceSubtab, guiArmatureSubtab, guiGeneralSubtab, guiAboutSubtab
-	global guiSequenceButton, guiMeshButton, guiArmatureButton, guiAboutButton
-	global guiSequenceList, guiSequenceOptions, guiBoneList
+	global guiSequenceButton, guiMeshButton, guiArmatureButton, guiMaterialsButton, guiAboutButton
+	global guiSequenceList, guiSequenceOptions, guiBoneList, guiMaterialList, guiMaterialOptions
 	global guiTriListsButton, guiStripMeshesButton, guiTriMeshesButton
 	global guiBonePatternText
 	global GlobalEvents	
 	
 	Common_Gui.initGui(exit_callback)
 	
-	# Main tab controls
+	# Main tab button controls
 	guiSequenceButton = Common_Gui.TabButton("guiSequenceButton", "Sequences", "Sequence options", None, guiBaseCallback, guiBaseResize)
 	guiSequenceButton.state = True
-	guiMeshButton = Common_Gui.TabButton("guiMeshButton", "General", "Mesh and other options", None, guiBaseCallback, guiBaseResize)
 	guiArmatureButton = Common_Gui.TabButton("guiArmatureButton", "Armatures", "Armature options", None, guiBaseCallback, guiBaseResize)
+	guiMaterialsButton = Common_Gui.TabButton("guiMaterialsButton", "Materials", "Material options", None, guiBaseCallback, guiBaseResize)
+	guiMeshButton = Common_Gui.TabButton("guiMeshButton", "General", "Mesh and other options", None, guiBaseCallback, guiBaseResize)
 	guiAboutButton = Common_Gui.TabButton("guiAboutButton", "About", "About", None, guiBaseCallback, guiBaseResize)
+	
 	guiExportButton = Common_Gui.BasicButton("guiExportButton", "Export", "Export .dts shape", globalEvents.getNewID("Export"), guiBaseCallback, guiBaseResize)
 
 	
-	# Sub tab controls
+	# Subtab button controls
 	
 
 	# Sequence tab controls
@@ -1726,7 +2081,6 @@ def initGui():
 	guiSequenceOptionsRefposeFrame.visible = False
 	guiSequenceOptionsRefposeFrame.min = 1
 	
-	
 	guiSequenceOptionsTriggerTitle = Common_Gui.SimpleText("guiSequenceOptionsTriggerTitle", "Triggers", None, guiSequenceResize)
 	guiSequenceOptionsTriggerMenu = Common_Gui.ComboBox("guiSequenceOptionsTriggerMenu", "Trigger List", "Select a trigger from this list to edit its properties", 14, guiSequenceTriggersCallback, guiSequenceResize)
 	guiSequenceOptionsTriggerState = Common_Gui.NumberPicker("guiSequenceOptionsTriggerState", "Trigger", "Trigger state to alter", 15, guiSequenceTriggersCallback, guiSequenceResize)
@@ -1745,6 +2099,39 @@ def initGui():
 	guiBonePatternText.value = "*"
 	guiBonePatternOnButton = Common_Gui.BasicButton("guiBonePatternOnButton", "On", "Turn on export of bones matching pattern", 7, guiArmatureCallback, guiArmatureResize)
 	guiBonePatternOffButton = Common_Gui.BasicButton("guiBonePatternOffButton", "Off", "Turn off export of bones matching pattern", 8, guiArmatureCallback, guiArmatureResize)
+	
+	# Material tab controls
+	guiMaterialList = Common_Gui.ListContainer("guiMaterialList", "material.list", guiMaterialCallback, guiMaterialResize)
+	guiMaterialList.fade_mode = 0
+	guiMaterialOptions = Common_Gui.BasicContainer("guiMaterialOptions", "", None, guiMaterialResize)
+	guiMaterialTransFrame = Common_Gui.BasicFrame("guiMaterialTransFrame", "", None, 29, None, guiMaterialResize) #("guiMaterialTransFrame", "", "", None, guiMaterialResize)
+	guiMaterialImportText = Common_Gui.SimpleText("guiMaterialImportText", "Import: ", None, guiMaterialResize)
+	guiMaterialImportBMatButton = Common_Gui.BasicButton("guiMaterialImportBMatButton", "B Mats", "Import Blender materials and settings", 7, guiMaterialCallback, guiMaterialResize)
+	guiMaterialImportUVTexButton = Common_Gui.BasicButton("guiMaterialImportUVTexButton", "UV Tex", "Import UV mapped texutres as materials", 8, guiMaterialCallback, guiMaterialResize)
+	guiMaterialSWrapButton = Common_Gui.ToggleButton("guiMaterialSWrapButton", "SWrap", "SWrap", 9, guiMaterialCallback, guiMaterialResize)
+	guiMaterialTWrapButton = Common_Gui.ToggleButton("guiMaterialTWrapButton", "TWrap", "TWrap", 10, guiMaterialCallback, guiMaterialResize)
+	guiMaterialTransButton = Common_Gui.ToggleButton("guiMaterialTransButton", "Translucent", "Translucent", 11, guiMaterialCallback, guiMaterialResize)
+	guiMaterialAddButton = Common_Gui.ToggleButton("guiMaterialAddButton", "Additive", "Blending Additive", 12, guiMaterialCallback, guiMaterialResize)
+	guiMaterialSubButton = Common_Gui.ToggleButton("guiMaterialSubButton", "Subtractive", "Blending Subtractive", 13, guiMaterialCallback, guiMaterialResize)
+	guiMaterialSelfIllumButton = Common_Gui.ToggleButton("guiMaterialSelfIllumButton", "SI", "Self Illuminating", 14, guiMaterialCallback, guiMaterialResize)
+	guiMaterialEnvMapButton = Common_Gui.ToggleButton("guiMaterialEnvMapButton", "Environment Map", "Environment Map", 15, guiMaterialCallback, guiMaterialResize)
+	guiMaterialMipMapButton = Common_Gui.ToggleButton("guiMaterialMipMapButton", "Mipmap", "Allow MipMapping", 16, guiMaterialCallback, guiMaterialResize)
+	guiMaterialMipMapZBButton = Common_Gui.ToggleButton("guiMaterialMipMapZBButton", "Mipmap Zero Border", "Use Zero border MipMaps", 17, guiMaterialCallback, guiMaterialResize)
+	guiMaterialDetailMapButton = Common_Gui.ToggleButton("guiMaterialDetailMapButton", "Detail Map", "Use a detail map texture", 18, guiMaterialCallback, guiMaterialResize)
+	guiMaterialBumpMapButton = Common_Gui.ToggleButton("guiMaterialBumpMapButton", "Bump Map", "Use a bump map texture", 19, guiMaterialCallback, guiMaterialResize)
+	guiMaterialRefMapButton = Common_Gui.ToggleButton("guiMaterialRefMapButton", "Reflectance Map", "Use a reflectance map texture", 20, guiMaterialCallback, guiMaterialResize)
+	guiMaterialBaseTexMenu = Common_Gui.ComboBox("guiMaterialBaseTexMenu", "Base Texture", "Select a texture from this list to use as the material\'s base texture", 21, guiMaterialCallback, guiMaterialResize)
+	guiMaterialDetailMapMenu = Common_Gui.ComboBox("guiMaterialDetailMapMenu", "Detail Texture", "Select a texture from this list to use as a detail map", 22, guiMaterialCallback, guiMaterialResize)
+	guiMaterialBumpMapMenu = Common_Gui.ComboBox("guiMaterialBumpMapMenu", "Bumpmap Texture", "Select a texture from this list to use as a bump map", 23, guiMaterialCallback, guiMaterialResize)
+	guiMaterialReflectanceMapMenu = Common_Gui.ComboBox("guiMaterialReflectanceMapMenu", "Reflectance Map", "Select a texture from this list to use as a Reflectance map", 24, guiMaterialCallback, guiMaterialResize)
+	guiMaterialReflectanceSlider = Common_Gui.NumberPicker("guiMaterialReflectanceSlider", "Reflectivity %", "Material reflectivity as a percentage", 25, guiMaterialCallback, guiMaterialResize)
+	guiMaterialReflectanceSlider.min, guiMaterialReflectanceSlider.max = 0, 100
+	guiMaterialDetailScaleSlider = Common_Gui.NumberPicker("guiMaterialDetailScaleSlider", "Detail Scale %", "Detail map scale as a percentage of original size", 26, guiMaterialCallback, guiMaterialResize)	
+	guiMaterialDetailScaleSlider.min, guiMaterialDetailScaleSlider.max = 1, 1000
+	guiMaterialDetailScaleSlider.value = 100
+	guiMaterialRenameButton = Common_Gui.BasicButton("guiMaterialRenameButton", "Rename", "Rename Selected Material", 27, guiMaterialCallback, guiMaterialResize)
+	guiMaterialDeleteButton = Common_Gui.BasicButton("guiMaterialDeleteButton", "Delete", "Delete Selected Material", 28, guiMaterialCallback, guiMaterialResize)
+
 	
 	# General tab controls
 	guiStripText = Common_Gui.SimpleText("guiStripText", "Geometry type", None, guiGeneralResize)
@@ -1836,12 +2223,15 @@ def initGui():
 	guiSequenceTab = Common_Gui.TabContainer("guiSequenceTab", "content.sequence", guiSequenceButton, None, guiBaseResize)
 	guiSequenceTab.fade_mode = 1
 	guiSequenceTab.enabled, guiSequenceTab.visible = True, True
-	guiGeneralTab = Common_Gui.TabContainer("guiGeneralTab", "content.general", guiMeshButton, None, guiBaseResize)
-	guiGeneralTab.fade_mode = 1
-	guiGeneralTab.enabled, guiGeneralTab.visible = False, False
 	guiArmatureTab = Common_Gui.TabContainer("guiArmatureTab", "content.armature", guiArmatureButton, None, guiBaseResize)
 	guiArmatureTab.fade_mode = 1
 	guiArmatureTab.enabled, guiArmatureTab.visible = False, False
+	guiMaterialsTab = Common_Gui.TabContainer("guiMaterialsTab", "content.materials", guiMaterialsButton, None, guiBaseResize)
+	guiMaterialsTab.fade_mode = 1
+	guiMaterialsTab.enabled, guiMaterialsTab.visible = False, False
+	guiGeneralTab = Common_Gui.TabContainer("guiGeneralTab", "content.general", guiMeshButton, None, guiBaseResize)
+	guiGeneralTab.fade_mode = 1
+	guiGeneralTab.enabled, guiGeneralTab.visible = False, False
 	guiAboutTab = Common_Gui.TabContainer("guiAboutTab", "content.about", guiAboutButton, None, guiBaseResize)
 	guiAboutTab.fade_mode = 1
 	guiAboutTab.enabled, guiAboutTab.visible = False, False
@@ -1853,6 +2243,8 @@ def initGui():
 	guiGeneralSubtab.fade_mode = 1
 	guiArmatureSubtab = Common_Gui.BasicContainer("guiArmatureSubtab", None, None, guiBaseResize)
 	guiArmatureSubtab.fade_mode = 1
+	guiMaterialsSubtab = Common_Gui.BasicContainer("guiMaterialsSubtab", None, None, guiBaseResize)
+	guiMaterialsSubtab.fade_mode = 1
 	guiAboutSubtab = Common_Gui.BasicContainer("guiAboutSubtab", None, None, guiBaseResize)
 	guiAboutSubtab.fade_mode = 1
 	#guiSequenceNLASubtab = Common_Gui.BasicContainer("guiSequenceNLASubtab", None, None, guiBaseResize)
@@ -1866,8 +2258,10 @@ def initGui():
 	Common_Gui.addGuiControl(guiTabBar)
 	guiTabBar.addControl(guiHeaderBar) # Here to get the blend from panel color
 	guiTabBar.addControl(guiSequenceButton)
-	guiTabBar.addControl(guiMeshButton)
 	guiTabBar.addControl(guiArmatureButton)
+	guiTabBar.addControl(guiMaterialsButton)
+	guiTabBar.addControl(guiMeshButton)
+	
 	guiTabBar.addControl(guiAboutButton)
 	guiTabBar.addControl(guiExportButton)
 	
@@ -1917,6 +2311,43 @@ def initGui():
 	guiArmatureSubtab.addControl(guiBonePatternOffButton)
 
 	populateBoneGrid()
+	
+	Common_Gui.addGuiControl(guiMaterialsTab)
+	guiMaterialsTab.borderColor = [0,0,0,0]
+	guiMaterialsTab.addControl(guiMaterialsSubtab)
+	guiMaterialsSubtab.borderColor = [0,0,0,0]
+	
+	guiMaterialsSubtab.addControl(guiMaterialList)
+	guiMaterialsSubtab.addControl(guiMaterialOptions)
+	guiMaterialsSubtab.addControl(guiMaterialImportText)
+	guiMaterialsSubtab.addControl(guiMaterialImportBMatButton)
+	guiMaterialsSubtab.addControl(guiMaterialImportUVTexButton)
+	guiMaterialsSubtab.addControl(guiMaterialRenameButton)
+	guiMaterialsSubtab.addControl(guiMaterialDeleteButton)
+
+	guiMaterialOptions.addControl(guiMaterialTransFrame)
+	guiMaterialOptions.addControl(guiMaterialSWrapButton)
+	guiMaterialOptions.addControl(guiMaterialTWrapButton)
+	guiMaterialOptions.addControl(guiMaterialTransButton)
+	guiMaterialOptions.addControl(guiMaterialAddButton)
+	guiMaterialOptions.addControl(guiMaterialSubButton)
+	guiMaterialOptions.addControl(guiMaterialSelfIllumButton)
+	guiMaterialOptions.addControl(guiMaterialEnvMapButton)
+	guiMaterialOptions.addControl(guiMaterialMipMapButton)
+	guiMaterialOptions.addControl(guiMaterialMipMapZBButton)
+	guiMaterialOptions.addControl(guiMaterialDetailMapButton)
+	guiMaterialOptions.addControl(guiMaterialBumpMapButton)
+	guiMaterialOptions.addControl(guiMaterialRefMapButton)
+	guiMaterialOptions.addControl(guiMaterialBaseTexMenu)
+	guiMaterialOptions.addControl(guiMaterialDetailMapMenu)
+	guiMaterialOptions.addControl(guiMaterialBumpMapMenu)
+	guiMaterialOptions.addControl(guiMaterialReflectanceMapMenu)
+	guiMaterialOptions.addControl(guiMaterialReflectanceSlider)
+	guiMaterialOptions.addControl(guiMaterialDetailScaleSlider)
+
+
+	
+	populateMaterialList()
 	
 	Common_Gui.addGuiControl(guiGeneralTab)
 	guiGeneralTab.borderColor = [0,0,0,0]
