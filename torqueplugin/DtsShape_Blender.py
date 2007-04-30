@@ -1421,15 +1421,16 @@ class BlenderShape(DtsShape):
 			if mat['NoMipMap'] == True: flags |= dMaterial.NoMipMap
 			if mat['MipMapZeroBorder'] == True: flags |= dMaterial.MipMapZeroBorder
 
-			material = dMaterial(mat['BaseTex'], flags,-1,-1,-1,mat['detailScale'],mat['reflectance'])
+			material = dMaterial(mat['BaseTex'], flags,-1,-1,-1,(1.0/mat['detailScale']),mat['reflectance'])
 			# Must have something in the reflectance slot to prevent TGE from
 			# crashing when env mapping without a reflectance map.
 			material.reflectance = len(self.materials.materials)
 
 			print "Created Main material."
 
-			if mat['DetailMapFlag'] == True:
+			if mat['DetailMapFlag'] == True and mat['DetailTex'] != None:
 				print "  Adding Detail map to material."
+				print "  detailtex = ", mat['DetailTex']
 				dmFlags = 0x00000000
 				if mat['SWrap'] == True: dmFlags |= dMaterial.SWrap
 				if mat['TWrap'] == True: dmFlags |= dMaterial.TWrap
@@ -1465,6 +1466,7 @@ class BlenderShape(DtsShape):
 			Torque_Util.dump_writeln("    Warning: Texture Image (%s) is used on a mesh but is not set as the base texture for any material!" % imageName)
 			return None
 
+		material.name = imageName
 		retVal = self.materials.add(material)
 		print "returning Index:", retVal
 		print "*********************************"
