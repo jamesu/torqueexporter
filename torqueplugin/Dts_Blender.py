@@ -1213,7 +1213,11 @@ def clearMaterialList():
 def populateMaterialList():
 	global guiMaterialList, Prefs, guiSequenceOptions
 
-	# populate the texture pulldowns first.
+	# clear texture pulldowns
+	guiMaterialOptions.controlDict['guiMaterialDetailMapMenu'].items = []
+	guiMaterialOptions.controlDict['guiMaterialBumpMapMenu'].items = []
+	guiMaterialOptions.controlDict['guiMaterialReflectanceMapMenu'].items = []
+	# populate the texture pulldowns
 	for img in Blender.Image.Get():
 		guiMaterialOptions.controlDict['guiMaterialDetailMapMenu'].items.append(img.getName().split(".")[0])
 		guiMaterialOptions.controlDict['guiMaterialBumpMapMenu'].items.append(img.getName().split(".")[0])
