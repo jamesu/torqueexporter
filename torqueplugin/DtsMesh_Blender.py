@@ -43,26 +43,53 @@ class BlenderMesh(DtsMesh):
 		ignoreDblSided = False # set to true if you want to ignore double sided meshes
 		
 		self.weightDictionary = self.createWeightDictionary(msh);
+		
+		materialGroups = {}
+		'''
 		materialGroups = []
 		for i in range (0, len(msh.materials)):
 			materialGroups.append([])
 		if len(materialGroups) == 0: materialGroups = [[]]
-
+		'''
+		
 		# if we're dealing with a collision mesh, init differently
 		if isCollision:
 			self.initColMesh(shape, msh,  rootBone, scaleFactor, matrix)
 			return
 		
-
+		'''
 		# First, sort faces by material
 		for face in msh.faces:
 			if len(face.v) < 3:
 				continue # skip to next face
 			#print "DBG: face idx=%d" % face.materialIndex
 			materialGroups[face.mat].append(face)
+		'''
+
+		# First, sort faces by material
+		for face in msh.faces:
+			if len(face.v) < 3:
+				continue # skip to next face
+			#print "DBG: face idx=%d" % face.materialIndex
+			imageName = None
+			try:imageName = face.image.getName().split(".")[0]
+			except AttributeError:
+				# no material
+				try: materialGroups['NoMaterialFound'].append(face)
+				except KeyError:
+					materialGroups['NoMaterialFound'] = []
+					materialGroups['NoMaterialFound'].append(face)
+					continue
+			try:
+				materialGroups[imageName].append(face)
+			except KeyError:
+				materialGroups[imageName] = []
+				materialGroups[imageName].append(face)
+				
+
 		
 		# Then, we can add in batches
-		for group in materialGroups: 
+		for group in materialGroups.values(): 
 			self.bVertList = []
 			self.dVertList = []
 			# Insert Polygons
@@ -72,15 +99,7 @@ class BlenderMesh(DtsMesh):
 				# Insert primitive
 				pr = Primitive(len(self.indices), 3, 0)
 				pr.matindex = pr.Triangles | pr.Indexed
-				# clear our duplicate vertex search structures
-				#if not isCollision:
-				#	self.bVertList = []
-				#	self.dVertList = []
 			
-			# Create primitive
-			#pr = Primitive(len(self.indices), 3, 0)
-			#pr.matindex = pr.Triangles | pr.Indexed
-
 			for face in group:
 				if len(face.v) < 3:
 					continue # skip to next face
@@ -93,7 +112,7 @@ class BlenderMesh(DtsMesh):
 				
 				useSticky = False
 				# Find the image associated with the face on the mesh, if any
-				if msh.hasFaceUV:
+				if msh.hasFaceUV and face.image != None:
 					imageName = face.image.getName().split(".")[0]
 					matIndex = shape.materials.findMaterial(imageName)
 					if matIndex == None: matIndex = shape.addMaterial(imageName)
@@ -105,20 +124,6 @@ class BlenderMesh(DtsMesh):
 					matIndex = pr.NoMaterial # Nope, no material
 				pr.matindex |= matIndex
 
-				'''
-				if len(msh.materials) > 0 and face.mat < len(msh.materials):
-					# Also, use sticky coords if we were asked to
-					matIndex = shape.materials.findMaterial(msh.materials[face.mat].getName())
-					if matIndex == None: matIndex = shape.addMaterial(msh.materials[face.mat])
-					if matIndex == None: matIndex = pr.NoMaterial
-					if matIndex != pr.NoMaterial: 
-						self.mainMaterial = matIndex
-						useSticky = shape.materials.get(matIndex).sticky
-				else:
-					matIndex = pr.NoMaterial # Nope, no material
-				pr.matindex |= matIndex
-				'''
-				
 				# we've got a quad
 				if (len(face.v) > 3):
 					# convert the quad into two triangles
@@ -132,10 +137,7 @@ class BlenderMesh(DtsMesh):
 
 					# Duplicate first triangle in reverse order if doublesided
 					if ((msh.mode & NMesh.Modes.TWOSIDED) or (face.mode & NMesh.FaceModes.TWOSIDE)) and not ignoreDblSided:
-						#for i in range((len(self.indices)-1),(len(self.indices)-4),-1):
-						#	self.indices.append(self.indices[i])
 						if not useLists:
-							#for i in range((pr.firstElement+pr.numElements)-1,pr.firstElement-1,-1):
 							for i in range((pr.firstElement+pr.numElements)-1,pr.firstElement-1,-1):
 								self.indices.append(self.indices[i])
 							# insert a new primitive for the back facing triangle
@@ -161,10 +163,7 @@ class BlenderMesh(DtsMesh):
 						
 				# Duplicate triangle in reverse order if doublesided
 				if ((msh.mode & NMesh.Modes.TWOSIDED) or (face.mode & NMesh.FaceModes.TWOSIDE)) and not ignoreDblSided: 
-					#for i in range((len(self.indices)-1),(len(self.indices)-4),-1):
-					#	self.indices.append(self.indices[i])
 					if not useLists:
-						#for i in range((pr.firstElement+pr.numElements)-1,pr.firstElement,-1):
 						for i in range((pr.firstElement+pr.numElements)-1,pr.firstElement-1,-1):
 							self.indices.append(self.indices[i])
 						self.primitives.append(Primitive(pr.firstElement+pr.numElements,pr.numElements,pr.matindex))
@@ -177,10 +176,6 @@ class BlenderMesh(DtsMesh):
 				pr.numElements = (len(self.indices) - pr.firstElement) #-1
 				self.primitives.append(pr)
 
-
-			# Finally add primitive
-			#pr.numElements = (len(self.indices) - pr.firstElement) #-1			
-			#if pr.numElements != 0: self.primitives.append(pr)
 
 		
 		# Determine shape type based on vertex weights
