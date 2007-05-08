@@ -1033,7 +1033,6 @@ def createMaterialListItem(matName, startEvent):
 
 def importMaterialList():	
 	global guiMaterialList, Prefs, guiMaterialOptions
-	print "importing material list..."
 
 	try:
 		materials = Prefs['Materials']
@@ -1045,9 +1044,9 @@ def importMaterialList():
 	# of unique images that are UV mapped to the faces.
 	imageList = []
 	shapeTree = export_tree.find("SHAPE")
-	for marker in getChildren(shapeTree.obj):
+	for marker in getChildren(shapeTree.obj):		
 		if marker.name[0:6].lower() == "detail":
-			for obj in getChildren(marker):
+			for obj in getAllChildren(marker):
 				if obj.getType() == "Mesh":
 					objData = obj.getData()
 					for face in objData.faces:
@@ -1060,10 +1059,8 @@ def importMaterialList():
 
 	# remove unused materials from the prefs
 	for imageName in materials.keys()[:]:
-		print "imageName = ", imageName
 		if not (imageName in imageList): del materials[imageName]
 
-	print "image list is:", imageList
 	if len(imageList)==0: return	
 
 
@@ -1075,7 +1072,7 @@ def importMaterialList():
 			try: x = Prefs['Materials'][imageName]
 			except KeyError:
 			# no corresponding blender material and no existing texture material, so use reasonable defaults.
-				print "Could not find a blender material that matches image (", imageName,") used on mesh, setting defaults."
+				#print "Could not find a blender material that matches image (", imageName,") used on mesh, setting defaults."
 				Prefs['Materials'][imageName] = {}
 				Prefs['Materials'][imageName]['SWrap'] = True
 				Prefs['Materials'][imageName]['TWrap'] = True
@@ -1089,7 +1086,7 @@ def importMaterialList():
 				Prefs['Materials'][imageName]['DetailMapFlag'] = False
 				Prefs['Materials'][imageName]['BumpMapFlag'] = False
 				Prefs['Materials'][imageName]['ReflectanceMapFlag'] = False
-				Prefs['Materials'][imageName]['BaseTex'] = None
+				Prefs['Materials'][imageName]['BaseTex'] = imageName
 				Prefs['Materials'][imageName]['DetailTex'] = None
 				Prefs['Materials'][imageName]['BumpMapTex'] = None
 				Prefs['Materials'][imageName]['RefMapTex'] = None
@@ -1114,7 +1111,7 @@ def importMaterialList():
 			Prefs['Materials'][bmat.name]['DetailMapFlag'] = False
 			Prefs['Materials'][bmat.name]['BumpMapFlag'] = False
 			Prefs['Materials'][bmat.name]['ReflectanceMapFlag'] = False
-			Prefs['Materials'][bmat.name]['BaseTex'] = None
+			Prefs['Materials'][bmat.name]['BaseTex'] = imageName
 			Prefs['Materials'][bmat.name]['DetailTex'] = None
 			Prefs['Materials'][bmat.name]['BumpMapTex'] = None
 			Prefs['Materials'][bmat.name]['RefMapTex'] = None
@@ -1122,9 +1119,9 @@ def importMaterialList():
 			Prefs['Materials'][bmat.name]['detailScale'] = 1.0
 			Prefs['Materials'][bmat.name]['reflectance'] = bmat.getRef()
 
-			if bmat.getRef() > 0:
-				Prefs['Materials'][bmat.name]['NeverEnvMap'] = False
-			else: Prefs['Materials'][bmat.name]['NeverEnvMap'] = True
+			#if bmat.getRef() > 0:
+			#	Prefs['Materials'][bmat.name]['NeverEnvMap'] = False
+			#else: Prefs['Materials'][bmat.name]['NeverEnvMap'] = True
 
 			if bmat.getEmit() > 0.0: Prefs['Materials'][bmat.name]['SelfIlluminating'] = True
 			else: Prefs['Materials'][bmat.name]['SelfIlluminating'] = False
@@ -1139,7 +1136,7 @@ def importMaterialList():
 
 				if textures[0].tex.image != None:
 					Prefs['Materials'][bmat.name]['BaseTex'] = textures[0].tex.image.getName().split(".")[0]
-					print "Setting basetex to:", textures[0].tex.image.getName().split(".")[0]
+					#print "Setting basetex to:", textures[0].tex.image.getName().split(".")[0]
 				else:
 					Prefs['Materials'][bmat.name]['BaseTex'] = None
 
@@ -1156,6 +1153,9 @@ def importMaterialList():
 					if not (textures[0].tex.imageFlags & Texture.ImageFlags.MIPMAP):
 						Prefs['Materials'][bmat.name]['NoMipMap'] = True
 					else:Prefs['Materials'][bmat.name]['NoMipMap'] = False
+
+					if bmat.getRef() > 0 and (textures[0].mapto & Texture.MapTo.REF):
+						Prefs['Materials'][bmat.name]['NeverEnvMap'] = False
 
 				Prefs['Materials'][bmat.name]['ReflectanceMapFlag'] = False
 				Prefs['Materials'][bmat.name]['DetailMapFlag'] = False
@@ -1199,7 +1199,7 @@ def importMaterialList():
 
 def clearMaterialList():
 	global guiMaterialList, Prefs, guiSequenceOptions
-	print "clearing material list..."
+	#print "clearing material list..."
 	for i in range(0, len(guiMaterialList.controls)):
 		del guiMaterialList.controls[i].controls[:]
 	del guiMaterialList.controls[:]
@@ -1207,7 +1207,7 @@ def clearMaterialList():
 	guiMaterialList.itemIndex = -1
 	guiMaterialList.scrollPosition = 0
 	if guiMaterialList.callback: guiMaterialList.callback(guiMaterialList) # Bit of a hack, but works
-	print "Cleared material list."
+	#print "Cleared material list."
 
 
 def populateMaterialList():
@@ -1238,7 +1238,7 @@ def populateMaterialList():
 	# add the materials to the list
 	startEvent = 40
 	for mat in materials.keys():
-		print "mat: ", mat
+		#print "mat: ", mat
 		guiMaterialList.addControl(createMaterialListItem(mat, startEvent))
 		startEvent += 1
 	
@@ -1403,8 +1403,8 @@ def guiMaterialCallback(control):
 	if control.name == "guiMaterialList":
 		if control.itemIndex != -1:
 			guiMaterialOptions.enabled = True
-			print "control.itemIndex =", control.itemIndex
-			print "len(controls) =", len(guiMaterialList.controls)
+			#print "control.itemIndex =", control.itemIndex
+			#print "len(controls) =", len(guiMaterialList.controls)
 			materialName = guiMaterialList.controls[control.itemIndex].controls[0].label
 			# referesh and repopulate the material option controls
 			guiMaterialOptions.controlDict['guiMaterialSWrapButton'].state = matList[materialName]['SWrap']
@@ -1427,12 +1427,14 @@ def guiMaterialCallback(control):
 		else:
 			guiMaterialOptions.enabled = False
 			
+	if guiMaterialList.itemIndex == -1: return
+	
 	elif control.name == "guiMaterialSWrapButton":
 		Prefs['Materials'][materialName]['SWrap'] = control.state
-		print "Prefs:", Prefs['Materials']
+		#print "Prefs:", Prefs['Materials']
 	elif control.name == "guiMaterialTWrapButton":
 		Prefs['Materials'][materialName]['TWrap'] = control.state
-		print "Prefs:", Prefs['Materials']
+		#print "Prefs:", Prefs['Materials']
 	elif control.name == "guiMaterialTransButton":
 		if not control.state:
 			Prefs['Materials'][materialName]['Subtractive'] = False
@@ -1440,7 +1442,7 @@ def guiMaterialCallback(control):
 			Prefs['Materials'][materialName]['Additive'] = False
 			guiMaterialOptions.controlDict['guiMaterialAddButton'].state = False
 		Prefs['Materials'][materialName]['Translucent'] = control.state
-		print "Prefs:", Prefs['Materials']
+		#print "Prefs:", Prefs['Materials']
 	elif control.name == "guiMaterialAddButton":
 		if control.state:
 			Prefs['Materials'][materialName]['Translucent'] = True
@@ -1448,7 +1450,7 @@ def guiMaterialCallback(control):
 			Prefs['Materials'][materialName]['Subtractive'] = False
 			guiMaterialOptions.controlDict['guiMaterialSubButton'].state = False
 		Prefs['Materials'][materialName]['Additive'] = control.state
-		print "Prefs:", Prefs['Materials']
+		#print "Prefs:", Prefs['Materials']
 	elif control.name == "guiMaterialSubButton":
 		if control.state:
 			Prefs['Materials'][materialName]['Translucent'] = True
@@ -1456,55 +1458,55 @@ def guiMaterialCallback(control):
 			Prefs['Materials'][materialName]['Additive'] = False
 			guiMaterialOptions.controlDict['guiMaterialAddButton'].state = False
 		Prefs['Materials'][materialName]['Subtractive'] = control.state
-		print "Prefs:", Prefs['Materials']
+		#print "Prefs:", Prefs['Materials']
 	elif control.name == "guiMaterialSelfIllumButton":
 		Prefs['Materials'][materialName]['SelfIlluminating'] = control.state
-		print "Prefs:", Prefs['Materials']
+		#print "Prefs:", Prefs['Materials']
 	elif control.name == "guiMaterialEnvMapButton":
 		if not control.state:
 			Prefs['Materials'][materialName]['ReflectanceMapFlag'] = False
 			guiMaterialOptions.controlDict['guiMaterialRefMapButton'].state = False
 		Prefs['Materials'][materialName]['NeverEnvMap'] = not control.state
-		print "Prefs:", Prefs['Materials']
+		#print "Prefs:", Prefs['Materials']
 	elif control.name == "guiMaterialMipMapButton":
 		if not control.state:
 			Prefs['Materials'][materialName]['MipMapZeroBorder'] = False
 			guiMaterialOptions.controlDict['guiMaterialMipMapZBButton'].state = False
 		Prefs['Materials'][materialName]['NoMipMap'] = not control.state
-		print "Prefs:", Prefs['Materials']
+		#print "Prefs:", Prefs['Materials']
 	elif control.name == "guiMaterialMipMapZBButton":
 		if control.state:
 			Prefs['Materials'][materialName]['NoMipMap'] = False
 			guiMaterialOptions.controlDict['guiMaterialMipMapButton'].state = True
 		Prefs['Materials'][materialName]['MipMapZeroBorder'] = control.state
-		print "Prefs:", Prefs['Materials']
+		#print "Prefs:", Prefs['Materials']
 	elif control.name == "guiMaterialDetailMapButton":
 		Prefs['Materials'][materialName]['DetailMapFlag'] = control.state
-		print "Prefs:", Prefs['Materials']
+		#print "Prefs:", Prefs['Materials']
 	elif control.name == "guiMaterialBumpMapButton":
 		Prefs['Materials'][materialName]['BumpMapFlag'] = control.state
-		print "Prefs:", Prefs['Materials']
+		#print "Prefs:", Prefs['Materials']
 	elif control.name == "guiMaterialRefMapButton":
 		if control.state:
 			Prefs['Materials'][materialName]['NeverEnvMap'] = False
 			guiMaterialOptions.controlDict['guiMaterialEnvMapButton'].state = True
 		Prefs['Materials'][materialName]['ReflectanceMapFlag'] = control.state
-		print "Prefs:", Prefs['Materials']
+		#print "Prefs:", Prefs['Materials']
 	elif control.name == "guiMaterialDetailMapMenu":
 		Prefs['Materials'][materialName]['DetailTex'] = control.getSelectedItemString()
-		print "Prefs:", Prefs['Materials']
+		#print "Prefs:", Prefs['Materials']
 	elif control.name == "guiMaterialBumpMapMenu":
 		Prefs['Materials'][materialName]['BumpMapTex'] = control.getSelectedItemString()
-		print "Prefs:", Prefs['Materials']
+		#print "Prefs:", Prefs['Materials']
 	elif control.name == "guiMaterialReflectanceMapMenu":
 		Prefs['Materials'][materialName]['RefMapTex'] = control.getSelectedItemString()
-		print "Prefs:", Prefs['Materials']
+		#print "Prefs:", Prefs['Materials']
 	elif control.name == "guiMaterialReflectanceSlider":
 		Prefs['Materials'][materialName]['reflectance'] = control.value / 100.0
-		print "Prefs:", Prefs['Materials']
+		#print "Prefs:", Prefs['Materials']
 	elif control.name == "guiMaterialDetailScaleSlider":
 		Prefs['Materials'][materialName]['detailScale'] = control.value / 100.0
-		print "Prefs:", Prefs['Materials']
+		#print "Prefs:", Prefs['Materials']
 
 
 def guiSequenceCallback(control):
