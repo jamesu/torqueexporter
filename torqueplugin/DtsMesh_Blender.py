@@ -79,7 +79,7 @@ class BlenderMesh(DtsMesh):
 				except KeyError:
 					materialGroups['NoMaterialFound'] = []
 					materialGroups['NoMaterialFound'].append(face)
-					continue
+				continue
 			try:
 				materialGroups[imageName].append(face)
 			except KeyError:
@@ -89,6 +89,7 @@ class BlenderMesh(DtsMesh):
 
 		
 		# Then, we can add in batches
+		limitExceeded = False
 		for group in materialGroups.values(): 
 			self.bVertList = []
 			self.dVertList = []
@@ -103,6 +104,11 @@ class BlenderMesh(DtsMesh):
 			for face in group:
 				if len(face.v) < 3:
 					continue # skip to next face
+					
+				# if we've hit the vertex index limit, don't add any more primitives!
+				if len(self.indices) >= 32748:
+					limitExceeded = True
+					continue
 
 				# if we're not using triangle lists, insert one primitive per face
 				if not useLists:
@@ -175,6 +181,11 @@ class BlenderMesh(DtsMesh):
 				# Finally add the primitive
 				pr.numElements = (len(self.indices) - pr.firstElement) #-1
 				self.primitives.append(pr)
+			
+			if limitExceeded:
+				Torque_Util.dump_writeln("Error: Mesh vertex index limit exceeded, truncating mesh!")
+
+			
 
 
 		
