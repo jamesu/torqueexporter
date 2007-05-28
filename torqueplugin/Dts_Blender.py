@@ -36,9 +36,7 @@ from DTSPython import *
 import Blender
 from Blender import *
 import Common_Gui
-import string
-import math
-import re
+import string, math, re, gc
 
 import DtsShape_Blender
 from DtsShape_Blender import *
@@ -736,6 +734,7 @@ class ShapeTree(SceneTree):
 				progressBar.update()
 				progressBar.popTask()
 
+				Stream.closeStream()
 				del Stream
 				del self.Shape
 			else:
@@ -1068,8 +1067,9 @@ def importMaterialList():
 	# populate materials list with all blender materials
 	#for bmat in Blender.Material.Get():
 	for imageName in imageList:
+		bmat = None
 		try: bmat = Blender.Material.Get(imageName)
-		except:
+		except NameError:
 			try: x = Prefs['Materials'][imageName]
 			except KeyError:
 			# no corresponding blender material and no existing texture material, so use reasonable defaults.
@@ -1093,10 +1093,11 @@ def importMaterialList():
 				Prefs['Materials'][imageName]['RefMapTex'] = None
 				Prefs['Materials'][imageName]['reflectance'] = 0.0
 				Prefs['Materials'][imageName]['detailScale'] = 1.0
-				continue
+			continue
 
-		try:blah = Prefs['Materials'][bmat.name]
-		except KeyError:
+		try:
+			blah = Prefs['Materials'][bmat.name]			
+		except:
 			Prefs['Materials'][bmat.name] = {}
 			# init everything to make sure all keys exist with sane values
 			Prefs['Materials'][bmat.name]['SWrap'] = True
