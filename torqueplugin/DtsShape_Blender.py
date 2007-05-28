@@ -1048,7 +1048,16 @@ class BlenderShape(DtsShape):
 				Torque_Util.dump_writeln("Error getting base Transforms!!!!!")
 
 
+
 		# *** special processing for the first frame:
+		# store off the default position of the bounds box
+		try:
+			Blender.Set('curframe', 1)
+			bound_obj = Blender.Object.Get("Bounds")
+			boundsStartMat = self.collapseBlenderTransform(bound_obj)
+		except ValueError:
+			boundsStartMat = MatrixF()
+
 		# For blend animations, we need to reset the pose to the reference pose instead of the default
 		# transforms.  Otherwise, we won't be able to tell reliably which bones have actually moved
 		# during the blend sequence.
@@ -1078,13 +1087,6 @@ class BlenderShape(DtsShape):
 				# update the pose.
 				tempPose.update()
 
-		# store off the default position of the bounds box
-		try:
-			Blender.Set('curframe', 1)
-			bound_obj = Blender.Object.Get("Bounds")
-			boundsStartMat = self.collapseBlenderTransform(bound_obj)
-		except ValueError:
-			boundsStartMat = MatrixF()
 			
 		
 		# create blank frames for each node
@@ -1219,9 +1221,7 @@ class BlenderShape(DtsShape):
 		# This is a workaround for a bug in blender 2.41 that causes the reference count of the last
 		# action that Action.setActive() is called on from a script to be corrupted.  The only way
 		# around this nasty bug is to create a fake action and make sure that we always set it active
-		# as last action.  When they fix the bug this fake action crap can be removed from the code
-		# or surrounded with version checks.  I really hate this, but it seems to be the only possible
-		# workaround.
+		# as last action.
 		if Blender.Get('version') < 242:
 			try:
 				# if fake action already exists reuse it.
@@ -1360,22 +1360,25 @@ class BlenderShape(DtsShape):
 		return True
 		
 	def convertAndDumpSequenceToDSQ(self, sequence, filename, version):
+		
 		# Write entry for this in shape script, if neccesary
 		self.externalSequences.append(self.sTable.get(sequence.nameIndex))
-
+		
 		# Simple task of opening the file and dumping sequence data
 		dsq_file = open(filename, "wb")
 		self.writeDSQSequence(dsq_file, sequence, version) # Write only current sequence data
 		dsq_file.close()
 
+
 		# Remove anything we added (using addAction or addSequenceTrigger only) to the main list
-		if sequence.baseTranslation != -1: del self.nodeTranslations[sequence.baseTranslation:sequence.baseTranslation+sequence.numKeyFrames]
-		if sequence.baseRotation != -1:    del self.nodeRotations[sequence.baseRotation:sequence.baseRotation+sequence.numKeyFrames]
-		if sequence.baseScale != -1:       del self.nodeAlignedScales[sequence.baseScale:sequence.baseScale+sequence.numKeyFrames]
-		if sequence.firstTrigger != -1:    del self.triggers[sequence.firstTrigger:sequence.firstTrigger+sequence.numTriggers]
+		
+		if sequence.baseTranslation != -1: del self.nodeTranslations[sequence.baseTranslation-1:sequence.baseTranslation+sequence.numKeyFrames]
+		if sequence.baseRotation != -1:    del self.nodeRotations[sequence.baseRotation-1:sequence.baseRotation+sequence.numKeyFrames]
+		if sequence.baseScale != -1:       del self.nodeAlignedScales[sequence.baseScale-1:sequence.baseScale+sequence.numKeyFrames]
+		if sequence.firstTrigger != -1:    del self.triggers[sequence.firstTrigger-1:sequence.firstTrigger+sequence.numTriggers]
 		if sequence.firstGroundFrame != -1:
-			del self.groundTranslations[sequence.firstGroundFrame:sequence.firstGroundFrame+sequence.numGroundFrames]
-			del self.groundRotations[sequence.firstGroundFrame:sequence.firstGroundFrame+sequence.numGroundFrames]
+			del self.groundTranslations[sequence.firstGroundFrame-1:sequence.firstGroundFrame+sequence.numGroundFrames]
+			del self.groundRotations[sequence.firstGroundFrame-1:sequence.firstGroundFrame+sequence.numGroundFrames]
 		# ^^ Add other data here once exporter has support for it.
 
 		# Remove sequence from list
@@ -1383,6 +1386,7 @@ class BlenderShape(DtsShape):
 			if self.sequences[i] == sequence:
 				del self.sequences[i]
 				break
+
 		return True
 	
 	# Generic object addition
@@ -1407,9 +1411,6 @@ class BlenderShape(DtsShape):
 		material = None
 		try:
 			mat = self.preferences['Materials'][imageName]
-			print "*********************************"
-			print "Adding Material ", imageName
-
 			flags = 0x00000000
 			if mat['SWrap'] == True: flags |= dMaterial.SWrap
 			if mat['TWrap'] == True: flags |= dMaterial.TWrap
@@ -1426,11 +1427,7 @@ class BlenderShape(DtsShape):
 			# crashing when env mapping without a reflectance map.
 			material.reflectance = len(self.materials.materials)
 
-			print "Created Main material."
-
 			if mat['DetailMapFlag'] == True and mat['DetailTex'] != None:
-				print "  Adding Detail map to material."
-				print "  detailtex = ", mat['DetailTex']
 				dmFlags = 0x00000000
 				if mat['SWrap'] == True: dmFlags |= dMaterial.SWrap
 				if mat['TWrap'] == True: dmFlags |= dMaterial.TWrap
@@ -1440,36 +1437,29 @@ class BlenderShape(DtsShape):
 				material.detail = self.materials.add(detail_map)
 				if mat['NeverEnvMap'] == False:
 					Torque_Util.dump_writeln("    Warning: Material (%s) is using environment mapping with a detail map, strange things may happen!" % imageName)
-				print "  Added detail map ", mat['DetailTex']
 
 			if mat['BumpMapFlag'] == True:
-				print "  Adding Bump map to material."
 				bmFlags = 0x00000000
 				if mat['SWrap'] == True: bmFlags |= dMaterial.SWrap
 				if mat['TWrap'] == True: bmFlags |= dMaterial.TWrap
 				bmFlags |= dMaterial.BumpMap
 				bump_map = dMaterial(mat['BumpMapTex'], bmFlags,-1,-1,-1,1.0,mat['reflectance'])
 				material.bump = self.materials.add(bump_map)
-				print "  Added bump map ", mat['BumpMapTex']
 
 			if mat['ReflectanceMapFlag'] == True:
-				print "  Adding Refl map to material."
 				rmFlags = 0x00000000
 				if mat['SWrap'] == True: rmFlags |= dMaterial.SWrap
 				if mat['TWrap'] == True: rmFlags |= dMaterial.TWrap
 				rmFlags |= dMaterial.ReflectanceMap
 				refl_map = dMaterial(mat['RefMapTex'], rmFlags,-1,-1,-1,1.0,mat['reflectance'])
 				material.reflectance = self.materials.add(refl_map)
-				print "  Added refl map ", mat['RefMapTex']
-				
+			
 		except KeyError:
 			Torque_Util.dump_writeln("    Warning: Texture Image (%s) is used on a mesh but is not set as the base texture for any material!" % imageName)
 			return None
 
 		material.name = imageName
 		retVal = self.materials.add(material)
-		print "returning Index:", retVal
-		print "*********************************"
 		return retVal
 		
 	
