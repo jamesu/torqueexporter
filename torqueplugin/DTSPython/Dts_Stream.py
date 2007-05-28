@@ -52,6 +52,11 @@ class DtsStream:
 	mExporterVersion = int(1)		# Exporter Version
 	
 	def __init__(self, fname, read=False, version=24):
+		# check python version and select correct write32 method
+		if sys.version.split(" ")[0] == "2.5":
+			self.write32 = self.write32_py25
+		else:
+			self.write32 = self.write32_py24			
 		if read:
 			self.fs = open(fname, "rb")
 			self.DTSVersion = 25	# Biggest version we can read
@@ -81,9 +86,13 @@ class DtsStream:
 		del self.buffer8
 		del self.buffer16
 		del self.buffer32
-	def __del__(self):
+	def closeStream(self):
 		self.clearStreams()
 		self.fs.close()
+	
+	def __del__(self):
+		self.closeStream()
+		
 	def storeCheck(self, checkPoint= -1):
 		# Write checkpoints (unsigned presumably)
 		a = self.checkCount % 256
@@ -173,11 +182,20 @@ class DtsStream:
 	# Quick & Easy Operators
 	def write(self, value): self.write32(value) # Evil
 	def write8(self, value): self.buffer8.append(value)
-	def write16(self, value): self.buffer16.append(value)
+	def write16(self, value): self.buffer16.append(value)	
+	'''
 	def write32(self, value):
 		# ugly ugly hack to deal with python 2.4's int -> long int conversion confusion
 		val = struct.unpack('i', struct.pack('I', value))[0]
 		self.buffer32.append(val)
+	'''
+	def write32_py24(self, value):
+		# ugly ugly hack to deal with python 2.4's int -> long int conversion confusion
+		val = struct.unpack('i', struct.pack('I', value))[0]
+		self.buffer32.append(val)
+	def write32_py25(self, value):
+		self.buffer32.append(value)
+
 	def read(self): return self.read32()
 	def read8(self): return self.buffer8.pop(0)
 	def read16(self): return self.buffer16.pop(0)
