@@ -480,9 +480,12 @@ class SceneTree:
 
 	def process(self, progressBar):
 		# Process children
+		found = False
 		for c in self.children:
 			if c == None: continue
+			found = True
 			c.process(progressBar)
+		if not found: Torque_Util.dump_writeln("  Error: No Shape Marker found!  See the readme.html file.")
 
 	def getChild(self, name):
 		for c in self.children:
@@ -552,7 +555,6 @@ class ShapeTree(SceneTree):
 	def process(self, progressBar):
 		global Debug
 		global Prefs
-	
 		# Set scene frame to 1 in case we have any problems
 		Scene.GetCurrent().getRenderingContext().currentFrame(1)
 		try:
@@ -658,69 +660,67 @@ class ShapeTree(SceneTree):
 				progressBar.update()
 				
 				# Add all actions (will ignore ones not belonging to shape)
-				if True:
-					scene = Blender.Scene.GetCurrent()
-					context = scene.getRenderingContext()
-					actions = Armature.NLA.GetActions()
+				scene = Blender.Scene.GetCurrent()
+				context = scene.getRenderingContext()
+				actions = Armature.NLA.GetActions()
 
-					# check the armatures to see if any are locked in rest position
-					for armOb in Blender.Object.Get():
-						if (armOb.getType() != 'Armature'): continue
-						if armOb.getData().restPosition:
-							Blender.Draw.PupMenu("Warning%t|One or more of your armatures is locked into rest position. This can cause problems with exported animations.")
-							break
+				# check the armatures to see if any are locked in rest position
+				for armOb in Blender.Object.Get():
+					if (armOb.getType() != 'Armature'): continue
+					if armOb.getData().restPosition:
+						Blender.Draw.PupMenu("Warning%t|One or more of your armatures is locked into rest position. This can cause problems with exported animations.")
+						break
 
-					# The ice be dammed, it's time to take action
-					if len(actions.keys()) > 0:
-						progressBar.pushTask("Adding Actions..." , len(actions.keys()*4), 0.8)
-						for action_name in actions.keys():
-							# skip the fake action (workaround for a blender bug)
-							# TODO: surround this w/ version check when bug is fixed.
-							if action_name == "DTSEXPFAKEACT": continue
-							
-							sequenceKey = getSequenceKey(action_name)
-							if (sequenceKey['NoExport']) or (sequenceKey['InterpolateFrames'] == 0):
-								progressBar.update()
-								progressBar.update()
-								progressBar.update()
-								progressBar.update()
-								continue
-							
-							# Sequence the Action
-							sequence = self.Shape.addAction(actions[action_name], scene, context, getSequenceKey(action_name))
-							if sequence == None:
-								Torque_Util.dump_writeln("Warning : Couldn't add action '%s' to shape!" % action_name)
-								progressBar.update()
-								progressBar.update()
-								progressBar.update()
-								progressBar.update()
-								continue
+				# The ice be dammed, it's time to take action
+				if len(actions.keys()) > 0:
+					progressBar.pushTask("Adding Actions..." , len(actions.keys()*4), 0.8)
+					for action_name in actions.keys():
+						# skip the fake action (workaround for a blender bug)
+						if action_name == "DTSEXPFAKEACT": continue
+
+						sequenceKey = getSequenceKey(action_name)
+						if (sequenceKey['NoExport']) or (sequenceKey['InterpolateFrames'] == 0):
 							progressBar.update()
-							
-							# Pull the triggers
-							if len(sequenceKey['Triggers']) != 0:
-								self.Shape.addSequenceTriggers(sequence, sequenceKey['Triggers'], DtsShape_Blender.getNumFrames(actions[action_name].getAllChannelIpos().values(), False))
 							progressBar.update()
-							
-							# Materialize
-							if sequenceKey['AnimateMaterial']:
-								self.Shape.addSequenceMaterialIpos(sequence, DtsShape_Blender.getNumFrames(actions[action_name].getAllChannelIpos().values(), False), sequenceKey['MaterialIpoStartFrame'])
 							progressBar.update()
-							
-							# Hey you, DSQ!
-							if sequenceKey['Dsq']:
-								self.Shape.convertAndDumpSequenceToDSQ(sequence, "%s/%s.dsq" % (Prefs['exportBasepath'], action_name), Stream.DTSVersion)
-								Torque_Util.dump_writeln("Loaded and dumped sequence '%s' to '%s/%s.dsq'." % (action_name, Prefs['exportBasepath'], action_name))
-							else:
-								Torque_Util.dump_writeln("Loaded sequence '%s'." % action_name)
-								
-							# Clear out matters if we don't need them
-							if not sequence.has_loc: sequence.matters_translation = []
-							if not sequence.has_rot: sequence.matters_rotation = []
-							if not sequence.has_scale: sequence.matters_scale = []
 							progressBar.update()
-						
-						progressBar.popTask()
+							continue
+
+						# Sequence the Action
+						sequence = self.Shape.addAction(actions[action_name], scene, context, getSequenceKey(action_name))
+						if sequence == None:
+							Torque_Util.dump_writeln("Warning : Couldn't add action '%s' to shape!" % action_name)
+							progressBar.update()
+							progressBar.update()
+							progressBar.update()
+							progressBar.update()
+							continue
+						progressBar.update()
+
+						# Pull the triggers
+						if len(sequenceKey['Triggers']) != 0:
+							self.Shape.addSequenceTriggers(sequence, sequenceKey['Triggers'], DtsShape_Blender.getNumFrames(actions[action_name].getAllChannelIpos().values(), False))
+						progressBar.update()
+
+						# Materialize
+						if sequenceKey['AnimateMaterial']:
+							self.Shape.addSequenceMaterialIpos(sequence, DtsShape_Blender.getNumFrames(actions[action_name].getAllChannelIpos().values(), False), sequenceKey['MaterialIpoStartFrame'])
+						progressBar.update()
+
+						# Hey you, DSQ!
+						if sequenceKey['Dsq']:
+							self.Shape.convertAndDumpSequenceToDSQ(sequence, "%s/%s.dsq" % (Prefs['exportBasepath'], action_name), Stream.DTSVersion)
+							Torque_Util.dump_writeln("Loaded and dumped sequence '%s' to '%s/%s.dsq'." % (action_name, Prefs['exportBasepath'], action_name))
+						else:
+							Torque_Util.dump_writeln("Loaded sequence '%s'." % action_name)
+
+						# Clear out matters if we don't need them
+						if not sequence.has_loc: sequence.matters_translation = []
+						if not sequence.has_rot: sequence.matters_rotation = []
+						if not sequence.has_scale: sequence.matters_scale = []
+						progressBar.update()
+
+					progressBar.popTask()
 				
 				Torque_Util.dump_writeln("> Shape Details")
 				self.Shape.dumpShapeInfo()
@@ -1044,18 +1044,19 @@ def importMaterialList():
 	# of unique images that are UV mapped to the faces.
 	imageList = []
 	shapeTree = export_tree.find("SHAPE")
-	for marker in getChildren(shapeTree.obj):		
-		if marker.name[0:6].lower() == "detail":
-			for obj in getAllChildren(marker):
-				if obj.getType() == "Mesh":
-					objData = obj.getData()
-					for face in objData.faces:
-						try:
-							if face.image != None:
-								imageName = face.image.getName().split(".")[0]
-								if not (imageName in imageList):
-									imageList.append(imageName)
-						except: doNothing = 1
+	if shapeTree != None:
+		for marker in getChildren(shapeTree.obj):		
+			if marker.name[0:6].lower() == "detail":
+				for obj in getAllChildren(marker):
+					if obj.getType() == "Mesh":
+						objData = obj.getData()
+						for face in objData.faces:
+							try:
+								if face.image != None:
+									imageName = face.image.getName().split(".")[0]
+									if not (imageName in imageList):
+										imageList.append(imageName)
+							except: doNothing = 1
 
 	# remove unused materials from the prefs
 	for imageName in materials.keys()[:]:
@@ -1133,35 +1134,35 @@ def importMaterialList():
 			# Look at the texture channels if they exist
 			textures = bmat.getTextures()
 			if len(textures) > 0:
-
-				if textures[0].tex.image != None:
-					Prefs['Materials'][bmat.name]['BaseTex'] = textures[0].tex.image.getName().split(".")[0]
-					#print "Setting basetex to:", textures[0].tex.image.getName().split(".")[0]
-				else:
-					Prefs['Materials'][bmat.name]['BaseTex'] = None
-
-				if (textures[0] != None) and (textures[0].tex.type == Texture.Types.IMAGE):
-					# Translucency?
-					if textures[0].mapto & Texture.MapTo.ALPHA:
-						Prefs['Materials'][bmat.name]['Translucent'] = True
-						if bmat.getAlpha() < 1.0: Prefs['Materials'][bmat.name]['Additive'] = True
-						else: Prefs['Materials'][bmat.name]['Additive'] = False
+				if textures[0] != None:
+					if textures[0].tex.image != None:
+						Prefs['Materials'][bmat.name]['BaseTex'] = textures[0].tex.image.getName().split(".")[0]
+						#print "Setting basetex to:", textures[0].tex.image.getName().split(".")[0]
 					else:
-						Prefs['Materials'][bmat.name]['Translucent'] = False
-						Prefs['Materials'][bmat.name]['Additive'] = False
-					# Disable mipmaps?
-					if not (textures[0].tex.imageFlags & Texture.ImageFlags.MIPMAP):
-						Prefs['Materials'][bmat.name]['NoMipMap'] = True
-					else:Prefs['Materials'][bmat.name]['NoMipMap'] = False
+						Prefs['Materials'][bmat.name]['BaseTex'] = None
 
-					if bmat.getRef() > 0 and (textures[0].mapto & Texture.MapTo.REF):
-						Prefs['Materials'][bmat.name]['NeverEnvMap'] = False
+					if (textures[0] != None) and (textures[0].tex.type == Texture.Types.IMAGE):
+						# Translucency?
+						if textures[0].mapto & Texture.MapTo.ALPHA:
+							Prefs['Materials'][bmat.name]['Translucent'] = True
+							if bmat.getAlpha() < 1.0: Prefs['Materials'][bmat.name]['Additive'] = True
+							else: Prefs['Materials'][bmat.name]['Additive'] = False
+						else:
+							Prefs['Materials'][bmat.name]['Translucent'] = False
+							Prefs['Materials'][bmat.name]['Additive'] = False
+						# Disable mipmaps?
+						if not (textures[0].tex.imageFlags & Texture.ImageFlags.MIPMAP):
+							Prefs['Materials'][bmat.name]['NoMipMap'] = True
+						else:Prefs['Materials'][bmat.name]['NoMipMap'] = False
+
+						if bmat.getRef() > 0 and (textures[0].mapto & Texture.MapTo.REF):
+							Prefs['Materials'][bmat.name]['NeverEnvMap'] = False
 
 				Prefs['Materials'][bmat.name]['ReflectanceMapFlag'] = False
 				Prefs['Materials'][bmat.name]['DetailMapFlag'] = False
 				Prefs['Materials'][bmat.name]['BumpMapFlag'] = False
 				for i in range(1, len(textures)):
-					texture_obj = textures[i]
+					texture_obj = textures[i]					
 					if texture_obj == None: continue
 					# Figure out if we have an Image
 					if texture_obj.tex.type != Texture.Types.IMAGE:
@@ -1638,6 +1639,9 @@ def guiArmatureCallback(control):
 						#print "Added", name, "to banned bones list."						
 		clearBoneGrid()
 		populateBoneGrid()
+	elif control.name == "guiBoneRefreshButton":
+		clearBoneGrid()
+		populateBoneGrid()
 	
 
 
@@ -1985,6 +1989,11 @@ def guiArmatureResize(control, newwidth, newheight):
 		control.width = 35
 		control.x = 121
 		control.y = newheight-315
+	elif control.name == "guiBoneRefreshButton":
+		control.width = 75
+		control.x = 400
+		control.y = newheight-315
+	
 	
 
 def guiGeneralResize(control, newwidth, newheight):
@@ -2128,7 +2137,7 @@ def initGui():
 	
 	# Sequence tab, sequence options controls
 	guiSequenceOptionsTitle = Common_Gui.SimpleText("guiSequenceOptionsTitle", "Sequence", None, guiSequenceResize)
-	guiSequenceOptionsFramecount = Common_Gui.NumberPicker("guiSequenceOptionsFramecount", "Frames", "Amount of frames to export", 10, guiSequenceCallback, guiSequenceResize)
+	guiSequenceOptionsFramecount = Common_Gui.NumberPicker("guiSequenceOptionsFramecount", "Frame Samples", "Amount of frames to export", 10, guiSequenceCallback, guiSequenceResize)
 	guiSequenceOptionsFramecount.min = 1
 	guiSequenceOptionsGroundFramecount = Common_Gui.NumberPicker("guiSequenceOptionsGroundFramecount", "Ground Frames", "Amount of ground frames to export", 11, guiSequenceCallback, guiSequenceResize)
 	guiSequenceOptionsAnimateMaterials = Common_Gui.ToggleButton("guiSequenceOptionsAnimateMaterials", "Mat Anim", "Animate Materials", 12, guiSequenceCallback, guiSequenceResize)
@@ -2168,6 +2177,7 @@ def initGui():
 	guiBonePatternText.value = "*"
 	guiBonePatternOnButton = Common_Gui.BasicButton("guiBonePatternOnButton", "On", "Turn on export of bones matching pattern", 7, guiArmatureCallback, guiArmatureResize)
 	guiBonePatternOffButton = Common_Gui.BasicButton("guiBonePatternOffButton", "Off", "Turn off export of bones matching pattern", 8, guiArmatureCallback, guiArmatureResize)
+	guiBoneRefreshButton = Common_Gui.BasicButton("guiBoneRefreshButton", "Refresh", "Refresh bones list", 9, guiArmatureCallback, guiArmatureResize)
 	
 	# Material tab controls
 	guiMaterialList = Common_Gui.ListContainer("guiMaterialList", "material.list", guiMaterialCallback, guiMaterialResize)
@@ -2374,6 +2384,7 @@ def initGui():
 	guiArmatureSubtab.addControl(guiBonePatternText)
 	guiArmatureSubtab.addControl(guiBonePatternOnButton)
 	guiArmatureSubtab.addControl(guiBonePatternOffButton)
+	guiArmatureSubtab.addControl(guiBoneRefreshButton)
 
 	populateBoneGrid()
 	
