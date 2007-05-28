@@ -1093,7 +1093,6 @@ def importMaterialList():
 				Prefs['Materials'][imageName]['RefMapTex'] = None
 				Prefs['Materials'][imageName]['reflectance'] = 0.0
 				Prefs['Materials'][imageName]['detailScale'] = 1.0
-				Prefs['Materials'][imageName]['reflectance'] = bmat.getRef()
 				continue
 
 		try:blah = Prefs['Materials'][bmat.name]
@@ -1118,7 +1117,6 @@ def importMaterialList():
 			Prefs['Materials'][bmat.name]['RefMapTex'] = None
 			Prefs['Materials'][bmat.name]['reflectance'] = 0.0
 			Prefs['Materials'][bmat.name]['detailScale'] = 1.0
-			Prefs['Materials'][bmat.name]['reflectance'] = bmat.getRef()
 
 			#if bmat.getRef() > 0:
 			#	Prefs['Materials'][bmat.name]['NeverEnvMap'] = False
