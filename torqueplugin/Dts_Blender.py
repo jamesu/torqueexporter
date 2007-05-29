@@ -1734,6 +1734,9 @@ def guiGeneralCallback(control):
 
 	elif control.name == "guiTSEMaterial":
 		Prefs['TSEMaterial'] = control.state
+		
+	elif control.name == "guiLogToOutputFolder":
+		Prefs['LogToOutputFolder'] = control.state
 
 def guiBaseResize(control, newwidth, newheight):
 	tabContainers = ["guiSequenceTab", "guiGeneralTab", "guiArmatureTab", "guiAboutTab", "guiMaterialsTab"]
@@ -2080,6 +2083,10 @@ def guiGeneralResize(control, newwidth, newheight):
 		control.x = 356
 		control.y = newheight - 282 - control.height
 		control.width = 122
+	elif control.name == "guiLogToOutputFolder":
+		control.x = 356
+		control.y = newheight - 304 - control.height
+		control.width = 122
 
 def guiAboutResize(control, newwidth, newheight):
 	if control.name == "guiAboutText":
@@ -2265,8 +2272,10 @@ def initGui():
 	guiCustomFilenameSelect = Common_Gui.BasicButton("guiCustomFilenameSelect", "Select...", "Select a filename and destination for export", 21, guiGeneralCallback, guiGeneralResize)
 	guiCustomFilenameDefaults = Common_Gui.BasicButton("guiCustomFilenameDefaults", "Default", "Reset filename and destination to defaults", 22, guiGeneralCallback, guiGeneralResize)
 	
+	
 	guiTSEMaterial = Common_Gui.ToggleButton("guiTSEMaterial", "Write TSE Materials", "Write materials and scripts geared for TSE", 24, guiGeneralCallback, guiGeneralResize)
 	guiTSEMaterial.state = Prefs['TSEMaterial']
+	guiLogToOutputFolder = Common_Gui.ToggleButton("guiLogToOutputFolder", "Log to Output Folder", "Write Log file to .DTS output folder", 25, guiGeneralCallback, guiGeneralResize)
 	
 	# About tab controls
 	guiAboutText = Common_Gui.MultilineText("guiAboutText", 
@@ -2447,7 +2456,9 @@ def initGui():
 	guiGeneralSubtab.addControl(guiCustomFilenameSelect)
 	guiGeneralSubtab.addControl(guiCustomFilenameDefaults)
 	guiGeneralSubtab.addControl(guiTSEMaterial)
-
+	guiGeneralSubtab.addControl(guiLogToOutputFolder)
+	Prefs['LogToOutputFolder'] = True
+	guiLogToOutputFolder.state = True
 	Common_Gui.addGuiControl(guiAboutTab)
 	guiAboutTab.borderColor = [0,0,0,0]
 	guiAboutTab.addControl(guiAboutSubtab)
