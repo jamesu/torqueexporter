@@ -41,7 +41,6 @@ class BlenderMesh(DtsMesh):
 		self.dVertList = [] # list containing lists of dts vertex indices, the outer list elements correspond to the bVertList element in the same position.
 		self.mainMaterial = None	# For determining material ipo track to use for ObjectState visibility animation
 		ignoreDblSided = False # set to true if you want to ignore double sided meshes
-		
 		self.weightDictionary = self.createWeightDictionary(msh);
 		
 		materialGroups = {}
@@ -125,6 +124,8 @@ class BlenderMesh(DtsMesh):
 					if matIndex == None: matIndex = pr.NoMaterial
 					if matIndex != pr.NoMaterial: 
 						self.mainMaterial = matIndex
+					else:
+						self.mainMaterial = None
 						#useSticky = shape.materials.get(matIndex).sticky
 				else:
 					matIndex = pr.NoMaterial # Nope, no material
@@ -231,7 +232,7 @@ class BlenderMesh(DtsMesh):
 			pr.matindex = pr.Triangles | pr.Indexed
 			useSticky = False
 			# no material for collision meshes
-			pr.matindex |= pr.NoMaterial 
+			pr.matindex |= pr.NoMaterial
 			if (len(face.v) > 3):
 				# convert the quad into two triangles
 				self.indices.append(self.appendVertex(shape,msh,rootBone,matrix,scaleFactor,face,2, useSticky, True))
@@ -294,9 +295,13 @@ class BlenderMesh(DtsMesh):
 		for group in mesh.getVertGroupNames():
 			# ignore groups that have no corresponding bone.
 			if not (group in boneList): continue
-			for vert in mesh.getVertsFromGroup(group, 1):
-			    	index, weight = vert[0], vert[1]
-			    	weightDictionary[index].append((group, weight))
+			try:
+				for vert in mesh.getVertsFromGroup(group, 1):
+					index, weight = vert[0], vert[1]
+					weightDictionary[index].append((group, weight))
+			except AttributeError:
+				continue
+				
 				
 		return weightDictionary
 		
