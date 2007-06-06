@@ -173,9 +173,6 @@ class BasicFrame(BasicControl):
 		self.borderColor = [0.0,0.0,0.0,0.0]
 		
 	def onDraw(self, offset):
-		print offset
-		print self.x, self.y
-		print self.width, self.height
 		real_x = offset[0] + self.x
 		real_y = offset[1] + self.y
 		
@@ -348,7 +345,6 @@ class ComboBox(BasicControl):
 		
 	# find a string in the list of items and return it's index
 	def getItemIndexFromString(self, string):
-		print "Searching for item: ", string
 		for i in range(0, len(self.items)):
 			if self.items[i] == string:
 				return i
