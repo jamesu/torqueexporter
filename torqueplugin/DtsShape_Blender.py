@@ -1303,7 +1303,7 @@ class BlenderShape(DtsShape):
 		# Get a list of used materials
 		for i in range(0, len(self.objects)):
 			# Only first mesh of object is taken into account, as that represents the object in the highest detail level
-			if self.meshes[self.objects[i].firstMesh].mainMaterial == None:
+			if not hasattr(self.meshes[self.objects[i].firstMesh], "mainMaterial") or self.meshes[self.objects[i].firstMesh].mainMaterial == None:
 				continue
 			else:
 				if not (self.meshes[self.objects[i].firstMesh].mainMaterial in usedMat):
@@ -1341,7 +1341,7 @@ class BlenderShape(DtsShape):
 		# Now we can dump each frame for the objects
 		for i in range(0, len(self.objects)):
 			for m in range(0, len(usedMat)):
-				if (self.meshes[self.objects[i].firstMesh].mainMaterial == usedMat[m]) and (matFrames[m] != None):
+				if hasattr(self.meshes[self.objects[i].firstMesh], "mainMaterial") and (self.meshes[self.objects[i].firstMesh].mainMaterial == usedMat[m]) and (matFrames[m] != None):
 					sequence.matters_vis[i] = True
 					
 					if sequence.baseObjectState == -1:
