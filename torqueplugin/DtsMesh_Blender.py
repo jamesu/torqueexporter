@@ -29,6 +29,17 @@ import Blender
 from Blender import NMesh
 
 '''
+   Utility functions
+'''
+
+# Strip image names of trailing extension
+def stripExtension(filename):
+	temp = string.split(filename,".")
+	retVal = string.join(temp[0:len(temp)-1], ".")
+	return retVal
+
+
+'''
    Mesh Class (Blender Export)
 '''
 #-------------------------------------------------------------------------------------------------
@@ -71,7 +82,8 @@ class BlenderMesh(DtsMesh):
 				continue # skip to next face
 			#print "DBG: face idx=%d" % face.materialIndex
 			imageName = None
-			try:imageName = face.image.getName().split(".")[0]
+			try:
+				imageName = stripExtension(face.image.getName())
 			except AttributeError:
 				# no material
 				try: materialGroups['NoMaterialFound'].append(face)
@@ -118,7 +130,8 @@ class BlenderMesh(DtsMesh):
 				useSticky = False
 				# Find the image associated with the face on the mesh, if any
 				if msh.hasFaceUV and face.image != None:
-					imageName = face.image.getName().split(".")[0]
+					#imageName = face.image.getName().split(".")[0]
+					imageName = stripExtension(face.image.getName())
 					matIndex = shape.materials.findMaterial(imageName)
 					if matIndex == None: matIndex = shape.addMaterial(imageName)
 					if matIndex == None: matIndex = pr.NoMaterial
