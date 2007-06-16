@@ -115,6 +115,12 @@ def pythonizeFileName(filename):
 	# replace all non-alphanumeric chars with _
 	p = re.compile('\W')
 	return p.sub('_', filename)
+
+# Strip image names of trailing extension
+def stripExtension(filename):
+	temp = string.split(filename,".")
+	retVal = string.join(temp[0:len(temp)-1], ".")
+	return retVal
 	
 '''
 	Preferences Code
@@ -1052,7 +1058,7 @@ def importMaterialList():
 						for face in objData.faces:
 							try:
 								if face.image != None:
-									imageName = face.image.getName().split(".")[0]
+									imageName = stripExtension(face.image.getName())
 									if not (imageName in imageList):
 										imageList.append(imageName)
 							except: doNothing = 1
@@ -1431,10 +1437,8 @@ def guiMaterialCallback(control):
 	
 	elif control.name == "guiMaterialSWrapButton":
 		Prefs['Materials'][materialName]['SWrap'] = control.state
-		#print "Prefs:", Prefs['Materials']
 	elif control.name == "guiMaterialTWrapButton":
 		Prefs['Materials'][materialName]['TWrap'] = control.state
-		#print "Prefs:", Prefs['Materials']
 	elif control.name == "guiMaterialTransButton":
 		if not control.state:
 			Prefs['Materials'][materialName]['Subtractive'] = False
@@ -1442,7 +1446,6 @@ def guiMaterialCallback(control):
 			Prefs['Materials'][materialName]['Additive'] = False
 			guiMaterialOptions.controlDict['guiMaterialAddButton'].state = False
 		Prefs['Materials'][materialName]['Translucent'] = control.state
-		#print "Prefs:", Prefs['Materials']
 	elif control.name == "guiMaterialAddButton":
 		if control.state:
 			Prefs['Materials'][materialName]['Translucent'] = True
@@ -1450,7 +1453,6 @@ def guiMaterialCallback(control):
 			Prefs['Materials'][materialName]['Subtractive'] = False
 			guiMaterialOptions.controlDict['guiMaterialSubButton'].state = False
 		Prefs['Materials'][materialName]['Additive'] = control.state
-		#print "Prefs:", Prefs['Materials']
 	elif control.name == "guiMaterialSubButton":
 		if control.state:
 			Prefs['Materials'][materialName]['Translucent'] = True
@@ -1458,55 +1460,42 @@ def guiMaterialCallback(control):
 			Prefs['Materials'][materialName]['Additive'] = False
 			guiMaterialOptions.controlDict['guiMaterialAddButton'].state = False
 		Prefs['Materials'][materialName]['Subtractive'] = control.state
-		#print "Prefs:", Prefs['Materials']
 	elif control.name == "guiMaterialSelfIllumButton":
 		Prefs['Materials'][materialName]['SelfIlluminating'] = control.state
-		#print "Prefs:", Prefs['Materials']
 	elif control.name == "guiMaterialEnvMapButton":
 		if not control.state:
 			Prefs['Materials'][materialName]['ReflectanceMapFlag'] = False
 			guiMaterialOptions.controlDict['guiMaterialRefMapButton'].state = False
 		Prefs['Materials'][materialName]['NeverEnvMap'] = not control.state
-		#print "Prefs:", Prefs['Materials']
 	elif control.name == "guiMaterialMipMapButton":
 		if not control.state:
 			Prefs['Materials'][materialName]['MipMapZeroBorder'] = False
 			guiMaterialOptions.controlDict['guiMaterialMipMapZBButton'].state = False
 		Prefs['Materials'][materialName]['NoMipMap'] = not control.state
-		#print "Prefs:", Prefs['Materials']
 	elif control.name == "guiMaterialMipMapZBButton":
 		if control.state:
 			Prefs['Materials'][materialName]['NoMipMap'] = False
 			guiMaterialOptions.controlDict['guiMaterialMipMapButton'].state = True
 		Prefs['Materials'][materialName]['MipMapZeroBorder'] = control.state
-		#print "Prefs:", Prefs['Materials']
 	elif control.name == "guiMaterialDetailMapButton":
 		Prefs['Materials'][materialName]['DetailMapFlag'] = control.state
-		#print "Prefs:", Prefs['Materials']
 	elif control.name == "guiMaterialBumpMapButton":
 		Prefs['Materials'][materialName]['BumpMapFlag'] = control.state
-		#print "Prefs:", Prefs['Materials']
 	elif control.name == "guiMaterialRefMapButton":
 		if control.state:
 			Prefs['Materials'][materialName]['NeverEnvMap'] = False
 			guiMaterialOptions.controlDict['guiMaterialEnvMapButton'].state = True
 		Prefs['Materials'][materialName]['ReflectanceMapFlag'] = control.state
-		#print "Prefs:", Prefs['Materials']
 	elif control.name == "guiMaterialDetailMapMenu":
 		Prefs['Materials'][materialName]['DetailTex'] = control.getSelectedItemString()
-		#print "Prefs:", Prefs['Materials']
 	elif control.name == "guiMaterialBumpMapMenu":
 		Prefs['Materials'][materialName]['BumpMapTex'] = control.getSelectedItemString()
-		#print "Prefs:", Prefs['Materials']
 	elif control.name == "guiMaterialReflectanceMapMenu":
 		Prefs['Materials'][materialName]['RefMapTex'] = control.getSelectedItemString()
-		#print "Prefs:", Prefs['Materials']
 	elif control.name == "guiMaterialReflectanceSlider":
 		Prefs['Materials'][materialName]['reflectance'] = control.value / 100.0
-		#print "Prefs:", Prefs['Materials']
 	elif control.name == "guiMaterialDetailScaleSlider":
 		Prefs['Materials'][materialName]['detailScale'] = control.value / 100.0
-		#print "Prefs:", Prefs['Materials']
 
 
 def guiSequenceCallback(control):
@@ -1592,7 +1581,6 @@ def guiSequenceCallback(control):
 			if control.name == "guiSequenceOptionsFramecount":
 				sequencePrefs['InterpolateFrames'] = control.value
 			elif control.name == "guiSequenceOptionsGroundFramecount":
-				#print "setting number of ground frames to: %i" % control.value
 				sequencePrefs['NumGroundFrames'] = control.value
 			elif control.name == "guiSequenceOptionsAnimateMaterials":
 				sequencePrefs['AnimateMaterial'] = control.state
@@ -1600,15 +1588,12 @@ def guiSequenceCallback(control):
 				sequencePrefs['MaterialIpoStartFrame'] = control.value
 			# added for blend ref pose selection
 			elif control.name == "guiSequenceOptionsRefposeMenu":
-				#print "setting refernce pose action to: %s" % control.items[control.itemIndex]
 				sequencePrefs['BlendRefPoseAction'] = control.items[control.itemIndex]
 				sequencePrefs['BlendRefPoseFrame'] = 1
 				guiSequenceOptions.controls[14].value = sequencePrefs['BlendRefPoseFrame']
 			elif control.name == "guiSequenceOptionsRefposeFrame":
-				#print "setting refernce pose frame to: %i" % control.value
 				sequencePrefs['BlendRefPoseFrame'] = control.value
 			elif control.name == "guiSequenceOptionsPriority":
-				#print "setting priority"
 				sequencePrefs['Priority'] = control.value
 
 			
@@ -1626,16 +1611,13 @@ def guiArmatureCallback(control):
 		for name in shapeTree.getShapeBoneNames():
 			name = name.upper()
 			if re.match(newPat, name) != None:				
-					#print "Matched", name
 					if control.name == "guiBonePatternOnButton":
 						for i in range(len(Prefs['BannedBones'])-1, -1, -1):
 							boneName = Prefs['BannedBones'][i].upper()
 							if name == boneName:
 								del Prefs['BannedBones'][i]
-								#print "Deleted", name, "from banned bones list."
 					elif control.name == "guiBonePatternOffButton":
 						Prefs['BannedBones'].append(name)
-						#print "Added", name, "to banned bones list."						
 		clearBoneGrid()
 		populateBoneGrid()
 	elif control.name == "guiBoneRefreshButton":
