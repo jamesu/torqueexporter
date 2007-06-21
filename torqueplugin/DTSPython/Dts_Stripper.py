@@ -45,7 +45,6 @@ class Stripper:
 		del self.strips
 	def strip(self):
 		self.strips = []
-		print "Convert Faces to Triangle Strips!"
 	def clear(self):
 		self.strips = []
 		self.faces = []
