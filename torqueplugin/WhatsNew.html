@@ -8,6 +8,54 @@
 <body>
 <h1>Torque Exporter Plug in for Blender</h1>
 <br>
+<h2>What's New for version 0.95</h2>
+<ul>
+  <li>Blender 2.44 and Python 2.5 compatibility.</li>
+  <li>New GUI tab controls, rewrote GUI event handling code</li>
+  <li>New "Materials" panel, material system rewrite. Features include:</li>
+  <ul>
+    <li>Additive and subtractive texture options</li>
+    <li>Self Illuminating texture options</li>
+    <li>Control of texture wrapping</li>
+    <li>Support for scaling of detail maps</li>
+    <li>Improved support of Environment mapping and reflectivity</li>
+    <li>Reflectance Maps (partially supported in TGE)</li>
+    <li>TGE "Bump" Maps (not supported in TGE)</li>
+    <li>Improved control of mipmaping</li>
+    <li>Users can now UV map multiple textures onto a single mesh
+without assigning material indices</li>
+  </ul>
+  <li>Fixed refresh of output path when selecting a new destination</li>
+  <li>Removed unused DTS version spinner from general panel</li>
+  <li>Added a log error message when no shape marker is found</li>
+  <li>Added a refresh button to the Armatures panel</li>
+  <li>Fixed a bug that would sometimes cause the DTS file stream not to
+close properly</li>
+  <li>Fixed a crash bug when exporting collision meshes with zero
+vertices</li>
+  <li>Fixed exporter crash when exceeding max per-mesh dts triangle
+count.&nbsp; Meshes that exceed the limit are now truncated and a
+message is written to the log.&nbsp; Maximum triangle count is around
+10,900.</li>
+  <li>Reverted buggy optimizations to animation export code introduced
+in version 0.94 that were resulting in mangled export of bones in some
+cases, thanks go out to Scott Coursey for finding the problem.</li>
+  <li>Fixed a problem with autobillboard detail levels that prevented
+them from displaying when a collision or loscollision mesh is present,
+thanks go out to Pho for finding and helping to diagnose the problem</li>
+  <li>Fixed a bug in the ground transform export, thanks go out to
+Duncan Gray for his help in finding and diagnosing the problem</li>
+  <li>Added an option to the General tab to write the export log file
+to the .dts output folder instead of the folder containing the .blend
+file (on by default).<br>
+  </li>
+  <li>Numerous bugfixes.&nbsp; Thanks go out to Duncan Gray, Adam
+Wilson, and Pho.&nbsp; Additional thanks go out to James Urquhart for
+writing the exporter in the first place and for suggestions in the user
+interface thread.&nbsp; Thanks also go out to Todd "zaz" Koeckeritz and
+Scott Coursey for suggestions and discussion in the user interface
+thread.&nbsp; And to anyone else that I missed.</li>
+</ul>
 <h2>What's New for version 0.94</h2>
 <ul>
   <li>Animation export code updated to work with the Blender 2.43 (is
