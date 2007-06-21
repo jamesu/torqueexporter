@@ -1404,8 +1404,6 @@ class BlenderShape(DtsShape):
 	# Material addition
 	def addMaterial(self, imageName):
 		if imageName == None: return None
-		if self.preferences['TSEMaterial']:
-			return self.addTSEMaterial(imageName)
 		
 		# find the material associated with the texture image file name
 		material = None
@@ -1438,7 +1436,7 @@ class BlenderShape(DtsShape):
 				if mat['NeverEnvMap'] == False:
 					Torque_Util.dump_writeln("    Warning: Material (%s) is using environment mapping with a detail map, strange things may happen!" % imageName)
 
-			if mat['BumpMapFlag'] == True:
+			if mat['BumpMapFlag'] == True and mat['BumpMapTex'] != None:
 				bmFlags = 0x00000000
 				if mat['SWrap'] == True: bmFlags |= dMaterial.SWrap
 				if mat['TWrap'] == True: bmFlags |= dMaterial.TWrap
@@ -1446,7 +1444,7 @@ class BlenderShape(DtsShape):
 				bump_map = dMaterial(mat['BumpMapTex'], bmFlags,-1,-1,-1,1.0,mat['reflectance'])
 				material.bump = self.materials.add(bump_map)
 
-			if mat['ReflectanceMapFlag'] == True:
+			if mat['ReflectanceMapFlag'] == True and mat['RefMapTex'] != None:
 				rmFlags = 0x00000000
 				if mat['SWrap'] == True: rmFlags |= dMaterial.SWrap
 				if mat['TWrap'] == True: rmFlags |= dMaterial.TWrap
@@ -1455,125 +1453,49 @@ class BlenderShape(DtsShape):
 				material.reflectance = self.materials.add(refl_map)
 			
 		except KeyError:
-			Torque_Util.dump_writeln("    Warning: Texture Image (%s) is used on a mesh but is not set as the base texture for any material!" % imageName)
+			Torque_Util.dump_writeln("    Warning: Texture Image (%s) is used on a mesh but could not be found in the material list!" % imageName)
 			return None
 
 		material.name = imageName
 		retVal = self.materials.add(material)
+		if self.preferences['TSEMaterial']:
+			self.addTSEMaterial(imageName)
+
 		return retVal
 		
 	
 	
 	
-	# Material addition
-	def addMaterialOld(self, bmat):
-		if bmat == None: return None
-		if self.preferences['TSEMaterial']:
-			return self.addTSEMaterial(bmat)
-		
-		material = dMaterial(bmat.getName(), dMaterial.SWrap | dMaterial.TWrap,-1,-1,-1,1.0,bmat.getRef())
-		material.sticky = False
-
-		# If we are emitting light, we must be self illuminating
-		if bmat.getEmit() > 0.0: material.flags |= dMaterial.SelfIlluminating
-		material.flags |= dMaterial.NeverEnvMap
-
-		# Look at the texture channels if they exist
-		textures = bmat.getTextures()
-		if len(textures) > 0:
-			if (textures[0] != None) and (textures[0].tex.type == Texture.Types.IMAGE):
-				# Translucency?
-				if textures[0].mapto & Texture.MapTo.ALPHA:
-					material.flags |= dMaterial.Translucent
-					if bmat.getAlpha() < 1.0: material.flags |= dMaterial.Additive
-
-				# Sticky coords?
-				if textures[0].texco & Texture.TexCo.STICK:
-					material.sticky = True
-
-				# Disable mipmaps?
-				if not (textures[0].tex.imageFlags & Texture.ImageFlags.MIPMAP):
-					material.flags |= dMaterial.NoMipMap
-
-			for i in range(1, len(textures)):
-				texture_obj = textures[i]
-				if texture_obj == None: continue
-				# Figure out if we have an Image
-				if texture_obj.tex.type != Texture.Types.IMAGE:
-					Torque_Util.dump_writeln("      Warning: Material(%s,%d) Only Image textures are supported. Skipped." % (bmat.getName(),i))
-					continue
-
-				# Determine what this texture is used for
-				# A) We have a reflectance map
-				if (material.reflectance == -1) and (texture_obj.mapto & Texture.MapTo.REF):
-					# Joe : this is still not working in showtool, need to investigate.
-					# We have a reflectance map
-					reflectance_map = dMaterial(texture_obj.tex.getName(), dMaterial.SWrap | dMaterial.TWrap,-1,-1,-1,1.0,bmat.getRef())
-					reflectance_map.flags |= dMaterial.ReflectanceMap
-					if texture_obj.texco & Texture.TexCo.STICK:
-						reflectance_map.sticky = True
-					material.flags &= ~dMaterial.NeverEnvMap
-					material.reflectance = self.materials.add(reflectance_map)
-				# B) We have a normal map (basically a 3d bump map)
-				elif (material.bump == -1) and (texture_obj.mapto & Texture.MapTo.NOR):
-					bump_map = dMaterial(texture_obj.tex.getName(), dMaterial.SWrap | dMaterial.TWrap,-1,-1,-1,1.0,bmat.getRef())
-					bump_map.flags |= dMaterial.BumpMap
-					if texture_obj.texco & Texture.TexCo.STICK:
-						bump_map.sticky = True
-					material.bump = self.materials.add(bump_map)
-				# C) We have a texture; Lets presume its a detail map (since its laid on top after all)
-				elif material.detail == -1:
-					detail_map = dMaterial(texture_obj.tex.getName(), dMaterial.SWrap | dMaterial.TWrap,-1,-1,-1,1.0,bmat.getRef())
-					detail_map.flags |= dMaterial.DetailMap
-					if texture_obj.texco & Texture.TexCo.STICK:
-						detail_map.sticky = True
-					material.detail = self.materials.add(detail_map)
-		else:
-			Torque_Util.dump_writeln("      Warning: Material(%s) does not have any textures assigned!" % bmat.getName())
-		return self.materials.add(material)
-	
 	# Material addition (TSE mode)
-	def addTSEMaterial(self, bmat):
-		if bmat == None: return None
+	def addTSEMaterial(self, imageName):
+	
+		mat = self.preferences['Materials'][imageName]
+
+		# Build the material string.
+		materialString = "new Material(%s)\n{\n" % (imageName)
 		
-		material = dMaterial(bmat.getName(), dMaterial.SWrap | dMaterial.TWrap,self.materials.size(),-1,-1,1.0,bmat.getRef())
-		material.sticky = False
-
-		# If we are emitting light, we must be self illuminating
-		if bmat.getEmit() > 0.0: material.flags |= dMaterial.SelfIlluminating
-		material.flags |= dMaterial.NeverEnvMap
-
-		# Look at the texture channels if they exist
-		textures = bmat.getTextures()
-		if len(textures) > 0:
-			if (textures[0] != None) and (textures[0].tex.type == Texture.Types.IMAGE):
-				# Translucency?
-				if textures[0].mapto & Texture.MapTo.ALPHA:
-					material.flags |= dMaterial.Translucent
-					if bmat.getAlpha() < 1.0: material.flags |= dMaterial.Additive
-
-				# Sticky coords?
-				if textures[0].texco & Texture.TexCo.STICK:
-					material.sticky = True
-
-				# Disable mipmaps?
-				if not (textures[0].tex.imageFlags & Texture.ImageFlags.MIPMAP):
-					material.flags |= dMaterial.NoMipMap
-					
-		# Now here's where things get different; we go through the texture channels and add stuff
-		materialString = "new Material(%s)\n{\n" % (bmat.getName())
-		for idx in range(0, len(textures)):
-			texture = textures[idx]
-			if texture == None:
-				continue
-			if texture.tex.type == Texture.Types.IMAGE: imgFilename = texture.tex.getName()
-			else: imgFilename = ""
-			materialString += "baseTex[%d] = \"./%s\";\n" % (idx, imgFilename)
-		materialString += "}\n"
+		materialString += "// Rendering Stage 0\n"
+		
+		materialString += "baseTex[0] = \"./%s\";\n" % (imageName)
+		
+		if mat['DetailMapFlag'] == True and mat['DetailTex'] != None:
+			materialString += "detailTex[0] = \"./%s\";\n" % (mat['DetailTex'])
+		if mat['BumpMapFlag'] == True and mat['BumpMapTex'] != None:
+			materialString += "bumpTex[0] = \"./%s\";\n" % (mat['BumpMapTex'])
+		
+		if mat['SelfIlluminating'] == True:
+			materialString += "emissive[0] = true;\n"
+		if mat['Translucent'] == True:
+			materialString += "translucent[0] = true;\n"
+		if mat['Additive'] == True:
+			materialString += "TranslucentBlendOp[0] = Add;\n" # <- not sure if it's Add or $Add, docs incomplete...
+		elif mat['Subtractive'] == True:
+			materialString += "TranslucentBlendOp[0] = Sub;\n" # <- ditto
+		# need to set a default blend op?  Which one?		
+		
+		materialString += "};\n\n"
 		
 		self.scriptMaterials.append(materialString)
-		
-		return self.materials.add(material)
 	
 	# Finalizes shape
 	def finalize(self, writeShapeScript=False):
@@ -1600,10 +1522,10 @@ class BlenderShape(DtsShape):
 		if self.preferences['TSEMaterial']:
 			Torque_Util.dump_writeln("   Writing material script %s%smaterials.cs" % (self.preferences['exportBasepath'], pathSep))
 			materialScript = open("%s%smaterials.cs" % (self.preferences['exportBasepath'], pathSep), "w")
-			for materialDef in self.scriptMaterials:
-				materialScript.write("// Script automatically generated by Blender DTS Exporter\n\n")
+			materialScript.write("// Script automatically generated by Blender DTS Exporter\n\n")
+			for materialDef in self.scriptMaterials:			
 				materialScript.write(materialDef)
-				materialScript.write("// End of generated script\n")
+			materialScript.write("// End of generated script\n")
 			materialScript.close()
 				
 	def dumpShapeInfo(self):
