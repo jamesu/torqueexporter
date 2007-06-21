@@ -130,7 +130,6 @@ class BlenderMesh(DtsMesh):
 				useSticky = False
 				# Find the image associated with the face on the mesh, if any
 				if msh.hasFaceUV and face.image != None:
-					#imageName = face.image.getName().split(".")[0]
 					imageName = stripExtension(face.image.getName())
 					matIndex = shape.materials.findMaterial(imageName)
 					if matIndex == None: matIndex = shape.addMaterial(imageName)
@@ -422,7 +421,7 @@ class BlenderMesh(DtsMesh):
 	def setBlenderMeshFlags(self, names):
 		# Look through elements in names
 		for n in names:
-			if n == "BB":
+			if n == "BB":				
 				self.flags |= DtsMesh.Billboard
 			elif n == "BBZ":
 				self.flags |= DtsMesh.Billboard | DtsMesh.BillboardZ
