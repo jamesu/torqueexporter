@@ -1227,9 +1227,9 @@ def populateMaterialList():
 	guiMaterialOptions.controlDict['guiMaterialReflectanceMapMenu'].items = []
 	# populate the texture pulldowns
 	for img in Blender.Image.Get():
-		guiMaterialOptions.controlDict['guiMaterialDetailMapMenu'].items.append(img.getName().split(".")[0])
-		guiMaterialOptions.controlDict['guiMaterialBumpMapMenu'].items.append(img.getName().split(".")[0])
-		guiMaterialOptions.controlDict['guiMaterialReflectanceMapMenu'].items.append(img.getName().split(".")[0])
+		guiMaterialOptions.controlDict['guiMaterialDetailMapMenu'].items.append(stripExtension(img.getName()))
+		guiMaterialOptions.controlDict['guiMaterialBumpMapMenu'].items.append(stripExtension(img.getName()))
+		guiMaterialOptions.controlDict['guiMaterialReflectanceMapMenu'].append(stripExtension(img.getName()))
 
 
 	# autoimport blender materials
