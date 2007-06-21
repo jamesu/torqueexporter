@@ -194,7 +194,10 @@ class DtsStream:
 		val = struct.unpack('i', struct.pack('I', value))[0]
 		self.buffer32.append(val)
 	def write32_py25(self, value):
-		self.buffer32.append(value)
+		try:self.buffer32.append(value)
+		except OverflowError:
+			self.buffer32.append(struct.unpack('i', struct.pack('I', value))[0])
+			
 
 	def read(self): return self.read32()
 	def read8(self): return self.buffer8.pop(0)
