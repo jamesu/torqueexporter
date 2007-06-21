@@ -1229,7 +1229,7 @@ def populateMaterialList():
 	for img in Blender.Image.Get():
 		guiMaterialOptions.controlDict['guiMaterialDetailMapMenu'].items.append(stripExtension(img.getName()))
 		guiMaterialOptions.controlDict['guiMaterialBumpMapMenu'].items.append(stripExtension(img.getName()))
-		guiMaterialOptions.controlDict['guiMaterialReflectanceMapMenu'].append(stripExtension(img.getName()))
+		guiMaterialOptions.controlDict['guiMaterialReflectanceMapMenu'].items.append(stripExtension(img.getName()))
 
 
 	# autoimport blender materials
@@ -2487,11 +2487,15 @@ def entryPoint(a):
 	if Debug:
 		Torque_Util.dump_setout("stdout")
 	else:
+		try: x = Prefs['LogToOutputFolder']
+		except KeyError: Prefs['LogToOutputFolder'] = True
 		if Prefs['LogToOutputFolder']:
 			getPathSeperator(Prefs['exportBasepath'])
 			Torque_Util.dump_setout( "%s%s%s.log" % (Prefs['exportBasepath'], pathSeperator, noext(Prefs['exportBasename'])) )
 		else:
 			Torque_Util.dump_setout("%s.log" % noext(Blender.Get("filename")))
+		
+		
 	
 	Torque_Util.dump_writeln("Torque Exporter %s " % Version)
 	Torque_Util.dump_writeln("Using blender, version %s" % Blender.Get('version'))
