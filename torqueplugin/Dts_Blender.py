@@ -96,6 +96,7 @@ def getPathSeperator(filepath):
 # Gets the Base Name & path from the File Path
 def noext(filepath):
 	words = string.split(filepath, ".")
+	if len(words)==1: return filepath
 	return string.join(words[:-1], ".")
 
 # Gets the children of an object
@@ -379,6 +380,7 @@ def loadPrefs():
 	if not os.path.exists(Prefs['exportBasepath']):
 		Prefs['exportBasepath'] = basepath(Blender.Get("filename"))
 	
+
 		
 # Saves preferences to registry and text object
 def savePrefs():
@@ -1698,27 +1700,34 @@ def guiGeneralCallback(control):
 	elif control.name == "guiCustomFilename":
 		Prefs['exportBasename'] = basename(control.value)
 		Prefs['exportBasepath'] = basepath(control.value)
+		if guiGeneralSubtab.controls[18].value[len(guiGeneralSubtab.controls[18].value)-4:] != ".dts":
+			guiGeneralSubtab.controls[18].value += ".dts"
+
+		if Prefs['LogToOutputFolder']:
+			Torque_Util.dump_setout( "%s%s%s.log" % (Prefs['exportBasepath'], pathSeperator, noext(Prefs['exportBasename'])) )
 	elif control.name == "guiCustomFilenameSelect":
 		Blender.Window.FileSelector (guiGeneralSelectorCallback, 'Select destination and filename')
 	elif control.name == "guiCustomFilenameDefaults":
 		Prefs['exportBasename'] = basename(Blender.Get("filename"))
-		Prefs['exportBasepath'] = basepath(Blender.Get("filename"))
-		
+		Prefs['exportBasepath'] = basepath(Blender.Get("filename"))		
 		pathSep = "/"
 		if "\\" in Prefs['exportBasepath']:
 			pathSep = "\\"
 		else:
 			pathSep = "/"
-
 		guiGeneralSubtab.controls[18].value = Prefs['exportBasepath'] + pathSep + Prefs['exportBasename']
 		if guiGeneralSubtab.controls[18].value[len(guiGeneralSubtab.controls[18].value)-4:] != ".dts":
 			guiGeneralSubtab.controls[18].value += ".dts"
-
 	elif control.name == "guiTSEMaterial":
 		Prefs['TSEMaterial'] = control.state
 		
 	elif control.name == "guiLogToOutputFolder":
 		Prefs['LogToOutputFolder'] = control.state
+		if control.state:
+			Torque_Util.dump_setout( "%s%s%s.log" % (Prefs['exportBasepath'], pathSeperator, noext(Prefs['exportBasename'])) )
+		else:
+			Torque_Util.dump_setout("%s.log" % noext(Blender.Get("filename")))
+		Prefs['exportBasename']
 
 def guiBaseResize(control, newwidth, newheight):
 	tabContainers = ["guiSequenceTab", "guiGeneralTab", "guiArmatureTab", "guiAboutTab", "guiMaterialsTab"]
@@ -2439,8 +2448,10 @@ def initGui():
 	guiGeneralSubtab.addControl(guiCustomFilenameDefaults)
 	guiGeneralSubtab.addControl(guiTSEMaterial)
 	guiGeneralSubtab.addControl(guiLogToOutputFolder)
-	Prefs['LogToOutputFolder'] = True
-	guiLogToOutputFolder.state = True
+	try: guiLogToOutputFolder.state = Prefs['LogToOutputFolder']
+	except:
+		Prefs['LogToOutputFolder'] = True
+		guiLogToOutputFolder.state = True
 	Common_Gui.addGuiControl(guiAboutTab)
 	guiAboutTab.borderColor = [0,0,0,0]
 	guiAboutTab.addControl(guiAboutSubtab)
@@ -2468,11 +2479,20 @@ if Profiling:
 		Profiling = False
 	
 def entryPoint(a):
+	global Prefs
 	getPathSeperator(Blender.Get("filename"))
+	
+	loadPrefs()
+	
 	if Debug:
 		Torque_Util.dump_setout("stdout")
 	else:
-		Torque_Util.dump_setout("%s.log" % noext(Blender.Get("filename")))
+		if Prefs['LogToOutputFolder']:
+			getPathSeperator(Prefs['exportBasepath'])
+			Torque_Util.dump_setout( "%s%s%s.log" % (Prefs['exportBasepath'], pathSeperator, noext(Prefs['exportBasename'])) )
+		else:
+			Torque_Util.dump_setout("%s.log" % noext(Blender.Get("filename")))
+	
 	Torque_Util.dump_writeln("Torque Exporter %s " % Version)
 	Torque_Util.dump_writeln("Using blender, version %s" % Blender.Get('version'))
 	
@@ -2482,7 +2502,7 @@ def entryPoint(a):
 	#	Torque_Util.dump_writeln("Using unaccelerated math code, performance may be suboptimal")
 	#Torque_Util.dump_writeln("**************************")
 	
-	loadPrefs()
+	
 	
 	if (a == 'quick'):
 		handleScene()
