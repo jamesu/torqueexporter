@@ -35,6 +35,7 @@ from Blender import NMesh
 # Strip image names of trailing extension
 def stripExtension(filename):
 	temp = string.split(filename,".")
+	if len(temp)==1: return temp[0]
 	retVal = string.join(temp[0:len(temp)-1], ".")
 	return retVal
 
