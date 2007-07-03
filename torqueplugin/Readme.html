@@ -27,7 +27,7 @@ Garage Games <a
 forums</a>.<br>
 </p>
 <h2>Requirements</h2>
-<table style="text-align: left; width: 840px; height: 115px;" border="1"
+<table style="text-align: left; width: 840px; height: 149px;" border="1"
  cellpadding="1" cellspacing="1">
   <tbody>
     <tr>
@@ -40,7 +40,7 @@ forums</a>.<br>
     </tr>
     <tr>
       <td style="vertical-align: top;"><a
- href="http://www.blender3d.org">Blender</a> 2.42+<br>
+ href="http://www.blender3d.org">Blender</a> 2.43+<br>
       </td>
       <td style="vertical-align: top;">Required by the
 exporter scripts
@@ -48,11 +48,19 @@ to run.<br>
       </td>
     </tr>
     <tr>
+      <td style="vertical-align: top;"><a
+ href="http://www.python.org/download/">Python</a> 2.4 or 2.5<br>
+      </td>
+      <td style="vertical-align: top;">Required to run scripts in
+Blender.<br>
+      </td>
+    </tr>
+    <tr>
       <td style="vertical-align: top;"><a href="http://www.vtk.org">VTK</a>
 + Python Bindings<br>
       </td>
       <td style="vertical-align: top;">Optional;
-Allows triangle strips to be generated.<br>
+Allows more efficent triangle strips to be generated.<br>
       </td>
     </tr>
   </tbody>
@@ -61,17 +69,11 @@ Allows triangle strips to be generated.<br>
 <ol>
   <li>Use one of the supplied installer scripts to install the
 exporter. </li>
-  <li>If the script failed, copy DTSPython, Dts_Blender.py,
-Common_Gui.py, DtsShape_Blender.py and DtsMesh_Blender.py to your
+  <li>If the script failed, copy all files and folders to your
 blender scripts directory. <br>
   </li>
   <li>Run blender to verify that the "Torque Shape (.dts)..."
 item is located on the "Export" menu.</li>
-  <li>Please ensure that you <span style="font-weight: bold;">do not</span>
-have a pythonpath set to a version of python less than Python
-2.4.&nbsp; Older versions of python in the pythonpath will cause the
-exporter scripts to fail.&nbsp; <br>
-  </li>
   <li>Linux users will need to set the executable flag on
 InstallScripts.sh using the command "chmod +x InstallScripts.sh"
 (without quotes) before it can be executed.<br>
@@ -183,7 +185,19 @@ could be attached to your armature bones, or out in the middle of
 nowhere).<br>
 The "Bounds" object can also act as an alternative set of
 bounds for your shape. for this to happen, the object needs to be of
-type "Mesh"</p>
+type "Mesh"<br>
+</p>
+<p>There are two options available for animating the bounds when
+exporting ground frames.&nbsp; If you only need one sequence with
+ground frames, you can keyframe the bounds object directly.&nbsp; If
+you would like to export more than one sequence with ground frames, you
+can parent your bounds box directly to a bone.&nbsp; The exporter will
+then pull the ground tranform data from that bone instead of the bounds
+mesh object, thus allowing for separate ground frame animations for
+different action sequences.&nbsp; Since the ground frames are pulled
+from the raw transforms, make sure that your bounds box and/or bone are
+axis alligned.<br>
+</p>
 <p>The exporter also supports "blend" animations which are additive in
 nature.&nbsp; In order to export a blend animation, select the desired
 sequence in the exporter's sequences tab.&nbsp; Press the "Blend"
@@ -193,7 +207,8 @@ animation.&nbsp; The reference pose can be chosen from any frame of any
 of the available actions.&nbsp; The action containing the reference
 pose does not need to be exported.<br>
 </p>
-<p>Finally, the "Frames" option tells the exporter how many frames to
+<p>Finally, the "Sample Frames" option tells the exporter how many
+frames to
 export out of the total frames present in the Action. This defaults to
 the amount of frames in the Action, but you may wish to decrease it to
 save space in your shape. However, if you do this, you may loose
@@ -210,12 +225,30 @@ an DTS Object visibility track for the sequence. </p>
 a DTS Object(see next section) as the first material it finds when
 exporting the first mesh of the DTS Object.</i>
 </p>
-<h3>Texturing</h3>
-<p>
-In order to apply textures to the model, one needs to assign one or
+<h3>Texturing/Materials<br>
+</h3>
+<p>Texturing your model is accomplished by UV mapping one or more image
+textures to a mesh.&nbsp; The exporter will automatically generate a
+default material based on the name of the image files that are
+used.&nbsp; Options for each material can be found under the
+"Materials" panel of the exporter GUI.&nbsp; The texture selection
+pulldowns in this panel are populated using the names of images that
+have been loaded in the UV/Image editor.&nbsp; If you wish to animate
+material visibility, you'll need to perform the material setup the old
+way, as described below.<br>
+</p>
+<h3>Texturing/Materials (Old Setup)<br>
+</h3>
+<p>These instructions are valid for material setup prior to version
+0.96 of the exporter.&nbsp; The exporter will draw it's default
+material settings from these options when it is initially run, to ease
+the transition to the new material system&nbsp; If your models are not
+UV mapped, however, you will need to UV map them prior to exporting. <br>
+</p>
+<p>In order to apply textures to the model, one needs to assign one or
 more blender materials to a mesh. In addition, the mesh has to have a
-UV map, or if the "Stick" mapto option is enabled, sticky coords.<br>
-The name of the material in blender corresponds to the texture torque
+UV map. The name of the material in blender corresponds to the texture
+torque
 loads. e.g. if you had a material called "Bob", torque would try to
 load "Bob.jpg" or "Bob.png" as the texture.<br>
 NOTE: You should ensure that your Material contains at least 1 texture
