@@ -53,7 +53,7 @@ class DtsStream:
 	
 	def __init__(self, fname, read=False, version=24):
 		# check python version and select correct write32 method
-		if sys.version.split(" ")[0] == "2.5":
+		if sys.version.split(" ")[0][0:3] == "2.5":
 			self.write32 = self.write32_py25
 		else:
 			self.write32 = self.write32_py24			
