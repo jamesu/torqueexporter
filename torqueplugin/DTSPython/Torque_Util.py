@@ -306,3 +306,27 @@ def stripImageExtension(filename):
 			retVal += (temp[i] + ".")
 	retVal = retVal[0:len(retVal)-1] # remove trailing "."
 	return retVal
+
+
+# if onlyIgnore is true, strips out any period separated
+# section of the string that starts with "IGNORE".
+# if onlyIgnore is false, strips out the "IGNORE" section
+# and everything that follows it.
+def finalizeImageName(name, onlyIgnore = False):
+	finalName = ""
+	nameList = name.split(".")
+	if len(nameList) > 1:
+		# check for the string "IGNORE", if found, remove the 
+		# trailing part of the material name, starting with the "IGNORE"
+		# string.  This allows multiple materials to share the same
+		# base texture by changing the material name at the last
+		# minute.
+		for i in range(0, len(nameList)):
+				if nameList[i][0:6] != "IGNORE":
+					finalName += (nameList[i] + ".")
+				elif onlyIgnore: continue
+				else: break
+		finalName = finalName[0:len(finalName)-1] # remove trailing "."
+	else:
+		finalName = name
+	return finalName
