@@ -288,3 +288,21 @@ def overlapSet(arr1, arr2):
 		if arr2[i]:
 			arr1[i] = True
 	return arr1
+	
+# Strip image names of trailing extension
+def stripImageExtension(filename):
+	imageExts = ['jpg', 'jpeg', 'gif', 'png', 
+		     'tif', 'tiff', 'mpg', 'mpeg',
+		     'tga', 'pcx', 'xcf', 'pix',
+		     'eps', 'fit', 'fits', 'jpe',
+		     'ico', 'pgm', 'psd', 'ps',
+		     'ppm', 'bmp', 'pcc', 'xbm',
+		     'xpm', 'xwd', 'bitmap']
+	temp = string.split(filename,".")	
+	if len(temp)==1: return temp[0]
+	retVal = ""
+	for i in range(0, len(temp)):
+		if not temp[i].lower() in imageExts:
+			retVal += (temp[i] + ".")
+	retVal = retVal[0:len(retVal)-1] # remove trailing "."
+	return retVal
