@@ -55,6 +55,20 @@ writing the exporter in the first place and for suggestions in the user
 interface thread.&nbsp; Thanks also go out to Todd "zaz" Koeckeritz and
 Scott Coursey for suggestions and discussion in the user interface
 thread.&nbsp; And to anyone else that I missed.</li>
+  <li>Added the ability to have multiple materials that use the same
+base texture by adding
+".IGNORE*" to the end of the blender image name (ex: "myTex.IGNORE01",
+"myTex.png.IGNORE.001", etc.).&nbsp;
+Just prior to export, the exporter will strip off the "IGNORE" portion
+of the material name and anything after it.&nbsp; This allows for the
+export
+of multiple materials with the same (base texture) name, but different
+properties.&nbsp; When generating a TSE (TGEA) material script for a
+material containing "IGNORE", only the period delmited section starting
+with "IGNORE" is stripped from the script material name.&nbsp; For
+example,
+"myTex.IGNORE.001" would generated a TGEA material called "myTex.001"
+with a base texture of "myTex".</li>
 </ul>
 <h2>What's New for version 0.94</h2>
 <ul>
