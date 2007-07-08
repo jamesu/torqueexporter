@@ -49,14 +49,8 @@ Duncan Gray for his help in finding and diagnosing the problem</li>
 to the .dts output folder instead of the folder containing the .blend
 file (on by default).<br>
   </li>
-  <li>Numerous bugfixes.&nbsp; Thanks go out to Duncan Gray, Adam
-Wilson, and Pho.&nbsp; Additional thanks go out to James Urquhart for
-writing the exporter in the first place and for suggestions in the user
-interface thread.&nbsp; Thanks also go out to Todd "zaz" Koeckeritz and
-Scott Coursey for suggestions and discussion in the user interface
-thread.&nbsp; And to anyone else that I missed.</li>
   <li>Added the ability to have multiple materials that use the same
-base texture by adding
+base texture.&nbsp; This is accomplished by adding
 ".IGNORE*" to the end of the blender image name (ex: "myTex.IGNORE01",
 "myTex.png.IGNORE.001", etc.).&nbsp;
 Just prior to export, the exporter will strip off the "IGNORE" portion
@@ -69,6 +63,13 @@ with "IGNORE" is stripped from the script material name.&nbsp; For
 example,
 "myTex.IGNORE.001" would generated a TGEA material called "myTex.001"
 with a base texture of "myTex".</li>
+  <li>Numerous bugfixes.&nbsp; Thanks go out to Duncan Gray, Adam
+Wilson, and Pho.&nbsp; Additional thanks go out to James Urquhart for
+writing the exporter in the first place and for suggestions in the user
+interface thread.&nbsp; Thanks also go out to Todd "zaz" Koeckeritz and
+Scott Coursey for suggestions and discussion in the user interface
+thread.&nbsp; And to anyone else that I missed.<br>
+  </li>
 </ul>
 <h2>What's New for version 0.94</h2>
 <ul>
