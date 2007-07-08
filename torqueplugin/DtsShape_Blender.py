@@ -1472,17 +1472,16 @@ class BlenderShape(DtsShape):
 		mat = self.preferences['Materials'][imageName]
 
 		# Build the material string.
-		materialString = "new Material(%s)\n{\n" % (imageName)
+		materialString = "new Material(%s)\n{\n" % ( finalizeImageName(stripImageExtension(imageName), True))
 		
 		materialString += "// Rendering Stage 0\n"
 		
-		materialString += "baseTex[0] = \"./%s\";\n" % (imageName)
+		materialString += "baseTex[0] = \"./%s\";\n" % (finalizeImageName(stripImageExtension(imageName)))
 		
 		if mat['DetailMapFlag'] == True and mat['DetailTex'] != None:
 			materialString += "detailTex[0] = \"./%s\";\n" % (mat['DetailTex'])
 		if mat['BumpMapFlag'] == True and mat['BumpMapTex'] != None:
-			materialString += "bumpTex[0] = \"./%s\";\n" % (mat['BumpMapTex'])
-		
+			materialString += "bumpTex[0] = \"./%s\";\n" % (mat['BumpMapTex'])		
 		if mat['SelfIlluminating'] == True:
 			materialString += "emissive[0] = true;\n"
 		if mat['Translucent'] == True:
