@@ -40,7 +40,7 @@ forums</a>.<br>
     </tr>
     <tr>
       <td style="vertical-align: top;"><a
- href="http://www.blender3d.org">Blender</a> 2.43+<br>
+ href="http://www.blender.org/download/get-blender/">Blender</a> 2.43+<br>
       </td>
       <td style="vertical-align: top;">Required by the
 exporter scripts
@@ -49,7 +49,7 @@ to run.<br>
     </tr>
     <tr>
       <td style="vertical-align: top;"><a
- href="http://www.python.org/download/">Python</a> 2.4 or 2.5<br>
+ href="http://www.python.org/download/">Python</a> 2.3, 2.4 or 2.5<br>
       </td>
       <td style="vertical-align: top;">Required to run scripts in
 Blender.<br>
@@ -175,8 +175,9 @@ The exporter supports loc, rot, and size animation of bones.</p>
 <p>An additional feature of the sequence export is the support
 for "ground frames", which are used by torque in player
 animations. The basic idea is that they track the movement and rotation
-of the object in an animation.<br>
-To Export Ground Frames, the "Ground Frames" option needs to be set to
+of the object in an animation.</p>
+<p>To Export Ground Frames, the "Ground Frames" option needs to be set
+to
 above
 0. Select the number of groundframes to export (sampling rate), and
 make sure you have an object called "Bounds" somewhere in your scene
@@ -219,11 +220,14 @@ object visibility, via Material ipos.<br>
 To enable this, enable the "Mat Anim" option and select a starting
 frame. The exporter will then go through all the Materials assigned to
 your meshes and use their ipo curves(specifically, "ALPHA") to create
-an DTS Object visibility track for the sequence. </p>
-<p>
-<i>NOTE: the exporter will determine the material associated with
+an DTS Object visibility track for the sequence.<br>
+</p>
+<p><i>NOTE: the exporter will determine the material associated with
 a DTS Object(see next section) as the first material it finds when
-exporting the first mesh of the DTS Object.</i>
+exporting the first mesh of the DTS Object.</i></p>
+<p>The exporter also allows you to export animated collision
+meshes.&nbsp; This is accomplised by setting a "copy location"
+constraint on the collision mesh with an armature bone as the target.<br>
 </p>
 <h3>Texturing/Materials<br>
 </h3>
@@ -233,10 +237,24 @@ default material based on the name of the image files that are
 used.&nbsp; Options for each material can be found under the
 "Materials" panel of the exporter GUI.&nbsp; The texture selection
 pulldowns in this panel are populated using the names of images that
-have been loaded in the UV/Image editor.&nbsp; If you wish to animate
-material visibility, you'll need to perform the material setup the old
-way, as described below.<br>
+have been loaded in the UV/Image editor<br>
 </p>
+<p>If you wish to use the same base texture for multiple materials, add
+".IGNORE*" to the end of the blender image name (ex: "myTex.IGNORE01",
+"myTex.png.IGNORE.001", etc.).&nbsp;
+Just prior to export, the exporter will strip off the "IGNORE" portion
+of the material name and anything after it.&nbsp; This allows for the
+export of multiple materials with the same (base texture) name, but
+different properties.&nbsp; When generating a TSE (TGEA) material
+script for a material containing "IGNORE", only the period delmited
+section starting with "IGNORE" is stripped from the script material
+name.&nbsp; For example, "myTex.IGNORE.001" would generated a TGEA
+material called "myTex.001" with a base texture of "myTex". <br>
+</p>
+<p>&nbsp;If you wish to animate material visibility, you'll need to
+perform the material setup the old way, as described below.<br>
+</p>
+<br>
 <h3>Texturing/Materials (Old Setup)<br>
 </h3>
 <p>These instructions are valid for material setup prior to version
