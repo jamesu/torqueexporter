@@ -41,6 +41,7 @@ import string, math, re, gc
 import DtsShape_Blender
 from DtsShape_Blender import *
 
+
 import os.path
 
 tracebackImported = True
@@ -117,13 +118,7 @@ def pythonizeFileName(filename):
 	p = re.compile('\W')
 	return p.sub('_', filename)
 
-# Strip image names of trailing extension
-def stripExtension(filename):
-	temp = string.split(filename,".")
-	if len(temp)==1: return temp[0]
-	retVal = string.join(temp[0:len(temp)-1], ".")
-	return retVal
-	
+
 '''
 	Preferences Code
 '''
@@ -1061,7 +1056,7 @@ def importMaterialList():
 						for face in objData.faces:
 							try:
 								if face.image != None:
-									imageName = stripExtension(face.image.getName())
+									imageName = stripImageExtension(face.image.getName())
 									if not (imageName in imageList):
 										imageList.append(imageName)
 							except: doNothing = 1
@@ -1228,9 +1223,9 @@ def populateMaterialList():
 	guiMaterialOptions.controlDict['guiMaterialReflectanceMapMenu'].items = []
 	# populate the texture pulldowns
 	for img in Blender.Image.Get():
-		guiMaterialOptions.controlDict['guiMaterialDetailMapMenu'].items.append(stripExtension(img.getName()))
-		guiMaterialOptions.controlDict['guiMaterialBumpMapMenu'].items.append(stripExtension(img.getName()))
-		guiMaterialOptions.controlDict['guiMaterialReflectanceMapMenu'].items.append(stripExtension(img.getName()))
+		guiMaterialOptions.controlDict['guiMaterialDetailMapMenu'].items.append(stripImageExtension(img.getName()))
+		guiMaterialOptions.controlDict['guiMaterialBumpMapMenu'].items.append(stripImageExtension(img.getName()))
+		guiMaterialOptions.controlDict['guiMaterialReflectanceMapMenu'].items.append(stripImageExtension(img.getName()))
 
 
 	# autoimport blender materials
