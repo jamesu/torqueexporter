@@ -229,7 +229,7 @@ class TabButton(BasicButton):
 				#if self.state: self.color = [175.0/255.0, 175.0/255.0, 175.0/255.0, 175.0/255.0]
 				#else: self.color = [152.0/255.0, 152.0/255.0, 152.0/255.0, 152.0/255.0]
 
-		self.onDraw([self.x,self.y])
+		#self.onDraw([self.x,self.y])
 		return True
 	
 	def onContainerResize(self, newwidth, newheight):
@@ -283,8 +283,6 @@ class TabButton(BasicButton):
 		BGL.glEnd()
 		
 		
-		
-
 		BGL.glBegin(BGL.GL_QUADS)
 		BGL.glColor4f(self.textColor[0], self.textColor[1], self.textColor[2], self.textColor[3])
 		BGL.glEnd()
