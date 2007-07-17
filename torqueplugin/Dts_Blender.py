@@ -1049,17 +1049,23 @@ def importMaterialList():
 	shapeTree = export_tree.find("SHAPE")
 	if shapeTree != None:
 		for marker in getChildren(shapeTree.obj):		
-			if marker.name[0:6].lower() == "detail":
-				for obj in getAllChildren(marker):
-					if obj.getType() == "Mesh":
-						objData = obj.getData()
-						for face in objData.faces:
-							try:
-								if face.image != None:
-									imageName = stripImageExtension(face.image.getName())
-									if not (imageName in imageList):
-										imageList.append(imageName)
-							except: doNothing = 1
+			if marker.name[0:6].lower() != "detail": continue
+			for obj in getAllChildren(marker):
+				if obj.getType() != "Mesh": continue
+				objData = obj.getData()
+				for face in objData.faces:
+					try:
+						if face.image != None:
+							imageName = stripImageExtension(face.image.getName())
+							if not (imageName in imageList):
+								imageList.append(imageName)
+						#else:
+						#	if objData.materials[face.mat] != None:
+						#		print "mesh.materials(face.mat)=", objData.materials[face.mat]	
+						#	else:
+						#		print "mesh.materials(face.mat)=None"
+							
+					except: doNothing = 1
 
 	# remove unused materials from the prefs
 	for imageName in materials.keys()[:]:
@@ -1138,8 +1144,8 @@ def importMaterialList():
 			textures = bmat.getTextures()
 			if len(textures) > 0:
 				if textures[0] != None:
-					if textures[0].tex.image != None:
-						Prefs['Materials'][bmat.name]['BaseTex'] = textures[0].tex.image.getName().split(".")[0]
+					if textures[0].tex.image != None:						
+						Prefs['Materials'][bmat.name]['BaseTex'] = stripImageExtension(textures[0].tex.image.getName())
 						#print "Setting basetex to:", textures[0].tex.image.getName().split(".")[0]
 					else:
 						Prefs['Materials'][bmat.name]['BaseTex'] = None
@@ -1178,24 +1184,24 @@ def importMaterialList():
 						Prefs['Materials'][bmat.name]['ReflectanceMapFlag'] = True
 						Prefs['Materials'][bmat.name]['NeverEnvMap'] = False
 						if textures[0].tex.image != None:
-							Prefs['Materials'][bmat.name]['RefMapTex'] = textures[i].tex.image.getName().split(".")[0]						
-							guiMaterialOptions.controlDict['guiMaterialReflectanceMapMenu'].selectStringItem(textures[i].tex.image.getName().split(".")[0])
+							Prefs['Materials'][bmat.name]['RefMapTex'] = stripImageExtension(textures[i].tex.image.getName())
+							guiMaterialOptions.controlDict['guiMaterialReflectanceMapMenu'].selectStringItem(stripImageExtension(textures[i].tex.image.getName()))
 						else:
 							Prefs['Materials'][bmat.name]['RefMapTex'] = None
 					# B) We have a normal map (basically a 3d bump map)
 					elif (texture_obj.mapto & Texture.MapTo.NOR):
 						Prefs['Materials'][bmat.name]['BumpMapFlag'] = True
 						if textures[0].tex.image != None:
-							Prefs['Materials'][bmat.name]['BumpMapTex'] = textures[i].tex.image.getName().split(".")[0]							
-							guiMaterialOptions.controlDict['guiMaterialBumpMapMenu'].selectStringItem(textures[i].tex.image.getName().split(".")[0])
+							Prefs['Materials'][bmat.name]['BumpMapTex'] = stripImageExtension(textures[i].tex.image.getName())
+							guiMaterialOptions.controlDict['guiMaterialBumpMapMenu'].selectStringItem(stripImageExtension(textures[i].tex.image.getName()))
 						else:
 							Prefs['Materials'][bmat.name]['BumpMapTex'] = None
 					# C) We have a texture; Lets presume its a detail map (since its laid on top after all)
 					else:
 						Prefs['Materials'][bmat.name]['DetailMapFlag'] = True
 						if textures[0].tex.image != None:
-							Prefs['Materials'][bmat.name]['DetailTex'] = textures[i].tex.image.getName().split(".")[0]							
-							guiMaterialOptions.controlDict['guiMaterialDetailMapMenu'].selectStringItem(textures[i].tex.image.getName().split(".")[0])
+							Prefs['Materials'][bmat.name]['DetailTex'] = stripImageExtension(textures[i].tex.image.getName())
+							guiMaterialOptions.controlDict['guiMaterialDetailMapMenu'].selectStringItem(stripImageExtension(textures[i].tex.image.getName()))
 						else:
 							Prefs['Materials'][bmat.name]['DetailTex'] = None
 
