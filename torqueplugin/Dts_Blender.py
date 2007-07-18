@@ -1053,19 +1053,26 @@ def importMaterialList():
 			for obj in getAllChildren(marker):
 				if obj.getType() != "Mesh": continue
 				objData = obj.getData()
-				for face in objData.faces:
-					try:
-						if face.image != None:
-							imageName = stripImageExtension(face.image.getName())
+				for face in objData.faces:					
+					try: x = face.image
+					except IndexError: x = None
+					# If we don't Have an image assigned to the face
+					if x == None:						
+						try: x = objData.materials[face.mat]
+						except IndexError: x = None
+						# is there a material index assigned?
+						if x != None:
+							#  add the material name to the imagelist
+							imageName = stripImageExtension(objData.materials[face.mat].name)
 							if not (imageName in imageList):
 								imageList.append(imageName)
-						#else:
-						#	if objData.materials[face.mat] != None:
-						#		print "mesh.materials(face.mat)=", objData.materials[face.mat]	
-						#	else:
-						#		print "mesh.materials(face.mat)=None"
-							
-					except: doNothing = 1
+					
+					# Otherwise we do have an image assigned to the face, so add it to the imageList.
+					else:
+						imageName = stripImageExtension(face.image.getName())
+						if not (imageName in imageList):
+							imageList.append(imageName)
+					
 
 	# remove unused materials from the prefs
 	for imageName in materials.keys()[:]:
@@ -1075,7 +1082,6 @@ def importMaterialList():
 
 
 	# populate materials list with all blender materials
-	#for bmat in Blender.Material.Get():
 	for imageName in imageList:
 		bmat = None
 		try: bmat = Blender.Material.Get(imageName)
@@ -1105,8 +1111,7 @@ def importMaterialList():
 				Prefs['Materials'][imageName]['detailScale'] = 1.0
 			continue
 
-		try:
-			blah = Prefs['Materials'][bmat.name]			
+		try: x = Prefs['Materials'][bmat.name]			
 		except:
 			Prefs['Materials'][bmat.name] = {}
 			# init everything to make sure all keys exist with sane values
