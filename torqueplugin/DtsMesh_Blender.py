@@ -49,26 +49,12 @@ class BlenderMesh(DtsMesh):
 		self.weightDictionary = self.createWeightDictionary(msh);
 		
 		materialGroups = {}
-		'''
-		materialGroups = []
-		for i in range (0, len(msh.materials)):
-			materialGroups.append([])
-		if len(materialGroups) == 0: materialGroups = [[]]
-		'''
 		
 		# if we're dealing with a collision mesh, init differently
 		if isCollision:
 			self.initColMesh(shape, msh,  rootBone, scaleFactor, matrix)
 			return
 		
-		'''
-		# First, sort faces by material
-		for face in msh.faces:
-			if len(face.v) < 3:
-				continue # skip to next face
-			#print "DBG: face idx=%d" % face.materialIndex
-			materialGroups[face.mat].append(face)
-		'''
 
 		# First, sort faces by material
 		for face in msh.faces:
@@ -76,22 +62,33 @@ class BlenderMesh(DtsMesh):
 				continue # skip to next face
 			#print "DBG: face idx=%d" % face.materialIndex
 			imageName = None
-			try:
-				imageName = stripImageExtension(face.image.getName())
+			try: imageName = stripImageExtension(face.image.getName())
 			except AttributeError:
-				# no material
+				# there isn't an image assigned to the face...
+				# do we have a material index?
+				try: mat = msh.materials[face.mat]
+				except IndexError: mat = None
+				if mat != None:
+					# we have a material index, so get the name of the material
+					imageName = stripImageExtension(mat.name)
+					#  create a new materialGroup if needed.
+					try: materialGroups[imageName].append(face)
+					except KeyError:
+						materialGroups[imageName] = []
+						materialGroups[imageName].append(face)
+					continue
+
+				# Create a "NoMaterialFound" group if needed, and add our face to it.
 				try: materialGroups['NoMaterialFound'].append(face)
 				except KeyError:
 					materialGroups['NoMaterialFound'] = []
 					materialGroups['NoMaterialFound'].append(face)
 				continue
-			try:
-				materialGroups[imageName].append(face)
+			try: materialGroups[imageName].append(face)
 			except KeyError:
 				materialGroups[imageName] = []
 				materialGroups[imageName].append(face)
 				
-
 		
 		# Then, we can add in batches
 		limitExceeded = False
@@ -114,7 +111,9 @@ class BlenderMesh(DtsMesh):
 				if len(self.indices) >= 32748:
 					limitExceeded = True
 					continue
-
+				
+				matIndex = None
+				
 				# if we're not using triangle lists, insert one primitive per face
 				if not useLists:
 					# Insert primitive
@@ -132,9 +131,26 @@ class BlenderMesh(DtsMesh):
 						self.mainMaterial = matIndex
 					else:
 						self.mainMaterial = None
-						#useSticky = shape.materials.get(matIndex).sticky
 				else:
-					matIndex = pr.NoMaterial # Nope, no material
+					# do we have a blender material?
+					try: mat = msh.materials[face.mat]
+					except IndexError: mat = None
+					if mat != None:
+						# we have a material index, so get the name of the material
+						imageName = stripImageExtension(mat.name)
+						matIndex = shape.materials.findMaterial(imageName)
+						if matIndex == None: matIndex = shape.addMaterial(imageName)
+						if matIndex == None: matIndex = pr.NoMaterial
+						if matIndex != pr.NoMaterial: 
+							self.mainMaterial = matIndex							
+						else:
+							self.mainMaterial = None
+							matIndex = pr.NoMaterial # Nope, no material
+					else:
+						self.mainMaterial = None
+						matIndex = pr.NoMaterial # Nope, no material
+					
+				
 				pr.matindex |= matIndex
 
 				# we've got a quad
