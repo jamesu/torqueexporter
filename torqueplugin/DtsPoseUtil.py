@@ -307,6 +307,7 @@ class DtsPoseUtilClass:
 		bTrans = armRot.apply(self.toTorqueVec(pose.bones[bName].poseMatrix.translationPart()))
 		# Scale by armature's scale
 		armSize = self.armInfo[armName][ARMSIZE]
+		#bTrans = Vector(bTrans[0] * armSize[0], bTrans[1] * armSize[1], bTrans[2]  * armSize[2])
 		bTrans = Vector(bTrans.members[0] * armSize.members[0], bTrans.members[1] * armSize.members[1], bTrans.members[2]  * armSize.members[2])
 		# add on armature pivot to translate into worldspace
 		bTrans = bTrans + self.armInfo[armName][ARMLOC]
