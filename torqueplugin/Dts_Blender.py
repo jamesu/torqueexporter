@@ -303,7 +303,7 @@ def loadOldTextPrefs(text_doc):
 
 def initPrefs():
 	Prefs = {}
-	Prefs['Version'] = 0.9 # NOTE: change version if anything *major* is changed.
+	Prefs['Version'] = 0.95 # NOTE: change version if anything *major* is changed.
 	Prefs['DTSVersion'] = 24
 	Prefs['WriteShapeScript'] = False
 	Prefs['Sequences'] = {}
