@@ -213,8 +213,8 @@ class TabButton(BasicButton):
 		self.selectedColor = [169.0/255.0, 169.0/255.0, 169.0/255.0, 169.0/255.0]
 		self.unselectedColor = [146.0/255.0, 146.0/255.0, 146.0/255.0, 146.0/255.0]
 		self.color = self.unselectedColor
-		self.borderColor = [0.0,0.0,0.0,0.0]
-		self.textColor = [0.0,0.0,0.0,0.0]
+		self.borderColor = [0.0,0.0,0.0,1.0]
+		self.textColor = [0.0,0.0,0.0,1.0]
 		self.state = False
 
 	def onAction(self, evt, mousepos, value):	
@@ -284,14 +284,19 @@ class TabButton(BasicButton):
 		
 		
 		BGL.glBegin(BGL.GL_QUADS)
-		BGL.glColor4f(self.textColor[0], self.textColor[1], self.textColor[2], self.textColor[3])
+		BGL.glColor3f(self.textColor[0], self.textColor[1], self.textColor[2])
 		BGL.glEnd()
 		# draw text
 		# crazy hack, we have to draw the text in order to get the pixel width of the text,
 		# so draw it off in nowhereland in order to determine the width >:-/
 		BGL.glRasterPos2i(-99999, -99999)
 		width = Draw.Text(self.text, 'normal')
-		if width < self.width: drawText_x = (self.width - width) / 2		
+		if width >= self.width: width = Draw.Text(self.text, 'small')
+		if width >= self.width: width = Draw.Text(self.text, 'tiny')		
+		
+		if width < self.width: drawText_x = (self.width - width) / 2
+		else: drawText_x = 1
+
 		BGL.glRasterPos2i(real_x + drawText_x, real_y + (self.height/2)-3)
 		width = Draw.Text(self.text, 'normal')
 		
@@ -406,7 +411,8 @@ class SimpleText(BasicControl):
 		self.enabled = False
 		
 		curTextCol = curTheme.get('buts').text
-		self.color = [curTextCol[0]/255.0,curTextCol[1]/255.0,curTextCol[2]/255.0,curTextCol[3]/255.0]
+		#self.color = [curTextCol[0]/255.0,curTextCol[1]/255.0,curTextCol[2]/255.0,curTextCol[3]/255.0]
+		self.color = [curTextCol[0]/255.0,curTextCol[1]/255.0,curTextCol[2]/255.0, 1.0]
 		self.label = label
 		self.size = "normal"
 
