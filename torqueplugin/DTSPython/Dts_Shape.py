@@ -176,8 +176,8 @@ class MaterialList:
 			st = array('c')
 			st.fromstring(finalName)
 			st.tofile(fs)
-		for mat in self.materials:
-			fs.write(struct.pack('i', mat.flags))
+		for mat in self.materials:			
+			fs.write(struct.pack('I', mat.flags))			
 		for mat in self.materials:
 			fs.write(struct.pack('i', mat.reflectance))
 		for mat in self.materials:
@@ -364,8 +364,8 @@ class Sequence:
 		self.numTriggers = struct.unpack('<i', fs.read(calcsize('<i')))[0] #S32
 		self.toolBegin = struct.unpack('<f', fs.read(calcsize('<f')))[0] #F32
 		
-		if version > 24:
-			self.baseMorph = struct.unpack('<i', fs.read(calcsize('<i')))[0] #S32
+		#if version > 24:
+		#	self.baseMorph = struct.unpack('<i', fs.read(calcsize('<i')))[0] #S32
 		
 		# Read integer sets
 		self.matters_rotation = readIntegerSet(fs)
@@ -377,8 +377,8 @@ class Sequence:
 		self.matters_frame = readIntegerSet(fs)
 		self.matters_matframe = readIntegerSet(fs)
 		
-		if version > 24:
-			self.matters_morph = readIntegerSet(fs)
+		#if version > 24:
+		#	self.matters_morph = readIntegerSet(fs)
 	
 	def write(self, fs, version, noIndex=False):
 		# Write Struct...
@@ -847,15 +847,15 @@ class DtsShape:
 		skipDL = min(self.mSmallestVisibleDL,self.smNumSkipLoadDetails)
 		
 		# Morphs
-		if dstream.DTSVersion > 24:
-			# Note: appears to be redundancy here...
-			numMorphs = dstream.reads32()
-			numDefMorphs = dstream.reads32()
-			if numMorphs != numDefMorphs:
-				Torque_Util.dump_writeln("Error: Morph number mismatch (%d morphs for %d defaults)" % (numMorphs, numDefMorphs))
-				return
-				
-			numMorphSettings = dstream.reads32()
+		#if dstream.DTSVersion > 24:
+		#	# Note: appears to be redundancy here...
+		#	numMorphs = dstream.reads32()
+		#	numDefMorphs = dstream.reads32()
+		#	if numMorphs != numDefMorphs:
+		#		Torque_Util.dump_writeln("Error: Morph number mismatch (%d morphs for %d defaults)" % (numMorphs, numDefMorphs))
+		#		return
+		#		
+		#	numMorphSettings = dstream.reads32()
 		
 		dstream.readCheck()
 			
@@ -998,7 +998,6 @@ class DtsShape:
 		Torque_Util.dump_writeln("Reading in Meshes...")
 		# Read in Meshes (sans skins)...
 		# Straight forward read one at a time
-		
 		curObject, curDecal= 0, 0 # For tracking skipped meshes
 		for cnt in range(0, numMeshes):
 			skip = False#self.checkSkip(cnt, curObject, curDecal, skipDL)
@@ -1017,15 +1016,14 @@ class DtsShape:
 		Torque_Util.dump_writeln("Finished Reading Meshes")
 		
 		# Morphs
-		if dstream.DTSVersion > 24:
-			for cnt in range(0, numMorphs):
-				self.morphs.append(dstream.readMorph())
-			for cnt in range(0, numDefMorphs):
-				self.morphs[cnt].initialValue = dstream.readf32()
-			for cnt in range(0, numMorphSettings):
-				self.morphSettings.append(dstream.readf32())
-			dstream.readCheck()
-		
+		#if dstream.DTSVersion > 24:
+		#	for cnt in range(0, numMorphs):
+		#		self.morphs.append(dstream.readMorph())
+		#	for cnt in range(0, numDefMorphs):
+		#		self.morphs[cnt].initialValue = dstream.readf32()
+		#	for cnt in range(0, numMorphSettings):
+		#		self.morphSettings.append(dstream.readf32())
+		#	dstream.readCheck()
 		# Read in names to our private string table...
 		for cnt in range(0, numNames):
 			self.sTable.addString(dstream.readStringt())
