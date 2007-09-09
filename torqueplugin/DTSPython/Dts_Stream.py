@@ -59,7 +59,7 @@ class DtsStream:
 			self.write32 = self.write32_py24			
 		if read:
 			self.fs = open(fname, "rb")
-			self.DTSVersion = 25	# Biggest version we can read
+			self.DTSVersion = 24	# Biggest version we can read
 			self.createStreams()
 			if self.flood() == None:
 				self.fs.close()
@@ -107,11 +107,12 @@ class DtsStream:
 		c8, c16, c32 = self.readu8(), self.readu16(), self.readu32()
 		if c8 == c16 == c32 == self.checkCount:
 			self.checkCount += 1
+			#print "checkCount =", self.checkCount
 			return self.checkCount
 		else:
 			self.checkCount += 1
 			Torque_Util.dump_writeln("Error! Checkpoint mismatch! (%d %d %d(8,16,32), should be %d)" % (c8, c16, c32, self.checkCount-1))
-			sys.exit(1)
+			#sys.exit(1)
 			#return -1
 	def flush(self):
 		# Get Sizes...
@@ -162,9 +163,9 @@ class DtsStream:
 		self.mExporterVersion = ver >> 16
 		ver &= 0xFF
    
-		if ((ver >= 24) and (ver <= self.DTSVersion)):
-			print "Error : File Version is %d, can only read in version 24 -> %d!" % (ver, self.DTSVersion)
-			return None
+		#if not ((ver >= 24) and (ver <= self.DTSVersion)):
+		#	print "Error : File Version is %d, can only read in version 24 -> %d!" % (ver, self.DTSVersion)
+		#	return None
 		self.Allocated32 = offset16
 		self.Allocated16 = (offset8-offset16) * 2
 		self.Allocated8  = (totalSize-offset8) * 4
@@ -386,7 +387,8 @@ class DtsStream:
 		no.firstObject = v3
 		no.firstChild  = v4
 		no.nextSibling = v5
-		return Node(v1, v2)
+		return no
+		#return Node(v1, v2)
 	def writeNode(self, value):
 		self.writes32(value.name)
 		self.writes32(value.parent)
