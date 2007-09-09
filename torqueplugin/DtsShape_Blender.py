@@ -560,7 +560,7 @@ class BlenderShape(DtsShape):
 			parent = parent.getParent()
 		return csize
 	
-	# Import an armature
+	# Import an armature, uses depth first traversal.  Node ordering at branch points is indeterminant
 	def addArmature(self, armature, collapseTransform=True):
 		'''
 			This adds an armature to the shape.
@@ -581,6 +581,24 @@ class BlenderShape(DtsShape):
 		'''
 		# First, process armature
 		arm = self.poseUtil.armInfo[armature.name][DtsPoseUtil.ARMDATA]
+		
+		# read in desired node ordering from a text buffer, if it exists.
+		nodeOrder = None
+		try:
+			nodeOrderTxt = Blender.Text.Get("NodeOrder")
+			nodeOrder = nodeOrderTxt.asLines()
+			Torque_Util.dump_writeln("  NodeOrder text buffer found, attempting to export nodes in the order specified.")
+		except: doNothing = 1
+		
+		# if the node order text buffer is found, add the bones in the order indicated
+		inOrderSuccess = True
+		if nodeOrder != None: inOrderSuccess = self.addArmatureInOrder(armature, nodeOrder)
+		if not inOrderSuccess: raise "Error: Problem processing NodeOrder text buffer!"
+		
+		#armBones = arm.bones
+
+		# no node ordering is indicated, so add them the normal way
+		
 		# Don't add existing armatures
 		for added in self.addedArmatures:			
 			if self.poseUtil.armInfo[added[0].name][DtsPoseUtil.ARMDATA].name == arm.name:
@@ -602,8 +620,132 @@ class BlenderShape(DtsShape):
 		self.addedArmatures.append([armature])
 		
 		return True
-		
 
+	# Import an armature, uses node ordering as specified in "NodeOrder" text buffer.  The node ordering in the
+	# text buffer *must* coincide with a valid depth first traversal.
+	def addArmatureInOrder(self, armature, nodeOrder, collapseTransform=True):
+		'''
+			
+			This adds an armature to the shape. Nodes are added in the order specified in the "NodeOrder"
+			text buffer.  Returns true if successful, false if problems occur.			
+			
+		'''
+		# First, process armature
+		arm = self.poseUtil.armInfo[armature.name][DtsPoseUtil.ARMDATA]
+		
+		armBones = arm.bones
+		# add the bones in the order indicated
+		try:
+			
+			# Don't add existing armatures
+			for added in self.addedArmatures:			
+				if self.poseUtil.armInfo[added[0].name][DtsPoseUtil.ARMDATA].name == arm.name:
+					#print "Note : ignoring attempt to process armature data '%s' again." % arm.name
+					return False
+
+			startNode = len(self.nodes)
+
+			# create a list of bones available in the current armature
+			boneList = []
+			for bone in armBones.values():
+				boneList.append(bone.name)
+			
+			nodeID = 0
+			addedBones = {}
+			for nodeName in nodeOrder:
+				if nodeName in armBones.keys():
+					nodeID += 1
+					# We must assume that we've already added the bone's parent, if any.
+					# This will probably break for multiple armatures.
+					parentBone = -1
+					try: parentBone = addedBones[armBones[nodeName].parent.name]
+					except: doNothing = 1
+					
+					# add the bone, don't recurse					
+					addedBones[nodeName] = nodeID
+					self.addBone(armBones[nodeName], parentBone, armature, arm)
+
+
+			# create the list of leftover bones
+			leftOvers = []
+			for bone in boneList:
+				if not (bone in addedBones.keys()):
+					leftOvers.append(bone)
+			
+			# now add leftover bones
+			# Add each bone tree
+			for b in leftOvers[:]:
+				stack = []
+				boneName = b
+				while not boneName in addedBones.keys():
+					stack.append(boneName)
+					boneName = armBones[boneName].parent.name
+				while len(stack)>0:
+					bone = armBones[stack.pop()]					
+					if bone.parent != None:	parentBone = addedBones[bone.parent.name]
+					else: parentBone = -1					
+					self.addBone(bone, parentBone, armature, arm)
+					
+					nodeID += 1
+					addedBones[bone.name] = nodeID					
+					
+					if bone.name in leftOvers:
+						leftOvers.remove(bone.name)
+					
+			# Set armature index on all added nodes
+			for node in self.nodes[startNode:len(self.nodes)]:
+				node.armIdx = len(self.addedArmatures)
+
+			self.addedArmatures.append([armature])
+			
+			return True
+		except:
+			# Something went wrong, write an error message to the log and bail
+			Torque_Util.dump_writeln("  Error: An exception occured while processing the NodeOrder text buffer,")			
+			Torque_Util.dump_writeln("   This can be caused by extra nodes in the buffer, missing nodes in the buffer,")
+			Torque_Util.dump_writeln("   or an invalid traversal order (must be a valid depth first traversal ordering).")
+			return False
+
+	def addBone(self, bone, parentId, arm, armData):
+
+		'''		
+		This function adds a single bone from an armature to the shape as a node (non-recursive).
+		It is called by the addArmatureInOrder function above.  
+		
+		'''
+
+		bonename = bone.name
+		
+		# Do not add bones on the "BannedBones" list
+		if bonename.upper() in self.preferences['BannedBones']:
+			return False
+
+		# Add a DTS bone to the shape
+		b = Node(self.sTable.addString(bonename), parentId)
+
+		# get the bone's loc and rot, and set flags.
+		b.isOrphan = False
+		b.unConnected = False
+		loc, rot = None, None
+		if bone.parent == None:
+			b.isOrphan = True
+			loc = self.poseUtil.armBones[arm.name][bonename][DtsPoseUtil.BONERESTPOSWS]
+			rot = self.poseUtil.armBones[arm.name][bonename][DtsPoseUtil.BONERESTROTWS]
+		else:
+			b.unConnected = True
+			loc = self.poseUtil.armBones[arm.name][bonename][DtsPoseUtil.BONEDEFPOSPS]
+			rot = self.poseUtil.armBones[arm.name][bonename][DtsPoseUtil.BONEDEFROTPS]
+
+		self.defaultTranslations.append(loc)
+		self.defaultRotations.append(rot)
+		# need to get the bone's armature space transform and store it to use later with the pose stuff
+		b.armSpaceTransform = bone.matrix['ARMATURESPACE']
+		self.nodes.append(b)
+
+
+		# Add any children this bone may have
+		self.subshapes[0].numNodes += 1
+	
 	def addBones(self, bone, parentId, arm, armData):
 		'''		
 		This function recursively adds a bone from an armature to the shape as a node.
@@ -637,7 +779,6 @@ class BlenderShape(DtsShape):
 		if bonename.upper() in self.preferences['BannedBones']:
 			return False
 
-		
 		# Add a DTS bone to the shape
 		b = Node(self.sTable.addString(bonename), parentId)
 
@@ -1148,7 +1289,7 @@ class BlenderShape(DtsShape):
 					sequence.frames[nodeIndex][frame][0] = None
 			if not sequence.matters_rotation[nodeIndex]:
 				for frame in range(0, numFrames-1):
-					sequence.frames[nodeIndex][frame][1] = None					
+					sequence.frames[nodeIndex][frame][1] = None				
 			if not sequence.matters_scale[nodeIndex]:
 				for frame in range(0, numFrames-1):
 					sequence.frames[nodeIndex][frame][2] = None
