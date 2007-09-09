@@ -49,7 +49,7 @@ class Primitive:
 	NoMaterial   = 0x10000000	# Set if face has no material assigned, else things may screw up
 	MaterialMask = 0x0FFFFFFF
 	def __init__(self, fe=0, ne=0, ty=0):
-		self.firstElement = fe	# First indicie used by primitive
+		self.firstElement = fe	# First index used by primitive
 		self.numElements = ne	# Number of elements in primitive (> 3 usually is a STRIP / FAN)
 		self.matindex = ty		# |'d Value of types + index of material used
 
@@ -357,7 +357,8 @@ class DtsMesh:
 			# Vertexes
 			# (Should be 0 if skin mesh)
 			if self.parent < 0:
-				for cnt in range(0, dstream.reads32()):
+				n = dstream.reads32()
+				for cnt in range(0, n):
 					self.verts.append(dstream.readPoint3F())
 			else:
 				dstream.reads32()
@@ -413,12 +414,20 @@ class DtsMesh:
 		if self.mtype == self.T_Skin:
 			# Skin Mesh
 
-			# If we have a parent, don't read some of this stuff in
+			# store off the true number of verts now...
+			numVerts = len(self.verts)
 
-			if self.parent < 0:
+			# If we have a parent, don't read some of this stuff in
+			if self.parent < 0:				
 				# Read Initial Verts... (plonked into verts array really)
-				for cnt in range(0, dstream.reads32()):
-					self.verts.append(dstream.readPoint3F())
+				n = dstream.reads32()
+				# Meh, if we didn't get the correct number of 
+				# verts before, set it now; otherwise we crash
+				# kinda hacky.
+				if n != numVerts: numVerts = n
+				for cnt in range(0, n):
+					x = dstream.readPoint3F()
+					self.verts.append(x)
 			else:
 				dstream.reads32()
 				# Following already done before!
@@ -428,18 +437,19 @@ class DtsMesh:
 			# (note : encoded normals not read)
 			if self.parent <0:
 				# Advance past norms.don't use
-				for u in self.verts:
+				for n in range(0, numVerts):
 					dstream.read8()# Skip
 
 				# Read in normals
-				for n in self.verts:
+				for n in range(0, numVerts):
 					self.normals.append(dstream.readPoint3F())
 			else:
 				self.normals, self.enormals = shape.meshes[self.parent].normals, shape.meshes[self.parent].enormals
 
 			if self.parent < 0:
+				n = dstream.reads32()
 				# Read Initial Transforms...
-				for cnt in range(0, dstream.reads32()):
+				for cnt in range(0, n):
 					self.nodeTransforms.append(dstream.readMatrixF())
 
 				sz = dstream.reads32()
@@ -455,8 +465,9 @@ class DtsMesh:
 				for cnt in range(0, sz):
 					self.vweight.append(dstream.readf32())
 
+				n = dstream.reads32()
 				# Read Node Indexes...
-				for cnt in range(0, dstream.reads32()):
+				for cnt in range(0, n):
 					self.nodeIndex.append(dstream.reads32())
 			else:
 				for i in range(0, 3):
@@ -513,7 +524,7 @@ class DtsMesh:
 			for cnt in range(0, sz):
 				self.firstTVerts.append(dstream.reads32())
 			self.alwaysWriteDepth = dstream.readu32()
-			dstream.readCheck()
+			dstream.readCheck()		
 		else:
 			# Null or Standard or Unknown Mesh
 			if self.mtype != self.T_Standard:
