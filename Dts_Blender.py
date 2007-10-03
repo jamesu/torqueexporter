@@ -58,7 +58,7 @@ except:
   Blender Dts Classes for Python
 '''
 
-Version = "0.951"
+Version = "0.952 (IFL Branch)"
 Prefs = None
 Prefs_keyname = ""
 export_tree = None
@@ -2162,10 +2162,10 @@ class IFLControlsClass:
 			control.width = 220
 
 	def handleEvent(self, control):
-		print control, "Happy!!!"
+		print control
 		
 	def handleListEvent(self, control):
-		print control, "Happy 2 !!!"
+		print control
 		pass
 	
 	def handleListItemEvent(self, control):
