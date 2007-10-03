@@ -856,15 +856,15 @@ def export():
 # Controls referenced in functions
 guiSequenceTab, guiGeneralTab, guiArmatureTab, guiAboutTab, guiTabBar, guiHeaderTab = None, None, None, None, None, None
 
-guiSequenceOptions = None
-guiSequenceActionList = None
+guiSeqActOpts = None
+guiSeqActList = None
 guiBoneList = None
 
 # Global control event table.  Containers have their own event tables for child controls
 globalEvents = Common_Gui.EventTable(1)
 
-def guiSequenceActionListItemCallback(control):
-	global Prefs, guiSequenceActionList
+def guiSeqActListItemCallback(control):
+	global Prefs, guiSeqActList
 	
 	# Determine sequence name
 	
@@ -873,7 +873,7 @@ def guiSequenceActionListItemCallback(control):
 	else:
 		calcIdx = (control.evt - 40) / 4
 
-	sequenceName = guiSequenceActionList.controls[calcIdx].controls[0].label
+	sequenceName = guiSeqActList.controls[calcIdx].controls[0].label
 	realItem = control.evt - 40 - (calcIdx*4)
 	sequencePrefs = getSequenceKey(sequenceName)
 	
@@ -885,18 +885,18 @@ def guiSequenceActionListItemCallback(control):
 		sequencePrefs['Blend'] = control.state
 		# if blend is true, show the ref pose controls
 		if sequencePrefs['Blend'] == True:
-			guiSequenceOptions.controls[12].visible = True
-			guiSequenceOptions.controls[13].visible = True
-			guiSequenceOptions.controls[14].visible = True
+			guiSeqActOpts.controls[12].visible = True
+			guiSeqActOpts.controls[13].visible = True
+			guiSeqActOpts.controls[14].visible = True
 		else:
-			guiSequenceOptions.controls[12].visible = False
-			guiSequenceOptions.controls[13].visible = False
-			guiSequenceOptions.controls[14].visible = False
+			guiSeqActOpts.controls[12].visible = False
+			guiSeqActOpts.controls[13].visible = False
+			guiSeqActOpts.controls[14].visible = False
 	elif realItem == 3:
 		sequencePrefs['Cyclic'] = control.state
 
 def guiBoneListItemCallback(control):
-	global Prefs, guiSequenceActionList
+	global Prefs, guiSeqActList
 	
 	# Determine id of clicked button
 	
@@ -928,19 +928,19 @@ def createSequenceActionListitem(seq_name, startEvent):
 	guiContainer.fade_mode = 0  # flat color
 	guiName = Common_Gui.SimpleText("", seq_name, None, None)
 	guiName.x, guiName.y = 5, 5
-	guiExport = Common_Gui.ToggleButton("guiExport", "Export", "Export Sequence", startEvent, guiSequenceActionListItemCallback, None)
+	guiExport = Common_Gui.ToggleButton("guiExport", "Export", "Export Sequence", startEvent, guiSeqActListItemCallback, None)
 	guiExport.x, guiExport.y = 70, 5
 	guiExport.width, guiExport.height = 50, 15
 	guiExport.state = not sequencePrefs['NoExport']
-	guiDSQ = Common_Gui.ToggleButton("guiDSQ", "Dsq", "Export Sequence as DSQ", startEvent+1, guiSequenceActionListItemCallback, None)
+	guiDSQ = Common_Gui.ToggleButton("guiDSQ", "Dsq", "Export Sequence as DSQ", startEvent+1, guiSeqActListItemCallback, None)
 	guiDSQ.x, guiDSQ.y = 122, 5
 	guiDSQ.width, guiDSQ.height = 50, 15
 	guiDSQ.state = sequencePrefs['Dsq']
-	guiBlend = Common_Gui.ToggleButton("guiBlend", "Blend", "Export Sequence as Blend", startEvent+2, guiSequenceActionListItemCallback, None)
+	guiBlend = Common_Gui.ToggleButton("guiBlend", "Blend", "Export Sequence as Blend", startEvent+2, guiSeqActListItemCallback, None)
 	guiBlend.x, guiBlend.y = 174, 5
 	guiBlend.width, guiBlend.height = 50, 15
 	guiBlend.state = sequencePrefs['Blend']
-	guiCyclic = Common_Gui.ToggleButton("guiCyclic", "Cyclic", "Export Sequence as Cyclic", startEvent+3, guiSequenceActionListItemCallback, None)
+	guiCyclic = Common_Gui.ToggleButton("guiCyclic", "Cyclic", "Export Sequence as Cyclic", startEvent+3, guiSeqActListItemCallback, None)
 	guiCyclic.x, guiCyclic.y = 226, 5
 	guiCyclic.width, guiCyclic.height = 50, 15
 	guiCyclic.state = sequencePrefs['Cyclic']
@@ -997,34 +997,34 @@ def createBoneListitem(bone1, bone2, bone3, bone4, bone5, startEvent):
 
 
 def populateSequenceActionList():
-	global guiSequenceActionList
+	global guiSeqActList
 	actions = Armature.NLA.GetActions()
 	keys = actions.keys()
 	keys.sort()
 	
-	#print "populateSequenceActionList: name of list : %s" % guiSequenceActionList.name
+	#print "populateSequenceActionList: name of list : %s" % guiSeqActList.name
 	# There are a finite number of events we can allocate in blender, so we need to
 	# assign events in batches of the maximum number of visible list items.
 	startEvent = 40
 	for key in keys:
 		# skip the fake action (hack for blender 2.41 bug)
 		if key == "DTSEXPFAKEACT": continue		
-		guiSequenceActionList.addControl(createSequenceActionListitem(key, startEvent))
+		guiSeqActList.addControl(createSequenceActionListitem(key, startEvent))
 		startEvent += 4
 		# add any new animations to the ref pose combo box
-		if not (key in guiSequenceOptions.controls[13].items):
-			guiSequenceOptions.controls[13].items.append(key)
+		if not (key in guiSeqActOpts.controls[13].items):
+			guiSeqActOpts.controls[13].items.append(key)
 		
 def clearSequenceActionList():
-	global guiSequenceActionList
+	global guiSeqActList
 	
-	for i in range(0, len(guiSequenceActionList.controls)):
-		del guiSequenceActionList.controls[i].controls[:]
-	del guiSequenceActionList.controls[:]
+	for i in range(0, len(guiSeqActList.controls)):
+		del guiSeqActList.controls[i].controls[:]
+	del guiSeqActList.controls[:]
 	
-	guiSequenceActionList.itemIndex = -1
-	guiSequenceActionList.scrollPosition = 0
-	if guiSequenceActionList.callback: guiSequenceActionList.callback(guiSequenceActionList) # Bit of a hack, but works
+	guiSeqActList.itemIndex = -1
+	guiSeqActList.scrollPosition = 0
+	if guiSeqActList.callback: guiSeqActList.callback(guiSeqActList) # Bit of a hack, but works
 
 def createMaterialListItem(matName, startEvent):
 	guiContainer = Common_Gui.BasicContainer("", None, None)
@@ -1214,7 +1214,7 @@ def importMaterialList():
 
 
 def clearMaterialList():
-	global guiMaterialList, Prefs, guiSequenceOptions
+	global guiMaterialList, Prefs, guiSeqActOpts
 	#print "clearing material list..."
 	for i in range(0, len(guiMaterialList.controls)):
 		del guiMaterialList.controls[i].controls[:]
@@ -1227,7 +1227,7 @@ def clearMaterialList():
 
 
 def populateMaterialList():
-	global guiMaterialList, Prefs, guiSequenceOptions
+	global guiMaterialList, Prefs, guiSeqActOpts
 
 	# clear texture pulldowns
 	guiMaterialOptions.controlDict['guiMaterialDetailMapMenu'].items = []
@@ -1334,13 +1334,13 @@ def guiBaseCallback(control):
 		ctrl[1].enabled = False
 		
 def guiSequenceTabsCallback(control):
-	global guiSequenceActionsButton, guiSequenceIFLButton, guiSequenceVisibilityButton, guiSequenceUVButton, guiSequenceMorphButton, guiSequenceTabBar
-	global guiSequenceActionsSubtab, guiSequenceIFLSubtab, guiSequenceVisibilitySubtab, guiSequenceUVSubtab, guiSequenceMorphSubtab
+	global guiSeqActButton, guiSequenceIFLButton, guiSequenceVisibilityButton, guiSequenceUVButton, guiSequenceMorphButton, guiSequenceTabBar
+	global guiSeqActSubtab, guiSequenceIFLSubtab, guiSequenceVisibilitySubtab, guiSequenceUVSubtab, guiSequenceMorphSubtab
 	#global guiSequenceTab, guiArmatureTab, guiMaterialsTab, guiGeneralTab, guiAboutTab, guiTabBar
 	#global guiSequenceButton, guiMeshButton, guiArmatureButton, guiMaterialsButton, guiAboutButton
 	
 	# Need to associate the button with it's corresponding tab container.
-	ctrls = [[guiSequenceActionsButton,guiSequenceActionsSubtab], [guiSequenceIFLButton,guiSequenceIFLSubtab], [guiSequenceVisibilityButton,guiSequenceVisibilitySubtab], [guiSequenceUVButton,guiSequenceUVSubtab], [guiSequenceMorphButton,guiSequenceMorphSubtab]]
+	ctrls = [[guiSeqActButton,guiSeqActSubtab], [guiSequenceIFLButton,guiSequenceIFLSubtab], [guiSequenceVisibilityButton,guiSequenceVisibilitySubtab], [guiSequenceUVButton,guiSequenceUVSubtab], [guiSequenceMorphButton,guiSequenceMorphSubtab]]
 	for ctrl in ctrls:
 		if control.name == ctrl[0].name:
 			# turn on the tab button, show and enable the tab container
@@ -1355,50 +1355,50 @@ def guiSequenceTabsCallback(control):
 
 
 def guiSequenceUpdateTriggers(triggerList, itemIndex):
-	global guiSequenceOptions, guiSequenceActionList
+	global guiSeqActOpts, guiSeqActList
 	if (len(triggerList) == 0) or (itemIndex >= len(triggerList)):
-		guiSequenceOptions.controls[7].value = 0
-		guiSequenceOptions.controls[8].state = False
-		guiSequenceOptions.controls[9].value = 0
+		guiSeqActOpts.controls[7].value = 0
+		guiSeqActOpts.controls[8].state = False
+		guiSeqActOpts.controls[9].value = 0
 	else:
-		guiSequenceOptions.controls[7].value = triggerList[itemIndex][0] # Trigger State
-		guiSequenceOptions.controls[9].value = triggerList[itemIndex][1] # Time
-		guiSequenceOptions.controls[8].state = triggerList[itemIndex][2] # On
+		guiSeqActOpts.controls[7].value = triggerList[itemIndex][0] # Trigger State
+		guiSeqActOpts.controls[9].value = triggerList[itemIndex][1] # Time
+		guiSeqActOpts.controls[8].state = triggerList[itemIndex][2] # On
 
 triggerMenuTemplate = "Frame:%d Trigger:%d "
 
 def guiSequenceTriggersCallback(control):
-	global guiSequenceOptions, guiSequenceActionList, triggerMenuTemplate
-	if guiSequenceActionList.itemIndex == -1:
+	global guiSeqActOpts, guiSeqActList, triggerMenuTemplate
+	if guiSeqActList.itemIndex == -1:
 		return
 	
-	sequenceName = guiSequenceActionList.controls[guiSequenceActionList.itemIndex].controls[0].label
+	sequenceName = guiSeqActList.controls[guiSeqActList.itemIndex].controls[0].label
 	sequencePrefs = getSequenceKey(sequenceName)
-	itemIndex = guiSequenceOptions.controls[6].itemIndex
+	itemIndex = guiSeqActOpts.controls[6].itemIndex
 				
-	if control.name == "guiSequenceOptionsTriggerMenu":
+	if control.name == "guiSeqActOptsTriggerMenu":
 		guiSequenceUpdateTriggers(sequencePrefs['Triggers'], itemIndex)
-	elif control.name == "guiSequenceOptionsTriggerAdd":
+	elif control.name == "guiSeqActOptsTriggerAdd":
 		# Add
 		sequencePrefs['Triggers'].append([1, 1, True])
-		guiSequenceOptions.controls[6].items.append((triggerMenuTemplate % (1, 1)) + "(ON)")
-		guiSequenceOptions.controls[6].itemIndex = len(sequencePrefs['Triggers'])-1
-		guiSequenceUpdateTriggers(sequencePrefs['Triggers'], guiSequenceOptions.controls[6].itemIndex)
-	elif (len(guiSequenceOptions.controls[6].items) != 0):
-		if control.name == "guiSequenceOptionsTriggerState":
+		guiSeqActOpts.controls[6].items.append((triggerMenuTemplate % (1, 1)) + "(ON)")
+		guiSeqActOpts.controls[6].itemIndex = len(sequencePrefs['Triggers'])-1
+		guiSequenceUpdateTriggers(sequencePrefs['Triggers'], guiSeqActOpts.controls[6].itemIndex)
+	elif (len(guiSeqActOpts.controls[6].items) != 0):
+		if control.name == "guiSeqActOptsTriggerState":
 			sequencePrefs['Triggers'][itemIndex][0] = control.value
-		elif control.name == "guiSequenceOptionsTriggerStateOn":
+		elif control.name == "guiSeqActOptsTriggerStateOn":
 			sequencePrefs['Triggers'][itemIndex][2] = control.state
-		elif control.name == "guiSequenceOptionsTriggerFrame":
+		elif control.name == "guiSeqActOptsTriggerFrame":
 			sequencePrefs['Triggers'][itemIndex][1] = control.value
-		elif control.name == "guiSequenceOptionsTriggerDel":
+		elif control.name == "guiSeqActOptsTriggerDel":
 			# Remove
 			del sequencePrefs['Triggers'][itemIndex]
-			del guiSequenceOptions.controls[6].items[itemIndex]
+			del guiSeqActOpts.controls[6].items[itemIndex]
 			# Must decrement itemIndex if we are out of bounds
 			if itemIndex <= len(sequencePrefs['Triggers']):
-				guiSequenceOptions.controls[6].itemIndex = len(sequencePrefs['Triggers'])-1
-				itemIndex = guiSequenceOptions.controls[6].itemIndex
+				guiSeqActOpts.controls[6].itemIndex = len(sequencePrefs['Triggers'])-1
+				itemIndex = guiSeqActOpts.controls[6].itemIndex
 			guiSequenceUpdateTriggers(sequencePrefs['Triggers'], itemIndex)
 		
 		# Update menu caption
@@ -1406,7 +1406,7 @@ def guiSequenceTriggersCallback(control):
 			return
 		if sequencePrefs['Triggers'][itemIndex][2]: stateStr = "(ON)"
 		else: stateStr = "(OFF)"
-		guiSequenceOptions.controls[6].items[itemIndex] = (triggerMenuTemplate % (sequencePrefs['Triggers'][itemIndex][1], sequencePrefs['Triggers'][itemIndex][0])) + stateStr
+		guiSeqActOpts.controls[6].items[itemIndex] = (triggerMenuTemplate % (sequencePrefs['Triggers'][itemIndex][1], sequencePrefs['Triggers'][itemIndex][0])) + stateStr
 		
 def guiMaterialCallback(control):
 	global guiMaterialList, Prefs, guiMaterialOptions
@@ -1520,22 +1520,22 @@ def guiMaterialCallback(control):
 
 
 def guiSequenceCallback(control):
-	global guiSequenceOptions, guiSequenceActionList
+	global guiSeqActOpts, guiSeqActList
 	
-	if control.name == "guiSequenceToggle":
-		for child in guiSequenceActionList.controls:
+	if control.name == "guiSeqActToggle":
+		for child in guiSeqActList.controls:
 			child.controls[1].state = control.state
 			getSequenceKey(child.controls[0].label)['NoExport'] = not control.state
-	elif control.name == "guiSequenceRefresh":
+	elif control.name == "guiSeqActRefresh":
 		clearSequenceActionList()
 		populateSequenceActionList()
-	elif control.name == "guiSequenceActionList":
+	elif control.name == "guiSeqActList":
 		# Clear triggers menu
-		del guiSequenceOptions.controls[6].items[:]
+		del guiSeqActOpts.controls[6].items[:]
 		if control.itemIndex != -1:
 			sequenceName = control.controls[control.itemIndex].controls[0].label
 			sequencePrefs = getSequenceKey(sequenceName)
-			guiSequenceOptions.controls[0].label = "Sequence '%s'" % sequenceName
+			guiSeqActOpts.controls[0].label = "Sequence '%s'" % sequenceName
 
 			try:
 				action = Blender.Armature.NLA.GetActions()[sequenceName]
@@ -1548,73 +1548,73 @@ def guiSequenceCallback(control):
 				sequencePrefs['InterpolateFrames'] = maxNumFrames
 			if sequencePrefs['NumGroundFrames'] > maxNumFrames:
 				sequencePrefs['NumGroundFrames'] = maxNumFrames
-			guiSequenceOptions.enabled = True
-			guiSequenceOptions.controls[1].value = sequencePrefs['InterpolateFrames']
-			guiSequenceOptions.controls[1].max = maxNumFrames
-			guiSequenceOptions.controls[2].value = sequencePrefs['NumGroundFrames']
-			guiSequenceOptions.controls[2].max = maxNumFrames
-			guiSequenceOptions.controls[3].state = sequencePrefs['AnimateMaterial']
-			guiSequenceOptions.controls[4].value = sequencePrefs['MaterialIpoStartFrame']
+			guiSeqActOpts.enabled = True
+			guiSeqActOpts.controls[1].value = sequencePrefs['InterpolateFrames']
+			guiSeqActOpts.controls[1].max = maxNumFrames
+			guiSeqActOpts.controls[2].value = sequencePrefs['NumGroundFrames']
+			guiSeqActOpts.controls[2].max = maxNumFrames
+			guiSeqActOpts.controls[3].state = sequencePrefs['AnimateMaterial']
+			guiSeqActOpts.controls[4].value = sequencePrefs['MaterialIpoStartFrame']
 
 			# added for blend anim ref pose selection
 			# make sure the user didn't delete the action containing the refrence pose
 			# out from underneath us while we weren't looking.
 			try: blah = Blender.Armature.NLA.GetActions()[sequencePrefs['BlendRefPoseAction']]
 			except: sequencePrefs['BlendRefPoseAction'] = sequenceName
-			guiSequenceOptions.controls[12].label = "Ref pose for '%s'" % sequenceName
-			guiSequenceOptions.controls[13].setTextValue(sequencePrefs['BlendRefPoseAction'])
-			guiSequenceOptions.controls[14].min = 1
-			guiSequenceOptions.controls[14].max = DtsShape_Blender.getNumFrames(Blender.Armature.NLA.GetActions()[sequencePrefs['BlendRefPoseAction']].getAllChannelIpos().values(), False)
-			guiSequenceOptions.controls[14].value = sequencePrefs['BlendRefPoseFrame']
+			guiSeqActOpts.controls[12].label = "Ref pose for '%s'" % sequenceName
+			guiSeqActOpts.controls[13].setTextValue(sequencePrefs['BlendRefPoseAction'])
+			guiSeqActOpts.controls[14].min = 1
+			guiSeqActOpts.controls[14].max = DtsShape_Blender.getNumFrames(Blender.Armature.NLA.GetActions()[sequencePrefs['BlendRefPoseAction']].getAllChannelIpos().values(), False)
+			guiSeqActOpts.controls[14].value = sequencePrefs['BlendRefPoseFrame']
 			# hack, there must be a better way to handle this.
 			try:
-				guiSequenceOptions.controls[15].value = sequencePrefs['Priority']
+				guiSeqActOpts.controls[15].value = sequencePrefs['Priority']
 			except KeyError:
-				guiSequenceOptions.controls[15].value = 0
+				guiSeqActOpts.controls[15].value = 0
 
 
 			# Triggers
 			for t in sequencePrefs['Triggers']:
 				if t[2]: stateStr = "(ON)"
 				else: stateStr = "(OFF)"
-				guiSequenceOptions.controls[6].items.append((triggerMenuTemplate % (t[1], t[0])) + stateStr)
+				guiSeqActOpts.controls[6].items.append((triggerMenuTemplate % (t[1], t[0])) + stateStr)
 
-			guiSequenceOptions.controls[6].itemIndex = 0
-			guiSequenceOptions.controls[9].max = maxNumFrames
+			guiSeqActOpts.controls[6].itemIndex = 0
+			guiSeqActOpts.controls[9].max = maxNumFrames
 			guiSequenceUpdateTriggers(sequencePrefs['Triggers'], 0)
 			# show/hide ref pose stuff.
 			if sequencePrefs['Blend'] == True:
-				guiSequenceOptions.controls[12].visible = True
-				guiSequenceOptions.controls[13].visible = True
-				guiSequenceOptions.controls[14].visible = True
+				guiSeqActOpts.controls[12].visible = True
+				guiSeqActOpts.controls[13].visible = True
+				guiSeqActOpts.controls[14].visible = True
 			else:
-				guiSequenceOptions.controls[12].visible = False
-				guiSequenceOptions.controls[13].visible = False
-				guiSequenceOptions.controls[14].visible = False
+				guiSeqActOpts.controls[12].visible = False
+				guiSeqActOpts.controls[13].visible = False
+				guiSeqActOpts.controls[14].visible = False
 
 		else:
-			guiSequenceOptions.enabled = False
-			guiSequenceOptions.controls[0].label = "Sequence: None Selected"
+			guiSeqActOpts.enabled = False
+			guiSeqActOpts.controls[0].label = "Sequence: None Selected"
 	else:
-		if guiSequenceActionList.itemIndex != -1:
-			sequenceName = guiSequenceActionList.controls[guiSequenceActionList.itemIndex].controls[0].label
+		if guiSeqActList.itemIndex != -1:
+			sequenceName = guiSeqActList.controls[guiSeqActList.itemIndex].controls[0].label
 			sequencePrefs = getSequenceKey(sequenceName)
-			if control.name == "guiSequenceOptionsFramecount":
+			if control.name == "guiSeqActOptsFramecount":
 				sequencePrefs['InterpolateFrames'] = control.value
-			elif control.name == "guiSequenceOptionsGroundFramecount":
+			elif control.name == "guiSeqActOptsGroundFramecount":
 				sequencePrefs['NumGroundFrames'] = control.value
-			elif control.name == "guiSequenceOptionsAnimateMaterials":
+			elif control.name == "guiSeqActOptsAnimateMaterials":
 				sequencePrefs['AnimateMaterial'] = control.state
-			elif control.name == "guiSequenceOptionsMaterialStartFrame":
+			elif control.name == "guiSeqActOptsMatStartFrame":
 				sequencePrefs['MaterialIpoStartFrame'] = control.value
 			# added for blend ref pose selection
-			elif control.name == "guiSequenceOptionsRefposeMenu":
+			elif control.name == "guiSeqActOptsRefposeMenu":
 				sequencePrefs['BlendRefPoseAction'] = control.items[control.itemIndex]
 				sequencePrefs['BlendRefPoseFrame'] = 1
-				guiSequenceOptions.controls[14].value = sequencePrefs['BlendRefPoseFrame']
-			elif control.name == "guiSequenceOptionsRefposeFrame":
+				guiSeqActOpts.controls[14].value = sequencePrefs['BlendRefPoseFrame']
+			elif control.name == "guiSeqActOptsRefposeFrame":
 				sequencePrefs['BlendRefPoseFrame'] = control.value
-			elif control.name == "guiSequenceOptionsPriority":
+			elif control.name == "guiSeqActOptsPriority":
 				sequencePrefs['Priority'] = control.value
 
 			
@@ -1750,7 +1750,7 @@ def guiGeneralCallback(control):
 
 def guiBaseResize(control, newwidth, newheight):
 	tabContainers = ["guiSequenceTab", "guiGeneralTab", "guiArmatureTab", "guiAboutTab", "guiMaterialsTab"]
-	tabSubContainers = ["guiSequenceActionsSubtab", "guiSequenceIFLSubtab", "guiSequenceVisibilitySubtab","guiSequenceUVSubtab","guiSequenceMorphSubtab", "guiSequenceNLASubtab", "guiMaterialsSubtab", "guiGeneralSubtab", "guiArmatureSubtab", "guiAboutSubtab"]
+	tabSubContainers = ["guiSeqActSubtab", "guiSequenceIFLSubtab", "guiSequenceVisibilitySubtab","guiSequenceUVSubtab","guiSequenceMorphSubtab", "guiSequenceNLASubtab", "guiMaterialsSubtab", "guiGeneralSubtab", "guiArmatureSubtab", "guiAboutSubtab"]
 	
 	if control.name == "guiTabBar":
 		control.x, control.y = 0, 378
@@ -1787,7 +1787,7 @@ def guiBaseResize(control, newwidth, newheight):
 		control.width, control.height = 70, 25
 	
 	# Sequences sub-tab buttons
-	elif control.name == "guiSequenceActionsButton":
+	elif control.name == "guiSeqActButton":
 		control.x, control.y = 15, 0
 		control.width, control.height = 60, 25
 	elif control.name == "guiSequenceIFLButton":
@@ -1904,94 +1904,94 @@ def guiMaterialResize(control, newwidth, newheight):
 
 def guiSequenceResize(control, newwidth, newheight):
 
-	if control.name == "guiSequenceActionList":
+	if control.name == "guiSeqActList":
 		control.x = 10
 		control.y = 30
 		control.height = newheight - 70
 		control.width = 300
-	elif control.name == "guiSequenceTitle":
+	elif control.name == "guiSeqActTitle":
 		control.x = 10
 		control.y = newheight-20
-	elif control.name == "guiSequenceOptions":
+	elif control.name == "guiSeqActOpts":
 		control.x = newwidth - 180
 		control.y = 0
 		control.width = 180
 		control.height = newheight
-	elif control.name == "guiSequenceOptionsTitle":
+	elif control.name == "guiSeqActOptsTitle":
 		control.x = 5
 		control.y = newheight - 15
 	# Joe - ?
 	elif control.name == "sequence.opts.btitle":
 		control.x = 5
 		control.y = newheight - 110
-	elif control.name == "guiSequenceOptionsTriggerTitle":
+	elif control.name == "guiSeqActOptsTriggerTitle":
 		control.x = 5
 		control.y = newheight - 215
-	elif control.name == "guiSequenceOptionsRefposeTitle":
+	elif control.name == "guiSeqActOptsRefposeTitle":
 		control.x = 5
 		control.y = newheight - 140
 	# Sequence list buttons
-	elif control.name == "guiSequenceToggle":
+	elif control.name == "guiSeqActToggle":
 		control.x = 10
 		control.y = 5
 		control.width = 100
-	elif control.name == "guiSequenceRefresh":
+	elif control.name == "guiSeqActRefresh":
 		control.x = 112
 		control.y = 5
 		control.width = 100
 	# Sequence options
-	elif control.name == "guiSequenceOptionsFramecount":
+	elif control.name == "guiSeqActOptsFramecount":
 		control.x = 5
 		control.y = newheight - 45
 		control.width = newwidth - 10
-	elif control.name == "guiSequenceOptionsGroundFramecount":
+	elif control.name == "guiSeqActOptsGroundFramecount":
 		control.x = 5
 		control.y = newheight - 70
 		control.width = newwidth - 10
-	elif control.name == "guiSequenceOptionsAnimateMaterials":
+	elif control.name == "guiSeqActOptsAnimateMaterials":
 		control.x = 5
 		control.y = newheight - 95
 		control.width = 65
-	elif control.name == "guiSequenceOptionsMaterialStartFrame":
+	elif control.name == "guiSeqActOptsMatStartFrame":
 		control.x = 72
 		control.y = newheight - 95
 		control.width = 102
 	# Triggers
-	elif control.name == "guiSequenceOptionsTriggerMenu":
+	elif control.name == "guiSeqActOptsTriggerMenu":
 		control.x = 5
 		control.y = newheight - 245
 		control.width = newwidth - 10
-	elif control.name == "guiSequenceOptionsTriggerState":
+	elif control.name == "guiSeqActOptsTriggerState":
 		control.x = 5
 		control.y = newheight - 267
 		control.width = newwidth - 50
-	elif control.name == "guiSequenceOptionsTriggerStateOn":
+	elif control.name == "guiSeqActOptsTriggerStateOn":
 		control.x = 137
 		control.y = newheight - 267
 		control.width = newwidth - 142
-	elif control.name == "guiSequenceOptionsTriggerFrame":
+	elif control.name == "guiSeqActOptsTriggerFrame":
 		control.x = 5
 		control.y = newheight - 289
 		control.width = newwidth - 10
-	elif control.name == "guiSequenceOptionsTriggerAdd":
+	elif control.name == "guiSeqActOptsTriggerAdd":
 		control.x = 5
 		control.y = newheight - 311
 		control.width = (newwidth / 2) - 6
-	elif control.name == "guiSequenceOptionsTriggerDel":
+	elif control.name == "guiSeqActOptsTriggerDel":
 		control.x = (newwidth / 2)
 		control.y = newheight - 311
 		control.width = (newwidth / 2) - 6
 	# reference pose controls
-	elif control.name == "guiSequenceOptionsRefposeMenu":
+	elif control.name == "guiSeqActOptsRefposeMenu":
 		control.x = 5
 		control.y = newheight - 170
 		control.width = (newwidth) - 10
-	elif control.name == "guiSequenceOptionsRefposeFrame":
+	elif control.name == "guiSeqActOptsRefposeFrame":
 		control.x = 5
 		control.y = newheight - 195
 		control.width = (newwidth) - 10
 	# sequence priority
-	elif control.name == "guiSequenceOptionsPriority":
+	elif control.name == "guiSeqActOptsPriority":
 		control.x = 5
 		control.y = newheight - 120
 		control.width = newwidth - 10
@@ -2132,6 +2132,74 @@ def guiHeaderResize(control, newwidth, newheight):
 		control.y = 5
 
 
+# Class that handles the GUI controls on the IFL sub-panel of the Sequences panel.
+class IFLControlsClass:
+	def __init__(self):
+		global guiSequenceIFLSubtab
+		# initialize GUI controls
+		self.guiSeqIFLList = Common_Gui.ListContainer("guiSeqIFLList", "sequence.list", self.handleListEvent, self.resize)
+		self.guiSeqIFLList.fade_mode = 0
+		'''
+		guiSeqActOptsTitle = Common_Gui.SimpleText("guiSeqActOptsTitle", "Sequence: None Selected", None, guiSequenceResize)
+		guiSeqActOptsFramecount = Common_Gui.NumberPicker("guiSeqActOptsFramecount", "Frame Samples", "Amount of frames to export", 10, guiSequenceCallback, guiSequenceResize)
+		guiSeqActOptsFramecount.min = 1
+		guiSeqActOptsGroundFramecount = Common_Gui.NumberPicker("guiSeqActOptsGroundFramecount", "Ground Frames", "Amount of ground frames to export", 11, guiSequenceCallback, guiSequenceResize)
+		guiSeqActOptsAnimateMaterials = Common_Gui.ToggleButton("guiSeqActOptsAnimateMaterials", "Mat Anim", "Animate Materials", 12, guiSequenceCallback, guiSequenceResize)
+		guiMaterialDetailMapMenu = Common_Gui.ComboBox("guiMaterialDetailMapMenu", "Detail Texture", "Select a texture from this list to use as a detail map", 22, guiMaterialCallback, guiMaterialResize)
+		guiCustomFilename = Common_Gui.TextBox("guiCustomFilename", "Filename: ", "Filename to write to", 20, guiGeneralCallback, guiGeneralResize)		
+		
+		'''
+		# add controls to container
+		guiSequenceIFLSubtab.addControl(self.guiSeqIFLList)
+		self.populateIFLList("Test")
+		
+	def resize(self, control, newwidth, newheight):
+		# handle control resize events.
+		if control.name == "guiSeqIFLList":
+			control.x = 10
+			control.y = 80
+			control.height = newheight - 120
+			control.width = 220
+
+	def handleEvent(self, control):
+		print control, "Happy!!!"
+		
+	def handleListEvent(self, control):
+		print control, "Happy 2 !!!"
+		pass
+	
+	def handleListItemEvent(self, control):
+		pass
+		
+	def populateIFLList(self, IFLSequences):
+		self.guiSeqIFLList.addControl(self.createSequenceListitem("Test 1", 40))
+
+
+	def createSequenceListitem(self, seqName, startEvent):
+		# Note on positions:
+		# It quicker to assign these here, as there is no realistic chance of scaling being required.
+		guiContainer = Common_Gui.BasicContainer("", None, None)
+
+		guiContainer.fade_mode = 0  # flat color
+		guiName = Common_Gui.SimpleText("", seqName, None, None)
+		guiName.x, guiName.y = 5, 5
+		guiExport = Common_Gui.ToggleButton("guiExport", "Export", "Export Sequence", startEvent, self.handleListItemEvent, None)
+		guiExport.x, guiExport.y = 95, 5
+		guiExport.width, guiExport.height = 50, 15
+		#guiExport.state = not sequencePrefs['NoExport']
+		guiCyclic = Common_Gui.ToggleButton("guiCyclic", "Cyclic", "Export Sequence as Cyclic", startEvent+3, self.handleListItemEvent, None)
+		guiCyclic.x, guiCyclic.y = 147, 5
+		guiCyclic.width, guiCyclic.height = 50, 15
+		#guiCyclic.state = sequencePrefs['Cyclic']
+
+		# Add everything
+		guiContainer.addControl(guiName)
+		guiContainer.addControl(guiExport)
+		guiContainer.addControl(guiCyclic)
+
+		return guiContainer
+	
+
 def initGui():
 	'''
 		Steps to create and initialize a new control:
@@ -2155,15 +2223,15 @@ def initGui():
 	global guiSequenceTab, guiArmatureTab, guiMaterialsTab, guiGeneralTab, guiAboutTab, guiHeaderTab
 	global guiSequenceSubtab, guiArmatureSubtab, guiGeneralSubtab, guiAboutSubtab
 	global guiSequenceButton, guiMeshButton, guiArmatureButton, guiMaterialsButton, guiAboutButton
-	global guiSequenceActionList, guiSequenceOptions, guiBoneList, guiMaterialList, guiMaterialOptions
+	global guiSeqActList, guiSeqActOpts, guiBoneList, guiMaterialList, guiMaterialOptions
 	global guiTriListsButton, guiStripMeshesButton, guiTriMeshesButton
 	global guiBonePatternText
 	global GlobalEvents
 	
 	global guiTabBar, guiSequencesTabBar
 	
-	global guiSequenceActionsButton, guiSequenceIFLButton, guiSequenceVisibilityButton, guiSequenceUVButton, guiSequenceMorphButton
-	global guiSequenceActionsSubtab, guiSequenceIFLSubtab, guiSequenceVisibilitySubtab, guiSequenceUVSubtab, guiSequenceMorphSubtab
+	global guiSeqActButton, guiSequenceIFLButton, guiSequenceVisibilityButton, guiSequenceUVButton, guiSequenceMorphButton
+	global guiSeqActSubtab, guiSequenceIFLSubtab, guiSequenceVisibilitySubtab, guiSequenceUVSubtab, guiSequenceMorphSubtab
 	                                
 	Common_Gui.initGui(exit_callback)
 	
@@ -2179,59 +2247,59 @@ def initGui():
 
 	
 	# Subtab button controls
-	guiSequenceActionsButton = Common_Gui.TabButton("guiSequenceActionsButton", "Actions", "Action Animations", None, guiSequenceTabsCallback, guiBaseResize)
-	guiSequenceActionsButton.state = True
+	guiSeqActButton = Common_Gui.TabButton("guiSeqActButton", "Actions", "Action Animations", None, guiSequenceTabsCallback, guiBaseResize)
+	guiSeqActButton.state = True
 	guiSequenceIFLButton = Common_Gui.TabButton("guiSequenceIFLButton", "IFL", "IFL Animations", None, guiSequenceTabsCallback, guiBaseResize)
 	guiSequenceVisibilityButton = Common_Gui.TabButton("guiSequenceVisibilityButton", "Visibility", "Visibility Animations", None, guiSequenceTabsCallback, guiBaseResize)
 	guiSequenceUVButton = Common_Gui.TabButton("guiSequenceUVButton", "Texture UV", "Texture UV Coord Animations", None, guiSequenceTabsCallback, guiBaseResize)
 	guiSequenceMorphButton = Common_Gui.TabButton("guiSequenceMorphButton", "Morph", "Mesh Morph Animations", None, guiSequenceTabsCallback, guiBaseResize)
 
 	# Sequence tab controls
-	guiSequenceTitle = Common_Gui.SimpleText("guiSequenceTitle", "Action Sequences :", None, guiSequenceResize)
-	guiSequenceActionList = Common_Gui.ListContainer("guiSequenceActionList", "sequence.list", guiSequenceCallback, guiSequenceResize)
-	guiSequenceActionList.fade_mode = 0
-	guiSequenceToggle = Common_Gui.ToggleButton("guiSequenceToggle", "Toggle All", "Toggle export of all sequences", 6, guiSequenceCallback, guiSequenceResize)
-	guiSequenceToggle.state = False
-	guiSequenceRefresh = Common_Gui.BasicButton("guiSequenceRefresh", "Refresh", "Refresh list of sequences", 7, guiSequenceCallback, guiSequenceResize)
-	guiSequenceOptions = Common_Gui.BasicContainer("guiSequenceOptions", "sequence.prefs", None, guiSequenceResize)
-	guiSequenceOptions.enabled = False
-	guiSequenceOptions.fade_mode = 5
-	guiSequenceOptions.borderColor = None
+	guiSeqActTitle = Common_Gui.SimpleText("guiSeqActTitle", "Action Sequences :", None, guiSequenceResize)
+	guiSeqActList = Common_Gui.ListContainer("guiSeqActList", "sequence.list", guiSequenceCallback, guiSequenceResize)
+	guiSeqActList.fade_mode = 0
+	guiSeqActToggle = Common_Gui.ToggleButton("guiSeqActToggle", "Toggle All", "Toggle export of all sequences", 6, guiSequenceCallback, guiSequenceResize)
+	guiSeqActToggle.state = False
+	guiSeqActRefresh = Common_Gui.BasicButton("guiSeqActRefresh", "Refresh", "Refresh list of sequences", 7, guiSequenceCallback, guiSequenceResize)
+	guiSeqActOpts = Common_Gui.BasicContainer("guiSeqActOpts", "sequence.prefs", None, guiSequenceResize)
+	guiSeqActOpts.enabled = False
+	guiSeqActOpts.fade_mode = 5
+	guiSeqActOpts.borderColor = None
 
 	
 	# Sequence tab, sequence options controls
-	guiSequenceOptionsTitle = Common_Gui.SimpleText("guiSequenceOptionsTitle", "Sequence: None Selected", None, guiSequenceResize)
-	guiSequenceOptionsFramecount = Common_Gui.NumberPicker("guiSequenceOptionsFramecount", "Frame Samples", "Amount of frames to export", 10, guiSequenceCallback, guiSequenceResize)
-	guiSequenceOptionsFramecount.min = 1
-	guiSequenceOptionsGroundFramecount = Common_Gui.NumberPicker("guiSequenceOptionsGroundFramecount", "Ground Frames", "Amount of ground frames to export", 11, guiSequenceCallback, guiSequenceResize)
-	guiSequenceOptionsAnimateMaterials = Common_Gui.ToggleButton("guiSequenceOptionsAnimateMaterials", "Mat Anim", "Animate Materials", 12, guiSequenceCallback, guiSequenceResize)
-	guiSequenceOptionsMaterialStartFrame = Common_Gui.NumberPicker("guiSequenceOptionsMaterialStartFrame", "Start", "Frame to start exporting material track", 13, guiSequenceCallback, guiSequenceResize)
-	guiSequenceOptionsMaterialStartFrame.min = 1
-	guiSequenceOptionsMaterialStartFrame.max = Blender.Scene.GetCurrent().getRenderingContext().endFrame()	
+	guiSeqActOptsTitle = Common_Gui.SimpleText("guiSeqActOptsTitle", "Sequence: None Selected", None, guiSequenceResize)
+	guiSeqActOptsFramecount = Common_Gui.NumberPicker("guiSeqActOptsFramecount", "Frame Samples", "Amount of frames to export", 10, guiSequenceCallback, guiSequenceResize)
+	guiSeqActOptsFramecount.min = 1
+	guiSeqActOptsGroundFramecount = Common_Gui.NumberPicker("guiSeqActOptsGroundFramecount", "Ground Frames", "Amount of ground frames to export", 11, guiSequenceCallback, guiSequenceResize)
+	guiSeqActOptsAnimateMaterials = Common_Gui.ToggleButton("guiSeqActOptsAnimateMaterials", "Mat Anim", "Animate Materials", 12, guiSequenceCallback, guiSequenceResize)
+	guiSeqActOptsMatStartFrame = Common_Gui.NumberPicker("guiSeqActOptsMatStartFrame", "Start", "Frame to start exporting material track", 13, guiSequenceCallback, guiSequenceResize)
+	guiSeqActOptsMatStartFrame.min = 1
+	guiSeqActOptsMatStartFrame.max = Blender.Scene.GetCurrent().getRenderingContext().endFrame()	
 	
-	guiSequenceOptionsPriority = Common_Gui.NumberPicker("guiSequenceOptionsPriority", "Priority", "Sequence playback priority", 23, guiSequenceCallback, guiSequenceResize)
-	guiSequenceOptionsPriority.min = 0
-	guiSequenceOptionsPriority.max = 64 # this seems resonable
+	guiSeqActOptsPriority = Common_Gui.NumberPicker("guiSeqActOptsPriority", "Priority", "Sequence playback priority", 23, guiSequenceCallback, guiSequenceResize)
+	guiSeqActOptsPriority.min = 0
+	guiSeqActOptsPriority.max = 64 # this seems resonable
 	
 	# this allows the user to select an arbitrary frame from any action as the reference pose
 	# for blend animations.
-	guiSequenceOptionsRefposeTitle = Common_Gui.SimpleText("guiSequenceOptionsRefposeTitle", "Ref Pose for ", None, guiSequenceResize)
-	guiSequenceOptionsRefposeTitle.visible = False
-	guiSequenceOptionsRefposeMenu = Common_Gui.ComboBox("guiSequenceOptionsRefposeMenu", "Use Action", "Select an action containing your refernce pose for this blend.", 20, guiSequenceCallback, guiSequenceResize)
-	guiSequenceOptionsRefposeMenu.visible = False
-	guiSequenceOptionsRefposeFrame = Common_Gui.NumberPicker("guiSequenceOptionsRefposeFrame", "Frame", "Frame to use for reference pose", 21, guiSequenceCallback, guiSequenceResize)
-	guiSequenceOptionsRefposeFrame.visible = False
-	guiSequenceOptionsRefposeFrame.min = 1
+	guiSeqActOptsRefposeTitle = Common_Gui.SimpleText("guiSeqActOptsRefposeTitle", "Ref Pose for ", None, guiSequenceResize)
+	guiSeqActOptsRefposeTitle.visible = False
+	guiSeqActOptsRefposeMenu = Common_Gui.ComboBox("guiSeqActOptsRefposeMenu", "Use Action", "Select an action containing your refernce pose for this blend.", 20, guiSequenceCallback, guiSequenceResize)
+	guiSeqActOptsRefposeMenu.visible = False
+	guiSeqActOptsRefposeFrame = Common_Gui.NumberPicker("guiSeqActOptsRefposeFrame", "Frame", "Frame to use for reference pose", 21, guiSequenceCallback, guiSequenceResize)
+	guiSeqActOptsRefposeFrame.visible = False
+	guiSeqActOptsRefposeFrame.min = 1
 	
-	guiSequenceOptionsTriggerTitle = Common_Gui.SimpleText("guiSequenceOptionsTriggerTitle", "Triggers", None, guiSequenceResize)
-	guiSequenceOptionsTriggerMenu = Common_Gui.ComboBox("guiSequenceOptionsTriggerMenu", "Trigger List", "Select a trigger from this list to edit its properties", 14, guiSequenceTriggersCallback, guiSequenceResize)
-	guiSequenceOptionsTriggerState = Common_Gui.NumberPicker("guiSequenceOptionsTriggerState", "Trigger", "Trigger state to alter", 15, guiSequenceTriggersCallback, guiSequenceResize)
-	guiSequenceOptionsTriggerState.min, guiSequenceOptionsTriggerState.max = 1, 32
-	guiSequenceOptionsTriggerStateOn = Common_Gui.ToggleButton("guiSequenceOptionsTriggerStateOn", "On", "Determines if state will be activated or deactivated", 16, guiSequenceTriggersCallback, guiSequenceResize)
-	guiSequenceOptionsTriggerFrame = Common_Gui.NumberPicker("guiSequenceOptionsTriggerFrame", "Frame", "Frame to activate trigger on", 17, guiSequenceTriggersCallback, guiSequenceResize)
-	guiSequenceOptionsTriggerFrame.min = 1
-	guiSequenceOptionsTriggerAdd = Common_Gui.BasicButton("guiSequenceOptionsTriggerAdd", "Add", "Add new trigger", 18, guiSequenceTriggersCallback, guiSequenceResize)
-	guiSequenceOptionsTriggerDel = Common_Gui.BasicButton("guiSequenceOptionsTriggerDel", "Del", "Delete currently selected trigger", 19, guiSequenceTriggersCallback, guiSequenceResize)
+	guiSeqActOptsTriggerTitle = Common_Gui.SimpleText("guiSeqActOptsTriggerTitle", "Triggers", None, guiSequenceResize)
+	guiSeqActOptsTriggerMenu = Common_Gui.ComboBox("guiSeqActOptsTriggerMenu", "Trigger List", "Select a trigger from this list to edit its properties", 14, guiSequenceTriggersCallback, guiSequenceResize)
+	guiSeqActOptsTriggerState = Common_Gui.NumberPicker("guiSeqActOptsTriggerState", "Trigger", "Trigger state to alter", 15, guiSequenceTriggersCallback, guiSequenceResize)
+	guiSeqActOptsTriggerState.min, guiSeqActOptsTriggerState.max = 1, 32
+	guiSeqActOptsTriggerStateOn = Common_Gui.ToggleButton("guiSeqActOptsTriggerStateOn", "On", "Determines if state will be activated or deactivated", 16, guiSequenceTriggersCallback, guiSequenceResize)
+	guiSeqActOptsTriggerFrame = Common_Gui.NumberPicker("guiSeqActOptsTriggerFrame", "Frame", "Frame to activate trigger on", 17, guiSequenceTriggersCallback, guiSequenceResize)
+	guiSeqActOptsTriggerFrame.min = 1
+	guiSeqActOptsTriggerAdd = Common_Gui.BasicButton("guiSeqActOptsTriggerAdd", "Add", "Add new trigger", 18, guiSequenceTriggersCallback, guiSequenceResize)
+	guiSeqActOptsTriggerDel = Common_Gui.BasicButton("guiSeqActOptsTriggerDel", "Del", "Delete currently selected trigger", 19, guiSequenceTriggersCallback, guiSequenceResize)
 	
 	# Armature tab controls
 	guiBoneText = Common_Gui.SimpleText("guiBoneText", "Bones that should be exported :", None, guiArmatureResize)
@@ -2382,8 +2450,8 @@ def initGui():
 	guiAboutTab.enabled, guiAboutTab.visible = False, False
 	
 	# Sub-container Controls
-	guiSequenceActionsSubtab = Common_Gui.TabContainer("guiSequenceActionsSubtab", None, guiSequenceActionsButton, None, guiBaseResize)
-	guiSequenceActionsSubtab.fade_mode = 1
+	guiSeqActSubtab = Common_Gui.TabContainer("guiSeqActSubtab", None, guiSeqActButton, None, guiBaseResize)
+	guiSeqActSubtab.fade_mode = 1
 	guiSequenceIFLSubtab = Common_Gui.TabContainer("guiSequenceIFLSubtab", None, guiSequenceIFLButton, None, guiBaseResize)
 	guiSequenceIFLSubtab.fade_mode = 1
 	guiSequenceVisibilitySubtab = Common_Gui.TabContainer("guiSequenceVisibilitySubtab", None, guiSequenceVisibilityButton, None, guiBaseResize)
@@ -2403,7 +2471,7 @@ def initGui():
 	guiAboutSubtab = Common_Gui.BasicContainer("guiAboutSubtab", None, None, guiBaseResize)
 	guiAboutSubtab.fade_mode = 1
 	#guiSequenceNLASubtab = Common_Gui.BasicContainer("guiSequenceNLASubtab", None, None, guiBaseResize)
-	#guiSequenceActionsSubtab.fade_mode = 1
+	#guiSeqActSubtab.fade_mode = 1
 	
 	# Add all controls to respective containers
 	
@@ -2423,14 +2491,14 @@ def initGui():
 		
 	Common_Gui.addGuiControl(guiSequenceTab)
 	guiSequenceTab.borderColor = [0,0,0,0]
-	guiSequenceTab.addControl(guiSequenceActionsSubtab)
+	guiSequenceTab.addControl(guiSeqActSubtab)
 	guiSequenceTab.addControl(guiSequenceIFLSubtab)
 	guiSequenceTab.addControl(guiSequenceVisibilitySubtab)
 	guiSequenceTab.addControl(guiSequenceUVSubtab)
 	guiSequenceTab.addControl(guiSequenceMorphSubtab)
 	
 	guiSequenceTab.addControl(guiSequencesTabBar)
-	guiSequencesTabBar.addControl(guiSequenceActionsButton)
+	guiSequencesTabBar.addControl(guiSeqActButton)
 	guiSequencesTabBar.addControl(guiSequenceIFLButton)
 	guiSequencesTabBar.addControl(guiSequenceVisibilityButton)
 	guiSequencesTabBar.addControl(guiSequenceUVButton)
@@ -2438,36 +2506,36 @@ def initGui():
 
 	#guiSequenceVisibilityButton, guiSequenceUVButton, guiSequenceMorphButton
 
-	guiSequenceActionsSubtab.borderColor = [0,0,0,0]
+	guiSeqActSubtab.borderColor = [0,0,0,0]
 	guiSequenceIFLSubtab.borderColor = [0,0,0,0]
 	guiSequenceVisibilitySubtab.borderColor = [0,0,0,0]
 	guiSequenceUVSubtab.borderColor = [0,0,0,0]
 	guiSequenceMorphSubtab.borderColor = [0,0,0,0]
 
-	guiSequenceActionsSubtab.addControl(guiSequenceTitle)
-	guiSequenceActionsSubtab.addControl(guiSequenceActionList)
-	guiSequenceActionsSubtab.addControl(guiSequenceToggle)
-	guiSequenceActionsSubtab.addControl(guiSequenceRefresh)
-	guiSequenceActionsSubtab.addControl(guiSequenceOptions)
+	guiSeqActSubtab.addControl(guiSeqActTitle)
+	guiSeqActSubtab.addControl(guiSeqActList)
+	guiSeqActSubtab.addControl(guiSeqActToggle)
+	guiSeqActSubtab.addControl(guiSeqActRefresh)
+	guiSeqActSubtab.addControl(guiSeqActOpts)
 
-	guiSequenceOptions.addControl(guiSequenceOptionsTitle)
-	guiSequenceOptions.addControl(guiSequenceOptionsFramecount)
-	guiSequenceOptions.addControl(guiSequenceOptionsGroundFramecount)
-	guiSequenceOptions.addControl(guiSequenceOptionsAnimateMaterials)
-	guiSequenceOptions.addControl(guiSequenceOptionsMaterialStartFrame)
+	guiSeqActOpts.addControl(guiSeqActOptsTitle)
+	guiSeqActOpts.addControl(guiSeqActOptsFramecount)
+	guiSeqActOpts.addControl(guiSeqActOptsGroundFramecount)
+	guiSeqActOpts.addControl(guiSeqActOptsAnimateMaterials)
+	guiSeqActOpts.addControl(guiSeqActOptsMatStartFrame)
 
-	guiSequenceOptions.addControl(guiSequenceOptionsTriggerTitle)
-	guiSequenceOptions.addControl(guiSequenceOptionsTriggerMenu)
-	guiSequenceOptions.addControl(guiSequenceOptionsTriggerState)
-	guiSequenceOptions.addControl(guiSequenceOptionsTriggerStateOn)
-	guiSequenceOptions.addControl(guiSequenceOptionsTriggerFrame)
-	guiSequenceOptions.addControl(guiSequenceOptionsTriggerAdd)
-	guiSequenceOptions.addControl(guiSequenceOptionsTriggerDel)
+	guiSeqActOpts.addControl(guiSeqActOptsTriggerTitle)
+	guiSeqActOpts.addControl(guiSeqActOptsTriggerMenu)
+	guiSeqActOpts.addControl(guiSeqActOptsTriggerState)
+	guiSeqActOpts.addControl(guiSeqActOptsTriggerStateOn)
+	guiSeqActOpts.addControl(guiSeqActOptsTriggerFrame)
+	guiSeqActOpts.addControl(guiSeqActOptsTriggerAdd)
+	guiSeqActOpts.addControl(guiSeqActOptsTriggerDel)
 
-	guiSequenceOptions.addControl(guiSequenceOptionsRefposeTitle)
-	guiSequenceOptions.addControl(guiSequenceOptionsRefposeMenu)
-	guiSequenceOptions.addControl(guiSequenceOptionsRefposeFrame)
-	guiSequenceOptions.addControl(guiSequenceOptionsPriority)
+	guiSeqActOpts.addControl(guiSeqActOptsRefposeTitle)
+	guiSeqActOpts.addControl(guiSeqActOptsRefposeMenu)
+	guiSeqActOpts.addControl(guiSeqActOptsRefposeFrame)
+	guiSeqActOpts.addControl(guiSeqActOptsPriority)
 	
 	populateSequenceActionList()
 	
@@ -2556,6 +2624,9 @@ def initGui():
 	guiAboutTab.addControl(guiAboutSubtab)
 	guiAboutSubtab.borderColor = [0,0,0,0]
 	guiAboutSubtab.addControl(guiAboutText)
+
+	# testing
+	IFLControls = IFLControlsClass()
 
 # Called when gui exits
 def exit_callback():
