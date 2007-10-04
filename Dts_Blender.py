@@ -2135,10 +2135,17 @@ def guiHeaderResize(control, newwidth, newheight):
 # Class that handles the GUI controls on the IFL sub-panel of the Sequences panel.
 class IFLControlsClass:
 	def __init__(self):
-		global guiSequenceIFLSubtab
+		global guiSequenceIFLSubtab		
 		# initialize GUI controls
 		self.guiSeqIFLList = Common_Gui.ListContainer("guiSeqIFLList", "sequence.list", self.handleListEvent, self.resize)
 		self.guiSeqIFLList.fade_mode = 0
+		self.guiSeqIFLName = Common_Gui.TextBox("guiSeqIFLName", "Sequence Name: ", "Name of the Current Sequence", 1, self.handleEvent, self.resize)
+		self.guiSeqAdd = Common_Gui.BasicButton("guiSeqAdd", "Add", "Add new IFL Sequence with the given name", 2, self.handleEvent, self.resize)
+		self.guiSeqDel = Common_Gui.BasicButton("guiSeqDel", "Del", "Delete Selected IFL Sequence", 3, self.handleEvent, self.resize)
+		self.guiSeqRename = Common_Gui.BasicButton("guiSeqRename", "Rename", "Rename Selected IFL Sequence to the given name", 3, self.handleEvent, self.resize)
+		self.guiSeqAddToExistingTxt = Common_Gui.SimpleText("guiSeqAddToExistingTxt", "Add IFL Animation to existing Sequence:", None, self.resize)
+		self.guiSeqExistingSequences = Common_Gui.ComboBox("guiSeqExistingSequences", "Sequence", "Select a Sequence from this list to which to add an IFL Animation", 22, self.handleEvent, self.resize)
+		
 		'''
 		guiSeqActOptsTitle = Common_Gui.SimpleText("guiSeqActOptsTitle", "Sequence: None Selected", None, guiSequenceResize)
 		guiSeqActOptsFramecount = Common_Gui.NumberPicker("guiSeqActOptsFramecount", "Frame Samples", "Amount of frames to export", 10, guiSequenceCallback, guiSequenceResize)
@@ -2149,17 +2156,56 @@ class IFLControlsClass:
 		guiCustomFilename = Common_Gui.TextBox("guiCustomFilename", "Filename: ", "Filename to write to", 20, guiGeneralCallback, guiGeneralResize)		
 		
 		'''
+		
 		# add controls to container
 		guiSequenceIFLSubtab.addControl(self.guiSeqIFLList)
+		guiSequenceIFLSubtab.addControl(self.guiSeqIFLName)
+		guiSequenceIFLSubtab.addControl(self.guiSeqAdd)
+		guiSequenceIFLSubtab.addControl(self.guiSeqDel)
+		guiSequenceIFLSubtab.addControl(self.guiSeqRename)
+		guiSequenceIFLSubtab.addControl(self.guiSeqAddToExistingTxt)
+		guiSequenceIFLSubtab.addControl(self.guiSeqExistingSequences)
+		
 		self.populateIFLList("Test")
 		
 	def resize(self, control, newwidth, newheight):
 		# handle control resize events.
 		if control.name == "guiSeqIFLList":
 			control.x = 10
-			control.y = 80
-			control.height = newheight - 120
+			control.y = 100
+			control.height = newheight - 140
 			control.width = 220
+		elif control.name == "guiSeqIFLName":
+			control.x = 10
+			control.y = 75
+			control.height = 20
+			control.width = 220
+		elif control.name == "guiSeqAdd":
+			control.x = 10
+			control.y = 53
+			control.height = 20
+			control.width = 71
+		elif control.name == "guiSeqDel":
+			control.x = 84
+			control.y = 53
+			control.height = 20
+			control.width = 71
+		elif control.name == "guiSeqRename":
+			control.x = 158
+			control.y = 53
+			control.height = 20
+			control.width = 71
+		elif control.name == "guiSeqAddToExistingTxt":
+			control.x = 10
+			control.y = 31
+			control.height = 20
+			control.width = 71
+		elif control.name == "guiSeqExistingSequences":
+			control.x = 10
+			control.y = 11
+			control.height = 20
+			control.width = 71
+
 
 	def handleEvent(self, control):
 		print control
@@ -2452,8 +2498,10 @@ def initGui():
 	# Sub-container Controls
 	guiSeqActSubtab = Common_Gui.TabContainer("guiSeqActSubtab", None, guiSeqActButton, None, guiBaseResize)
 	guiSeqActSubtab.fade_mode = 1
+	guiSeqActSubtab.enabled, guiSeqActSubtab.visible = True, True
 	guiSequenceIFLSubtab = Common_Gui.TabContainer("guiSequenceIFLSubtab", None, guiSequenceIFLButton, None, guiBaseResize)
 	guiSequenceIFLSubtab.fade_mode = 1
+	guiSequenceIFLSubtab.enabled, guiSequenceIFLSubtab.visible = False, False
 	guiSequenceVisibilitySubtab = Common_Gui.TabContainer("guiSequenceVisibilitySubtab", None, guiSequenceVisibilityButton, None, guiBaseResize)
 	guiSequenceVisibilitySubtab.fade_mode = 1
 	guiSequenceUVSubtab = Common_Gui.TabContainer("guiSequenceUVSubtab", None, guiSequenceUVButton, None, guiBaseResize)
