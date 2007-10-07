@@ -855,6 +855,7 @@ def export():
 
 # Controls referenced in functions
 guiSequenceTab, guiGeneralTab, guiArmatureTab, guiAboutTab, guiTabBar, guiHeaderTab = None, None, None, None, None, None
+IFLControls = None
 
 guiSeqActOpts = None
 guiSeqActList = None
@@ -2132,20 +2133,9 @@ def guiHeaderResize(control, newwidth, newheight):
 		control.y = 5
 
 
-# Class that handles the GUI controls on the IFL sub-panel of the Sequences panel.
+# Class that creates and owns the GUI controls on the IFL sub-panel of the Sequences panel.
 class IFLControlsClass:
 	def __init__(self):
-		global guiSequenceIFLSubtab		
-		# initialize GUI controls
-		self.guiSeqIFLList = Common_Gui.ListContainer("guiSeqIFLList", "sequence.list", self.handleListEvent, self.resize)
-		self.guiSeqIFLList.fade_mode = 0
-		self.guiSeqIFLName = Common_Gui.TextBox("guiSeqIFLName", "Sequence Name: ", "Name of the Current Sequence", 1, self.handleEvent, self.resize)
-		self.guiSeqAdd = Common_Gui.BasicButton("guiSeqAdd", "Add", "Add new IFL Sequence with the given name", 2, self.handleEvent, self.resize)
-		self.guiSeqDel = Common_Gui.BasicButton("guiSeqDel", "Del", "Delete Selected IFL Sequence", 3, self.handleEvent, self.resize)
-		self.guiSeqRename = Common_Gui.BasicButton("guiSeqRename", "Rename", "Rename Selected IFL Sequence to the given name", 3, self.handleEvent, self.resize)
-		self.guiSeqAddToExistingTxt = Common_Gui.SimpleText("guiSeqAddToExistingTxt", "Add IFL Animation to existing Sequence:", None, self.resize)
-		self.guiSeqExistingSequences = Common_Gui.ComboBox("guiSeqExistingSequences", "Sequence", "Select a Sequence from this list to which to add an IFL Animation", 22, self.handleEvent, self.resize)
-		
 		'''
 		guiSeqActOptsTitle = Common_Gui.SimpleText("guiSeqActOptsTitle", "Sequence: None Selected", None, guiSequenceResize)
 		guiSeqActOptsFramecount = Common_Gui.NumberPicker("guiSeqActOptsFramecount", "Frame Samples", "Amount of frames to export", 10, guiSequenceCallback, guiSequenceResize)
@@ -2154,10 +2144,32 @@ class IFLControlsClass:
 		guiSeqActOptsAnimateMaterials = Common_Gui.ToggleButton("guiSeqActOptsAnimateMaterials", "Mat Anim", "Animate Materials", 12, guiSequenceCallback, guiSequenceResize)
 		guiMaterialDetailMapMenu = Common_Gui.ComboBox("guiMaterialDetailMapMenu", "Detail Texture", "Select a texture from this list to use as a detail map", 22, guiMaterialCallback, guiMaterialResize)
 		guiCustomFilename = Common_Gui.TextBox("guiCustomFilename", "Filename: ", "Filename to write to", 20, guiGeneralCallback, guiGeneralResize)		
+		'''		
 		
-		'''
-		
-		# add controls to container
+		global guiSequenceIFLSubtab		
+
+		# initialize GUI controls
+		self.guiSeqIFLList = Common_Gui.ListContainer("guiSeqIFLList", "sequence.list", self.handleListEvent, self.resize)
+		self.guiSeqIFLName = Common_Gui.TextBox("guiSeqIFLName", "Sequence Name: ", "Name of the Current Sequence", 1, self.handleEvent, self.resize)
+		self.guiSeqAdd = Common_Gui.BasicButton("guiSeqAdd", "Add", "Add new IFL Sequence with the given name", 2, self.handleEvent, self.resize)
+		self.guiSeqDel = Common_Gui.BasicButton("guiSeqDel", "Del", "Delete Selected IFL Sequence", 3, self.handleEvent, self.resize)
+		self.guiSeqRename = Common_Gui.BasicButton("guiSeqRename", "Rename", "Rename Selected IFL Sequence to the given name", 3, self.handleEvent, self.resize)
+		self.guiSeqAddToExistingTxt = Common_Gui.SimpleText("guiSeqAddToExistingTxt", "Add IFL Animation to existing Sequence:", None, self.resize)
+		self.guiSeqExistingSequences = Common_Gui.ComboBox("guiSeqExistingSequences", "Sequence", "Select a Sequence from this list to which to add an IFL Animation", 22, self.handleEvent, self.resize)
+		self.guiSeqAddToExisting = Common_Gui.BasicButton("guiSeqAddToExisting", "Add IFL", "Add an IFL Animation to an existing sequence.", 3, self.handleEvent, self.resize)
+		self.guiSeqListTitle = Common_Gui.SimpleText("guiSeqListTitle", "IFL Sequences:", None, self.resize)
+		self.guiSeqOptsTitle = Common_Gui.SimpleText("guiSeqOptsTitle", "Sequence: None Selected", None, self.resize)
+		self.guiSeqIFLOpts = Common_Gui.BasicContainer("guiSeqIFLOpts", "guiSeqIFLOpts", None, self.resize)
+
+		# set initial states
+		self.guiSeqIFLOpts.enabled = True
+		self.guiSeqIFLOpts.fade_mode = 5
+		self.guiSeqIFLOpts.borderColor = None
+
+		# set container fade modes
+		self.guiSeqIFLList.fade_mode = 0
+
+		# add controls to containers
 		guiSequenceIFLSubtab.addControl(self.guiSeqIFLList)
 		guiSequenceIFLSubtab.addControl(self.guiSeqIFLName)
 		guiSequenceIFLSubtab.addControl(self.guiSeqAdd)
@@ -2165,47 +2177,94 @@ class IFLControlsClass:
 		guiSequenceIFLSubtab.addControl(self.guiSeqRename)
 		guiSequenceIFLSubtab.addControl(self.guiSeqAddToExistingTxt)
 		guiSequenceIFLSubtab.addControl(self.guiSeqExistingSequences)
-		
+		guiSequenceIFLSubtab.addControl(self.guiSeqAddToExisting)
+		guiSequenceIFLSubtab.addControl(self.guiSeqListTitle)
+		guiSequenceIFLSubtab.addControl(self.guiSeqOptsTitle)
+		guiSequenceIFLSubtab.addControl(self.guiSeqIFLOpts)
+
+		# populate the IFL Sequences list
 		self.populateIFLList("Test")
+	
+	def cleanup(self):
+		'''
+		Must destroy any GUI objects that are referenced in a non-global scope
+		explicitly before interpreter shutdown to avoid the dreaded
+		"error totblock" message when exiting Blender.
+		Note: __del__ is not guaranteed to be called for objects that still
+		exist when the interpreter exits.
+		'''
+		del self.guiSeqIFLList
+		del self.guiSeqIFLName
+		del self.guiSeqAdd
+		del self.guiSeqDel
+		del self.guiSeqRename
+		del self.guiSeqAddToExistingTxt
+		del self.guiSeqExistingSequences
+		del self.guiSeqAddToExisting
+		del self.guiSeqListTitle
+		del self.guiSeqOptsTitle
+		del self.guiSeqIFLOpts
+
 		
 	def resize(self, control, newwidth, newheight):
 		# handle control resize events.
+		print control.name
 		if control.name == "guiSeqIFLList":
 			control.x = 10
 			control.y = 100
 			control.height = newheight - 140
-			control.width = 220
+			control.width = 230
 		elif control.name == "guiSeqIFLName":
 			control.x = 10
 			control.y = 75
 			control.height = 20
-			control.width = 220
+			control.width = 230
 		elif control.name == "guiSeqAdd":
 			control.x = 10
 			control.y = 53
 			control.height = 20
-			control.width = 71
+			control.width = 75
 		elif control.name == "guiSeqDel":
-			control.x = 84
+			control.x = 87
 			control.y = 53
 			control.height = 20
-			control.width = 71
+			control.width = 75
 		elif control.name == "guiSeqRename":
-			control.x = 158
+			control.x = 164
 			control.y = 53
 			control.height = 20
-			control.width = 71
+			control.width = 76
 		elif control.name == "guiSeqAddToExistingTxt":
 			control.x = 10
-			control.y = 31
+			control.y = 38
 			control.height = 20
-			control.width = 71
+			control.width = 230
 		elif control.name == "guiSeqExistingSequences":
 			control.x = 10
 			control.y = 11
 			control.height = 20
-			control.width = 71
-
+			control.width = 145
+		elif control.name == "guiSeqAddToExisting":
+			control.x = 157
+			control.y = 11
+			control.height = 20
+			control.width = 82
+		elif control.name == "guiSeqListTitle":			
+			control.x = 10
+			control.y = 310
+			control.height = 20
+			control.width = 82
+		elif control.name == "guiSeqIFLOpts":
+			print "you are here 1"
+			control.x = 241
+			control.y = 0
+			control.height = 334
+			control.width = 249		
+		elif control.name == "guiSeqOptsTitle":
+			control.x = 280
+			control.y = 310
+			control.height = 20
+			control.width = 82
 
 	def handleEvent(self, control):
 		print control
@@ -2230,11 +2289,11 @@ class IFLControlsClass:
 		guiName = Common_Gui.SimpleText("", seqName, None, None)
 		guiName.x, guiName.y = 5, 5
 		guiExport = Common_Gui.ToggleButton("guiExport", "Export", "Export Sequence", startEvent, self.handleListItemEvent, None)
-		guiExport.x, guiExport.y = 95, 5
+		guiExport.x, guiExport.y = 105, 5
 		guiExport.width, guiExport.height = 50, 15
 		#guiExport.state = not sequencePrefs['NoExport']
 		guiCyclic = Common_Gui.ToggleButton("guiCyclic", "Cyclic", "Export Sequence as Cyclic", startEvent+3, self.handleListItemEvent, None)
-		guiCyclic.x, guiCyclic.y = 147, 5
+		guiCyclic.x, guiCyclic.y = 157, 5
 		guiCyclic.width, guiCyclic.height = 50, 15
 		#guiCyclic.state = sequencePrefs['Cyclic']
 
@@ -2244,7 +2303,9 @@ class IFLControlsClass:
 		guiContainer.addControl(guiCyclic)
 
 		return guiContainer
-	
+
+#IFLControls = IFLControlsClass
+IFLControls = None
 
 def initGui():
 	'''
@@ -2273,6 +2334,8 @@ def initGui():
 	global guiTriListsButton, guiStripMeshesButton, guiTriMeshesButton
 	global guiBonePatternText
 	global GlobalEvents
+	
+	global IFLControls
 	
 	global guiTabBar, guiSequencesTabBar
 	
@@ -2678,9 +2741,12 @@ def initGui():
 
 # Called when gui exits
 def exit_callback():
+	global IFLControls
 	Torque_Util.dump_setout("stdout")
 	clearSequenceActionList()
 	clearBoneGrid()
+	print IFLControls
+	IFLControls.cleanup()
 	savePrefs()
 
 '''
