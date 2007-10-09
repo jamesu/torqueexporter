@@ -2164,9 +2164,19 @@ class IFLControlsClass:
 		self.guiSeqIFLMat = Common_Gui.ComboBox("guiSeqIFLMat", "IFL Material", "Select a Material from this list to use in the IFL Animation", 7, self.handleEvent, self.resize)
 		self.guiSeqIFLDurationTxt = Common_Gui.SimpleText("guiSeqIFLDurationTxt", "Sequence Duration:", None, self.resize)
 		self.guiSeqIFLDuration = Common_Gui.NumberPicker("guiSeqIFLDuration", "Frames", "Number of Frames in the IFL animation", 8, self.handleEvent, self.resize)
-		self.guiSeqIFLFrame = Common_Gui.NumberPicker("guiSeqIFLFrame", "Current Frame", "Current Frame of IFL Animation", 9, self.handleEvent, self.resize)
-		self.guiSeqIFLFrameBox = Common_Gui.BasicFrame("guiSeqIFLFrameBox", "", None, None, None, self.resize)
-		self.guiSeqImageName = Common_Gui.TextBox("guiSeqImageName", "Image Name: ", "Name of the Current IFL Frame Image", 1, self.handleEvent, self.resize)
+		#self.guiSeqIFLFrame = Common_Gui.NumberPicker("guiSeqIFLFrame", "Current Frame", "Current Frame of IFL Animation", 9, self.handleEvent, self.resize)
+		self.guiSeqIFLImageBox = Common_Gui.BasicFrame("guiSeqIFLImageBox", "", None, None, None, self.resize)
+		#self.guiSeqImageName = Common_Gui.TextBox("guiSeqImageName", "IFL Image Name: ", "Name of the Current IFL Frame Image", 1, self.handleEvent, self.resize)
+		self.guiSeqIFLNumImagesTxt = Common_Gui.SimpleText("guiSeqIFLNumImagesTxt", "Number of Images:", None, self.resize)
+		self.guiSeqIFLNumImages = Common_Gui.NumberPicker("guiSeqIFLNumImages", "Images", "Number of Images in the IFL animation", 8, self.handleEvent, self.resize)
+		self.guiSeqIFLImageListTxt = Common_Gui.SimpleText("guiSeqIFLImageListTxt", "IFL Image Frames:", None, self.resize)
+		self.guiSeqIFLImageList = Common_Gui.ListContainer("guiSeqIFLImageList", "sequence.list", self.handleListEvent, self.resize)
+		self.guiSeqIFLImageListSelectedTxt = Common_Gui.SimpleText("guiSeqIFLImageListSelectedTxt", "With selected:", None, self.resize)
+		self.guiSeqIFLImageCopy = Common_Gui.BasicButton("guiSeqIFLImageCopy", "Copy", "Copy Selected IFL Image", 2, self.handleEvent, self.resize)
+		self.guiSeqIFLImagePasteA = Common_Gui.BasicButton("guiSeqIFLImagePasteA", "Paste Above", "Pasted copied image above current selection", 2, self.handleEvent, self.resize)
+		self.guiSeqIFLImagePasteB = Common_Gui.BasicButton("guiSeqIFLImagePasteB", "Paste Below", "Pasted copied image below current selection", 2, self.handleEvent, self.resize)
+		self.guiSeqIFLImageMoveUp = Common_Gui.BasicButton("guiSeqIFLImageMoveUp", "Move Up", "Move selected image up in the list", 2, self.handleEvent, self.resize)
+		self.guiSeqIFLImageMoveDown = Common_Gui.BasicButton("guiSeqIFLImageMoveDown", "Move Down", "Move selected image down in the list", 2, self.handleEvent, self.resize)
 		# set initial states
 		self.guiSeqIFLOpts.enabled = True
 		self.guiSeqIFLOpts.fade_mode = 5
@@ -2191,8 +2201,20 @@ class IFLControlsClass:
 		self.guiSeqIFLOpts.addControl(self.guiSeqIFLMat)
 		self.guiSeqIFLOpts.addControl(self.guiSeqIFLDurationTxt)
 		self.guiSeqIFLOpts.addControl(self.guiSeqIFLDuration)
-		self.guiSeqIFLOpts.addControl(self.guiSeqIFLFrame)
-		self.guiSeqIFLOpts.addControl(self.guiSeqIFLFrameBox)
+		self.guiSeqIFLOpts.addControl(self.guiSeqIFLImageBox)
+		#self.guiSeqIFLOpts.addControl(self.guiSeqIFLFrameBox)
+		#self.guiSeqIFLOpts.addControl(self.guiSeqImageName)
+		self.guiSeqIFLOpts.addControl(self.guiSeqIFLNumImagesTxt)
+		self.guiSeqIFLOpts.addControl(self.guiSeqIFLNumImages)
+		self.guiSeqIFLOpts.addControl(self.guiSeqIFLImageListTxt)
+		self.guiSeqIFLOpts.addControl(self.guiSeqIFLImageList)
+		self.guiSeqIFLOpts.addControl(self.guiSeqIFLImageListSelectedTxt)
+		self.guiSeqIFLOpts.addControl(self.guiSeqIFLImageCopy)
+		self.guiSeqIFLOpts.addControl(self.guiSeqIFLImagePasteA)
+		self.guiSeqIFLOpts.addControl(self.guiSeqIFLImagePasteB)
+		self.guiSeqIFLOpts.addControl(self.guiSeqIFLImageMoveUp)
+		self.guiSeqIFLOpts.addControl(self.guiSeqIFLImageMoveDown)
+
 		# populate the IFL Sequences list
 		self.populateIFLList("Test")
 	
@@ -2301,12 +2323,68 @@ class IFLControlsClass:
 			control.y = 211
 			control.height = 20
 			control.width = 120
-		elif control.name == "guiSeqIFLFrameBox":
+		elif control.name == "guiSeqIFLImageBox":
+			control.x = 4
+			control.y = 5
+			control.height = 220
+			control.width = 241
+		elif control.name == "guiSeqImageName":
+			control.x = 15
+			control.y = 183
+			control.height = 20
+			control.width = 219
+		elif control.name == "guiSeqIFLNumImagesTxt":
 			control.x = 10
-			control.y = 143
-			control.height = 80
-			control.width = 229
-
+			control.y = 234
+			control.height = 20
+			control.width = 120
+		elif control.name == "guiSeqIFLNumImages":
+			control.x = 125
+			control.y = 231
+			control.height = 20
+			control.width = 120
+		elif control.name == "guiSeqIFLImageListTxt":
+			control.x = 15
+			control.y = 212
+			control.height = 20
+			control.width = 120
+		elif control.name == "guiSeqIFLImageList":
+			control.x = 7
+			control.y = 10
+			control.height = 195
+			control.width = 150
+		elif control.name == "guiSeqIFLImageListSelectedTxt":
+			control.x = 162
+			control.y = 194
+			control.height = 20
+			control.width = 120
+		elif control.name == "guiSeqIFLImageCopy":
+			control.x = 162
+			control.y = 168
+			control.height = 20
+			control.width = 80
+		elif control.name == "guiSeqIFLImagePasteA":
+			control.x = 162
+			control.y = 146
+			control.height = 20
+			control.width = 80
+		elif control.name == "guiSeqIFLImagePasteB":
+			control.x = 162
+			control.y = 124
+			control.height = 20
+			control.width = 80
+		elif control.name == "guiSeqIFLImageMoveUp":
+			control.x = 162
+			control.y = 102
+			control.height = 20
+			control.width = 80
+		elif control.name == "guiSeqIFLImageMoveDown":
+			control.x = 162
+			control.y = 80
+			control.height = 20
+			control.width = 80
+		
+		
 	def handleEvent(self, control):
 		print control
 		
