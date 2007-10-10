@@ -2136,47 +2136,38 @@ def guiHeaderResize(control, newwidth, newheight):
 # Class that creates and owns the GUI controls on the IFL sub-panel of the Sequences panel.
 class IFLControlsClass:
 	def __init__(self):
-		'''
-		guiSeqActOptsTitle = Common_Gui.SimpleText("guiSeqActOptsTitle", "Sequence: None Selected", None, guiSequenceResize)
-		guiSeqActOptsFramecount = Common_Gui.NumberPicker("guiSeqActOptsFramecount", "Frame Samples", "Amount of frames to export", 10, guiSequenceCallback, guiSequenceResize)
-		guiSeqActOptsFramecount.min = 1
-		guiSeqActOptsGroundFramecount = Common_Gui.NumberPicker("guiSeqActOptsGroundFramecount", "Ground Frames", "Amount of ground frames to export", 11, guiSequenceCallback, guiSequenceResize)
-		guiSeqActOptsAnimateMaterials = Common_Gui.ToggleButton("guiSeqActOptsAnimateMaterials", "Mat Anim", "Animate Materials", 12, guiSequenceCallback, guiSequenceResize)
-		guiMaterialDetailMapMenu = Common_Gui.ComboBox("guiMaterialDetailMapMenu", "Detail Texture", "Select a texture from this list to use as a detail map", 22, guiMaterialCallback, guiMaterialResize)
-		guiCustomFilename = Common_Gui.TextBox("guiCustomFilename", "Filename: ", "Filename to write to", 20, guiGeneralCallback, guiGeneralResize)		
-		'''		
-		
 		global guiSequenceIFLSubtab		
+		global globalEvents
+		# panel state
+		self.curSeqListEvent = 40
 
 		# initialize GUI controls
 		self.guiSeqIFLList = Common_Gui.ListContainer("guiSeqIFLList", "sequence.list", self.handleListEvent, self.resize)
-		self.guiSeqIFLName = Common_Gui.TextBox("guiSeqIFLName", "Sequence Name: ", "Name of the Current Sequence", 1, self.handleEvent, self.resize)
-		self.guiSeqAdd = Common_Gui.BasicButton("guiSeqAdd", "Add", "Add new IFL Sequence with the given name", 2, self.handleEvent, self.resize)
-		self.guiSeqDel = Common_Gui.BasicButton("guiSeqDel", "Del", "Delete Selected IFL Sequence", 3, self.handleEvent, self.resize)
-		self.guiSeqRename = Common_Gui.BasicButton("guiSeqRename", "Rename", "Rename Selected IFL Sequence to the given name", 4, self.handleEvent, self.resize)
+		self.guiSeqIFLName = Common_Gui.TextBox("guiSeqIFLName", "Sequence Name: ", "Name of the Current Sequence", globalEvents.getNewID(), self.handleEvent, self.resize)
+		self.guiSeqAdd = Common_Gui.BasicButton("guiSeqAdd", "Add", "Add new IFL Sequence with the given name", globalEvents.getNewID(), self.handleEvent, self.resize)
+		self.guiSeqDel = Common_Gui.BasicButton("guiSeqDel", "Del", "Delete Selected IFL Sequence", globalEvents.getNewID(), self.handleEvent, self.resize)
+		self.guiSeqRename = Common_Gui.BasicButton("guiSeqRename", "Rename", "Rename Selected IFL Sequence to the given name", globalEvents.getNewID(), self.handleEvent, self.resize)
 		self.guiSeqAddToExistingTxt = Common_Gui.SimpleText("guiSeqAddToExistingTxt", "Add IFL Animation to existing Sequence:", None, self.resize)
-		self.guiSeqExistingSequences = Common_Gui.ComboBox("guiSeqExistingSequences", "Sequence", "Select a Sequence from this list to which to add an IFL Animation", 5, self.handleEvent, self.resize)
-		self.guiSeqAddToExisting = Common_Gui.BasicButton("guiSeqAddToExisting", "Add IFL", "Add an IFL Animation to an existing sequence.", 6, self.handleEvent, self.resize)
+		self.guiSeqExistingSequences = Common_Gui.ComboBox("guiSeqExistingSequences", "Sequence", "Select a Sequence from this list to which to add an IFL Animation", globalEvents.getNewID(), self.handleEvent, self.resize)
+		self.guiSeqAddToExisting = Common_Gui.BasicButton("guiSeqAddToExisting", "Add IFL", "Add an IFL Animation to an existing sequence.", globalEvents.getNewID(), self.handleEvent, self.resize)
 		self.guiSeqListTitle = Common_Gui.SimpleText("guiSeqListTitle", "IFL Sequences:", None, self.resize)
 		self.guiSeqOptsTitle = Common_Gui.SimpleText("guiSeqOptsTitle", "Sequence: None Selected", None, self.resize)
 		self.guiSeqIFLOpts = Common_Gui.BasicContainer("guiSeqIFLOpts", "guiSeqIFLOpts", None, self.resize)
 		self.guiSeqIFLMatTxt = Common_Gui.SimpleText("guiSeqIFLMatTxt", "Select IFL Material:", None, self.resize)
-		self.guiSeqIFLMat = Common_Gui.ComboBox("guiSeqIFLMat", "IFL Material", "Select a Material from this list to use in the IFL Animation", 7, self.handleEvent, self.resize)
+		self.guiSeqIFLMat = Common_Gui.ComboBox("guiSeqIFLMat", "IFL Material", "Select a Material from this list to use in the IFL Animation", globalEvents.getNewID(), self.handleEvent, self.resize)
 		self.guiSeqIFLDurationTxt = Common_Gui.SimpleText("guiSeqIFLDurationTxt", "Sequence Duration:", None, self.resize)
-		self.guiSeqIFLDuration = Common_Gui.NumberPicker("guiSeqIFLDuration", "Frames", "Number of Frames in the IFL animation", 8, self.handleEvent, self.resize)
-		#self.guiSeqIFLFrame = Common_Gui.NumberPicker("guiSeqIFLFrame", "Current Frame", "Current Frame of IFL Animation", 9, self.handleEvent, self.resize)
+		self.guiSeqIFLDuration = Common_Gui.NumberPicker("guiSeqIFLDuration", "Frames", "Number of Frames in the IFL animation", globalEvents.getNewID(), self.handleEvent, self.resize)
 		self.guiSeqIFLImageBox = Common_Gui.BasicFrame("guiSeqIFLImageBox", "", None, None, None, self.resize)
-		#self.guiSeqImageName = Common_Gui.TextBox("guiSeqImageName", "IFL Image Name: ", "Name of the Current IFL Frame Image", 1, self.handleEvent, self.resize)
 		self.guiSeqIFLNumImagesTxt = Common_Gui.SimpleText("guiSeqIFLNumImagesTxt", "Number of Images:", None, self.resize)
-		self.guiSeqIFLNumImages = Common_Gui.NumberPicker("guiSeqIFLNumImages", "Images", "Number of Images in the IFL animation", 8, self.handleEvent, self.resize)
+		self.guiSeqIFLNumImages = Common_Gui.NumberPicker("guiSeqIFLNumImages", "Images", "Number of Images in the IFL animation", globalEvents.getNewID(), self.handleEvent, self.resize)
 		self.guiSeqIFLImageListTxt = Common_Gui.SimpleText("guiSeqIFLImageListTxt", "IFL Image Frames:", None, self.resize)
 		self.guiSeqIFLImageList = Common_Gui.ListContainer("guiSeqIFLImageList", "sequence.list", self.handleListEvent, self.resize)
 		self.guiSeqIFLImageListSelectedTxt = Common_Gui.SimpleText("guiSeqIFLImageListSelectedTxt", "With selected:", None, self.resize)
-		self.guiSeqIFLImageCopy = Common_Gui.BasicButton("guiSeqIFLImageCopy", "Copy", "Copy Selected IFL Image", 2, self.handleEvent, self.resize)
-		self.guiSeqIFLImagePasteA = Common_Gui.BasicButton("guiSeqIFLImagePasteA", "Paste Above", "Pasted copied image above current selection", 2, self.handleEvent, self.resize)
-		self.guiSeqIFLImagePasteB = Common_Gui.BasicButton("guiSeqIFLImagePasteB", "Paste Below", "Pasted copied image below current selection", 2, self.handleEvent, self.resize)
-		self.guiSeqIFLImageMoveUp = Common_Gui.BasicButton("guiSeqIFLImageMoveUp", "Move Up", "Move selected image up in the list", 2, self.handleEvent, self.resize)
-		self.guiSeqIFLImageMoveDown = Common_Gui.BasicButton("guiSeqIFLImageMoveDown", "Move Down", "Move selected image down in the list", 2, self.handleEvent, self.resize)
+		self.guiSeqIFLImageCopy = Common_Gui.BasicButton("guiSeqIFLImageCopy", "Copy", "Copy Selected IFL Image", globalEvents.getNewID(), self.handleEvent, self.resize)
+		self.guiSeqIFLImagePasteA = Common_Gui.BasicButton("guiSeqIFLImagePasteA", "Paste Above", "Pasted copied image above current selection", globalEvents.getNewID(), self.handleEvent, self.resize)
+		self.guiSeqIFLImagePasteB = Common_Gui.BasicButton("guiSeqIFLImagePasteB", "Paste Below", "Pasted copied image below current selection", globalEvents.getNewID(), self.handleEvent, self.resize)
+		self.guiSeqIFLImageMoveUp = Common_Gui.BasicButton("guiSeqIFLImageMoveUp", "Move Up", "Move selected image up in the list", globalEvents.getNewID(), self.handleEvent, self.resize)
+		self.guiSeqIFLImageMoveDown = Common_Gui.BasicButton("guiSeqIFLImageMoveDown", "Move Down", "Move selected image down in the list", globalEvents.getNewID(), self.handleEvent, self.resize)
 		# set initial states
 		self.guiSeqIFLOpts.enabled = True
 		self.guiSeqIFLOpts.fade_mode = 5
@@ -2216,7 +2207,7 @@ class IFLControlsClass:
 		self.guiSeqIFLOpts.addControl(self.guiSeqIFLImageMoveDown)
 
 		# populate the IFL Sequences list
-		self.populateIFLList("Test")
+		#self.populateIFLList("Test")
 	
 	def cleanup(self):
 		'''
@@ -2241,7 +2232,7 @@ class IFLControlsClass:
 		
 	def resize(self, control, newwidth, newheight):
 		# handle control resize events.
-		print control.name
+		#print control.name
 		if control.name == "guiSeqIFLList":
 			control.x = 10
 			control.y = 100
@@ -2288,7 +2279,7 @@ class IFLControlsClass:
 			control.height = 20
 			control.width = 82
 		elif control.name == "guiSeqIFLOpts":
-			print "you are here 1"
+			#print "you are here 1"
 			control.x = 241
 			control.y = 0
 			control.height = 334
@@ -2383,22 +2374,10 @@ class IFLControlsClass:
 			control.y = 80
 			control.height = 20
 			control.width = 80
-		
-		
-	def handleEvent(self, control):
-		print control
-		
-	def handleListEvent(self, control):
-		print control
-		pass
-	
-	def handleListItemEvent(self, control):
-		pass
-		
-	def populateIFLList(self, IFLSequences):
-		self.guiSeqIFLList.addControl(self.createSequenceListitem("Test 1", 40))
 
-	def createSequenceListitem(self, seqName, startEvent):
+	def createSequenceListItem(self, seqName):
+		startEvent = self.curSeqListEvent
+		self.curSeqListEvent += 1
 		# Note on positions:
 		# It quicker to assign these here, as there is no realistic chance of scaling being required.
 		guiContainer = Common_Gui.BasicContainer("", None, None)
@@ -2421,6 +2400,38 @@ class IFLControlsClass:
 		guiContainer.addControl(guiCyclic)
 
 		return guiContainer
+		
+		
+	def handleEvent(self, control):
+		if control.name == "guiSeqIFLName":
+			pass
+		elif control.name == "guiSeqAdd":
+			self.guiSeqIFLList.addControl(self.createSequenceListItem(self.guiSeqIFLName.value))
+		elif control.name == "guiSeqDel":
+			guiSeqIFLList = self.guiSeqIFLList
+			guiSeqIFLList.removeItem(guiSeqIFLList.itemIndex)
+		elif control.name == "guiSeqRename":
+			guiSeqIFLList = self.guiSeqIFLList
+			# todo - validate sequence name
+			guiSeqIFLList.controls[guiSeqIFLList.itemIndex].controls[0].label = self.guiSeqIFLName.value
+
+		#print control
+		
+	# called when an item is selected in the sequence list
+	def handleListEvent(self, control):
+		if control.itemIndex < 0: return
+		#print control.itemIndex
+		self.guiSeqIFLName.value = control.controls[control.itemIndex].controls[0].label
+		#print control
+		pass
+	
+	def handleListItemEvent(self, control):
+		pass
+		
+	def populateIFLList(self, IFLSequences):
+		#self.guiSeqIFLList.addControl(self.createSequenceListitem("Test 1", 40))
+		pass
+
 
 #IFLControls = IFLControlsClass
 IFLControls = None
