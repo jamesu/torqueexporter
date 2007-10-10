@@ -70,7 +70,7 @@ class EventTable:
 		self.NextID = startID
 		self.IDs = {}
 		#print "1. self.NextID = ", self.NextID
-	def getNewID(self, objectName):
+	def getNewID(self, objectName = ""):
 		#print "2. self.NextID = ", self.NextID
 		self.IDs[objectName] = self.NextID
 		self.NextID += 1
@@ -810,7 +810,7 @@ class ListContainer(BasicContainer):
 			
 	def selectItem(self, idx):
 		if len(self.controls) == 0: return
-		
+		if self.itemIndex > len(self.controls): return
 		if self.itemIndex != -1: 
 			curCol = curTheme.get('ui').menu_item
 			curTextCol = curTheme.get('ui').menu_text
@@ -830,6 +830,21 @@ class ListContainer(BasicContainer):
 				for c in self.controls[self.itemIndex].controls:
 					if c.__class__ == SimpleText:
 						c.color = [curTextCol[0]/255.0, curTextCol[1]/255.0, curTextCol[2]/255.0, curTextCol[3]/255.0]
+
+	def removeItem(self, idx):
+		if idx < 0: return
+		if idx < len(self.controls)-1:
+			del self.controls[idx]
+			self.itemIndex  = idx - 1
+			self.selectItem(idx)
+		else:
+			del self.controls[idx]
+			self.itemIndex  = len(self.controls)-2
+			if self.itemIndex < 0: self.itemIndex = -1
+			self.selectItem(len(self.controls)-1)
+		self.callback(self)
+
+
 
 	def onDraw(self, offset):
 		BGL.glRasterPos2i(offset[0]+self.x, offset[1]+self.y)
