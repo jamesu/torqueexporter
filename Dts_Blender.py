@@ -435,18 +435,25 @@ def getSequenceKey(value):
 
 # Cleans up extra keys that may not be used anymore (e.g. action deleted)
 def cleanKeys():
+	pass
+	'''
 	# Sequences
-	delKeys = []
+	#delKeys = []
 	for key in Prefs['Sequences'].keys():
 		Found = False
 		for action_key in Armature.NLA.GetActions().keys():
 			if action_key == key:
 				Found = True
 				break
-		if not Found: del Prefs['Sequences'][key]
+		if not Found:
+			ifl = None
+			try: ifl = Prefs['Sequences'][key]['IFL']['Enabled']
+			except: pass
+			if ifl == None or ifl == False:	del Prefs['Sequences'][key]
 
-	for key in delKeys:
-		del Prefs['Sequences'][key]
+	#for key in delKeys:
+	#	del Prefs['Sequences'][key]
+	'''
 
 '''
 	Class to handle the 'World' branch
@@ -2206,14 +2213,15 @@ class IFLControlsClass:
 		self.guiSeqIFLOpts.addControl(self.guiSeqIFLImageMoveUp)
 		self.guiSeqIFLOpts.addControl(self.guiSeqIFLImageMoveDown)
 
-		# populate the IFL Sequences list
-		#self.populateIFLList("Test")
 		
 		# update old style prefs that don't have 'IFL' sequence keys
 		self.updateOldPrefs()
 		
 		# populate the IFL sequence list
 		self.populateIFLList(None)
+		
+		# populate the existing sequences pulldown.
+		self.populateExistingSeqPulldown()
 	
 	def cleanup(self):
 		'''
@@ -2239,9 +2247,11 @@ class IFLControlsClass:
 	def updateOldPrefs(self):
 		# loop through all actions in the preferences and add the 'IFL' key to them with some reasonable default values.
 		global Prefs
-		for seq in Prefs['Sequences'].values():
+		for seqName in Prefs['Sequences'].keys():
+			seq = Prefs['Sequences'][seqName]
 			try: x = seq['IFL']
 			except KeyError:
+				print "Resetting IFL Sequence:",seqName
 				seq['IFL'] = {}
 				seq['IFL']['Enabled'] = False
 				seq['IFL']['Material'] = None
@@ -2254,136 +2264,57 @@ class IFLControlsClass:
 		# handle control resize events.
 		#print control.name
 		if control.name == "guiSeqIFLList":
-			control.x = 10
-			control.y = 100
-			control.height = newheight - 140
-			control.width = 230
+			control.x, control.y, control.height, control.width = 10,100, newheight - 140,230
 		elif control.name == "guiSeqIFLName":
-			control.x = 10
-			control.y = 75
-			control.height = 20
-			control.width = 230
+			control.x, control.y, control.height, control.width = 10,75, 20,230
 		elif control.name == "guiSeqAdd":
-			control.x = 10
-			control.y = 53
-			control.height = 20
-			control.width = 75
+			control.x, control.y, control.height, control.width = 10,53, 20,75
 		elif control.name == "guiSeqDel":
-			control.x = 87
-			control.y = 53
-			control.height = 20
-			control.width = 75
+			control.x, control.y, control.height, control.width = 87,53, 20,75
 		elif control.name == "guiSeqRename":
-			control.x = 164
-			control.y = 53
-			control.height = 20
-			control.width = 76
+			control.x, control.y, control.height, control.width = 164,53, 20,76
 		elif control.name == "guiSeqAddToExistingTxt":
-			control.x = 10
-			control.y = 38
-			control.height = 20
-			control.width = 230
+			control.x, control.y, control.height, control.width = 10,38, 20,230
 		elif control.name == "guiSeqExistingSequences":
-			control.x = 10
-			control.y = 11
-			control.height = 20
-			control.width = 145
+			control.x, control.y, control.height, control.width = 10,11, 20,145
 		elif control.name == "guiSeqAddToExisting":
-			control.x = 157
-			control.y = 11
-			control.height = 20
-			control.width = 82
+			control.x, control.y, control.height, control.width = 157,11, 20,82
 		elif control.name == "guiSeqListTitle":			
-			control.x = 10
-			control.y = 310
-			control.height = 20
-			control.width = 82
+			control.x, control.y, control.height, control.width = 10,310, 20,82
 		elif control.name == "guiSeqIFLOpts":
-			#print "you are here 1"
-			control.x = 241
-			control.y = 0
-			control.height = 334
-			control.width = 249		
+			control.x, control.y, control.height, control.width = 241,0, 334,249
 		elif control.name == "guiSeqOptsTitle":
-			control.x = 280
-			control.y = 310
-			control.height = 20
-			control.width = 82
+			control.x, control.y, control.height, control.width = 280,310, 20,82
 		elif control.name == "guiSeqIFLMatTxt":
-			control.x = 10
-			control.y = 278
-			control.height = 20
-			control.width = 120
+			control.x, control.y, control.height, control.width = 10,278, 20,120
 		elif control.name == "guiSeqIFLMat":
-			control.x = 125
-			control.y = 275
-			control.height = 20
-			control.width = 120
+			control.x, control.y, control.height, control.width = 125,275, 20,120
 		elif control.name == "guiSeqIFLNumImagesTxt":
-			control.x = 10
-			control.y = 256
-			control.height = 20
-			control.width = 120
+			control.x, control.y, control.height, control.width = 10,256, 20,120
 		elif control.name == "guiSeqIFLNumImages":
-			control.x = 125
-			control.y = 253
-			control.height = 20
-			control.width = 120
+			control.x, control.y, control.height, control.width = 125,253, 20,120
 		elif control.name == "guiSeqIFLFrame":
-			control.x = 64
-			control.y = 211
-			control.height = 20
-			control.width = 120
+			control.x, control.y, control.height, control.width = 64,211, 20,120
 		elif control.name == "guiSeqIFLImageBox":
-			control.x = 4
-			control.y = 5
-			control.height = 220
-			control.width = 241
+			control.x, control.y, control.height, control.width = 4,5, 220,241
 		elif control.name == "guiSeqImageName":
-			control.x = 15
-			control.y = 183
-			control.height = 20
-			control.width = 219
+			control.x, control.y, control.height, control.width = 15,183, 20,219
 		elif control.name == "guiSeqIFLImageListTxt":
-			control.x = 15
-			control.y = 212
-			control.height = 20
-			control.width = 120
+			control.x, control.y, control.height, control.width = 15,212, 20,120
 		elif control.name == "guiSeqIFLImageList":
-			control.x = 7
-			control.y = 10
-			control.height = 195
-			control.width = 150
+			control.x, control.y, control.height, control.width = 7,10, 195,150
 		elif control.name == "guiSeqIFLImageListSelectedTxt":
-			control.x = 162
-			control.y = 194
-			control.height = 20
-			control.width = 120
+			control.x, control.y, control.height, control.width = 162,194, 20,120
 		elif control.name == "guiSeqIFLImageCopy":
-			control.x = 162
-			control.y = 168
-			control.height = 20
-			control.width = 80
+			control.x, control.y, control.height, control.width = 162,168, 20,80
 		elif control.name == "guiSeqIFLImagePasteA":
-			control.x = 162
-			control.y = 146
-			control.height = 20
-			control.width = 80
+			control.x, control.y, control.height, control.width = 162,146, 20,80
 		elif control.name == "guiSeqIFLImagePasteB":
-			control.x = 162
-			control.y = 124
-			control.height = 20
-			control.width = 80
+			control.x, control.y, control.height, control.width = 162,124, 20,80
 		elif control.name == "guiSeqIFLImageMoveUp":
-			control.x = 162
-			control.y = 102
-			control.height = 20
-			control.width = 80
+			control.x, control.y, control.height, control.width = 162,102, 20,80
 		elif control.name == "guiSeqIFLImageMoveDown":
-			control.x = 162
-			control.y = 80
-			control.height = 20
-			control.width = 80
+			control.x, control.y, control.height, control.width = 162,80, 20,80
 		'''
 		elif control.name == "guiSeqIFLDurationTxt":
 			control.x = 10
@@ -2455,25 +2386,54 @@ class IFLControlsClass:
 
 			# add sequence to GUI sequence list
 			self.guiSeqIFLList.addControl(self.createSequenceListItem(seqName))
-		
+	
+	# add IFL to an existing sequence
+	def AddNewIFLSeq(self, seqName):
+		seq = Prefs['Sequences'][seqName]
+		# add ifl stuff
+		seq['IFL'] = {}
+		seq['IFL']['Enabled'] = True
+		seq['IFL']['Material'] = None
+		seq['IFL']['NumImages'] = 0
+		seq['IFL']['TotalFrames'] = 0
+		seq['IFL']['IFLFrames'] = []
+
+		# add sequence to GUI sequence list
+		self.guiSeqIFLList.addControl(self.createSequenceListItem(seqName))
+	
+	
 	def handleEvent(self, control):
 		if control.name == "guiSeqIFLName":
 			pass
 		elif control.name == "guiSeqAdd":
-			self.AddNewIFLSeq(self.guiSeqIFLName.value)			
+			# todo - validate sequence name
+			self.AddNewIFLSeq(self.guiSeqIFLName.value)
+			self.guiSeqIFLName.value = ""
 		elif control.name == "guiSeqDel":
 			guiSeqIFLList = self.guiSeqIFLList
+			seqName = self.guiSeqIFLList.controls[self.guiSeqIFLList.itemIndex].controls[0].label
 			guiSeqIFLList.removeItem(guiSeqIFLList.itemIndex)
+			Prefs['Sequences'][seqName]['IFL']['Enabled'] = False
+			
+			self.guiSeqExistingSequences.items.append(seqName)
 		elif control.name == "guiSeqRename":
 			guiSeqIFLList = self.guiSeqIFLList
 			# todo - validate sequence name
 			guiSeqIFLList.controls[guiSeqIFLList.itemIndex].controls[0].label = self.guiSeqIFLName.value
-
+		elif control.name == "guiSeqAddToExisting":
+			existingSequences = self.guiSeqExistingSequences
+			itemIndex = existingSequences.itemIndex
+			if itemIndex >=0 and itemIndex < len(existingSequences.items):
+				existingName = existingSequences.getSelectedItemString()
+				self.AddNewIFLSeq(existingName)
+				del existingSequences.items[existingSequences.getItemIndexFromString(existingName)]
 		#print control
 		
 	# called when an item is selected in the sequence list
 	def handleListEvent(self, control):
-		if control.itemIndex < 0: return
+		if control.itemIndex < 0:
+			self.guiSeqIFLName.value = ""
+			return
 		#print control.itemIndex
 		self.guiSeqIFLName.value = control.controls[control.itemIndex].controls[0].label
 		#print control
@@ -2488,13 +2448,12 @@ class IFLControlsClass:
 		print "Populating IFL Sequence list..."
 		# loop through all actions in the preferences and check for IFL animations
 		global Prefs
-		print "Prefs['Sequences'].keys():",Prefs['Sequences'].keys()
-		print "Prefs['Sequences'].values():",Prefs['Sequences'].values()
 		for seqName in Prefs['Sequences'].keys():
 			print "Checking",seqName,"..."
-			seqVal = Prefs['Sequences'][seqName]
+			seq = Prefs['Sequences'][seqName]
 			if seq['IFL']['Enabled'] == True:
-				self.createSequenceListItem(seqName)
+				print "  Creating IFL sequence:",seqName
+				self.guiSeqIFLList.addControl(self.createSequenceListItem(seqName))
 			
 			
 			
@@ -2507,6 +2466,29 @@ class IFLControlsClass:
 
 		#self.guiSeqIFLList.addControl(self.createSequenceListitem("Test 1", 40))
 		pass
+
+	def populateExistingSeqPulldown(self):
+		print "Populating Existing Sequence list..."
+		# loop through all actions in the preferences and check for sequences without IFL animations
+		global Prefs
+		for seqName in Prefs['Sequences'].keys():
+			print "Checking",seqName,"..."
+			seq = Prefs['Sequences'][seqName]
+			if seq['IFL']['Enabled'] == False:
+				print "  Adding sequence to existing sequence pulldown:",seqName
+				self.guiSeqExistingSequences.items.append(seqName)
+			
+			
+			'''
+			seq['IFL']['Material'] = None
+			seq['IFL']['NumImages'] = 0
+			seq['IFL']['TotalFrames'] = 0
+			seq['IFL']['IFLFrames'] = []
+			'''
+
+		#self.guiSeqIFLList.addControl(self.createSequenceListitem("Test 1", 40))
+		pass
+	
 
 
 #IFLControls = IFLControlsClass
