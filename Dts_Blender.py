@@ -493,7 +493,6 @@ class SceneTree:
 		for c in self.children:
 			if c == None: continue
 			found = True
-			raise AttributeError
 			c.process(progressBar)
 		if not found: Torque_Util.dump_writeln("  Error: No Shape Marker found!  See the readme.html file.")
 
@@ -1735,26 +1734,27 @@ class IFLControlsClass:
 		self.guiSeqIFLOpts = Common_Gui.BasicContainer("guiSeqIFLOpts", "guiSeqIFLOpts", None, self.resize)
 		self.guiSeqIFLMatTxt = Common_Gui.SimpleText("guiSeqIFLMatTxt", "Select IFL Material:", None, self.resize)
 		self.guiSeqIFLMat = Common_Gui.ComboBox("guiSeqIFLMat", "IFL Material", "Select a Material from this list to use in the IFL Animation", globalEvents.getNewID(), self.handleEvent, self.resize)
-		#self.guiSeqIFLDurationTxt = Common_Gui.SimpleText("guiSeqIFLDurationTxt", "Sequence Duration:", None, self.resize)
-		#self.guiSeqIFLDuration = Common_Gui.NumberPicker("guiSeqIFLDuration", "Frames", "Number of Frames in the IFL animation", globalEvents.getNewID(), self.handleEvent, self.resize)
-		self.guiSeqIFLImageBox = Common_Gui.BasicFrame("guiSeqIFLImageBox", "", None, None, None, self.resize)
 		self.guiSeqIFLNumImagesTxt = Common_Gui.SimpleText("guiSeqIFLNumImagesTxt", "Number of Images:", None, self.resize)
 		self.guiSeqIFLNumImages = Common_Gui.NumberPicker("guiSeqIFLNumImages", "Images", "Number of Images in the IFL animation", globalEvents.getNewID(), self.handleEvent, self.resize)
-		self.guiSeqIFLImageListTxt = Common_Gui.SimpleText("guiSeqIFLImageListTxt", "IFL Image Frames:", None, self.resize)
-		self.guiSeqIFLImageList = Common_Gui.ListContainer("guiSeqIFLImageList", "sequence.list", self.handleListEvent, self.resize)
-		self.guiSeqIFLImageListSelectedTxt = Common_Gui.SimpleText("guiSeqIFLImageListSelectedTxt", "With selected:", None, self.resize)
-		self.guiSeqIFLImageCopy = Common_Gui.BasicButton("guiSeqIFLImageCopy", "Copy", "Copy Selected IFL Image", globalEvents.getNewID(), self.handleEvent, self.resize)
-		self.guiSeqIFLImagePasteA = Common_Gui.BasicButton("guiSeqIFLImagePasteA", "Paste Above", "Pasted copied image above current selection", globalEvents.getNewID(), self.handleEvent, self.resize)
-		self.guiSeqIFLImagePasteB = Common_Gui.BasicButton("guiSeqIFLImagePasteB", "Paste Below", "Pasted copied image below current selection", globalEvents.getNewID(), self.handleEvent, self.resize)
-		self.guiSeqIFLImageMoveUp = Common_Gui.BasicButton("guiSeqIFLImageMoveUp", "Move Up", "Move selected image up in the list", globalEvents.getNewID(), self.handleEvent, self.resize)
-		self.guiSeqIFLImageMoveDown = Common_Gui.BasicButton("guiSeqIFLImageMoveDown", "Move Down", "Move selected image down in the list", globalEvents.getNewID(), self.handleEvent, self.resize)
+		self.guiSeqIFLFramesListTxt = Common_Gui.SimpleText("guiSeqIFLFramesListTxt", "IFL Image Frames:", None, self.resize)
+		self.guiSeqIFLFramesList = Common_Gui.ListContainer("guiSeqIFLFramesList", "", self.handleFrameListEvent, self.resize)
+		self.guiSeqIFLFramesListSelectedTxt = Common_Gui.SimpleText("guiSeqIFLFramesListSelectedTxt", "Selected:", None, self.resize)
+		self.guiSeqIFLNumFrames = Common_Gui.NumberPicker("guiSeqIFLNumFrames", "Frames", "Hold Selected image for n frames", globalEvents.getNewID(), self.handleEvent, self.resize)
+		self.guiSeqIFLApplyToAll = Common_Gui.BasicButton("guiSeqIFLApplyToAll", "Apply to all", "Apply current frame display value to all IFL images", globalEvents.getNewID(), self.handleEvent, self.resize)
+		#self.guiSeqIFLImageCopy = Common_Gui.BasicButton("guiSeqIFLImageCopy", "Copy", "Copy Selected IFL Image", globalEvents.getNewID(), self.handleEvent, self.resize)
+		#self.guiSeqIFLImagePasteA = Common_Gui.BasicButton("guiSeqIFLImagePasteA", "Paste Above", "Pasted copied image above current selection", globalEvents.getNewID(), self.handleEvent, self.resize)
+		#self.guiSeqIFLImagePasteB = Common_Gui.BasicButton("guiSeqIFLImagePasteB", "Paste Below", "Pasted copied image below current selection", globalEvents.getNewID(), self.handleEvent, self.resize)
+		#self.guiSeqIFLImageMoveUp = Common_Gui.BasicButton("guiSeqIFLImageMoveUp", "Move Up", "Move selected image up in the list", globalEvents.getNewID(), self.handleEvent, self.resize)
+		#self.guiSeqIFLImageMoveDown = Common_Gui.BasicButton("guiSeqIFLImageMoveDown", "Move Down", "Move selected image down in the list", globalEvents.getNewID(), self.handleEvent, self.resize)
+
 		# set initial states
 		self.guiSeqIFLOpts.enabled = True
 		self.guiSeqIFLOpts.fade_mode = 5
 		self.guiSeqIFLOpts.borderColor = None
-
-		# set container fade modes
 		self.guiSeqIFLList.fade_mode = 0
+		self.guiSeqIFLFramesList.enabled = True
+
+
 
 		# add controls to containers
 		guiSequenceIFLSubtab.addControl(self.guiSeqIFLList)
@@ -1770,21 +1770,18 @@ class IFLControlsClass:
 		guiSequenceIFLSubtab.addControl(self.guiSeqIFLOpts)
 		self.guiSeqIFLOpts.addControl(self.guiSeqIFLMatTxt)
 		self.guiSeqIFLOpts.addControl(self.guiSeqIFLMat)
-		#self.guiSeqIFLOpts.addControl(self.guiSeqIFLDurationTxt)
-		#self.guiSeqIFLOpts.addControl(self.guiSeqIFLDuration)
-		self.guiSeqIFLOpts.addControl(self.guiSeqIFLImageBox)
-		#self.guiSeqIFLOpts.addControl(self.guiSeqIFLFrameBox)
-		#self.guiSeqIFLOpts.addControl(self.guiSeqImageName)
 		self.guiSeqIFLOpts.addControl(self.guiSeqIFLNumImagesTxt)
 		self.guiSeqIFLOpts.addControl(self.guiSeqIFLNumImages)
-		self.guiSeqIFLOpts.addControl(self.guiSeqIFLImageListTxt)
-		self.guiSeqIFLOpts.addControl(self.guiSeqIFLImageList)
-		self.guiSeqIFLOpts.addControl(self.guiSeqIFLImageListSelectedTxt)
-		self.guiSeqIFLOpts.addControl(self.guiSeqIFLImageCopy)
-		self.guiSeqIFLOpts.addControl(self.guiSeqIFLImagePasteA)
-		self.guiSeqIFLOpts.addControl(self.guiSeqIFLImagePasteB)
-		self.guiSeqIFLOpts.addControl(self.guiSeqIFLImageMoveUp)
-		self.guiSeqIFLOpts.addControl(self.guiSeqIFLImageMoveDown)
+		self.guiSeqIFLOpts.addControl(self.guiSeqIFLFramesListTxt)
+		self.guiSeqIFLOpts.addControl(self.guiSeqIFLFramesList)
+		self.guiSeqIFLOpts.addControl(self.guiSeqIFLFramesListSelectedTxt)
+		self.guiSeqIFLOpts.addControl(self.guiSeqIFLNumFrames)
+		self.guiSeqIFLOpts.addControl(self.guiSeqIFLApplyToAll)
+		#self.guiSeqIFLOpts.addControl(self.guiSeqIFLImageCopy)
+		#self.guiSeqIFLOpts.addControl(self.guiSeqIFLImagePasteA)
+		#self.guiSeqIFLOpts.addControl(self.guiSeqIFLImagePasteB)
+		#self.guiSeqIFLOpts.addControl(self.guiSeqIFLImageMoveUp)
+		#self.guiSeqIFLOpts.addControl(self.guiSeqIFLImageMoveDown)
 
 		
 		# update old style prefs that don't have 'IFL' sequence keys
@@ -1792,6 +1789,9 @@ class IFLControlsClass:
 		
 		# populate the IFL sequence list
 		self.populateIFLList(None)
+		
+		# populate the ifl material pulldown
+		self.populateIFLMatPulldown()
 		
 		# populate the existing sequences pulldown.
 		self.populateExistingSeqPulldown()
@@ -1834,6 +1834,7 @@ class IFLControlsClass:
 
 	
 	def resize(self, control, newwidth, newheight):
+		print "resize callback called..."
 		# handle control resize events.
 		#print control.name
 		if control.name == "guiSeqIFLList":
@@ -1872,22 +1873,26 @@ class IFLControlsClass:
 			control.x, control.y, control.height, control.width = 4,5, 220,241
 		elif control.name == "guiSeqImageName":
 			control.x, control.y, control.height, control.width = 15,183, 20,219
-		elif control.name == "guiSeqIFLImageListTxt":
-			control.x, control.y, control.height, control.width = 15,212, 20,120
-		elif control.name == "guiSeqIFLImageList":
-			control.x, control.y, control.height, control.width = 7,10, 195,150
-		elif control.name == "guiSeqIFLImageListSelectedTxt":
-			control.x, control.y, control.height, control.width = 162,194, 20,120
-		elif control.name == "guiSeqIFLImageCopy":
-			control.x, control.y, control.height, control.width = 162,168, 20,80
-		elif control.name == "guiSeqIFLImagePasteA":
-			control.x, control.y, control.height, control.width = 162,146, 20,80
-		elif control.name == "guiSeqIFLImagePasteB":
-			control.x, control.y, control.height, control.width = 162,124, 20,80
-		elif control.name == "guiSeqIFLImageMoveUp":
-			control.x, control.y, control.height, control.width = 162,102, 20,80
-		elif control.name == "guiSeqIFLImageMoveDown":
-			control.x, control.y, control.height, control.width = 162,80, 20,80
+		elif control.name == "guiSeqIFLFramesListTxt":
+			control.x, control.y, control.height, control.width = 10,232, 20,120
+		elif control.name == "guiSeqIFLFramesList":
+			control.x, control.y, control.height, control.width = 20,30, 195,223
+		elif control.name == "guiSeqIFLFramesListSelectedTxt":
+			control.x, control.y, control.height, control.width = 20,10, 20,120
+		elif control.name == "guiSeqIFLNumFrames":
+			control.x, control.y, control.height, control.width = 80,5, 20,80
+		elif control.name == "guiSeqIFLApplyToAll":
+			control.x, control.y, control.height, control.width = 164,5, 20,80
+		#elif control.name == "guiSeqIFLImageCopy":
+		#	control.x, control.y, control.height, control.width = 162,168, 20,80
+		#elif control.name == "guiSeqIFLImagePasteA":
+		#	control.x, control.y, control.height, control.width = 162,146, 20,80
+		#elif control.name == "guiSeqIFLImagePasteB":
+		#	control.x, control.y, control.height, control.width = 162,124, 20,80
+		#elif control.name == "guiSeqIFLImageMoveUp":
+		#	control.x, control.y, control.height, control.width = 162,102, 20,80
+		#elif control.name == "guiSeqIFLImageMoveDown":
+		#	control.x, control.y, control.height, control.width = 162,80, 20,80
 		'''
 		elif control.name == "guiSeqIFLDurationTxt":
 			control.x = 10
@@ -1932,12 +1937,23 @@ class IFLControlsClass:
 		self.curSeqListEvent += 2
 		
 		return guiContainer
+
+	def createFramesListItem(self, matName):
+		guiContainer = Common_Gui.BasicContainer("", None, None)
+		guiContainer.fade_mode = 0  # flat color
+		guiName = Common_Gui.SimpleText("", matName, None, None)
+		guiName.x, guiName.y = 5, 5
+
+		# Add everything
+		guiContainer.addControl(guiName)
+		return guiContainer
 	
 	# add a new IFL sequence in the GUI and the prefs
 	def AddNewIFLSeq(self, seqName):
 		# add sequence to prefs
 		if not (seqName in Prefs['Sequences'].keys()):
-			Prefs['Sequences'][seqName] = {}
+			try: x = Prefs['Sequences'][seqName]
+			except: Prefs['Sequences'][seqName] = {}
 			seq = Prefs['Sequences'][seqName]
 			# add action stuff here for now...
 			seq['Triggers'] = []
@@ -1966,8 +1982,11 @@ class IFLControlsClass:
 			# add sequence to GUI sequence list
 			self.guiSeqIFLList.addControl(self.createSequenceListItem(seqName))
 	
+
 	# add IFL to an existing sequence
-	def AddNewIFLSeq(self, seqName):
+	def AddIFLToExistingSeq(self, seqName):
+		try: x = Prefs['Sequences'][seqName]
+		except: Prefs['Sequences'][seqName] = {}
 		seq = Prefs['Sequences'][seqName]
 		# add ifl stuff
 		seq['IFL'] = {}
@@ -1979,9 +1998,32 @@ class IFLControlsClass:
 
 		# add sequence to GUI sequence list
 		self.guiSeqIFLList.addControl(self.createSequenceListItem(seqName))
+
+	def determineIFLMatStartNumber(self, matName):
+		i = len(matName)-1
+		while matName[i:len(matName)].isdigit() and i > -1: i -= 1
+		i += 1
+		digitPortion = matName[i:len(matName)]
+		print "Last", len(matName) - i, "characters of material name are digits."		
+		if len(digitPortion) > 0:
+			return int(digitPortion)
+		else:
+			return 0
+	
+	def getIFLMatTextPortion(self, matName):
+		i = len(matName)-1
+		while matName[i:len(matName)].isdigit() and i > -1: i -= 1
+		i += 1
+		textPortion = matName[0:i]
+		print "first", i, "characters of material name are text."
+		if len(textPortion) > 0:
+			return textPortion
+		else:
+			return ""
 	
 	
 	def handleEvent(self, control):
+		print "handleEvent called..."
 		if control.name == "guiSeqIFLName":
 			pass
 		elif control.name == "guiSeqAdd":
@@ -1990,11 +2032,12 @@ class IFLControlsClass:
 			self.guiSeqIFLName.value = ""
 		elif control.name == "guiSeqDel":
 			guiSeqIFLList = self.guiSeqIFLList
-			seqName = self.guiSeqIFLList.controls[self.guiSeqIFLList.itemIndex].controls[0].label
-			guiSeqIFLList.removeItem(guiSeqIFLList.itemIndex)
-			Prefs['Sequences'][seqName]['IFL']['Enabled'] = False
-			# todo - don't add back to list if only IFL is enabled for the sequence
-			self.guiSeqExistingSequences.items.append(seqName)
+			if guiSeqIFLList.itemIndex > -1 and guiSeqIFLList.itemIndex < len(guiSeqIFLList.controls):
+				seqName = guiSeqIFLList.controls[guiSeqIFLList.itemIndex].controls[0].label
+				guiSeqIFLList.removeItem(guiSeqIFLList.itemIndex)
+				Prefs['Sequences'][seqName]['IFL']['Enabled'] = False
+				# todo - don't add back to list if only IFL is enabled for the sequence
+				self.guiSeqExistingSequences.items.append(seqName)
 		elif control.name == "guiSeqRename":
 			guiSeqIFLList = self.guiSeqIFLList
 			# todo - validate sequence name
@@ -2004,19 +2047,57 @@ class IFLControlsClass:
 			itemIndex = existingSequences.itemIndex
 			if itemIndex >=0 and itemIndex < len(existingSequences.items):
 				existingName = existingSequences.getSelectedItemString()
-				self.AddNewIFLSeq(existingName)
-				del existingSequences.items[existingSequences.getItemIndexFromString(existingName)]
-		#print control
+				self.AddIFLToExistingSeq(existingName)
+				del existingSequences.items[itemIndex]
+				existingSequences.selectStringItem("")
+		elif control.name == "guiSeqIFLMat":
+			guiSeqIFLList = self.guiSeqIFLList
+			guiSeqIFLMat = self.guiSeqIFLMat
+			itemIndex = guiSeqIFLMat.itemIndex
+			# set the pref for the selected sequence
+			if guiSeqIFLList.itemIndex > -1 and itemIndex >=0 and itemIndex < len(guiSeqIFLMat.items):
+				seqName = guiSeqIFLList.controls[guiSeqIFLList.itemIndex].controls[0].label
+				Prefs['Sequences'][seqName]['IFL']['Material'] = control.getSelectedItemString()
+		elif control.name == "guiSeqIFLNumImages":
+			guiSeqIFLList = self.guiSeqIFLList
+			guiSeqIFLMat = self.guiSeqIFLMat
+			guiSeqIFLFramesList = self.guiSeqIFLFramesList
+			seqName = guiSeqIFLList.controls[guiSeqIFLList.itemIndex].controls[0].label
+			matName = guiSeqIFLMat.getSelectedItemString()
+			seqPrefs = getSequenceKey(seqName)
+			seqPrefs['IFL']['NumImages'] = control.value			
+			startNum = self.determineIFLMatStartNumber(matName)
+			textPortion = self.getIFLMatTextPortion(matName)
+			i = len(guiSeqIFLFramesList.controls)
+			while len(guiSeqIFLFramesList.controls) < control.value:				
+				newItemName = textPortion + str(startNum + i)
+				guiSeqIFLFramesList.addControl(self.createFramesListItem(newItemName))
+				Prefs['Sequences'][seqName]['IFL']['IFLFrames'].append([newItemName,1])
+				i = len(guiSeqIFLFramesList.controls)
+
+				
+			
+
 		
 	# called when an item is selected in the sequence list
 	def handleListEvent(self, control):
+		print "handleListEvent called..."
 		if control.itemIndex < 0:
 			self.guiSeqIFLName.value = ""
-			return
-		self.guiSeqIFLName.value = control.controls[control.itemIndex].controls[0].label
-
+			self.guiSeqIFLMat.selectStringItem("")
+			self.guiSeqIFLNumImages.value = 0
+			self.guiSeqIFLNumFrames = 0
+		else:
+			seqName = control.controls[control.itemIndex].controls[0].label
+			seqPrefs = getSequenceKey(seqName)
+			self.guiSeqIFLName.value = seqName 
+			self.guiSeqIFLMat.selectStringItem(seqPrefs['IFL']['Material'])
+			self.guiSeqIFLNumImages.value = seqPrefs['IFL']['NumImages']
+			self.guiSeqIFLNumFrames = seqPrefs['IFL']['IFLFrames']
+			self.populateImageFramesList(seqName)
 	
 	def handleListItemEvent(self, control):
+		print "handleListItemEvent called..."
 		print control
 		print control.name
 		# Determine sequence name
@@ -2035,6 +2116,11 @@ class IFLControlsClass:
 			sequencePrefs['NoExport'] = not control.state
 		elif realItem == 1:
 			sequencePrefs['Cyclic'] = control.state
+		pass
+	
+	# called when an item is selected in the IFL image frames list
+	def handleFrameListEvent(self, control):
+		print "Handing frame list event..."
 		pass
 		
 	# this method assumes that the IFL list is empty prior to it being called.
@@ -2082,8 +2168,41 @@ class IFLControlsClass:
 
 		#self.guiSeqIFLList.addControl(self.createSequenceListitem("Test 1", 40))
 		pass
-	
 
+	def populateIFLMatPulldown(self):
+		print "Populating IFL Material pulldown"
+		# loop through all materials in the preferences and check for IFL materials
+		global Prefs
+		for matName in Prefs['Materials'].keys():
+			print "Checking",matName,"..."
+			mat = Prefs['Materials'][matName]
+			try: x = mat['IFLMaterial']
+			except KeyError: mat['IFLMaterial'] = False
+			if mat['IFLMaterial'] == True:
+				print "  Adding material to IFL Material pulldown:",matName
+				self.guiSeqIFLMat.items.append(matName)
+
+	def clearImageFramesList(self):
+		for i in range(0, len(self.guiSeqIFLFramesList.controls)):
+			del self.guiSeqIFLFramesList.controls[i].controls[:]
+		del self.guiSeqIFLFramesList.controls[:]
+
+		self.guiSeqIFLFramesList.itemIndex = -1
+		self.guiSeqIFLFramesList.scrollPosition = 0
+		if self.guiSeqIFLFramesList.callback: self.guiSeqIFLFramesList.callback(self.guiSeqIFLFramesList) # Bit of a hack, but works
+
+	
+	def populateImageFramesList(self, seqName):
+		self.clearImageFramesList()
+		guiSeqIFLFramesList = self.guiSeqIFLFramesList
+		
+		IFLMat = Prefs['Sequences'][seqName]['IFL']['IFLFrames']
+		for fr in IFLMat:
+			guiSeqIFLFramesList.addControl(self.createFramesListItem(fr[0]))
+			#print "Checking",matName,"..."
+			
+		
+		guiSeqIFLFramesList
 '''
 ***************************************************************************************************
 *
@@ -2157,6 +2276,7 @@ class MaterialControlsClass:
 		self.guiMaterialOptions.addControl(self.guiMaterialEnvMapButton)
 		self.guiMaterialOptions.addControl(self.guiMaterialMipMapButton)
 		self.guiMaterialOptions.addControl(self.guiMaterialMipMapZBButton)
+		self.guiMaterialOptions.addControl(self.guiMaterialIFLMatButton)
 		self.guiMaterialOptions.addControl(self.guiMaterialDetailMapButton)
 		self.guiMaterialOptions.addControl(self.guiMaterialBumpMapButton)
 		self.guiMaterialOptions.addControl(self.guiMaterialShowAdvancedButton)
@@ -2167,6 +2287,8 @@ class MaterialControlsClass:
 		self.guiMaterialOptions.addControl(self.guiMaterialReflectanceSlider)
 		self.guiMaterialOptions.addControl(self.guiMaterialDetailScaleSlider)
 
+		# update old style preferences
+		self.updateOldPrefs()
 		
 		# populate the Material list
 		self.populateMaterialList()
@@ -2193,6 +2315,7 @@ class MaterialControlsClass:
 		del self.guiMaterialEnvMapButton
 		del self.guiMaterialMipMapButton
 		del self.guiMaterialMipMapZBButton
+		del self.guiMaterialIFLMatButton
 		del self.guiMaterialDetailMapButton
 		del self.guiMaterialBumpMapButton
 		del self.guiMaterialShowAdvancedButton
@@ -2207,7 +2330,10 @@ class MaterialControlsClass:
 	def updateOldPrefs(self):
 		# loop through all actions in the preferences and add the 'IFL' key to them with some reasonable default values.
 		global Prefs
-		pass
+		for matName in Prefs['Materials'].keys():
+			pmi = Prefs['Materials'][matName]
+			try: x = pmi['IFLMaterial']
+			except: pmi['IFLMaterial'] = False
 	
 	def resize(self, control, newwidth, newheight):
 		# handle control resize events.
@@ -2237,6 +2363,8 @@ class MaterialControlsClass:
 			control.x, control.y, control.width = 8,newheight-137, 50
 		elif control.name == "guiMaterialMipMapZBButton":
 			control.x, control.y, control.width = 60,newheight-137, 125
+		elif control.name == "guiMaterialIFLMatButton":
+			control.x, control.y, control.width = 195,newheight-137, 122
 		elif control.name == "guiMaterialDetailMapButton":
 			control.x, control.y, control.width = 8,newheight-167, 150
 		elif control.name == "guiMaterialDetailMapMenu":
@@ -2248,7 +2376,7 @@ class MaterialControlsClass:
 		elif control.name == "guiMaterialReflectanceSlider":
 			control.x, control.y, control.width = 160,newheight-217, 150
 		elif control.name == "guiMaterialShowAdvancedButton":
-			control.x, control.y, control.width = 15,newheight-260, 150
+			control.x, control.y, control.width = 89,newheight-260, 150
 		elif control.name == "guiMaterialRefMapButton":
 			control.x, control.y, control.width = 15,newheight-295, 150
 		elif control.name == "guiMaterialReflectanceMapMenu":
@@ -2327,90 +2455,94 @@ class MaterialControlsClass:
 				# no corresponding blender material and no existing texture material, so use reasonable defaults.
 					#print "Could not find a blender material that matches image (", imageName,") used on mesh, setting defaults."
 					Prefs['Materials'][imageName] = {}
-					Prefs['Materials'][imageName]['SWrap'] = True
-					Prefs['Materials'][imageName]['TWrap'] = True
-					Prefs['Materials'][imageName]['Translucent'] = False
-					Prefs['Materials'][imageName]['Additive'] = False
-					Prefs['Materials'][imageName]['Subtractive'] = False
-					Prefs['Materials'][imageName]['SelfIlluminating'] = False
-					Prefs['Materials'][imageName]['NeverEnvMap'] = True
-					Prefs['Materials'][imageName]['NoMipMap'] = False
-					Prefs['Materials'][imageName]['MipMapZeroBorder'] = False
-					Prefs['Materials'][imageName]['DetailMapFlag'] = False
-					Prefs['Materials'][imageName]['BumpMapFlag'] = False
-					Prefs['Materials'][imageName]['ReflectanceMapFlag'] = False
-					Prefs['Materials'][imageName]['BaseTex'] = imageName
-					Prefs['Materials'][imageName]['DetailTex'] = None
-					Prefs['Materials'][imageName]['BumpMapTex'] = None
-					Prefs['Materials'][imageName]['RefMapTex'] = None
-					Prefs['Materials'][imageName]['reflectance'] = 0.0
-					Prefs['Materials'][imageName]['detailScale'] = 1.0
+					pmi = Prefs['Materials'][imageName]
+					pmi['SWrap'] = True
+					pmi['TWrap'] = True
+					pmi['Translucent'] = False
+					pmi['Additive'] = False
+					pmi['Subtractive'] = False
+					pmi['SelfIlluminating'] = False
+					pmi['NeverEnvMap'] = True
+					pmi['NoMipMap'] = False
+					pmi['MipMapZeroBorder'] = False
+					pmi['IFLMaterial'] = False
+					pmi['DetailMapFlag'] = False
+					pmi['BumpMapFlag'] = False
+					pmi['ReflectanceMapFlag'] = False
+					pmi['BaseTex'] = imageName
+					pmi['DetailTex'] = None
+					pmi['BumpMapTex'] = None
+					pmi['RefMapTex'] = None
+					pmi['reflectance'] = 0.0
+					pmi['detailScale'] = 1.0
 				continue
 
 			try: x = Prefs['Materials'][bmat.name]			
 			except:
 				Prefs['Materials'][bmat.name] = {}
+				pmb = Prefs['Materials'][bmat.name]
 				# init everything to make sure all keys exist with sane values
-				Prefs['Materials'][bmat.name]['SWrap'] = True
-				Prefs['Materials'][bmat.name]['TWrap'] = True
-				Prefs['Materials'][bmat.name]['Translucent'] = False
-				Prefs['Materials'][bmat.name]['Additive'] = False
-				Prefs['Materials'][bmat.name]['Subtractive'] = False
-				Prefs['Materials'][bmat.name]['SelfIlluminating'] = False
-				Prefs['Materials'][bmat.name]['NeverEnvMap'] = True
-				Prefs['Materials'][bmat.name]['NoMipMap'] = False
-				Prefs['Materials'][bmat.name]['MipMapZeroBorder'] = False
-				Prefs['Materials'][bmat.name]['DetailMapFlag'] = False
-				Prefs['Materials'][bmat.name]['BumpMapFlag'] = False
-				Prefs['Materials'][bmat.name]['ReflectanceMapFlag'] = False
-				Prefs['Materials'][bmat.name]['BaseTex'] = imageName
-				Prefs['Materials'][bmat.name]['DetailTex'] = None
-				Prefs['Materials'][bmat.name]['BumpMapTex'] = None
-				Prefs['Materials'][bmat.name]['RefMapTex'] = None
-				Prefs['Materials'][bmat.name]['reflectance'] = 0.0
-				Prefs['Materials'][bmat.name]['detailScale'] = 1.0
+				pmb['SWrap'] = True
+				pmb['TWrap'] = True
+				pmb['Translucent'] = False
+				pmb['Additive'] = False
+				pmb['Subtractive'] = False
+				pmb['SelfIlluminating'] = False
+				pmb['NeverEnvMap'] = True
+				pmb['NoMipMap'] = False
+				pmb['MipMapZeroBorder'] = False
+				pmi['IFLMaterial'] = False
+				pmb['DetailMapFlag'] = False
+				pmb['BumpMapFlag'] = False
+				pmb['ReflectanceMapFlag'] = False
+				pmb['BaseTex'] = imageName
+				pmb['DetailTex'] = None
+				pmb['BumpMapTex'] = None
+				pmb['RefMapTex'] = None
+				pmb['reflectance'] = 0.0
+				pmb['detailScale'] = 1.0
 
 				#if bmat.getRef() > 0:
-				#	Prefs['Materials'][bmat.name]['NeverEnvMap'] = False
-				#else: Prefs['Materials'][bmat.name]['NeverEnvMap'] = True
+				#	pmb['NeverEnvMap'] = False
+				#else: pmb['NeverEnvMap'] = True
 
-				if bmat.getEmit() > 0.0: Prefs['Materials'][bmat.name]['SelfIlluminating'] = True
-				else: Prefs['Materials'][bmat.name]['SelfIlluminating'] = False
+				if bmat.getEmit() > 0.0: pmb['SelfIlluminating'] = True
+				else: pmb['SelfIlluminating'] = False
 
-				Prefs['Materials'][bmat.name]['RefMapTex'] = None
-				Prefs['Materials'][bmat.name]['BumpMapTex'] = None
-				Prefs['Materials'][bmat.name]['DetailTex'] = None
+				pmb['RefMapTex'] = None
+				pmb['BumpMapTex'] = None
+				pmb['DetailTex'] = None
 
 				# Look at the texture channels if they exist
 				textures = bmat.getTextures()
 				if len(textures) > 0:
 					if textures[0] != None:
 						if textures[0].tex.image != None:						
-							Prefs['Materials'][bmat.name]['BaseTex'] = stripImageExtension(textures[0].tex.image.getName())
+							pmb['BaseTex'] = stripImageExtension(textures[0].tex.image.getName())
 							#print "Setting basetex to:", textures[0].tex.image.getName().split(".")[0]
 						else:
-							Prefs['Materials'][bmat.name]['BaseTex'] = None
+							pmb['BaseTex'] = None
 
 						if (textures[0] != None) and (textures[0].tex.type == Texture.Types.IMAGE):
 							# Translucency?
 							if textures[0].mapto & Texture.MapTo.ALPHA:
-								Prefs['Materials'][bmat.name]['Translucent'] = True
-								if bmat.getAlpha() < 1.0: Prefs['Materials'][bmat.name]['Additive'] = True
-								else: Prefs['Materials'][bmat.name]['Additive'] = False
+								pmb['Translucent'] = True
+								if bmat.getAlpha() < 1.0: pmb['Additive'] = True
+								else: pmb['Additive'] = False
 							else:
-								Prefs['Materials'][bmat.name]['Translucent'] = False
-								Prefs['Materials'][bmat.name]['Additive'] = False
+								pmb['Translucent'] = False
+								pmb['Additive'] = False
 							# Disable mipmaps?
 							if not (textures[0].tex.imageFlags & Texture.ImageFlags.MIPMAP):
-								Prefs['Materials'][bmat.name]['NoMipMap'] = True
-							else:Prefs['Materials'][bmat.name]['NoMipMap'] = False
+								pmb['NoMipMap'] = True
+							else:pmb['NoMipMap'] = False
 
 							if bmat.getRef() > 0 and (textures[0].mapto & Texture.MapTo.REF):
-								Prefs['Materials'][bmat.name]['NeverEnvMap'] = False
+								pmb['NeverEnvMap'] = False
 
-					Prefs['Materials'][bmat.name]['ReflectanceMapFlag'] = False
-					Prefs['Materials'][bmat.name]['DetailMapFlag'] = False
-					Prefs['Materials'][bmat.name]['BumpMapFlag'] = False
+					pmb['ReflectanceMapFlag'] = False
+					pmb['DetailMapFlag'] = False
+					pmb['BumpMapFlag'] = False
 					for i in range(1, len(textures)):
 						texture_obj = textures[i]					
 						if texture_obj == None: continue
@@ -2422,29 +2554,29 @@ class MaterialControlsClass:
 						# A) We have a reflectance map
 						if (texture_obj.mapto & Texture.MapTo.REF):
 							# We have a reflectance map
-							Prefs['Materials'][bmat.name]['ReflectanceMapFlag'] = True
-							Prefs['Materials'][bmat.name]['NeverEnvMap'] = False
+							pmb['ReflectanceMapFlag'] = True
+							pmb['NeverEnvMap'] = False
 							if textures[0].tex.image != None:
-								Prefs['Materials'][bmat.name]['RefMapTex'] = stripImageExtension(textures[i].tex.image.getName())
+								pmb['RefMapTex'] = stripImageExtension(textures[i].tex.image.getName())
 								guiMaterialOptions.controlDict['guiMaterialReflectanceMapMenu'].selectStringItem(stripImageExtension(textures[i].tex.image.getName()))
 							else:
-								Prefs['Materials'][bmat.name]['RefMapTex'] = None
+								pmb['RefMapTex'] = None
 						# B) We have a normal map (basically a 3d bump map)
 						elif (texture_obj.mapto & Texture.MapTo.NOR):
-							Prefs['Materials'][bmat.name]['BumpMapFlag'] = True
+							pmb['BumpMapFlag'] = True
 							if textures[0].tex.image != None:
-								Prefs['Materials'][bmat.name]['BumpMapTex'] = stripImageExtension(textures[i].tex.image.getName())
+								pmb['BumpMapTex'] = stripImageExtension(textures[i].tex.image.getName())
 								guiMaterialOptions.controlDict['guiMaterialBumpMapMenu'].selectStringItem(stripImageExtension(textures[i].tex.image.getName()))
 							else:
-								Prefs['Materials'][bmat.name]['BumpMapTex'] = None
+								pmb['BumpMapTex'] = None
 						# C) We have a texture; Lets presume its a detail map (since its laid on top after all)
 						else:
-							Prefs['Materials'][bmat.name]['DetailMapFlag'] = True
+							pmb['DetailMapFlag'] = True
 							if textures[0].tex.image != None:
-								Prefs['Materials'][bmat.name]['DetailTex'] = stripImageExtension(textures[i].tex.image.getName())
+								pmb['DetailTex'] = stripImageExtension(textures[i].tex.image.getName())
 								guiMaterialOptions.controlDict['guiMaterialDetailMapMenu'].selectStringItem(stripImageExtension(textures[i].tex.image.getName()))
 							else:
-								Prefs['Materials'][bmat.name]['DetailTex'] = None
+								pmb['DetailTex'] = None
 
 	def handleEvent(self, control):
 		global Prefs
@@ -2482,6 +2614,7 @@ class MaterialControlsClass:
 				guiMaterialOptions.controlDict['guiMaterialEnvMapButton'].state = not matList[materialName]['NeverEnvMap']
 				guiMaterialOptions.controlDict['guiMaterialMipMapButton'].state = not matList[materialName]['NoMipMap']
 				guiMaterialOptions.controlDict['guiMaterialMipMapZBButton'].state = matList[materialName]['MipMapZeroBorder']
+				guiMaterialOptions.controlDict['guiMaterialIFLMatButton'].state = matList[materialName]['IFLMaterial']
 				guiMaterialOptions.controlDict['guiMaterialDetailMapButton'].state = matList[materialName]['DetailMapFlag']
 				guiMaterialOptions.controlDict['guiMaterialBumpMapButton'].state = matList[materialName]['BumpMapFlag']
 				guiMaterialOptions.controlDict['guiMaterialRefMapButton'].state = matList[materialName]['ReflectanceMapFlag']			
@@ -2500,6 +2633,7 @@ class MaterialControlsClass:
 				guiMaterialOptions.controlDict['guiMaterialEnvMapButton'].state = False
 				guiMaterialOptions.controlDict['guiMaterialMipMapButton'].state = False
 				guiMaterialOptions.controlDict['guiMaterialMipMapZBButton'].state = False
+				guiMaterialOptions.controlDict['guiMaterialIFLMatButton'].state = False
 				guiMaterialOptions.controlDict['guiMaterialDetailMapButton'].state = False
 				guiMaterialOptions.controlDict['guiMaterialBumpMapButton'].state = False
 				guiMaterialOptions.controlDict['guiMaterialRefMapButton'].state = False
@@ -2555,6 +2689,8 @@ class MaterialControlsClass:
 				Prefs['Materials'][materialName]['NoMipMap'] = False
 				guiMaterialOptions.controlDict['guiMaterialMipMapButton'].state = True
 			Prefs['Materials'][materialName]['MipMapZeroBorder'] = control.state
+		elif control.name == "guiMaterialIFLMatButton":
+			Prefs['Materials'][materialName]['IFLMaterial'] = control.state
 		elif control.name == "guiMaterialDetailMapButton":
 			Prefs['Materials'][materialName]['DetailMapFlag'] = control.state
 		elif control.name == "guiMaterialBumpMapButton":
