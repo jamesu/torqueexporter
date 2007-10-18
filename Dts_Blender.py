@@ -62,7 +62,7 @@ Version = "0.952 (IFL Branch)"
 Prefs = None
 Prefs_keyname = ""
 export_tree = None
-Debug = False
+Debug = True
 Profiling = False
 textDocName = "TorqueExporter_SCONF"
 pathSeperator = "/"
@@ -663,6 +663,7 @@ class ShapeTree(SceneTree):
 				progressBar.pushTask("Finalizing Geometry..." , 2, 0.6)
 				# Finalize static meshes, do triangle strips
 				self.Shape.finalizeObjects()
+				self.Shape.finalizeMaterials()
 				progressBar.update()
 				if Prefs['PrimType'] == "TriStrips":
 					self.Shape.stripMeshes(Prefs['MaxStripSize'])
@@ -714,6 +715,12 @@ class ShapeTree(SceneTree):
 						# Materialize
 						if sequenceKey['AnimateMaterial']:
 							self.Shape.addSequenceMaterialIpos(sequence, DtsShape_Blender.getNumFrames(actions[action_name].getAllChannelIpos().values(), False), sequenceKey['MaterialIpoStartFrame'])
+						
+						try: x = sequenceKey['IFL']['Enabled']
+						except: sequenceKey['IFL']['Enabled'] = False
+						if sequenceKey['IFL']['Enabled']:
+							self.Shape.addSequenceIFL(sequence, sequenceKey)
+						
 						progressBar.update()
 
 						# Hey you, DSQ!
@@ -2004,6 +2011,20 @@ class IFLControlsClass:
 		else:
 			return 0
 	
+	def determineIFLMatNumberPadding(self, matName):
+		i = len(matName)-1
+		while matName[i:len(matName)].isdigit() and i > -1: i -= 1
+		i += 1
+		digitPortion = matName[i:len(matName)]
+		print "Last", len(matName) - i, "characters of material name are digits."
+		return len(matName) - i
+
+	def numToPaddedString(self, num, padding):
+		retVal = '0' * (padding - len(str(num)))
+		retVal += str(num)
+		print retVal
+		return retVal
+
 	def getIFLMatTextPortion(self, matName):
 		i = len(matName)-1
 		while matName[i:len(matName)].isdigit() and i > -1: i -= 1
@@ -2062,6 +2083,7 @@ class IFLControlsClass:
 			seqPrefs['IFL']['NumImages'] = control.value			
 			startNum = self.determineIFLMatStartNumber(matName)
 			textPortion = self.getIFLMatTextPortion(matName)
+			numPadding = self.determineIFLMatNumberPadding(matName)			
 			fr = seqPrefs['IFL']['IFLFrames']
 			while len(fr) > control.value:				
 				del fr[len(fr)-1]
@@ -2070,7 +2092,7 @@ class IFLControlsClass:
 			#print seqPrefs			
 			i = len(guiFramesList.controls)
 			while len(guiFramesList.controls) < control.value:
-				newItemName = textPortion + str(startNum + i)
+				newItemName = textPortion + self.numToPaddedString(startNum + i, numPadding)
 				guiFramesList.addControl(self.createFramesListItem(newItemName))
 				print "adding item to prefs:", newItemName
 				Prefs['Sequences'][seqName]['IFL']['IFLFrames'].append([newItemName,1])
@@ -2434,6 +2456,7 @@ class MaterialControlsClass:
 
 	def importMaterialList(self):	
 		global Prefs
+		print "importMaterialList called..."
 		guiMaterialOptions = self.guiMaterialOptions
 		guiMaterialList = self.guiMaterialList
 
@@ -2474,21 +2497,29 @@ class MaterialControlsClass:
 								imageList.append(imageName)
 
 
+		print "Removing unused materials from the perfs..."
 		# remove unused materials from the prefs
 		for imageName in materials.keys()[:]:
 			if not (imageName in imageList): del materials[imageName]
 
-		if len(imageList)==0: return	
+		if len(imageList)==0: return
+		print "At least 1 material is in the imageList."
 
 
 		# populate materials list with all blender materials
 		for imageName in imageList:
+			print "Current image is:", imageName
 			bmat = None
+			# Do we have a blender material that matches the image name?
+			print "Do we have a blender material that matches the image name?"
 			try: bmat = Blender.Material.Get(imageName)
 			except NameError:
+				# No blender material, do we have a prefs key for this material?
+				print "No blender material, do we have a prefs key for this material?"
 				try: x = Prefs['Materials'][imageName]
 				except KeyError:
-				# no corresponding blender material and no existing texture material, so use reasonable defaults.
+					# no corresponding blender material and no existing texture material, so use reasonable defaults.
+					print "no corresponding blender material and no existing texture material, so use reasonable defaults."
 					#print "Could not find a blender material that matches image (", imageName,") used on mesh, setting defaults."
 					Prefs['Materials'][imageName] = {}
 					pmi = Prefs['Materials'][imageName]
@@ -2511,10 +2542,16 @@ class MaterialControlsClass:
 					pmi['RefMapTex'] = None
 					pmi['reflectance'] = 0.0
 					pmi['detailScale'] = 1.0
+					print "!!!!!!!!!!!!!!!!stuff!!!!!!!!!!!!!!!!!! (1)"
 				continue
 
+			# We have a blender material, do we have a prefs key for it?
+			print "We have a blender material, do we have a prefs key for it?"
+			print "Prefs['Materials'] = \n",Prefs['Materials']
 			try: x = Prefs['Materials'][bmat.name]			
 			except:
+				# No prefs key, so create one.
+				print "No prefs key, so create one."
 				Prefs['Materials'][bmat.name] = {}
 				pmb = Prefs['Materials'][bmat.name]
 				# init everything to make sure all keys exist with sane values
@@ -2527,7 +2564,7 @@ class MaterialControlsClass:
 				pmb['NeverEnvMap'] = True
 				pmb['NoMipMap'] = False
 				pmb['MipMapZeroBorder'] = False
-				pmi['IFLMaterial'] = False
+				pmb['IFLMaterial'] = False
 				pmb['DetailMapFlag'] = False
 				pmb['BumpMapFlag'] = False
 				pmb['ReflectanceMapFlag'] = False
@@ -2537,7 +2574,7 @@ class MaterialControlsClass:
 				pmb['RefMapTex'] = None
 				pmb['reflectance'] = 0.0
 				pmb['detailScale'] = 1.0
-
+				print "!!!!!!!!!!!!!!!!stuff!!!!!!!!!!!!!!!!!! (2)"
 				#if bmat.getRef() > 0:
 				#	pmb['NeverEnvMap'] = False
 				#else: pmb['NeverEnvMap'] = True
