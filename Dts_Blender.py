@@ -1371,77 +1371,77 @@ def guiHeaderResize(control, newwidth, newheight):
 '''
 class ActionControlsClass:
 	def __init__(self):
-		global guiSequenceActionSubtab
+		global guiSeqActSubtab
 		global globalEvents
 		self.triggerMenuTemplate = "Frame:%d Trigger:%d "
 		
 		# initialize GUI controls
-		self.guiSeqActTitle = Common_Gui.SimpleText("guiSeqActTitle", "Action Sequences :", None, self.resize)
-		self.guiSeqActList = Common_Gui.ListContainer("guiSeqActList", "sequence.list", self.handleEvent, self.resize)		
-		self.guiSeqActToggle = Common_Gui.ToggleButton("guiSeqActToggle", "Toggle All", "Toggle export of all sequences", 6, self.handleEvent, self.resize)		
-		self.guiSeqActRefresh = Common_Gui.BasicButton("guiSeqActRefresh", "Refresh", "Refresh list of sequences", 7, self.handleEvent, self.resize)
-		self.guiSeqActOpts = Common_Gui.BasicContainer("guiSeqActOpts", "sequence.prefs", None, self.resize)
-		self.guiSeqActOptsTitle = Common_Gui.SimpleText("guiSeqActOptsTitle", "Sequence: None Selected", None, self.resize)
-		self.guiSeqActOptsFramecount = Common_Gui.NumberPicker("guiSeqActOptsFramecount", "Frame Samples", "Amount of frames to export", 10, self.handleEvent, self.resize)
-		self.guiSeqActOptsGroundFramecount = Common_Gui.NumberPicker("guiSeqActOptsGroundFramecount", "Ground Frames", "Amount of ground frames to export", 11, self.handleEvent, self.resize)
-		self.guiSeqActOptsAnimateMaterials = Common_Gui.ToggleButton("guiSeqActOptsAnimateMaterials", "Mat Anim", "Animate Materials", 12, self.handleEvent, self.resize)
-		self.guiSeqActOptsMatStartFrame = Common_Gui.NumberPicker("guiSeqActOptsMatStartFrame", "Start", "Frame to start exporting material track", 13, self.handleEvent, self.resize)
-		self.guiSeqActOptsPriority = Common_Gui.NumberPicker("guiSeqActOptsPriority", "Priority", "Sequence playback priority", 23, self.handleEvent, self.resize)
-		self.guiSeqActOptsRefposeTitle = Common_Gui.SimpleText("guiSeqActOptsRefposeTitle", "Ref Pose for ", None, self.resize)
-		self.guiSeqActOptsRefposeMenu = Common_Gui.ComboBox("guiSeqActOptsRefposeMenu", "Use Action", "Select an action containing your refernce pose for this blend.", 20, self.handleEvent, self.resize)
-		self.guiSeqActOptsRefposeFrame = Common_Gui.NumberPicker("guiSeqActOptsRefposeFrame", "Frame", "Frame to use for reference pose", 21, self.handleEvent, self.resize)
-		self.guiSeqActOptsTriggerTitle = Common_Gui.SimpleText("guiSeqActOptsTriggerTitle", "Triggers", None, self.resize)
-		self.guiSeqActOptsTriggerMenu = Common_Gui.ComboBox("guiSeqActOptsTriggerMenu", "Trigger List", "Select a trigger from this list to edit its properties", 14, self.handleTriggersEvent, self.resize)
-		self.guiSeqActOptsTriggerState = Common_Gui.NumberPicker("guiSeqActOptsTriggerState", "Trigger", "Trigger state to alter", 15, self.handleTriggersEvent, self.resize)
-		self.guiSeqActOptsTriggerStateOn = Common_Gui.ToggleButton("guiSeqActOptsTriggerStateOn", "On", "Determines if state will be activated or deactivated", 16, self.handleTriggersEvent, self.resize)
-		self.guiSeqActOptsTriggerFrame = Common_Gui.NumberPicker("guiSeqActOptsTriggerFrame", "Frame", "Frame to activate trigger on", 17, self.handleTriggersEvent, self.resize)
-		self.guiSeqActOptsTriggerAdd = Common_Gui.BasicButton("guiSeqActOptsTriggerAdd", "Add", "Add new trigger", 18, self.handleTriggersEvent, self.resize)
-		self.guiSeqActOptsTriggerDel = Common_Gui.BasicButton("guiSeqActOptsTriggerDel", "Del", "Delete currently selected trigger", 19, self.handleTriggersEvent, self.resize)
+		self.guiActTitle = Common_Gui.SimpleText("guiActTitle", "Action Sequences :", None, self.resize)
+		self.guiActList = Common_Gui.ListContainer("guiActList", "sequence.list", self.handleEvent, self.resize)		
+		self.guiToggle = Common_Gui.ToggleButton("guiToggle", "Toggle All", "Toggle export of all sequences", 6, self.handleEvent, self.resize)		
+		self.guiRefresh = Common_Gui.BasicButton("guiRefresh", "Refresh", "Refresh list of sequences", 7, self.handleEvent, self.resize)
+		self.guiActOpts = Common_Gui.BasicContainer("guiActOpts", "sequence.prefs", None, self.resize)
+		self.guiOptsTitle = Common_Gui.SimpleText("guiOptsTitle", "Sequence: None Selected", None, self.resize)
+		self.guiFramecount = Common_Gui.NumberPicker("guiFramecount", "Frame Samples", "Amount of frames to export", 10, self.handleEvent, self.resize)
+		self.guiGroundframeCount = Common_Gui.NumberPicker("guiGroundframeCount", "Ground Frames", "Amount of ground frames to export", 11, self.handleEvent, self.resize)
+		self.guiMatAnim = Common_Gui.ToggleButton("guiMatAnim", "Mat Anim", "Animate Materials", 12, self.handleEvent, self.resize)
+		self.guiMatStartFrame = Common_Gui.NumberPicker("guiMatStartFrame", "Start", "Frame to start exporting material track", 13, self.handleEvent, self.resize)
+		self.guiPriority = Common_Gui.NumberPicker("guiPriority", "Priority", "Sequence playback priority", 23, self.handleEvent, self.resize)
+		self.guiRefPoseTitle = Common_Gui.SimpleText("guiRefPoseTitle", "Ref Pose for ", None, self.resize)
+		self.guiRefPoseMenu = Common_Gui.ComboBox("guiRefPoseMenu", "Use Action", "Select an action containing your refernce pose for this blend.", 20, self.handleEvent, self.resize)
+		self.guiRefPoseFrame = Common_Gui.NumberPicker("guiRefPoseFrame", "Frame", "Frame to use for reference pose", 21, self.handleEvent, self.resize)
+		self.guiTriggerTitle = Common_Gui.SimpleText("guiTriggerTitle", "Triggers", None, self.resize)
+		self.guiTriggerMenu = Common_Gui.ComboBox("guiTriggerMenu", "Trigger List", "Select a trigger from this list to edit its properties", 14, self.handleTriggersEvent, self.resize)
+		self.guiTriggerState = Common_Gui.NumberPicker("guiTriggerState", "Trigger", "Trigger state to alter", 15, self.handleTriggersEvent, self.resize)
+		self.guiTriggerStateOn = Common_Gui.ToggleButton("guiTriggerStateOn", "On", "Determines if state will be activated or deactivated", 16, self.handleTriggersEvent, self.resize)
+		self.guiTriggerFrame = Common_Gui.NumberPicker("guiTriggerFrame", "Frame", "Frame to activate trigger on", 17, self.handleTriggersEvent, self.resize)
+		self.guiTriggerAdd = Common_Gui.BasicButton("guiTriggerAdd", "Add", "Add new trigger", 18, self.handleTriggersEvent, self.resize)
+		self.guiTriggerDel = Common_Gui.BasicButton("guiTriggerDel", "Del", "Delete currently selected trigger", 19, self.handleTriggersEvent, self.resize)
 		
 		# set initial states
-		self.guiSeqActList.fade_mode = 0
-		self.guiSeqActToggle.state = False
-		self.guiSeqActOpts.enabled = False
-		self.guiSeqActOpts.fade_mode = 5
-		self.guiSeqActOpts.borderColor = None
-		self.guiSeqActOptsFramecount.min = 1
-		self.guiSeqActOptsMatStartFrame.min = 1
-		self.guiSeqActOptsMatStartFrame.max = Blender.Scene.GetCurrent().getRenderingContext().endFrame()	
-		self.guiSeqActOptsPriority.min = 0
-		self.guiSeqActOptsPriority.max = 64 # this seems resonable
-		self.guiSeqActOptsRefposeTitle.visible = False
-		self.guiSeqActOptsRefposeMenu.visible = False
-		self.guiSeqActOptsRefposeFrame.visible = False
-		self.guiSeqActOptsRefposeFrame.min = 1
-		self.guiSeqActOptsTriggerState.min, self.guiSeqActOptsTriggerState.max = 1, 32
-		self.guiSeqActOptsTriggerFrame.min = 1
+		self.guiActList.fade_mode = 0
+		self.guiToggle.state = False
+		self.guiActOpts.enabled = False
+		self.guiActOpts.fade_mode = 5
+		self.guiActOpts.borderColor = None
+		self.guiFramecount.min = 1
+		self.guiMatStartFrame.min = 1
+		self.guiMatStartFrame.max = Blender.Scene.GetCurrent().getRenderingContext().endFrame()	
+		self.guiPriority.min = 0
+		self.guiPriority.max = 64 # this seems resonable
+		self.guiRefPoseTitle.visible = False
+		self.guiRefPoseMenu.visible = False
+		self.guiRefPoseFrame.visible = False
+		self.guiRefPoseFrame.min = 1
+		self.guiTriggerState.min, self.guiTriggerState.max = 1, 32
+		self.guiTriggerFrame.min = 1
 		
 		
 		# add controls to containers
-		guiSeqActSubtab.addControl(self.guiSeqActTitle)
-		guiSeqActSubtab.addControl(self.guiSeqActList)
-		guiSeqActSubtab.addControl(self.guiSeqActToggle)
-		guiSeqActSubtab.addControl(self.guiSeqActRefresh)
-		guiSeqActSubtab.addControl(self.guiSeqActOpts)
+		guiSeqActSubtab.addControl(self.guiActTitle)
+		guiSeqActSubtab.addControl(self.guiActList)
+		guiSeqActSubtab.addControl(self.guiToggle)
+		guiSeqActSubtab.addControl(self.guiRefresh)
+		guiSeqActSubtab.addControl(self.guiActOpts)
 
-		self.guiSeqActOpts.addControl(self.guiSeqActOptsTitle)
-		self.guiSeqActOpts.addControl(self.guiSeqActOptsFramecount)
-		self.guiSeqActOpts.addControl(self.guiSeqActOptsGroundFramecount)
-		self.guiSeqActOpts.addControl(self.guiSeqActOptsAnimateMaterials)
-		self.guiSeqActOpts.addControl(self.guiSeqActOptsMatStartFrame)
+		self.guiActOpts.addControl(self.guiOptsTitle)
+		self.guiActOpts.addControl(self.guiFramecount)
+		self.guiActOpts.addControl(self.guiGroundframeCount)
+		self.guiActOpts.addControl(self.guiMatAnim)
+		self.guiActOpts.addControl(self.guiMatStartFrame)
 
-		self.guiSeqActOpts.addControl(self.guiSeqActOptsTriggerTitle)
-		self.guiSeqActOpts.addControl(self.guiSeqActOptsTriggerMenu)
-		self.guiSeqActOpts.addControl(self.guiSeqActOptsTriggerState)
-		self.guiSeqActOpts.addControl(self.guiSeqActOptsTriggerStateOn)
-		self.guiSeqActOpts.addControl(self.guiSeqActOptsTriggerFrame)
-		self.guiSeqActOpts.addControl(self.guiSeqActOptsTriggerAdd)
-		self.guiSeqActOpts.addControl(self.guiSeqActOptsTriggerDel)
+		self.guiActOpts.addControl(self.guiTriggerTitle)
+		self.guiActOpts.addControl(self.guiTriggerMenu)
+		self.guiActOpts.addControl(self.guiTriggerState)
+		self.guiActOpts.addControl(self.guiTriggerStateOn)
+		self.guiActOpts.addControl(self.guiTriggerFrame)
+		self.guiActOpts.addControl(self.guiTriggerAdd)
+		self.guiActOpts.addControl(self.guiTriggerDel)
 
-		self.guiSeqActOpts.addControl(self.guiSeqActOptsRefposeTitle)
-		self.guiSeqActOpts.addControl(self.guiSeqActOptsRefposeMenu)
-		self.guiSeqActOpts.addControl(self.guiSeqActOptsRefposeFrame)
-		self.guiSeqActOpts.addControl(self.guiSeqActOptsPriority)
+		self.guiActOpts.addControl(self.guiRefPoseTitle)
+		self.guiActOpts.addControl(self.guiRefPoseMenu)
+		self.guiActOpts.addControl(self.guiRefPoseFrame)
+		self.guiActOpts.addControl(self.guiPriority)
 
 
 		# populate actions list
@@ -1462,22 +1462,22 @@ class ActionControlsClass:
 		pass
 
 	def handleEvent(self, control):
-		global guiSeqActOpts, guiSeqActList
+		global guiActOpts, guiActList
 
-		if control.name == "guiSeqActToggle":
-			for child in self.guiSeqActList.controls:
+		if control.name == "guiToggle":
+			for child in self.guiActList.controls:
 				child.controls[1].state = control.state
 				getSequenceKey(child.controls[0].label)['NoExport'] = not control.state
-		elif control.name == "guiSeqActRefresh":
+		elif control.name == "guiRefresh":
 			self.clearSequenceActionList()
 			self.populateSequenceActionList()
-		elif control.name == "guiSeqActList":
+		elif control.name == "guiActList":
 			# Clear triggers menu
-			del self.guiSeqActOpts.controls[6].items[:]
+			del self.guiActOpts.controls[6].items[:]
 			if control.itemIndex != -1:
 				sequenceName = control.controls[control.itemIndex].controls[0].label
 				sequencePrefs = getSequenceKey(sequenceName)
-				self.guiSeqActOpts.controls[0].label = "Sequence '%s'" % sequenceName
+				self.guiActOpts.controls[0].label = "Sequence '%s'" % sequenceName
 
 				try:
 					action = Blender.Armature.NLA.GetActions()[sequenceName]
@@ -1490,249 +1490,249 @@ class ActionControlsClass:
 					sequencePrefs['InterpolateFrames'] = maxNumFrames
 				if sequencePrefs['NumGroundFrames'] > maxNumFrames:
 					sequencePrefs['NumGroundFrames'] = maxNumFrames
-				self.guiSeqActOpts.enabled = True
-				self.guiSeqActOpts.controls[1].value = sequencePrefs['InterpolateFrames']
-				self.guiSeqActOpts.controls[1].max = maxNumFrames
-				self.guiSeqActOpts.controls[2].value = sequencePrefs['NumGroundFrames']
-				self.guiSeqActOpts.controls[2].max = maxNumFrames
-				self.guiSeqActOpts.controls[3].state = sequencePrefs['AnimateMaterial']
-				self.guiSeqActOpts.controls[4].value = sequencePrefs['MaterialIpoStartFrame']
+				self.guiActOpts.enabled = True
+				self.guiActOpts.controls[1].value = sequencePrefs['InterpolateFrames']
+				self.guiActOpts.controls[1].max = maxNumFrames
+				self.guiActOpts.controls[2].value = sequencePrefs['NumGroundFrames']
+				self.guiActOpts.controls[2].max = maxNumFrames
+				self.guiActOpts.controls[3].state = sequencePrefs['AnimateMaterial']
+				self.guiActOpts.controls[4].value = sequencePrefs['MaterialIpoStartFrame']
 
 				# added for blend anim ref pose selection
 				# make sure the user didn't delete the action containing the refrence pose
 				# out from underneath us while we weren't looking.
 				try: blah = Blender.Armature.NLA.GetActions()[sequencePrefs['BlendRefPoseAction']]
 				except: sequencePrefs['BlendRefPoseAction'] = sequenceName
-				self.guiSeqActOpts.controls[12].label = "Ref pose for '%s'" % sequenceName
-				self.guiSeqActOpts.controls[13].setTextValue(sequencePrefs['BlendRefPoseAction'])
-				self.guiSeqActOpts.controls[14].min = 1
-				self.guiSeqActOpts.controls[14].max = DtsShape_Blender.getNumFrames(Blender.Armature.NLA.GetActions()[sequencePrefs['BlendRefPoseAction']].getAllChannelIpos().values(), False)
-				self.guiSeqActOpts.controls[14].value = sequencePrefs['BlendRefPoseFrame']
+				self.guiActOpts.controls[12].label = "Ref pose for '%s'" % sequenceName
+				self.guiActOpts.controls[13].setTextValue(sequencePrefs['BlendRefPoseAction'])
+				self.guiActOpts.controls[14].min = 1
+				self.guiActOpts.controls[14].max = DtsShape_Blender.getNumFrames(Blender.Armature.NLA.GetActions()[sequencePrefs['BlendRefPoseAction']].getAllChannelIpos().values(), False)
+				self.guiActOpts.controls[14].value = sequencePrefs['BlendRefPoseFrame']
 				# hack, there must be a better way to handle this.
 				try:
-					self.guiSeqActOpts.controls[15].value = sequencePrefs['Priority']
+					self.guiActOpts.controls[15].value = sequencePrefs['Priority']
 				except KeyError:
-					self.guiSeqActOpts.controls[15].value = 0
+					self.guiActOpts.controls[15].value = 0
 
 
 				# Triggers
 				for t in sequencePrefs['Triggers']:
 					if t[2]: stateStr = "(ON)"
 					else: stateStr = "(OFF)"
-					self.guiSeqActOpts.controls[6].items.append((self.triggerMenuTemplate % (t[1], t[0])) + stateStr)
+					self.guiActOpts.controls[6].items.append((self.triggerMenuTemplate % (t[1], t[0])) + stateStr)
 
-				self.guiSeqActOpts.controls[6].itemIndex = 0
-				self.guiSeqActOpts.controls[9].max = maxNumFrames
-				self.guiSequenceUpdateTriggers(sequencePrefs['Triggers'], 0)
+				self.guiActOpts.controls[6].itemIndex = 0
+				self.guiActOpts.controls[9].max = maxNumFrames
+				self.guiuenceUpdateTriggers(sequencePrefs['Triggers'], 0)
 				# show/hide ref pose stuff.
 				if sequencePrefs['Blend'] == True:
-					self.guiSeqActOpts.controls[12].visible = True
-					self.guiSeqActOpts.controls[13].visible = True
-					self.guiSeqActOpts.controls[14].visible = True
+					self.guiActOpts.controls[12].visible = True
+					self.guiActOpts.controls[13].visible = True
+					self.guiActOpts.controls[14].visible = True
 				else:
-					self.guiSeqActOpts.controls[12].visible = False
-					self.guiSeqActOpts.controls[13].visible = False
-					self.guiSeqActOpts.controls[14].visible = False
+					self.guiActOpts.controls[12].visible = False
+					self.guiActOpts.controls[13].visible = False
+					self.guiActOpts.controls[14].visible = False
 
 			else:
-				self.guiSeqActOpts.enabled = False
-				self.guiSeqActOpts.controls[0].label = "Sequence: None Selected"
+				self.guiActOpts.enabled = False
+				self.guiActOpts.controls[0].label = "Sequence: None Selected"
 		else:
-			if self.guiSeqActList.itemIndex != -1:
-				sequenceName = self.guiSeqActList.controls[self.guiSeqActList.itemIndex].controls[0].label
+			if self.guiActList.itemIndex != -1:
+				sequenceName = self.guiActList.controls[self.guiActList.itemIndex].controls[0].label
 				sequencePrefs = getSequenceKey(sequenceName)
-				if control.name == "guiSeqActOptsFramecount":
+				if control.name == "guiFramecount":
 					sequencePrefs['InterpolateFrames'] = control.value
-				elif control.name == "guiSeqActOptsGroundFramecount":
+				elif control.name == "guiGroundframeCount":
 					sequencePrefs['NumGroundFrames'] = control.value
-				elif control.name == "guiSeqActOptsAnimateMaterials":
+				elif control.name == "guiMatAnim":
 					sequencePrefs['AnimateMaterial'] = control.state
-				elif control.name == "guiSeqActOptsMatStartFrame":
+				elif control.name == "guiMatStartFrame":
 					sequencePrefs['MaterialIpoStartFrame'] = control.value
 				# added for blend ref pose selection
-				elif control.name == "guiSeqActOptsRefposeMenu":
+				elif control.name == "guiRefPoseMenu":
 					sequencePrefs['BlendRefPoseAction'] = control.items[control.itemIndex]
 					sequencePrefs['BlendRefPoseFrame'] = 1
-					self.guiSeqActOpts.controls[14].value = sequencePrefs['BlendRefPoseFrame']
-				elif control.name == "guiSeqActOptsRefposeFrame":
+					self.guiActOpts.controls[14].value = sequencePrefs['BlendRefPoseFrame']
+				elif control.name == "guiRefPoseFrame":
 					sequencePrefs['BlendRefPoseFrame'] = control.value
-				elif control.name == "guiSeqActOptsPriority":
+				elif control.name == "guiPriority":
 					sequencePrefs['Priority'] = control.value
 
 		pass
 
 	def resize(self, control, newwidth, newheight):
 
-		if control.name == "guiSeqActList":
+		if control.name == "guiActList":
 			control.x = 10
 			control.y = 30
 			control.height = newheight - 70
 			control.width = 300
-		elif control.name == "guiSeqActTitle":
+		elif control.name == "guiActTitle":
 			control.x = 10
 			control.y = newheight-20
-		elif control.name == "guiSeqActOpts":
+		elif control.name == "guiActOpts":
 			control.x = newwidth - 180
 			control.y = 0
 			control.width = 180
 			control.height = newheight
-		elif control.name == "guiSeqActOptsTitle":
+		elif control.name == "guiOptsTitle":
 			control.x = 5
 			control.y = newheight - 15
 		# Joe - ?
 		elif control.name == "sequence.opts.btitle":
 			control.x = 5
 			control.y = newheight - 110
-		elif control.name == "guiSeqActOptsTriggerTitle":
+		elif control.name == "guiTriggerTitle":
 			control.x = 5
 			control.y = newheight - 215
-		elif control.name == "guiSeqActOptsRefposeTitle":
+		elif control.name == "guiRefPoseTitle":
 			control.x = 5
 			control.y = newheight - 140
 		# Sequence list buttons
-		elif control.name == "guiSeqActToggle":
+		elif control.name == "guiToggle":
 			control.x = 10
 			control.y = 5
 			control.width = 100
-		elif control.name == "guiSeqActRefresh":
+		elif control.name == "guiRefresh":
 			control.x = 112
 			control.y = 5
 			control.width = 100
 		# Sequence options
-		elif control.name == "guiSeqActOptsFramecount":
+		elif control.name == "guiFramecount":
 			control.x = 5
 			control.y = newheight - 45
 			control.width = newwidth - 10
-		elif control.name == "guiSeqActOptsGroundFramecount":
+		elif control.name == "guiGroundframeCount":
 			control.x = 5
 			control.y = newheight - 70
 			control.width = newwidth - 10
-		elif control.name == "guiSeqActOptsAnimateMaterials":
+		elif control.name == "guiMatAnim":
 			control.x = 5
 			control.y = newheight - 95
 			control.width = 65
-		elif control.name == "guiSeqActOptsMatStartFrame":
+		elif control.name == "guiMatStartFrame":
 			control.x = 72
 			control.y = newheight - 95
 			control.width = 102
 		# Triggers
-		elif control.name == "guiSeqActOptsTriggerMenu":
+		elif control.name == "guiTriggerMenu":
 			control.x = 5
 			control.y = newheight - 245
 			control.width = newwidth - 10
-		elif control.name == "guiSeqActOptsTriggerState":
+		elif control.name == "guiTriggerState":
 			control.x = 5
 			control.y = newheight - 267
 			control.width = newwidth - 50
-		elif control.name == "guiSeqActOptsTriggerStateOn":
+		elif control.name == "guiTriggerStateOn":
 			control.x = 137
 			control.y = newheight - 267
 			control.width = newwidth - 142
-		elif control.name == "guiSeqActOptsTriggerFrame":
+		elif control.name == "guiTriggerFrame":
 			control.x = 5
 			control.y = newheight - 289
 			control.width = newwidth - 10
-		elif control.name == "guiSeqActOptsTriggerAdd":
+		elif control.name == "guiTriggerAdd":
 			control.x = 5
 			control.y = newheight - 311
 			control.width = (newwidth / 2) - 6
-		elif control.name == "guiSeqActOptsTriggerDel":
+		elif control.name == "guiTriggerDel":
 			control.x = (newwidth / 2)
 			control.y = newheight - 311
 			control.width = (newwidth / 2) - 6
 		# reference pose controls
-		elif control.name == "guiSeqActOptsRefposeMenu":
+		elif control.name == "guiRefPoseMenu":
 			control.x = 5
 			control.y = newheight - 170
 			control.width = (newwidth) - 10
-		elif control.name == "guiSeqActOptsRefposeFrame":
+		elif control.name == "guiRefPoseFrame":
 			control.x = 5
 			control.y = newheight - 195
 			control.width = (newwidth) - 10
 		# sequence priority
-		elif control.name == "guiSeqActOptsPriority":
+		elif control.name == "guiPriority":
 			control.x = 5
 			control.y = newheight - 120
 			control.width = newwidth - 10
 
-	def guiSequenceUpdateTriggers(self, triggerList, itemIndex):
+	def guiuenceUpdateTriggers(self, triggerList, itemIndex):
 		if (len(triggerList) == 0) or (itemIndex >= len(triggerList)):
-			self.guiSeqActOpts.controls[7].value = 0
-			self.guiSeqActOpts.controls[8].state = False
-			self.guiSeqActOpts.controls[9].value = 0
+			self.guiActOpts.controls[7].value = 0
+			self.guiActOpts.controls[8].state = False
+			self.guiActOpts.controls[9].value = 0
 		else:
-			self.guiSeqActOpts.controls[7].value = triggerList[itemIndex][0] # Trigger State
-			self.guiSeqActOpts.controls[9].value = triggerList[itemIndex][1] # Time
-			self.guiSeqActOpts.controls[8].state = triggerList[itemIndex][2] # On
+			self.guiActOpts.controls[7].value = triggerList[itemIndex][0] # Trigger State
+			self.guiActOpts.controls[9].value = triggerList[itemIndex][1] # Time
+			self.guiActOpts.controls[8].state = triggerList[itemIndex][2] # On
 
 	
 
 	def handleTriggersEvent(self, control):
-		if self.guiSeqActList.itemIndex == -1:
+		if self.guiActList.itemIndex == -1:
 			return
 
-		sequenceName = self.guiSeqActList.controls[self.guiSeqActList.itemIndex].controls[0].label
+		sequenceName = self.guiActList.controls[self.guiActList.itemIndex].controls[0].label
 		sequencePrefs = getSequenceKey(sequenceName)
-		itemIndex = self.guiSeqActOpts.controls[6].itemIndex
+		itemIndex = self.guiActOpts.controls[6].itemIndex
 
-		if control.name == "guiSeqActOptsTriggerMenu":
-			self.guiSequenceUpdateTriggers(sequencePrefs['Triggers'], itemIndex)
-		elif control.name == "guiSeqActOptsTriggerAdd":
+		if control.name == "guiTriggerMenu":
+			self.guiuenceUpdateTriggers(sequencePrefs['Triggers'], itemIndex)
+		elif control.name == "guiTriggerAdd":
 			# Add
 			sequencePrefs['Triggers'].append([1, 1, True])
-			self.guiSeqActOpts.controls[6].items.append((self.triggerMenuTemplate % (1, 1)) + "(ON)")
-			self.guiSeqActOpts.controls[6].itemIndex = len(sequencePrefs['Triggers'])-1
-			self.guiSequenceUpdateTriggers(sequencePrefs['Triggers'], self.guiSeqActOpts.controls[6].itemIndex)
-		elif (len(self.guiSeqActOpts.controls[6].items) != 0):
-			if control.name == "guiSeqActOptsTriggerState":
+			self.guiActOpts.controls[6].items.append((self.triggerMenuTemplate % (1, 1)) + "(ON)")
+			self.guiActOpts.controls[6].itemIndex = len(sequencePrefs['Triggers'])-1
+			self.guiuenceUpdateTriggers(sequencePrefs['Triggers'], self.guiActOpts.controls[6].itemIndex)
+		elif (len(self.guiActOpts.controls[6].items) != 0):
+			if control.name == "guiTriggerState":
 				sequencePrefs['Triggers'][itemIndex][0] = control.value
-			elif control.name == "guiSeqActOptsTriggerStateOn":
+			elif control.name == "guiTriggerStateOn":
 				sequencePrefs['Triggers'][itemIndex][2] = control.state
-			elif control.name == "guiSeqActOptsTriggerFrame":
+			elif control.name == "guiTriggerFrame":
 				sequencePrefs['Triggers'][itemIndex][1] = control.value
-			elif control.name == "guiSeqActOptsTriggerDel":
+			elif control.name == "guiTriggerDel":
 				# Remove
 				del sequencePrefs['Triggers'][itemIndex]
-				del self.guiSeqActOpts.controls[6].items[itemIndex]
+				del self.guiActOpts.controls[6].items[itemIndex]
 				# Must decrement itemIndex if we are out of bounds
 				if itemIndex <= len(sequencePrefs['Triggers']):
-					self.guiSeqActOpts.controls[6].itemIndex = len(sequencePrefs['Triggers'])-1
-					itemIndex = self.guiSeqActOpts.controls[6].itemIndex
-				self.guiSequenceUpdateTriggers(sequencePrefs['Triggers'], itemIndex)
+					self.guiActOpts.controls[6].itemIndex = len(sequencePrefs['Triggers'])-1
+					itemIndex = self.guiActOpts.controls[6].itemIndex
+				self.guiuenceUpdateTriggers(sequencePrefs['Triggers'], itemIndex)
 
 			# Update menu caption
 			if itemIndex == -1:
 				return
 			if sequencePrefs['Triggers'][itemIndex][2]: stateStr = "(ON)"
 			else: stateStr = "(OFF)"
-			self.guiSeqActOpts.controls[6].items[itemIndex] = (self.triggerMenuTemplate % (sequencePrefs['Triggers'][itemIndex][1], sequencePrefs['Triggers'][itemIndex][0])) + stateStr
+			self.guiActOpts.controls[6].items[itemIndex] = (self.triggerMenuTemplate % (sequencePrefs['Triggers'][itemIndex][1], sequencePrefs['Triggers'][itemIndex][0])) + stateStr
 	def populateSequenceActionList(self):
 		actions = Armature.NLA.GetActions()
 		keys = actions.keys()
 		keys.sort()
 
-		#print "populateSequenceActionList: name of list : %s" % guiSeqActList.name
+		#print "populateSequenceActionList: name of list : %s" % guiActList.name
 		# There are a finite number of events we can allocate in blender, so we need to
 		# assign events in batches of the maximum number of visible list items.
 		startEvent = 40
 		for key in keys:
 			# skip the fake action (hack for blender 2.41 bug)
 			if key == "DTSEXPFAKEACT": continue		
-			self.guiSeqActList.addControl(self.createSequenceActionListitem(key, startEvent))
+			self.guiActList.addControl(self.createSequenceActionListitem(key, startEvent))
 			startEvent += 4
 			# add any new animations to the ref pose combo box
-			if not (key in self.guiSeqActOpts.controls[13].items):
-				self.guiSeqActOpts.controls[13].items.append(key)
+			if not (key in self.guiActOpts.controls[13].items):
+				self.guiActOpts.controls[13].items.append(key)
 
 	def clearSequenceActionList(self):
 
-		for i in range(0, len(self.guiSeqActList.controls)):
-			del self.guiSeqActList.controls[i].controls[:]
-		del self.guiSeqActList.controls[:]
+		for i in range(0, len(self.guiActList.controls)):
+			del self.guiActList.controls[i].controls[:]
+		del self.guiActList.controls[:]
 
-		self.guiSeqActList.itemIndex = -1
-		self.guiSeqActList.scrollPosition = 0
-		if self.guiSeqActList.callback: self.guiSeqActList.callback(self.guiSeqActList) # Bit of a hack, but works
+		self.guiActList.itemIndex = -1
+		self.guiActList.scrollPosition = 0
+		if self.guiActList.callback: self.guiActList.callback(self.guiActList) # Bit of a hack, but works
 
 	def handleListItemEvent(self, control):
 		global Prefs
@@ -1744,7 +1744,7 @@ class ActionControlsClass:
 		else:
 			calcIdx = (control.evt - 40) / 4
 
-		sequenceName = self.guiSeqActList.controls[calcIdx].controls[0].label
+		sequenceName = self.guiActList.controls[calcIdx].controls[0].label
 		realItem = control.evt - 40 - (calcIdx*4)
 		sequencePrefs = getSequenceKey(sequenceName)
 
@@ -1756,13 +1756,13 @@ class ActionControlsClass:
 			sequencePrefs['Blend'] = control.state
 			# if blend is true, show the ref pose controls
 			if sequencePrefs['Blend'] == True:
-				self.guiSeqActOpts.controls[12].visible = True
-				self.guiSeqActOpts.controls[13].visible = True
-				self.guiSeqActOpts.controls[14].visible = True
+				self.guiActOpts.controls[12].visible = True
+				self.guiActOpts.controls[13].visible = True
+				self.guiActOpts.controls[14].visible = True
 			else:
-				self.guiSeqActOpts.controls[12].visible = False
-				self.guiSeqActOpts.controls[13].visible = False
-				self.guiSeqActOpts.controls[14].visible = False
+				self.guiActOpts.controls[12].visible = False
+				self.guiActOpts.controls[13].visible = False
+				self.guiActOpts.controls[14].visible = False
 		elif realItem == 3:
 			sequencePrefs['Cyclic'] = control.state
 
@@ -2948,6 +2948,8 @@ class MaterialControlsClass:
 #IFLControls = IFLControlsClass
 IFLControls = None
 MaterialControls = None
+ActionControls = None
+
 
 
 def initGui():
@@ -2978,7 +2980,7 @@ def initGui():
 	global guiBonePatternText
 	global GlobalEvents
 	
-	global IFLControls
+	global IFLControls, ActionControls, MaterialControls
 	
 	global guiTabBar, guiSequencesTabBar
 	
@@ -3263,12 +3265,15 @@ def initGui():
 
 # Called when gui exits
 def exit_callback():
-	global IFLControls
+	global IFLControls, ActionControls
 	Torque_Util.dump_setout("stdout")
-	clearSequenceActionList()
+	ActionControls.clearSequenceActionList()	
+	# todo - clear lists on other panels before cleaning up.
 	clearBoneGrid()
 	print IFLControls
 	IFLControls.cleanup()
+	ActionControls.cleanup()
+	MaterialControls.cleanup()
 	savePrefs()
 
 '''
