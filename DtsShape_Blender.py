@@ -421,6 +421,18 @@ class BlenderShape(DtsShape):
 				if len(tmsh.primitives) == 0: continue
 				tmsh.windStrip(maxsize)
 		return True
+	
+	# this should probably be called before the other finalize functions
+	def finalizeMaterials(self):
+		# Go through materials, strip ".ignore", add IFL image frames.
+		for i in range(0, len(self.materials.materials)):
+			mat = self.materials.materials[i]		
+			if mat.flags & mat.IFLMaterial != 0:
+				# add a name for our IflMaterial into the string table
+				si = self.sTable.addString(mat.name + ".ifl")
+				# create an IflMaterial object and append it to the shape
+				iflMat = IflMaterial(si, i, 0, 0, 0)
+				self.iflmaterials.append(iflMat)
 		
 	def finalizeObjects(self):
 		# Go through objects, add meshes, set transforms
@@ -1418,6 +1430,16 @@ class BlenderShape(DtsShape):
 		sequence.numTriggers += len(triggers)
 
 
+	# Add sequence matters for IFL animation.
+	def addSequenceIFL(self, sequence, sequenceKey):
+		sequence.matters_ifl = [False]*len(self.objects)	
+		# Now we can dump each frame for the objects
+		for i in range(0, len(self.materials.materials)):
+			mat = self.materials.materials[i]			
+			if sequenceKey['IFL']['Material'] == mat.name:
+				sequence.matters_ifl[i] = True
+
+
 	# Processes a material ipo and incorporates it into the Action
 	def addSequenceMaterialIpos(self, sequence, numFrames, startFrame=1):
 		'''
@@ -1437,7 +1459,8 @@ class BlenderShape(DtsShape):
 		scene = Blender.Scene.GetCurrent()
 		context = Blender.Scene.GetCurrent().getRenderingContext()
 		sequence.matters_vis = [False]*len(self.objects)
-		
+		sequence.matters_ifl = [False]*len(self.objects)
+		print "**!! sequence.matters_ifl=\n", sequence.matters_ifl
 		# First, scan for objects that have associated materials
 		usedMat = []
 		
@@ -1455,7 +1478,7 @@ class BlenderShape(DtsShape):
 		interpolateInc = numFrames / sequence.numKeyFrames
 		for i in range(0, len(usedMat)):
 			matIdx = usedMat[i]
-			
+
 			# Can we get the frames out?
 			try: blenderMat = Material.Get(self.materials.get(matIdx).name)
 			except: continue
@@ -1476,7 +1499,6 @@ class BlenderShape(DtsShape):
 				# Update the ipo's current value
 				
 				# Add the frame(s)
-				# TODO: ifl frame would be useful here, if blender had a "Frame" value :)
 				matFrames[i].append(ipo.getCurveCurval(curveMap['Alpha']))
 				
 		# Now we can dump each frame for the objects
@@ -1484,14 +1506,14 @@ class BlenderShape(DtsShape):
 			for m in range(0, len(usedMat)):
 				if hasattr(self.meshes[self.objects[i].firstMesh], "mainMaterial") and (self.meshes[self.objects[i].firstMesh].mainMaterial == usedMat[m]) and (matFrames[m] != None):
 					sequence.matters_vis[i] = True
-					
+					sequence.matters_ifl[i] = True
 					if sequence.baseObjectState == -1:
 						sequence.baseObjectState = len(self.objectstates)
 					
 					# Create objectstate's for each frame
 					for frame in matFrames[m]:
 						self.objectstates.append(ObjectState(frame, 0, 0))
-				
+
 		# Cleanup
 		for frame in matFrames:
 			if frame != None: del frame
