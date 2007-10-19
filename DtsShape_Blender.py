@@ -1149,13 +1149,13 @@ class BlenderShape(DtsShape):
 			isCyclic = True
 			sequence.flags |= sequence.Cyclic
 		else: isCyclic = False
-		if sequencePrefs['Blend']:
+		if sequencePrefs['Action']['Blend']:
 			isBlend = True
 			sequence.flags |= sequence.Blend
 		else: isBlend = False
-		if sequencePrefs['NumGroundFrames'] != 0:
+		if sequencePrefs['Action']['NumGroundFrames'] != 0:
 			sequence.has_ground = True
-			sequence.ground_target = sequencePrefs['NumGroundFrames']
+			sequence.ground_target = sequencePrefs['Action']['NumGroundFrames']
 			sequence.flags |= sequence.MakePath
 		else: sequence.has_ground = False
 		sequence.fps = context.framesPerSec()
@@ -1173,19 +1173,19 @@ class BlenderShape(DtsShape):
 		sequence.numKeyFrames = getNumFrames(action.getAllChannelIpos().values(), False)
 
 		# calc the interpolation increment
-		interpolateInc = float(sequence.numKeyFrames) / float(sequencePrefs['InterpolateFrames'])
+		interpolateInc = float(sequence.numKeyFrames) / float(sequencePrefs['Action']['InterpolateFrames'])
 		# make sure it's not less than 1
 		if interpolateInc < 1.0: interpolateInc = 1.0
 
 		# Print different messages depending if we used interpolate or not
-		Torque_Util.dump_writeln("      Frames: %d " % sequencePrefs['InterpolateFrames'])
+		Torque_Util.dump_writeln("      Frames: %d " % sequencePrefs['Action']['InterpolateFrames'])
 		
 		# Depending on what we have, set the bases accordingly
 		if sequence.has_ground: sequence.firstGroundFrame = len(self.groundTranslations)
 		else: sequence.firstGroundFrame = -1
 		
 		# this is the number of frames we are exporting.
-		numFrames = sequencePrefs['InterpolateFrames']+1
+		numFrames = sequencePrefs['Action']['InterpolateFrames']+1
 		
 		remove_last = False
 		baseTransforms = []
@@ -1194,8 +1194,8 @@ class BlenderShape(DtsShape):
 		if isBlend:
 			# Need to build a list of node transforms to use as the
 			# base transforms for nodes in our blend animation.
- 			useAction = sequencePrefs['BlendRefPoseAction']
-			useFrame = sequencePrefs['BlendRefPoseFrame']
+ 			useAction = sequencePrefs['Action']['BlendRefPoseAction']
+			useFrame = sequencePrefs['Action']['BlendRefPoseFrame']
 			baseTransforms = self.buildBaseTransforms(sequence, action, useAction, useFrame, scene, context)
 			if baseTransforms == None:
 				Torque_Util.dump_writeln("Error getting base Transforms!!!!!")
