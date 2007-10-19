@@ -396,6 +396,7 @@ def saveTextPrefs():
 	# representation of the config dictionary
 	text_doc.write(str(Prefs))
 
+'''
 dummySequence = {'Dsq' : False,
 'Cyclic' : False,
 'Blend' : False,
@@ -406,6 +407,41 @@ dummySequence = {'Dsq' : False,
 'NoExport' : False,
 'NumGroundFrames' : 0,
 'Priority' : 0}
+'''
+
+dummySequence =	\
+{
+'Dsq': True,
+'Cyclic': False,
+'Triggers': [], # [State, Time, On]
+'NoExport': False,
+'Priority': 0,
+'TotalFrames': 36,
+'Action':
+{
+'NumGroundFrames': 0, 
+'BlendRefPoseAction': 'Block_1HR',
+'BlendRefPoseFrame': 8,
+'InterpolateFrames': 0,
+'Blend': False,
+},
+'IFL':
+{
+'Enabled': False,
+'Material': 'Frame001',
+'NumImages': 3,
+'TotalFrames': 6,
+'IFLFrames':
+[['Frame001', 2],
+['Frame002', 2],
+['Frame003', 2],],
+},
+'Vis': 
+{ 
+'AnimateMaterial': False,
+'MaterialIpoStartFrame': 1
+}
+}
 
 # Gets a sequence key from the preferences
 # Creates default if key does not exist
@@ -425,11 +461,11 @@ def getSequenceKey(value):
 			maxNumFrames = DtsShape_Blender.getNumFrames(action.getAllChannelIpos().values(), False)
 		except:
 			maxNumFrames = 0
-		Prefs['Sequences'][value]['InterpolateFrames'] = maxNumFrames			
+		Prefs['Sequences'][value]['Action']['InterpolateFrames'] = maxNumFrames
 		# added for ref pose of blend animations
 		# default reference pose for blends is in the middle of the same action
-		Prefs['Sequences'][value]['BlendRefPoseAction'] = value			
-		Prefs['Sequences'][value]['BlendRefPoseFrame'] = maxNumFrames/2
+		Prefs['Sequences'][value]['Action']['BlendRefPoseAction'] = value			
+		Prefs['Sequences'][value]['Action']['BlendRefPoseFrame'] = maxNumFrames/2
 		Prefs['Sequences'][value]['Priority'] = 0
 		return getSequenceKey(value)
 
@@ -689,7 +725,7 @@ class ShapeTree(SceneTree):
 						if action_name == "DTSEXPFAKEACT": continue
 
 						sequenceKey = getSequenceKey(action_name)
-						if (sequenceKey['NoExport']) or (sequenceKey['InterpolateFrames'] == 0):
+						if (sequenceKey['NoExport']) or (sequenceKey['Action']['InterpolateFrames'] == 0):
 							progressBar.update()
 							progressBar.update()
 							progressBar.update()
@@ -1373,6 +1409,9 @@ class ActionControlsClass:
 	def __init__(self):
 		global guiSeqActSubtab
 		global globalEvents
+		
+		self.updateOldPrefs()
+		
 		self.triggerMenuTemplate = "Frame:%d Trigger:%d "
 		
 		# initialize GUI controls
@@ -1444,6 +1483,7 @@ class ActionControlsClass:
 		self.guiActOpts.addControl(self.guiPriority)
 
 
+
 		# populate actions list
 		self.populateSequenceActionList()
 		
@@ -1459,6 +1499,44 @@ class ActionControlsClass:
 		pass
 	
 	def updateOldPrefs(self):
+		global Prefs
+		for seqName in Prefs['Sequences'].keys():
+			seq = Prefs['Sequences'][seqName]
+			print "seq:",seq
+			# Move keys into the new "Action" subkey.and delete old keys
+			try: x = seq['Action']
+			except: seq['Action'] = {}
+			actKey = seq['Action']
+			try: x = actKey['InterpolateFrames']
+			except:
+				actKey['InterpolateFrames'] = seq['InterpolateFrames']
+				del seq['InterpolateFrames']
+			try: x = actKey['NumGroundFrames']
+			except:
+				actKey['NumGroundFrames'] = seq['NumGroundFrames']
+				del seq['NumGroundFrames']
+			try: x = actKey['Blend']
+			except:
+				actKey['Blend'] = seq['Blend']
+				del seq['Blend']
+			try: x = actKey['BlendRefPoseAction']
+			except:
+				actKey['BlendRefPoseAction'] = seq['BlendRefPoseAction']
+				del seq['BlendRefPoseAction']
+			try: x = actKey['BlendRefPoseFrame']
+			except:
+				actKey['BlendRefPoseFrame'] = seq['BlendRefPoseFrame']
+				del seq['BlendRefPoseFrame']
+			# create the new total frames key
+			try: x = seq['TotalFrames']
+			except: seq['TotalFrames'] = {}
+			
+			
+			
+			
+			
+			
+			
 		pass
 
 	def handleEvent(self, control):
@@ -1486,14 +1564,14 @@ class ActionControlsClass:
 					maxNumFrames = 0
 
 				# Update gui control states
-				if sequencePrefs['InterpolateFrames'] > maxNumFrames:
-					sequencePrefs['InterpolateFrames'] = maxNumFrames
-				if sequencePrefs['NumGroundFrames'] > maxNumFrames:
-					sequencePrefs['NumGroundFrames'] = maxNumFrames
+				if sequencePrefs['Action']['InterpolateFrames'] > maxNumFrames:
+					sequencePrefs['Action']['InterpolateFrames'] = maxNumFrames
+				if sequencePrefs['Action']['NumGroundFrames'] > maxNumFrames:
+					sequencePrefs['Action']['NumGroundFrames'] = maxNumFrames
 				self.guiActOpts.enabled = True
-				self.guiActOpts.controls[1].value = sequencePrefs['InterpolateFrames']
+				self.guiActOpts.controls[1].value = sequencePrefs['Action']['InterpolateFrames']
 				self.guiActOpts.controls[1].max = maxNumFrames
-				self.guiActOpts.controls[2].value = sequencePrefs['NumGroundFrames']
+				self.guiActOpts.controls[2].value = sequencePrefs['Action']['NumGroundFrames']
 				self.guiActOpts.controls[2].max = maxNumFrames
 				self.guiActOpts.controls[3].state = sequencePrefs['AnimateMaterial']
 				self.guiActOpts.controls[4].value = sequencePrefs['MaterialIpoStartFrame']
@@ -1501,13 +1579,13 @@ class ActionControlsClass:
 				# added for blend anim ref pose selection
 				# make sure the user didn't delete the action containing the refrence pose
 				# out from underneath us while we weren't looking.
-				try: blah = Blender.Armature.NLA.GetActions()[sequencePrefs['BlendRefPoseAction']]
-				except: sequencePrefs['BlendRefPoseAction'] = sequenceName
+				try: blah = Blender.Armature.NLA.GetActions()[sequencePrefs['Action']['BlendRefPoseAction']]
+				except: sequencePrefs['Action']['BlendRefPoseAction'] = sequenceName
 				self.guiActOpts.controls[12].label = "Ref pose for '%s'" % sequenceName
-				self.guiActOpts.controls[13].setTextValue(sequencePrefs['BlendRefPoseAction'])
+				self.guiActOpts.controls[13].setTextValue(sequencePrefs['Action']['BlendRefPoseAction'])
 				self.guiActOpts.controls[14].min = 1
-				self.guiActOpts.controls[14].max = DtsShape_Blender.getNumFrames(Blender.Armature.NLA.GetActions()[sequencePrefs['BlendRefPoseAction']].getAllChannelIpos().values(), False)
-				self.guiActOpts.controls[14].value = sequencePrefs['BlendRefPoseFrame']
+				self.guiActOpts.controls[14].max = DtsShape_Blender.getNumFrames(Blender.Armature.NLA.GetActions()[sequencePrefs['Action']['BlendRefPoseAction']].getAllChannelIpos().values(), False)
+				self.guiActOpts.controls[14].value = sequencePrefs['Action']['BlendRefPoseFrame']
 				# hack, there must be a better way to handle this.
 				try:
 					self.guiActOpts.controls[15].value = sequencePrefs['Priority']
@@ -1525,7 +1603,7 @@ class ActionControlsClass:
 				self.guiActOpts.controls[9].max = maxNumFrames
 				self.guiuenceUpdateTriggers(sequencePrefs['Triggers'], 0)
 				# show/hide ref pose stuff.
-				if sequencePrefs['Blend'] == True:
+				if sequencePrefs['Action']['Blend'] == True:
 					self.guiActOpts.controls[12].visible = True
 					self.guiActOpts.controls[13].visible = True
 					self.guiActOpts.controls[14].visible = True
@@ -1542,20 +1620,20 @@ class ActionControlsClass:
 				sequenceName = self.guiActList.controls[self.guiActList.itemIndex].controls[0].label
 				sequencePrefs = getSequenceKey(sequenceName)
 				if control.name == "guiFramecount":
-					sequencePrefs['InterpolateFrames'] = control.value
+					sequencePrefs['Action']['InterpolateFrames'] = control.value
 				elif control.name == "guiGroundframeCount":
-					sequencePrefs['NumGroundFrames'] = control.value
+					sequencePrefs['Action']['NumGroundFrames'] = control.value
 				elif control.name == "guiMatAnim":
 					sequencePrefs['AnimateMaterial'] = control.state
 				elif control.name == "guiMatStartFrame":
 					sequencePrefs['MaterialIpoStartFrame'] = control.value
 				# added for blend ref pose selection
 				elif control.name == "guiRefPoseMenu":
-					sequencePrefs['BlendRefPoseAction'] = control.items[control.itemIndex]
-					sequencePrefs['BlendRefPoseFrame'] = 1
-					self.guiActOpts.controls[14].value = sequencePrefs['BlendRefPoseFrame']
+					sequencePrefs['Action']['BlendRefPoseAction'] = control.items[control.itemIndex]
+					sequencePrefs['Action']['BlendRefPoseFrame'] = 1
+					self.guiActOpts.controls[14].value = sequencePrefs['Action']['BlendRefPoseFrame']
 				elif control.name == "guiRefPoseFrame":
-					sequencePrefs['BlendRefPoseFrame'] = control.value
+					sequencePrefs['Action']['BlendRefPoseFrame'] = control.value
 				elif control.name == "guiPriority":
 					sequencePrefs['Priority'] = control.value
 
@@ -1753,9 +1831,9 @@ class ActionControlsClass:
 		elif realItem == 1:
 			sequencePrefs['Dsq'] = control.state
 		elif realItem == 2:
-			sequencePrefs['Blend'] = control.state
+			sequencePrefs['Action']['Blend'] = control.state
 			# if blend is true, show the ref pose controls
-			if sequencePrefs['Blend'] == True:
+			if sequencePrefs['Action']['Blend'] == True:
 				self.guiActOpts.controls[12].visible = True
 				self.guiActOpts.controls[13].visible = True
 				self.guiActOpts.controls[14].visible = True
@@ -1788,7 +1866,7 @@ class ActionControlsClass:
 		guiBlend = Common_Gui.ToggleButton("guiBlend", "Blend", "Export Sequence as Blend", startEvent+2, self.handleListItemEvent, None)
 		guiBlend.x, guiBlend.y = 174, 5
 		guiBlend.width, guiBlend.height = 50, 15
-		guiBlend.state = sequencePrefs['Blend']
+		guiBlend.state = sequencePrefs['Action']['Blend']
 		guiCyclic = Common_Gui.ToggleButton("guiCyclic", "Cyclic", "Export Sequence as Cyclic", startEvent+3, self.handleListItemEvent, None)
 		guiCyclic.x, guiCyclic.y = 226, 5
 		guiCyclic.width, guiCyclic.height = 50, 15
@@ -2053,12 +2131,12 @@ class IFLControlsClass:
 			seq['Dsq'] = False
 			seq['Priority'] = 0
 			seq['Cyclic'] = False
-			seq['InterpolateFrames'] = 0
+			seq['Action']['InterpolateFrames'] = 0
 			seq['TotalFrames'] = 0
-			seq['NumGroundFrames'] = 0
-			seq['Blend'] = False
-			seq['BlendRefPoseAction'] = None
-			seq['BlendRefPoseFrame'] = 8
+			seq['Action']['NumGroundFrames'] = 0
+			seq['Action']['Blend'] = False
+			seq['Action']['BlendRefPoseAction'] = None
+			seq['Action']['BlendRefPoseFrame'] = 8
 			seq['AnimateMaterial'] = False
 			seq['MaterialIpoStartFrame'] = 0
 
