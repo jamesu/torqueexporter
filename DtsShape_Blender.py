@@ -600,7 +600,7 @@ class BlenderShape(DtsShape):
 			nodeOrderTxt = Blender.Text.Get("NodeOrder")
 			nodeOrder = nodeOrderTxt.asLines()
 			Torque_Util.dump_writeln("  NodeOrder text buffer found, attempting to export nodes in the order specified.")
-		except: doNothing = 1
+		except: pass
 		
 		# if the node order text buffer is found, add the bones in the order indicated
 		inOrderSuccess = True
@@ -671,7 +671,7 @@ class BlenderShape(DtsShape):
 					# This will probably break for multiple armatures.
 					parentBone = -1
 					try: parentBone = addedBones[armBones[nodeName].parent.name]
-					except: doNothing = 1
+					except: pass
 					
 					# add the bone, don't recurse					
 					addedBones[nodeName] = nodeID
@@ -1061,10 +1061,53 @@ class BlenderShape(DtsShape):
 		del tempSequence
 		return baseTransforms
 		
+	# Adds a generic sequence
+	def addSequence(self, seqName, context, seqPrefs, scene = None, action=None):
+		print "Adding new sequence:",seqName
+		#return None
+		# Lets start off with the basic sequence
+		sequence = Sequence(self.sTable.addString(seqName))
+		sequence.name = seqName
+		sequence.numTriggers = 0
+		sequence.firstTrigger = -1
 
+		sequence.has_loc = False
+		sequence.has_rot = False
+		sequence.has_scale = False
+		sequence.has_ground = False
+		
+		sequence.frames = []
+		for n in self.nodes:
+			#sequence.ipo.append(0)
+			sequence.matters_translation.append(False)
+			sequence.matters_rotation.append(False)
+			sequence.matters_scale.append(False)
+			sequence.frames.append(0)
+		
+		sequence.fps = context.framesPerSec()
+		if seqPrefs['Cyclic']: 
+			sequence.flags |= sequence.Cyclic
+		
+		if seqPrefs['Action']['Enabled'] and action != None and scene != None:
+			print "   Adding action data for", seqName
+			sequence = self.addAction(sequence, action, scene, context, seqPrefs)
+		if seqPrefs['Vis']['Enabled']:
+			print "   Adding visibility data for", seqName
+			numFrames = int(seqPrefs['Vis']['StartFrame']) - int(seqPrefs['Vis']['EndFrame'])
+			sequence = self.addSequenceMaterialIpos(sequence, numFrames, int(seqPrefs['Vis']['StartFrame']))
+		if seqPrefs['IFL']['Enabled']:
+			print "   Adding IFL data for", seqName
+			sequence.numKeyFrames = 15
+			if sequence.duration == 0:
+				sequence.duration = sequence.numKeyFrames * (1.0 / sequence.fps)
+			sequence = self.addSequenceIFL(sequence, seqPrefs)
+			
+		self.sequences.append(sequence)
+		
+		return sequence
 	
 	# Import a sequence
-	def addAction(self, action, scene, context, sequencePrefs):
+	def addAction(self, sequence, action, scene, context, sequencePrefs):
 		'''
 		This adds an action to a shape as a sequence.
 		
@@ -1085,10 +1128,12 @@ class BlenderShape(DtsShape):
 		
 
 		# Lets start off with the basic sequence
+		'''
 		sequence = Sequence(self.sTable.addString(action.getName()))
 		sequence.name = action.getName()
 		sequence.numTriggers = 0
 		sequence.firstTrigger = -1
+
 
 		# Make set of blank ipos and matters for current node
 		#sequence.ipo = []
@@ -1104,7 +1149,8 @@ class BlenderShape(DtsShape):
 		sequence.has_loc = False
 		sequence.has_rot = False
 		sequence.has_scale = False
-			
+		'''
+		
 		# Figure out which nodes have IPO curves.  Need this to determine the number of keyframes; and
 		# possibly to force export of some channels where nothing actually moves but the user requires
 		# the transforms to be keyed in place for some reason.
@@ -1130,7 +1176,7 @@ class BlenderShape(DtsShape):
 					sequence.has_scale = True
 			except ValueError:
 				# not an Action IPO...
-				nothing = None # <- buh.
+				pass
 			
 			# TODO: how do we determine RVK channels?
 
@@ -1147,7 +1193,7 @@ class BlenderShape(DtsShape):
 		# Add additional flags, e.g. cyclic
 		if sequencePrefs['Cyclic']: 
 			isCyclic = True
-			sequence.flags |= sequence.Cyclic
+			#sequence.flags |= sequence.Cyclic
 		else: isCyclic = False
 		if sequencePrefs['Action']['Blend']:
 			isBlend = True
@@ -1158,7 +1204,7 @@ class BlenderShape(DtsShape):
 			sequence.ground_target = sequencePrefs['Action']['NumGroundFrames']
 			sequence.flags |= sequence.MakePath
 		else: sequence.has_ground = False
-		sequence.fps = context.framesPerSec()
+		#sequence.fps = context.framesPerSec()
 
 		# hack, there must be a more elegant way to handle this.
 		try:
@@ -1290,7 +1336,7 @@ class BlenderShape(DtsShape):
 		if sequence.has_scale: sequence.flags |= Sequence.AlignedScale
 		
 		# It should be safe to add this sequence to the list now.
-		self.sequences.append(sequence)
+		#self.sequences.append(sequence)
 
 		# Now that we have all the transforms for each node at 
 		# every frame, remove the ones that we don't need. This is much faster than doing
@@ -1438,7 +1484,7 @@ class BlenderShape(DtsShape):
 			mat = self.materials.materials[i]			
 			if sequenceKey['IFL']['Material'] == mat.name:
 				sequence.matters_ifl[i] = True
-
+		return sequence
 
 	# Processes a material ipo and incorporates it into the Action
 	def addSequenceMaterialIpos(self, sequence, numFrames, startFrame=1):
@@ -1520,7 +1566,7 @@ class BlenderShape(DtsShape):
 		del matFrames
 		del usedMat
 		
-		return True
+		return sequence
 		
 	def convertAndDumpSequenceToDSQ(self, sequence, filename, version):
 		
