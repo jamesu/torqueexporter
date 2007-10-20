@@ -1432,7 +1432,7 @@ class BlenderShape(DtsShape):
 
 	# Add sequence matters for IFL animation.
 	def addSequenceIFL(self, sequence, sequenceKey):
-		sequence.matters_ifl = [False]*len(self.objects)	
+		sequence.matters_ifl = [False]*len(self.materials.materials)
 		# Now we can dump each frame for the objects
 		for i in range(0, len(self.materials.materials)):
 			mat = self.materials.materials[i]			
