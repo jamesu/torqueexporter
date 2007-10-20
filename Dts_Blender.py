@@ -411,7 +411,7 @@ dummySequence = {'Dsq' : False,
 
 dummySequence =	\
 {
-'Dsq': True,
+'Dsq': False,
 'Cyclic': False,
 'Triggers': [], # [State, Time, On]
 'NoExport': False,
@@ -438,8 +438,9 @@ dummySequence =	\
 },
 'Vis': 
 { 
-'AnimateMaterial': False,
-'MaterialIpoStartFrame': 1
+'Enabled': False,
+'StartFrame': 1,
+'EndFrame': 1
 }
 }
 
@@ -717,6 +718,56 @@ class ShapeTree(SceneTree):
 						Blender.Draw.PupMenu("Warning%t|One or more of your armatures is locked into rest position. This can cause problems with exported animations.")
 						break
 
+				# Process sequences
+				seqKeys = Prefs['Sequences'].keys()
+				if len(seqKeys) > 0:
+					progressBar.pushTask("Adding Sequences..." , len(actions.keys()*4), 0.8)
+					for seqName in seqKeys:
+						seqKey = getSequenceKey(seqName)
+
+						# does the sequence have anything to export?
+						if (seqKey['NoExport']) or not (seqKey['Action']['Enabled'] or seqKey['IFL']['Enabled'] or seqKey['Vis']['Enabled']):
+							progressBar.update()
+							progressBar.update()
+							progressBar.update()
+							progressBar.update()
+							continue
+
+						# add the sequence
+						try: action = actions[seqName]
+						except: action = None
+						sequence = self.Shape.addSequence(seqName, context, seqKey, scene, action)
+						if sequence == None:
+							Torque_Util.dump_writeln("Warning : Couldn't add action '%s' to shape!" % seqName)
+							progressBar.update()
+							progressBar.update()
+							progressBar.update()
+							progressBar.update()
+							continue
+						progressBar.update()
+
+						# Pull the triggers
+						if len(seqKey['Triggers']) != 0:
+							self.Shape.addSequenceTriggers(sequence, seqKey['Triggers'], DtsShape_Blender.getNumFrames(actions[seqName].getAllChannelIpos().values(), False))
+						progressBar.update()
+						progressBar.update()						
+
+						# Hey you, DSQ!
+						if seqKey['Dsq']:
+							self.Shape.convertAndDumpSequenceToDSQ(sequence, "%s/%s.dsq" % (Prefs['exportBasepath'], seqName), Stream.DTSVersion)
+							Torque_Util.dump_writeln("Loaded and dumped sequence '%s' to '%s/%s.dsq'." % (seqName, Prefs['exportBasepath'], seqName))
+						else:
+							Torque_Util.dump_writeln("Loaded sequence '%s'." % seqName)
+
+						# Clear out matters if we don't need them
+						if not sequence.has_loc: sequence.matters_translation = []
+						if not sequence.has_rot: sequence.matters_rotation = []
+						if not sequence.has_scale: sequence.matters_scale = []
+						progressBar.update()
+
+					progressBar.popTask()
+
+				'''				
 				# The ice be dammed, it's time to take action
 				if len(actions.keys()) > 0:
 					progressBar.pushTask("Adding Actions..." , len(actions.keys()*4), 0.8)
@@ -773,7 +824,7 @@ class ShapeTree(SceneTree):
 						progressBar.update()
 
 					progressBar.popTask()
-				
+				'''
 				Torque_Util.dump_writeln("> Shape Details")
 				self.Shape.dumpShapeInfo()
 				progressBar.update()
@@ -1073,7 +1124,7 @@ class SomeControlsClass:
 '''
 ***************************************************************************************************
 *
-* Template for creating new control pages
+* Class that creates and owns the GUI controls on the About control page
 *
 ***************************************************************************************************
 '''
@@ -1727,8 +1778,22 @@ class ActionControlsClass:
 				actKey['BlendRefPoseFrame'] = seq['BlendRefPoseFrame']
 				del seq['BlendRefPoseFrame']
 			# create the new total frames key
+			actKey['Enabled'] = True
+			try: x = seq['Vis']
+			except: seq['Vis'] = {}
+			try: x = seq['Vis']['Enabled']
+			except:
+				seq['Vis']['Enabled'] = seq['AnimateMaterial']
+				del seq['AnimateMaterial']
+			try: x = seq['Vis']['StartFrame']
+			except:
+				seq['Vis']['StartFrame'] = seq['MaterialIpoStartFrame']
+				seq['Vis']['EndFrame'] = seq['MaterialIpoStartFrame']
+				del seq['MaterialIpoStartFrame']
+				
 			try: x = seq['TotalFrames']
-			except: seq['TotalFrames'] = {}
+			except: seq['TotalFrames'] = 0
+			
 
 	def handleEvent(self, control):
 		global guiActOpts, guiActList
@@ -1764,8 +1829,8 @@ class ActionControlsClass:
 				self.guiActOpts.controls[1].max = maxNumFrames
 				self.guiActOpts.controls[2].value = sequencePrefs['Action']['NumGroundFrames']
 				self.guiActOpts.controls[2].max = maxNumFrames
-				self.guiActOpts.controls[3].state = sequencePrefs['AnimateMaterial']
-				self.guiActOpts.controls[4].value = sequencePrefs['MaterialIpoStartFrame']
+				self.guiActOpts.controls[3].state = sequencePrefs['Vis']['Enabled']
+				self.guiActOpts.controls[4].value = sequencePrefs['Vis']['StartFrame']
 
 				# added for blend anim ref pose selection
 				# make sure the user didn't delete the action containing the refrence pose
@@ -1815,9 +1880,9 @@ class ActionControlsClass:
 				elif control.name == "guiGroundframeCount":
 					sequencePrefs['Action']['NumGroundFrames'] = control.value
 				elif control.name == "guiMatAnim":
-					sequencePrefs['AnimateMaterial'] = control.state
+					sequencePrefs['Vis']['Enabled'] = control.state
 				elif control.name == "guiMatStartFrame":
-					sequencePrefs['MaterialIpoStartFrame'] = control.value
+					sequencePrefs['Vis']['StartFrame'] = control.value
 				# added for blend ref pose selection
 				elif control.name == "guiRefPoseMenu":
 					sequencePrefs['Action']['BlendRefPoseAction'] = control.items[control.itemIndex]
@@ -2289,26 +2354,31 @@ class IFLControlsClass:
 	
 	# add a new IFL sequence in the GUI and the prefs
 	def AddNewIFLSeq(self, seqName):
+		global dummySequence
 		# add sequence to prefs
 		if not (seqName in Prefs['Sequences'].keys()):
 			try: x = Prefs['Sequences'][seqName]
-			except: Prefs['Sequences'][seqName] = {}
+			except: Prefs['Sequences'][seqName] = dummySequence.copy()
 			seq = Prefs['Sequences'][seqName]
+			'''
 			# add action stuff here for now...
 			seq['Triggers'] = []
 			seq['NoExport'] = False
 			seq['Dsq'] = False
 			seq['Priority'] = 0
 			seq['Cyclic'] = False
+			seq['Action'] = {}
 			seq['Action']['InterpolateFrames'] = 0
 			seq['TotalFrames'] = 0
 			seq['Action']['NumGroundFrames'] = 0
 			seq['Action']['Blend'] = False
 			seq['Action']['BlendRefPoseAction'] = None
 			seq['Action']['BlendRefPoseFrame'] = 8
-			seq['AnimateMaterial'] = False
-			seq['MaterialIpoStartFrame'] = 0
-
+			seq['Vis']
+			seq['Vis']['Enabled'] = False
+			seq['Vis']['StartFrame'] = 0
+			seq['Vis']['EndFrame'] = 0
+			'''
 			
 			# add ifl stuff
 			seq['IFL'] = {}
