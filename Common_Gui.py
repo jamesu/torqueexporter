@@ -344,7 +344,9 @@ class ComboBox(BasicControl):
 		
 	# get the string corresponding to the selected item
 	def getSelectedItemString(self):
-		return self.items[self.itemIndex]
+		if self.itemIndex > -1:
+			return self.items[self.itemIndex]
+		else: return ""
 		
 	# find a string in the list of items and return it's index
 	def getItemIndexFromString(self, string):
