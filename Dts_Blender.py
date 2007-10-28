@@ -417,80 +417,86 @@ dummySequence =	\
 'NoExport': False,
 'Priority': 0,
 'TotalFrames': 36,
-'Action':
-{
-'NumGroundFrames': 0, 
-'BlendRefPoseAction': 'Block_1HR',
-'BlendRefPoseFrame': 8,
-'InterpolateFrames': 0,
-'Blend': False,
-},
-'IFL':
-{
-'Enabled': False,
-'Material': 'Frame001',
-'NumImages': 3,
-'TotalFrames': 6,
-'IFLFrames':
-[['Frame001', 2],
-['Frame002', 2],
-['Frame003', 2],],
-},
-'Vis': 
-{ 
-'Enabled': False,
-'StartFrame': 1,
-'EndFrame': 1
-}
 }
 
 # Gets a sequence key from the preferences
 # Creates default if key does not exist
-def getSequenceKey(value):
+def getSequenceKey(value):	
 	global Prefs, dummySequence
 	if value == "N/A":
-		return dummySequence
+		return dummySequence.copy()
 	try:
 		return Prefs['Sequences'][value]	
 	except KeyError:
+		print "Creating new sequence key..."
 		Prefs['Sequences'][value] = dummySequence.copy()
 		# Create anything that cannot be copied (reference objects like lists),
 		# and set everything that needs a default
 		Prefs['Sequences'][value]['Triggers'] = []
+		Prefs['Sequences'][value]['Action'] = {'Enabled': False,'NumGroundFrames': 0,'BlendRefPoseAction': None,'BlendRefPoseFrame': 8,'InterpolateFrames': 0,'Blend': False}
+		Prefs['Sequences'][value]['IFL'] = { 'Enabled': False,'Material': None,'NumImages': 0,'TotalFrames': 0,'IFLFrames': []}
+		Prefs['Sequences'][value]['Vis'] = { 'Enabled': False,'StartFrame': 1,'EndFrame': 1}
+
+
+		Prefs['Sequences'][value]['Action']['enabled'] = True
+		print "Checking for action..."
 		try:
 			action = Blender.Armature.NLA.GetActions()[value]
 			maxNumFrames = DtsShape_Blender.getNumFrames(action.getAllChannelIpos().values(), False)
-		except:
+			print "got maxNumFrames:",maxNumFrames
+		except KeyError:
+			Prefs['Sequences'][value]['Action']['Enabled'] = False
 			maxNumFrames = 0
+			print "Action not found..."
+		except:
+			Prefs['Sequences'][value]['Action']['Enabled'] = False
+			print "Some problem with action..."
+			maxNumFrames = 0		
+		print "Setting InterpolateFrames Value to:", maxNumFrames
 		Prefs['Sequences'][value]['Action']['InterpolateFrames'] = maxNumFrames
 		# added for ref pose of blend animations
 		# default reference pose for blends is in the middle of the same action
 		Prefs['Sequences'][value]['Action']['BlendRefPoseAction'] = value			
 		Prefs['Sequences'][value]['Action']['BlendRefPoseFrame'] = maxNumFrames/2
 		Prefs['Sequences'][value]['Priority'] = 0
-		return getSequenceKey(value)
+		print "Returning new sequence for", value, "..."
+		return Prefs['Sequences'][value]
 
-# Cleans up extra keys that may not be used anymore (e.g. action deleted)
+# Cleans up extra sequence keys that may not be used anymore (e.g. action deleted)
 def cleanKeys():
-	pass
-	'''
+	print "************* Cleaning sequence keys *******************"
 	# Sequences
-	#delKeys = []
-	for key in Prefs['Sequences'].keys():
-		Found = False
-		for action_key in Armature.NLA.GetActions().keys():
-			if action_key == key:
-				Found = True
-				break
-		if not Found:
-			ifl = None
-			try: ifl = Prefs['Sequences'][key]['IFL']['Enabled']
-			except: pass
-			if ifl == None or ifl == False:	del Prefs['Sequences'][key]
+	for keyName in Prefs['Sequences'].keys():
+		#key = Prefs['Sequences'][keyName]
+		key = getSequenceKey(keyName)
+		actionFound = False
+		# is the action 
+		print "*******************\n",key,"\n*******************\n"
+		if key['Action']['Enabled']:
+			for action_key in Armature.NLA.GetActions().keys():
+				if action_key == key:
+					actionFound = True
+					break
+		
+		if not actionFound:
+			# see if any of the other sequence types are enabled
+			VisFound = False
+			try: IFLFound = Prefs['Sequences'][key]['IFL']['Enabled']
+			except: IFLFound = False
+			try: VisFound = Prefs['Sequences'][key]['Action']['Enabled']
+			except: VisFound = False
+			# if no sequence type is enabled for the key, get rid of it.
+			print "**************    Deleting key:", keyName
+			if VisFound == False and IFLFound == False: del key
 
-	#for key in delKeys:
-	#	del Prefs['Sequences'][key]
-	'''
+
+
+# Creates action keys that don't already exist
+def createActionKeys():
+	print "************ Creating Action Keys ************************"
+	for action in Blender.Armature.NLA.GetActions():
+		print action
+		getSequenceKey(action)
 
 '''
 	Class to handle the 'World' branch
@@ -719,6 +725,7 @@ class ShapeTree(SceneTree):
 						break
 
 				# Process sequences
+				print "************ Processing sequences ******************"
 				seqKeys = Prefs['Sequences'].keys()
 				if len(seqKeys) > 0:
 					progressBar.pushTask("Adding Sequences..." , len(actions.keys()*4), 0.8)
@@ -727,12 +734,14 @@ class ShapeTree(SceneTree):
 
 						# does the sequence have anything to export?
 						if (seqKey['NoExport']) or not (seqKey['Action']['Enabled'] or seqKey['IFL']['Enabled'] or seqKey['Vis']['Enabled']):
+							print "not exporting sequence:",seqName
+							print "SeqKey=\n", seqKey
 							progressBar.update()
 							progressBar.update()
 							progressBar.update()
 							progressBar.update()
 							continue
-
+						
 						# add the sequence
 						try: action = actions[seqName]
 						except: action = None
@@ -917,6 +926,7 @@ def handleScene():
 	export_tree = SceneTree(None,Blender.Scene.GetCurrent())
 	Torque_Util.dump_writeln("Cleaning Preference Keys")
 	cleanKeys()
+	createActionKeys()
 
 def export():
 	Torque_Util.dump_writeln("Exporting...")
@@ -1749,35 +1759,47 @@ class ActionControlsClass:
 
 	
 	def updateOldPrefs(self):
+		print "*********     Updating old action preferences ***********"
 		global Prefs
+		print "Prefs['Sequences'].keys():",Prefs['Sequences'].keys()
 		for seqName in Prefs['Sequences'].keys():
-			seq = Prefs['Sequences'][seqName]
-			print "seq:",seq
+			seq = getSequenceKey(seqName)
+			print "*** seq:",seq
 			# Move keys into the new "Action" subkey.and delete old keys
 			try: x = seq['Action']
-			except: seq['Action'] = {}
+			except:
+				seq['Action'] = {}
+				print "      Created New Action Key.."
 			actKey = seq['Action']
+			try: x = actKey['Enabled']
+			except: 
+				actKey['Enabled'] = True
+				print "      Created Enabled Key.."
 			try: x = actKey['InterpolateFrames']
 			except:
 				actKey['InterpolateFrames'] = seq['InterpolateFrames']
 				del seq['InterpolateFrames']
+				print "      Moved InterpolateFrames Key.."
 			try: x = actKey['NumGroundFrames']
 			except:
 				actKey['NumGroundFrames'] = seq['NumGroundFrames']
 				del seq['NumGroundFrames']
+				print "      Moved NumGroundFrames Key.."
 			try: x = actKey['Blend']
 			except:
 				actKey['Blend'] = seq['Blend']
 				del seq['Blend']
+				print "      Moved Blend Key.."
 			try: x = actKey['BlendRefPoseAction']
 			except:
 				actKey['BlendRefPoseAction'] = seq['BlendRefPoseAction']
 				del seq['BlendRefPoseAction']
+				print "      Moved BlendRefPoseAction Key.."
 			try: x = actKey['BlendRefPoseFrame']
 			except:
 				actKey['BlendRefPoseFrame'] = seq['BlendRefPoseFrame']
 				del seq['BlendRefPoseFrame']
-			# create the new total frames key
+				print "      Moved BlendRefPoseFrame Key.."
 			actKey['Enabled'] = True
 			try: x = seq['Vis']
 			except: seq['Vis'] = {}
@@ -1811,6 +1833,7 @@ class ActionControlsClass:
 			if control.itemIndex != -1:
 				sequenceName = control.controls[control.itemIndex].controls[0].label
 				sequencePrefs = getSequenceKey(sequenceName)
+				print "** Responding to Action list event, seqKey:\n", sequencePrefs
 				self.guiActOpts.controls[0].label = "Sequence '%s'" % sequenceName
 
 				try:
@@ -1857,7 +1880,7 @@ class ActionControlsClass:
 
 				self.guiActOpts.controls[6].itemIndex = 0
 				self.guiActOpts.controls[9].max = maxNumFrames
-				self.guiuenceUpdateTriggers(sequencePrefs['Triggers'], 0)
+				self.guiSequenceUpdateTriggers(sequencePrefs['Triggers'], 0)
 				# show/hide ref pose stuff.
 				if sequencePrefs['Action']['Blend'] == True:
 					self.guiActOpts.controls[12].visible = True
@@ -1989,7 +2012,7 @@ class ActionControlsClass:
 			control.y = newheight - 120
 			control.width = newwidth - 10
 
-	def guiuenceUpdateTriggers(self, triggerList, itemIndex):
+	def guiSequenceUpdateTriggers(self, triggerList, itemIndex):
 		if (len(triggerList) == 0) or (itemIndex >= len(triggerList)):
 			self.guiActOpts.controls[7].value = 0
 			self.guiActOpts.controls[8].state = False
@@ -2010,13 +2033,13 @@ class ActionControlsClass:
 		itemIndex = self.guiActOpts.controls[6].itemIndex
 
 		if control.name == "guiTriggerMenu":
-			self.guiuenceUpdateTriggers(sequencePrefs['Triggers'], itemIndex)
+			self.guiSequenceUpdateTriggers(sequencePrefs['Triggers'], itemIndex)
 		elif control.name == "guiTriggerAdd":
 			# Add
 			sequencePrefs['Triggers'].append([1, 1, True])
 			self.guiActOpts.controls[6].items.append((self.triggerMenuTemplate % (1, 1)) + "(ON)")
 			self.guiActOpts.controls[6].itemIndex = len(sequencePrefs['Triggers'])-1
-			self.guiuenceUpdateTriggers(sequencePrefs['Triggers'], self.guiActOpts.controls[6].itemIndex)
+			self.guiSequenceUpdateTriggers(sequencePrefs['Triggers'], self.guiActOpts.controls[6].itemIndex)
 		elif (len(self.guiActOpts.controls[6].items) != 0):
 			if control.name == "guiTriggerState":
 				sequencePrefs['Triggers'][itemIndex][0] = control.value
@@ -2032,7 +2055,7 @@ class ActionControlsClass:
 				if itemIndex <= len(sequencePrefs['Triggers']):
 					self.guiActOpts.controls[6].itemIndex = len(sequencePrefs['Triggers'])-1
 					itemIndex = self.guiActOpts.controls[6].itemIndex
-				self.guiuenceUpdateTriggers(sequencePrefs['Triggers'], itemIndex)
+				self.guiSequenceUpdateTriggers(sequencePrefs['Triggers'], itemIndex)
 
 			# Update menu caption
 			if itemIndex == -1:
@@ -2040,6 +2063,7 @@ class ActionControlsClass:
 			if sequencePrefs['Triggers'][itemIndex][2]: stateStr = "(ON)"
 			else: stateStr = "(OFF)"
 			self.guiActOpts.controls[6].items[itemIndex] = (self.triggerMenuTemplate % (sequencePrefs['Triggers'][itemIndex][1], sequencePrefs['Triggers'][itemIndex][0])) + stateStr
+	
 	def populateSequenceActionList(self):
 		actions = Armature.NLA.GetActions()
 		keys = actions.keys()
@@ -2101,7 +2125,9 @@ class ActionControlsClass:
 			sequencePrefs['Cyclic'] = control.state
 
 	def createSequenceActionListitem(self, seq_name, startEvent):
+		print "Creating Action Sequence List item...."
 		sequencePrefs = getSequenceKey(seq_name)
+		sequencePrefs['Action']['Enabled'] = True
 		# Note on positions:
 		# It quicker to assign these here, as there is no realistic chance scaling being required.
 		guiContainer = Common_Gui.BasicContainer("", None, None)
@@ -2171,7 +2197,7 @@ class IFLControlsClass:
 		self.guiMatTxt = Common_Gui.SimpleText("guiMatTxt", "Select IFL Material:", None, self.resize)
 		self.guiMat = Common_Gui.ComboBox("guiMat", "IFL Material", "Select a Material from this list to use in the IFL Animation", globalEvents.getNewID(), self.handleEvent, self.resize)
 		self.guiNumImagesTxt = Common_Gui.SimpleText("guiNumImagesTxt", "Number of Images:", None, self.resize)
-		self.guiNumImages = Common_Gui.NumberPicker("guiNumImages", "Images", "Number of Images in the IFL animation", globalEvents.getNewID(), self.handleEvent, self.resize)
+		self.guiNumImages = Common_Gui.NumberPicker("guiNumImages", "Images", "Number of Images in the IFL animation", globalEvents.getNewID(), self.handleGuiNumImagesEvent, self.resize)
 		self.guiFramesListTxt = Common_Gui.SimpleText("guiFramesListTxt", "IFL Image Frames:", None, self.resize)
 		self.guiFramesList = Common_Gui.ListContainer("guiFramesList", "", self.handleFrameListEvent, self.resize)
 		self.guiFramesListSelectedTxt = Common_Gui.SimpleText("guiFramesListSelectedTxt", "Selected:", None, self.resize)
@@ -2179,13 +2205,16 @@ class IFLControlsClass:
 		self.guiApplyToAll = Common_Gui.BasicButton("guiApplyToAll", "Apply to all", "Apply current frame display value to all IFL images", globalEvents.getNewID(), self.handleEvent, self.resize)
 
 		# set initial states
-		self.guiSeqOptsContainer.enabled = True
+		self.guiSeqOptsContainer.enabled = False
 		self.guiSeqOptsContainer.fade_mode = 5
 		self.guiSeqOptsContainer.borderColor = None
 		self.guiSeqList.fade_mode = 0
 		self.guiFramesList.enabled = True
-
-
+		self.guiNumImages.min = 1
+		self.guiNumFrames.min = 1
+		self.guiNumImages.value = 1
+		self.guiNumFrames.value = 1
+		self.guiNumFrames.max = 65535 # <- reasonable?  I wonder if anyone wants to do day night cycles with IFL? - Joe G.
 
 		# add controls to containers
 		guiSequenceIFLSubtab.addControl(self.guiSeqList)
@@ -2244,7 +2273,8 @@ class IFLControlsClass:
 		# loop through all actions in the preferences and add the 'IFL' key to them with some reasonable default values.
 		global Prefs
 		for seqName in Prefs['Sequences'].keys():
-			seq = Prefs['Sequences'][seqName]
+			#seq = Prefs['Sequences'][seqName]
+			seq = getSequenceKey(seqName)
 			try: x = seq['IFL']
 			except KeyError:
 				print "Resetting IFL Sequence:",seqName
@@ -2354,59 +2384,22 @@ class IFLControlsClass:
 	
 	# add a new IFL sequence in the GUI and the prefs
 	def AddNewIFLSeq(self, seqName):
-		global dummySequence
-		# add sequence to prefs
-		if not (seqName in Prefs['Sequences'].keys()):
-			try: x = Prefs['Sequences'][seqName]
-			except: Prefs['Sequences'][seqName] = dummySequence.copy()
-			seq = Prefs['Sequences'][seqName]
-			'''
-			# add action stuff here for now...
-			seq['Triggers'] = []
-			seq['NoExport'] = False
-			seq['Dsq'] = False
-			seq['Priority'] = 0
-			seq['Cyclic'] = False
-			seq['Action'] = {}
-			seq['Action']['InterpolateFrames'] = 0
-			seq['TotalFrames'] = 0
-			seq['Action']['NumGroundFrames'] = 0
-			seq['Action']['Blend'] = False
-			seq['Action']['BlendRefPoseAction'] = None
-			seq['Action']['BlendRefPoseFrame'] = 8
-			seq['Vis']
-			seq['Vis']['Enabled'] = False
-			seq['Vis']['StartFrame'] = 0
-			seq['Vis']['EndFrame'] = 0
-			'''
-			
-			# add ifl stuff
-			seq['IFL'] = {}
-			seq['IFL']['Enabled'] = True
-			seq['IFL']['Material'] = None
-			seq['IFL']['NumImages'] = 0
-			seq['IFL']['TotalFrames'] = 0
-			seq['IFL']['IFLFrames'] = []
+		seq = getSequenceKey(seqName)
 
-			# add sequence to GUI sequence list
-			self.guiSeqList.addControl(self.createSequenceListItem(seqName))
-	
-
-	# add IFL to an existing sequence
-	def AddIFLToExistingSeq(self, seqName):
-		try: x = Prefs['Sequences'][seqName]
-		except: Prefs['Sequences'][seqName] = {}
-		seq = Prefs['Sequences'][seqName]
 		# add ifl stuff
 		seq['IFL'] = {}
 		seq['IFL']['Enabled'] = True
 		seq['IFL']['Material'] = None
-		seq['IFL']['NumImages'] = 0
-		seq['IFL']['TotalFrames'] = 0
+		seq['IFL']['NumImages'] = 1
+		seq['IFL']['TotalFrames'] = 1
 		seq['IFL']['IFLFrames'] = []
 
-		# add sequence to GUI sequence list
+		# add sequence to GUI sequence list		
 		self.guiSeqList.addControl(self.createSequenceListItem(seqName))
+		# refresh the Image frames list
+		self.clearImageFramesList()
+		self.populateImageFramesList(seqName)
+	
 
 	def determineIFLMatStartNumber(self, matName):
 		i = len(matName)-1
@@ -2443,7 +2436,34 @@ class IFLControlsClass:
 			return textPortion
 		else:
 			return ""
-	
+	def handleGuiNumImagesEvent(self, control):
+		print "*** Handling Gui Num Images Event ***"
+		if self.guiMat.itemIndex < 0:
+			control.value = 1
+			return
+		guiSeqList = self.guiSeqList
+		guiMat = self.guiMat
+		guiFramesList = self.guiFramesList
+		seqName = guiSeqList.controls[guiSeqList.itemIndex].controls[0].label
+		matName = guiMat.getSelectedItemString()
+		seqPrefs = getSequenceKey(seqName)
+		seqPrefs['IFL']['NumImages'] = control.value			
+		startNum = self.determineIFLMatStartNumber(matName)
+		textPortion = self.getIFLMatTextPortion(matName)
+		numPadding = self.determineIFLMatNumberPadding(matName)			
+		fr = seqPrefs['IFL']['IFLFrames']
+		while len(fr) > control.value:				
+			del fr[len(fr)-1]
+			self.removeLastItemFromFrameList()
+			print "removed last frame, len is now:", len(fr)
+		i = len(guiFramesList.controls)
+		while len(guiFramesList.controls) < control.value:
+			newItemName = textPortion + self.numToPaddedString(startNum + i, numPadding)
+			guiFramesList.addControl(self.createFramesListItem(newItemName))
+			print "adding item to prefs:", newItemName
+			Prefs['Sequences'][seqName]['IFL']['IFLFrames'].append([newItemName,1])
+			i += 1
+
 	
 	def handleEvent(self, control):
 		print "handleEvent called..."
@@ -2453,14 +2473,24 @@ class IFLControlsClass:
 			# todo - validate sequence name
 			self.AddNewIFLSeq(self.guiSeqName.value)
 			self.guiSeqName.value = ""
+			self.guiSeqList.selectItem(len(self.guiSeqList.controls)-1)
 		elif control.name == "guiSeqDel":
 			guiSeqList = self.guiSeqList
 			if guiSeqList.itemIndex > -1 and guiSeqList.itemIndex < len(guiSeqList.controls):
 				seqName = guiSeqList.controls[guiSeqList.itemIndex].controls[0].label
+				seqKey = getSequenceKey(seqName)
 				guiSeqList.removeItem(guiSeqList.itemIndex)
-				Prefs['Sequences'][seqName]['IFL']['Enabled'] = False
-				# todo - don't add back to list if only IFL is enabled for the sequence
-				self.guiSeqExistingSequences.items.append(seqName)
+				seqKey['IFL']['Enabled'] = False
+				if seqKey['Action']['Enabled'] == True or seqKey['Vis']['Enabled'] == True:
+					print "Adding sequence",seqName,"back to existing sequences list"
+					if seqKey['Action']['Enabled'] == True:
+						print " because Action is enabled"
+					if seqKey['Vis']['Enabled'] == True:
+						print " because Vis is enabled"
+					self.guiSeqExistingSequences.items.append(seqName)
+				else:
+					print "Removing sequence key for",seqName
+					del Prefs['Sequences'][seqName]
 		elif control.name == "guiSeqRename":
 			guiSeqList = self.guiSeqList
 			# todo - validate sequence name
@@ -2470,7 +2500,7 @@ class IFLControlsClass:
 			itemIndex = existingSequences.itemIndex
 			if itemIndex >=0 and itemIndex < len(existingSequences.items):
 				existingName = existingSequences.getSelectedItemString()
-				self.AddIFLToExistingSeq(existingName)
+				self.AddNewIFLSeq(existingName)
 				del existingSequences.items[itemIndex]
 				existingSequences.selectStringItem("")
 		elif control.name == "guiMat":
@@ -2480,42 +2510,43 @@ class IFLControlsClass:
 			# set the pref for the selected sequence
 			if guiSeqList.itemIndex > -1 and itemIndex >=0 and itemIndex < len(guiMat.items):
 				seqName = guiSeqList.controls[guiSeqList.itemIndex].controls[0].label
-				Prefs['Sequences'][seqName]['IFL']['Material'] = control.getSelectedItemString()
-		elif control.name == "guiNumImages":
+				
+				
+				if Prefs['Sequences'][seqName]['IFL']['Material'] != control.getSelectedItemString():
+					Prefs['Sequences'][seqName]['IFL']['Material'] = control.getSelectedItemString()
+					# replace existing frame names with new ones					
+					guiFramesList = self.guiFramesList
+					matName = guiMat.getSelectedItemString()
+					seqPrefs = getSequenceKey(seqName)
+					startNum = self.determineIFLMatStartNumber(matName)
+					textPortion = self.getIFLMatTextPortion(matName)
+					numPadding = self.determineIFLMatNumberPadding(matName)
+					i = 0
+					while i < self.guiNumImages.value:
+						newItemName = textPortion + self.numToPaddedString(startNum + i, numPadding)
+						guiFramesList.addControl(self.createFramesListItem(newItemName))
+						print "Changing name of item to:", newItemName
+						try: Prefs['Sequences'][seqName]['IFL']['IFLFrames'][i][0] = newItemName
+						except IndexError: Prefs['Sequences'][seqName]['IFL']['IFLFrames'].append([newItemName, 1])
+						i += 1
+					# add initial image frame
+					#Prefs['Sequences'][seqName]['IFL']['IFLFrames'] = [[textPortion + self.numToPaddedString(startNum, numPadding), 1]]
+					self.handleGuiNumImagesEvent(self.guiNumImages)
+					self.clearImageFramesList()
+					self.populateImageFramesList(seqName)
+
+			
+		elif control.name == "guiNumFrames":			
 			guiSeqList = self.guiSeqList
-			guiMat = self.guiMat
 			guiFramesList = self.guiFramesList
-			seqName = guiSeqList.controls[guiSeqList.itemIndex].controls[0].label
-			matName = guiMat.getSelectedItemString()
-			seqPrefs = getSequenceKey(seqName)
-			seqPrefs['IFL']['NumImages'] = control.value			
-			startNum = self.determineIFLMatStartNumber(matName)
-			textPortion = self.getIFLMatTextPortion(matName)
-			numPadding = self.determineIFLMatNumberPadding(matName)			
-			fr = seqPrefs['IFL']['IFLFrames']
-			while len(fr) > control.value:				
-				del fr[len(fr)-1]
-				self.removeLastItemFromFrameList()
-			print fr
-			#print seqPrefs			
-			i = len(guiFramesList.controls)
-			while len(guiFramesList.controls) < control.value:
-				newItemName = textPortion + self.numToPaddedString(startNum + i, numPadding)
-				guiFramesList.addControl(self.createFramesListItem(newItemName))
-				print "adding item to prefs:", newItemName
-				Prefs['Sequences'][seqName]['IFL']['IFLFrames'].append([newItemName,1])
-				i += 1
-			print fr
-		elif control.name == "guiNumFrames":
-			guiSeqList = self.guiSeqList
-			guiFramesList = self.guiFramesList
-			seqName = guiSeqList.controls[guiSeqList.itemIndex].controls[0].label
-			seqPrefs = getSequenceKey(seqName)
-			itemIndex = guiFramesList.itemIndex
-			print "itemIndex=",itemIndex
-			seqPrefs['IFL']['IFLFrames'][itemIndex][1] = control.value
-			guiFramesList.controls[guiFramesList.itemIndex].controls[1].label = "fr:" + str(control.value)
-			if self.guiFramesList.callback: self.guiFramesList.callback(self.guiFramesList) # Bit of a hack, but works
+			if guiFramesList.itemIndex > -1:
+				seqName = guiSeqList.controls[guiSeqList.itemIndex].controls[0].label
+				seqPrefs = getSequenceKey(seqName)
+				itemIndex = guiFramesList.itemIndex
+				print "itemIndex=",itemIndex
+				seqPrefs['IFL']['IFLFrames'][itemIndex][1] = control.value
+				guiFramesList.controls[guiFramesList.itemIndex].controls[1].label = "fr:" + str(control.value)
+				if self.guiFramesList.callback: self.guiFramesList.callback(self.guiFramesList) # Bit of a hack, but works
 		elif control.name == "guiApplyToAll":
 			guiSeqList = self.guiSeqList
 			guiFramesList = self.guiFramesList
@@ -2535,9 +2566,13 @@ class IFLControlsClass:
 		if control.itemIndex < 0:
 			self.guiSeqName.value = ""
 			self.guiMat.selectStringItem("")
-			self.guiNumImages.value = 0
+			self.guiNumImages.value = 1
 			self.guiNumFrames.value = 1
+			self.clearImageFramesList()
+			self.guiNumFrames.value = 1
+			self.guiSeqOptsContainer.enabled = False
 		else:
+			self.guiSeqOptsContainer.enabled = True
 			seqName = control.controls[control.itemIndex].controls[0].label
 			seqPrefs = getSequenceKey(seqName)
 			self.guiSeqName.value = seqName 
@@ -2590,22 +2625,25 @@ class IFLControlsClass:
 		global Prefs
 		for seqName in Prefs['Sequences'].keys():
 			print "Checking",seqName,"..."
-			seq = Prefs['Sequences'][seqName]
+			#seq = Prefs['Sequences'][seqName]
+			seq = getSequenceKey(seqName)
 			if seq['IFL']['Enabled'] == True:
 				print "  Creating IFL sequence:",seqName
 				self.guiSeqList.addControl(self.createSequenceListItem(seqName))
 
 	def populateExistingSeqPulldown(self):
-		print "Populating Existing Sequence list..."
+		print "**** Populating Existing Sequence list..."
 		# loop through all actions in the preferences and check for sequences without IFL animations
 		global Prefs
 		for seqName in Prefs['Sequences'].keys():
 			print "Checking",seqName,"..."
-			seq = Prefs['Sequences'][seqName]
+			#seq = Prefs['Sequences'][seqName]
+			seq = getSequenceKey(seqName)
 			if seq['IFL']['Enabled'] == False:
 				print "  Adding sequence to existing sequence pulldown:",seqName
 				self.guiSeqExistingSequences.items.append(seqName)
 
+	
 	def populateIFLMatPulldown(self):
 		print "Populating IFL Material pulldown"
 		# loop through all materials in the preferences and check for IFL materials
@@ -2621,6 +2659,13 @@ class IFLControlsClass:
 				print "  Adding material to IFL Material pulldown:",matName
 				self.guiMat.items.append(matName)
 
+	def clearIFLMatPulldown(self):
+		print "Clearing IFL Material pulldown"
+		# loop through all materials in the preferences and check for IFL materials
+		self.guiMat.items = []
+		#for item in self.guiMat.items:
+		#	del item
+	
 	def clearImageFramesList(self):
 		for i in range(0, len(self.guiFramesList.controls)):
 			del self.guiFramesList.controls[i].controls[:]
@@ -3045,7 +3090,7 @@ class MaterialControlsClass:
 								pmb['DetailTex'] = None
 
 	def handleEvent(self, control):
-		global Prefs
+		global Prefs, IFLControls
 		guiMaterialList = self.guiMaterialList
 		guiMaterialOptions = self.guiMaterialOptions
 
@@ -3157,6 +3202,8 @@ class MaterialControlsClass:
 			Prefs['Materials'][materialName]['MipMapZeroBorder'] = control.state
 		elif control.name == "guiMaterialIFLMatButton":
 			Prefs['Materials'][materialName]['IFLMaterial'] = control.state
+			IFLControls.clearIFLMatPulldown()
+			IFLControls.populateIFLMatPulldown()
 		elif control.name == "guiMaterialDetailMapButton":
 			Prefs['Materials'][materialName]['DetailMapFlag'] = control.state
 		elif control.name == "guiMaterialBumpMapButton":
@@ -3231,8 +3278,6 @@ class MaterialControlsClass:
 		try:
 			materials = Prefs['Materials']
 		except:
-
-			toDo = 1
 			importMaterialList()
 			materials = Prefs['Materials']
 
