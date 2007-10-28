@@ -3413,13 +3413,17 @@ def initGui():
 	guiSequenceIFLSubtab.enabled, guiSequenceIFLSubtab.visible = False, False
 	guiSequenceVisibilitySubtab = Common_Gui.TabContainer("guiSequenceVisibilitySubtab", None, guiSequenceVisibilityButton, None, guiBaseResize)
 	guiSequenceVisibilitySubtab.fade_mode = 1
+	guiSequenceVisibilitySubtab.enabled, guiSequenceVisibilitySubtab.visible = False, False
 	guiSequenceUVSubtab = Common_Gui.TabContainer("guiSequenceUVSubtab", None, guiSequenceUVButton, None, guiBaseResize)
 	guiSequenceUVSubtab.fade_mode = 1
+	guiSequenceUVSubtab.enabled, guiSequenceUVSubtab.visible = False, False
 	guiSequenceMorphSubtab = Common_Gui.TabContainer("guiSequenceMorphSubtab", None, guiSequenceMorphButton, None, guiBaseResize)
 	guiSequenceMorphSubtab.fade_mode = 1
+	guiSequenceMorphSubtab.enabled, guiSequenceMorphSubtab.visible = False, False
 	guiMaterialsSubtab = Common_Gui.BasicContainer("guiMaterialsSubtab", None, None, guiBaseResize)
 	guiMaterialsSubtab.fade_mode = 1
 	guiMaterialsSubtab.borderColor = [0,0,0,0]
+	guiMaterialsSubtab.enabled, guiMaterialsSubtab.visible = False, False
 
 	
 	guiGeneralSubtab = Common_Gui.BasicContainer("guiGeneralSubtab", None, None, guiBaseResize)
