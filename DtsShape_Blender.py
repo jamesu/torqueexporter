@@ -1521,7 +1521,10 @@ class BlenderShape(DtsShape):
 		
 		# Get frames for each used material
 		matFrames = [None]*len(usedMat)
-		interpolateInc = numFrames / sequence.numKeyFrames
+		if sequence.numKeyFrames > 0:
+			interpolateInc = numFrames / sequence.numKeyFrames
+		else:
+			interpolateInc = 1
 		for i in range(0, len(usedMat)):
 			matIdx = usedMat[i]
 
