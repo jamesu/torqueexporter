@@ -48,6 +48,9 @@ dragInitial = None
 dragState = False
 dragError = 10
 
+
+LastComboboxClickTime = Blender.sys.time()
+
 #----------------------------------------------------------------------------
 '''
 Notes:
@@ -317,6 +320,8 @@ class ToggleButton(BasicButton):
 		#print "self.text = ", self.text
 		self.data = Draw.Toggle(self.text, self.evt, self.x+offset[0], self.y+offset[1], self.width, self.height, self.state, self.tooltip)
 
+
+
 class ComboBox(BasicControl):
 	def __init__(self, name=None, text=None, tooltip=None, evt=None, callback=None, resize_callback=None):
 		BasicControl.__init__(self, name, text, tooltip, evt, callback, resize_callback)
@@ -359,7 +364,18 @@ class ComboBox(BasicControl):
 		self.itemIndex = self.getItemIndexFromString(string)
 	
 	def onAction(self, evt, mousepos, value):
+		global LastComboboxClickTime
 		self.itemIndex = int(self.data.val)
+		
+		# Store off the time of the last combobox event.
+		# Combo boxes can overlap list controls, causing
+		# undesirable click events when the mouse button is
+		# released over these controls.  We'll check the last
+		# combo box event time in the event processing for lists
+		# to see if the events happened to close together, and
+		# discard the unwanted click if they did.
+		LastComboboxClickTime = Blender.sys.time()
+
 		if self.callback: self.callback(self)
 		return True
 
@@ -704,6 +720,7 @@ class ListContainer(BasicContainer):
 		del self.controls
 	
 	def onAction(self, evt, mousepos, value):
+		global LastComboboxClickTime
 		#print "SCROLLABLECONTAINER CHECKING FOR evt=" + str(evt)
 		newpos = [mousepos[0]-self.x, mousepos[1]-self.y]
 		
@@ -760,6 +777,13 @@ class ListContainer(BasicContainer):
 			if (value == Draw.LEFTMOUSE) and (newpos[0] < (self.width-self.barWidth)):
 				# Only send callback when mouse button is released!
 				if not (Window.GetMouseButtons() & Window.MButs.L):
+					
+					# Check to see if a combo box event fired within the last
+					# 1/4 second.  If it did, we ignore the click. 
+					curTime = Blender.sys.time()
+					timeElapsed = curTime - LastComboboxClickTime
+					if timeElapsed < 0.25:
+						return False
 					# calculate the amount of dead space at the bottom if any
 					deadSpace = self.height % self.childHeight
 					# find the id of the list item that was clicked.
