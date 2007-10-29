@@ -2716,14 +2716,51 @@ class IFLControlsClass:
 *
 ***************************************************************************************************
 '''
+def getIPOTypes():
+	typeList = ["Object", "Material", "Pose"]
+	return typeList
+
+def getIPOChannelTypes(IPOType):
+	typesDict = {	"Object": ["LocX", "LocY", "LocZ", "dLocX", "dLocY", "dLocZ", "RotX", "RotY", "RotZ", "dRotX", "dRotY", "dRotZ", "ScaleX", "ScaleY", "ScaleZ", "dScaleX", "dScaleY", "dScaleZ", "Layer", "Time", "ColR", "ColG", "ColB", "ColA", "FSteng", "FFall", "RDamp", "Damping", "Perm"],\
+			"Material":["R", "G", "B", "SpecR", "SpecG", "SpecB", "MirR", "MirG", "MirB", "Ref", "Alpha", "Emit", "Amb", "Spec", "Hard"],\
+			"Pose":["LocX", "LocY", "LocZ", "QuatW", "QuatX", "QuatY", "QuatZ", "Scale" ]\
+		    }
+	return typesDict[IPOType]
+
+
+def getAllSceneObjectNames(IPOType):
+	scene = Blender.Scene.getCurrent()
+	retVal = []
+	if IPOType == "Object":
+		allObjs = Blender.Object.Get()
+		for obj in allObjs:
+			retVal.append(obj.name)
+	elif IPOType == "Material":
+		allObjs = Blender.Material.Get()
+		for obj in allObjs:
+			retVal.append(obj.name)
+
+	elif IPOType == "Pose":
+		allObjs = Blender.Object.Get()
+		for obj in allObjs:
+			if obj.getType() != "Armature":
+				continue
+			retVal.append(obj.name)
+
+	return retVal
+	
+#def getIPOChannelConstFromLabel(label):
+	
+	
+
 class VisControlsClass:
 	def __init__(self):
 		global guiSequenceVisibilitySubtab		
 		global globalEvents
-
+		self.eatComboClick = False
 		# update old style prefs that don't have 'IFL' sequence keys
 		self.updateOldPrefs()
-
+		
 		# panel state
 		self.curSeqListEvent = 40
 		self.curVisTrackEvent = 80
@@ -2743,20 +2780,17 @@ class VisControlsClass:
 		self.guiStartFrame = Common_Gui.NumberPicker("guiStartFrame", "Start Frame", "Start frame for visibility IPO curve samples", globalEvents.getNewID(), self.handleEvent, self.resize)
 		self.guiEndFrame = Common_Gui.NumberPicker("guiEndFrame", "End Frame", "End frame for visibility IPO curve samples", globalEvents.getNewID(), self.handleEvent, self.resize)
 		self.guiVisTrackListTxt = Common_Gui.SimpleText("guiVisTrackListTxt", "Object Visibility Tracks:", None, self.resize)
-		self.guiVisTrackList = Common_Gui.ListContainer("guiVisTrackList", "", self.handleEvent, self.resize)
+		self.guiVisTrackList = Common_Gui.ListContainer("guiVisTrackList", "", self.handleVisTrackListEvent, self.resize)
+
 		self.guiIpoTypeTxt = Common_Gui.SimpleText("guiIpoTypeTxt", "IPO Type:", None, self.resize)
-		self.guiIpoCurveTxt = Common_Gui.SimpleText("guiIpoCurveTxt", "IPO Curve:", None, self.resize)
+		self.guiIpoType = Common_Gui.ComboBox("guiIpoType", "IPO Type", "Select the type of IPO curve to use for Visibility Animation", globalEvents.getNewID(), self.handleEvent, self.resize)
+		self.guiIpoChannelTxt = Common_Gui.SimpleText("guiIpoChannelTxt", "IPO Channel:", None, self.resize)
+		self.guiIpoChannel = Common_Gui.ComboBox("guiIpoChannel", "IPO Channel", "Select the IPO curve to use for Visibility Animation", globalEvents.getNewID(), self.handleEvent, self.resize)
 		self.guiIpoObjectTxt = Common_Gui.SimpleText("guiIpoObjectTxt", "IPO Object:", None, self.resize)
+		self.guiIpoObject = Common_Gui.ComboBox("guiIpoObject", "IPO Object", "Select the object whose IPO curve will be used for Visibility Animation", globalEvents.getNewID(), self.handleEvent, self.resize)
 		self.guiIpoBoneTxt = Common_Gui.SimpleText("guiIpoBoneTxt", "IPO Bone:", None, self.resize)
+		self.guiIpoBone = Common_Gui.ComboBox("guiIpoBone", "IPO Bone", "Select the bone whose IPO curve will be used for Visibility Animation", globalEvents.getNewID(), self.handleEvent, self.resize)
 
-
-		#self.guiMatTxt = Common_Gui.SimpleText("guiMatTxt", "Select Visibility Material:", None, self.resize)
-		#self.guiMat = Common_Gui.ComboBox("guiMat", "IFL Material", "Select a Material from this list to use in the IFL Animation", globalEvents.getNewID(), self.handleEvent, self.resize)
-		#self.guiNumImagesTxt = Common_Gui.SimpleText("guiNumImagesTxt", "Number of Images:", None, self.resize)
-		#self.guiNumImages = Common_Gui.NumberPicker("guiNumImages", "Images", "Number of Images in the IFL animation", globalEvents.getNewID(), self.handleGuiNumImagesEvent, self.resize)
-		#self.guiVisTrackListSelectedTxt = Common_Gui.SimpleText("guiVisTrackListSelectedTxt", "Selected:", None, self.resize)
-		#self.guiNumFrames = Common_Gui.NumberPicker("guiNumFrames", "Frames", "Hold Selected image for n frames", globalEvents.getNewID(), self.handleEvent, self.resize)
-		#self.guiApplyToAll = Common_Gui.BasicButton("guiApplyToAll", "Apply to all", "Apply current frame display value to all IFL images", globalEvents.getNewID(), self.handleEvent, self.resize)
 
 		# set initial states
 		self.guiSeqOptsContainer.enabled = False
@@ -2788,17 +2822,21 @@ class VisControlsClass:
 		self.guiSeqOptsContainer.addControl(self.guiEndFrame)
 		self.guiSeqOptsContainer.addControl(self.guiVisTrackList)
 		self.guiSeqOptsContainer.addControl(self.guiIpoTypeTxt)
-		self.guiSeqOptsContainer.addControl(self.guiIpoCurveTxt)
+		self.guiSeqOptsContainer.addControl(self.guiIpoChannelTxt)
 		self.guiSeqOptsContainer.addControl(self.guiIpoObjectTxt)
 		self.guiSeqOptsContainer.addControl(self.guiIpoBoneTxt)
+		self.guiSeqOptsContainer.addControl(self.guiIpoType)
+		self.guiSeqOptsContainer.addControl(self.guiIpoChannel)
+		self.guiSeqOptsContainer.addControl(self.guiIpoObject)
+		self.guiSeqOptsContainer.addControl(self.guiIpoBone)
 
 
 		
 		# populate the IFL sequence list
 		self.populateVisSeqList(None)
 		
-		# populate the ifl material pulldown
-		#self.populateIFLMatPulldown()
+		# populate the IPO type pulldown
+		self.populateIpoTypePulldown()
 		
 		# populate the existing sequences pulldown.
 		self.populateExistingSeqPulldown()
@@ -2826,9 +2864,13 @@ class VisControlsClass:
 		del self.guiStartFrame
 		del self.guiEndFrame
 		del self.guiIpoTypeTxt
-		del self.guiIpoCurveTxt
+		del self.guiIpoChannelTxt
 		del self.guiIpoObjectTxt
 		del self.guiIpoBoneTxt
+		del self.guiIpoType
+		del self.guiIpoChannel
+		del self.guiIpoObject
+		del self.guiIpoBone
 
 
 
@@ -2888,17 +2930,27 @@ class VisControlsClass:
 			control.x, control.y, control.height, control.width = 20,100, 155,223
 		elif control.name == "guiIpoTypeTxt":
 			control.x, control.y, control.height, control.width = 20,80, 20,223
-		elif control.name == "guiIpoCurveTxt":
+		elif control.name == "guiIpoType":
+			control.x, control.y, control.height, control.width = 110,75, 20,133
+		elif control.name == "guiIpoChannelTxt":
 			control.x, control.y, control.height, control.width = 20,58, 20,223
+		elif control.name == "guiIpoChannel":
+			control.x, control.y, control.height, control.width = 110,53, 20,133
 		elif control.name == "guiIpoObjectTxt":
 			control.x, control.y, control.height, control.width = 20,36, 20,223
+		elif control.name == "guiIpoObject":
+			control.x, control.y, control.height, control.width = 110,31, 20,133
 		elif control.name == "guiIpoBoneTxt":
 			control.x, control.y, control.height, control.width = 20,14, 20,223
+		elif control.name == "guiIpoBone":
+			control.x, control.y, control.height, control.width = 110,9, 20,133
 
-		self.guiIpoTypeTxt
-		self.guiIpoCurveTxt
-		self.guiIpoObjectTxt
-		self.guiIpoBoneTxt
+		'''
+		self.guiIpoType
+		self.guiIpoChannel
+		self.guiIpoObject
+		self.guiIpoBone
+		'''
 
 	def createSequenceListItem(self, seqName):
 		startEvent = self.curSeqListEvent
@@ -3026,7 +3078,6 @@ class VisControlsClass:
 				seqKey = getSequenceKey(seqName)
 				seqKey['Vis']['StartFrame'] = control.value
 
-			pass
 		elif control.name == "guiEndFrame":
 			guiSeqList = self.guiSeqList
 			if guiSeqList.itemIndex > -1 and guiSeqList.itemIndex < len(guiSeqList.controls):
@@ -3034,8 +3085,27 @@ class VisControlsClass:
 				seqKey = getSequenceKey(seqName)
 				seqKey['Vis']['EndFrame'] = control.value
 
-			pass
+		elif control.name == "guiIpoType":
+			type = self.guiIpoType.getSelectedItemString()
+			if type == "":
+				self.clearIpoCurvePulldown()
+				self.clearIpoObjectPulldown()
+				return
+			self.populateIpoCurvePulldown(type)
+			self.populateIpoObjectPulldown(type)
+			if type == "Object":
+				self.guiIpoObjectTxt.label = "IPO Object:"
+			elif type == "Material":
+				self.guiIpoObjectTxt.label = "IPO Material:"
+			elif type == "Pose":
+				self.guiIpoObjectTxt.label = "IPO Armature:"
 			
+		elif control.name == "guiIpoChannel":
+			pass
+		elif control.name == "guiIpoObject":
+			pass
+		elif control.name == "guiIpoBone":
+			pass
 
 		
 	# called when an item is selected in the sequence list
@@ -3096,8 +3166,8 @@ class VisControlsClass:
 	# called when an item is selected in the Vis track list
 	def handleVisTrackListEvent(self, control):
 		guiVisTrackList = self.guiVisTrackList
-		guiNumFrames = self.guiNumFrames
 		if control.itemIndex > -1:
+			print "Reached the undesirable callback!"
 			seqName = self.guiSeqList.controls[self.guiSeqList.itemIndex].controls[0].label
 			objName = self.guiVisTrackList.controls[self.guiVisTrackList.itemIndex].controls[0].label
 			print "seqName=",seqName
@@ -3156,7 +3226,30 @@ class VisControlsClass:
 				print "  Adding sequence to existing sequence pulldown:",seqName
 				self.guiSeqExistingSequences.items.append(seqName)
 
+	def populateIpoTypePulldown(self):		
+		for type in getIPOTypes():
+			self.guiIpoType.items.append(type)
+			
 	
+	def clearIpoObjectPulldown(self):
+		self.guiIpoObject.items = []
+		self.guiIpoObject.itemIndex = -1
+
+	def populateIpoObjectPulldown(self, type):
+		self.clearIpoObjectPulldown()
+		objs = getAllSceneObjectNames(type)		
+		for obj in objs:
+			self.guiIpoObject.items.append(obj)
+
+	def clearIpoCurvePulldown(self):
+		self.guiIpoChannel.items = []
+		self.guiIpoChannel.itemIndex = -1
+		
+	def populateIpoCurvePulldown(self, type):
+		self.clearIpoCurvePulldown()
+		for chann in getIPOChannelTypes(type):
+			self.guiIpoChannel.items.append(chann)
+
 	
 	def clearVisTrackList(self):
 		for i in range(0, len(self.guiVisTrackList.controls)):
