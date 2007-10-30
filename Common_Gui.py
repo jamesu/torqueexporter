@@ -345,7 +345,7 @@ class ComboBox(BasicControl):
 			if self.items[i] == value:
 				self.itemIndex = i
 				return
-		self.itemIndex = 0
+		self.itemIndex = -1
 		
 	# get the string corresponding to the selected item
 	def getSelectedItemString(self):
