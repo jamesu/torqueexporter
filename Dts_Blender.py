@@ -2725,7 +2725,9 @@ def getIPOChannelTypes(IPOType):
 			"Material":["R", "G", "B", "SpecR", "SpecG", "SpecB", "MirR", "MirG", "MirB", "Ref", "Alpha", "Emit", "Amb", "Spec", "Hard"],\
 			"Pose":["LocX", "LocY", "LocZ", "QuatW", "QuatX", "QuatY", "QuatZ", "Scale" ]\
 		    }
-	return typesDict[IPOType]
+	try: retVal = typesDict[IPOType]
+	except: retVal = []
+	return retVal
 
 
 def getAllSceneObjectNames(IPOType):
@@ -2749,6 +2751,14 @@ def getAllSceneObjectNames(IPOType):
 
 	return retVal
 	
+def getArmBoneNames(armature):
+	try: arm = Blender.Armature.Get(armature)
+	except: return []
+	retVal = []
+	for bone in arm.bones.keys():
+		retVal.append(bone)
+	return retVal
+
 #def getIPOChannelConstFromLabel(label):
 	
 	
@@ -3086,25 +3096,58 @@ class VisControlsClass:
 				seqKey['Vis']['EndFrame'] = control.value
 
 		elif control.name == "guiIpoType":
+			seqName = self.guiSeqList.controls[self.guiSeqList.itemIndex].controls[0].label
+			seqKey = getSequenceKey(seqName)
+			objName = self.guiVisTrackList.controls[self.guiVisTrackList.itemIndex].controls[0].label
 			type = self.guiIpoType.getSelectedItemString()
 			if type == "":
 				self.clearIpoCurvePulldown()
 				self.clearIpoObjectPulldown()
+				self.clearIpoBonePulldown()
 				return
+			seqKey['Vis']['Tracks'][objName]['IPOType'] = type
+			seqKey['Vis']['Tracks'][objName]['IPOChannel'] = None
+			seqKey['Vis']['Tracks'][objName]['IPOObject'] = None
+			seqKey['Vis']['Tracks'][objName]['IPOBone'] = None
+			'''
 			self.populateIpoCurvePulldown(type)
 			self.populateIpoObjectPulldown(type)
+			#self.populateIpoBonePulldown(type)
 			if type == "Object":
 				self.guiIpoObjectTxt.label = "IPO Object:"
 			elif type == "Material":
 				self.guiIpoObjectTxt.label = "IPO Material:"
 			elif type == "Pose":
 				self.guiIpoObjectTxt.label = "IPO Armature:"
+			'''
+			self.refreshIpoControls()
+			
 			
 		elif control.name == "guiIpoChannel":
+			seqName = self.guiSeqList.controls[self.guiSeqList.itemIndex].controls[0].label
+			seqKey = getSequenceKey(seqName)
+			objName = self.guiVisTrackList.controls[self.guiVisTrackList.itemIndex].controls[0].label
+			channel = self.guiIpoChannel.getSelectedItemString()
+			seqKey['Vis']['Tracks'][objName]['IPOChannel'] = channel
 			pass
 		elif control.name == "guiIpoObject":
-			pass
+			seqName = self.guiSeqList.controls[self.guiSeqList.itemIndex].controls[0].label
+			seqKey = getSequenceKey(seqName)
+			objName = self.guiVisTrackList.controls[self.guiVisTrackList.itemIndex].controls[0].label
+			type = self.guiIpoType.getSelectedItemString()
+			if control.getSelectedItemString() == "":
+				self.clearIpoBonePulldown()
+				return
+			if control.itemIndex > -1:
+				seqKey['Vis']['Tracks'][objName]['IPOObject'] = self.guiIpoObject.getSelectedItemString()
+				if type == "Pose": self.populateIpoBonePulldown(self.guiIpoObject.getSelectedItemString())
+				else: self.clearIpoBonePulldown()			
+
 		elif control.name == "guiIpoBone":
+			seqName = self.guiSeqList.controls[self.guiSeqList.itemIndex].controls[0].label
+			seqKey = getSequenceKey(seqName)
+			objName = self.guiVisTrackList.controls[self.guiVisTrackList.itemIndex].controls[0].label
+			seqKey['Vis']['Tracks'][objName]['IPOBone'] = self.guiIpoBone.getSelectedItemString()
 			pass
 
 		
@@ -3162,23 +3205,97 @@ class VisControlsClass:
 			sequencePrefs['Cyclic'] = control.state
 
 
+	def refreshIpoControls(self):
+		print "******** Refreshing IPO controls ************"
+		guiVisTrackList = self.guiVisTrackList		
+		try: seqName = self.guiSeqList.controls[self.guiSeqList.itemIndex].controls[0].label
+		except: seqName = ""
+		try: objName = self.guiVisTrackList.controls[self.guiVisTrackList.itemIndex].controls[0].label
+		except: objName = ""
+		seqKey = getSequenceKey(seqName)
+		try: type = seqKey['Vis']['Tracks'][objName]['IPOType']
+		except: type = ""
+		if guiVisTrackList.itemIndex > -1:
+			self.guiIpoType.enabled = True
+			self.guiIpoChannel.enabled = True
+			self.guiIpoObject.enabled = True
+			self.guiIpoBone.enabled = True
+			if objName == "" or objName == None:
+				self.guiIpoType.itemIndex = -1
+				self.guiIpoChannel.itemIndex = -1
+				self.guiIpoObject.itemIndex = -1
+				self.guiIpoBone.itemIndex = -1
+			if type != "":
+				print "Populating pulldowns..."
+				print "type =",type
+				self.populateIpoCurvePulldown(type)
+				self.populateIpoObjectPulldown(type)
+				#arm = self.guiIpoObject.getSelectedItemString()
+				arm = seqKey['Vis']['Tracks'][objName]['IPOObject']
+				self.populateIpoBonePulldown(arm)
+			else:
+				print "Clearing pulldowns..."
+				self.clearIpoCurvePulldown()
+				self.clearIpoObjectPulldown()
+				self.clearIpoBonePulldown()
+			print "seqName=", seqName
+			print "objName=", objName
+			# todo - add code here to update controls below the vis track list
+			try:
+				self.guiIpoType.setTextValue(seqKey['Vis']['Tracks'][objName]['IPOType'])
+				print "(1) Set IPOType pulldown value:", self.guiIpoType.itemIndex, "(",seqKey['Vis']['Tracks'][objName]['IPOType'],")"
+			except:
+				seqKey['Vis']['Tracks'][objName]['IPOType'] = None
+				print "(2) Set IPOType pulldown value:", self.guiIpoType.itemIndex
+			try:
+				self.guiIpoChannel.setTextValue(seqKey['Vis']['Tracks'][objName]['IPOChannel'])
+				print "(1) Set IPOChannel pulldown value:", self.guiIpoChannel.itemIndex, "(",seqKey['Vis']['Tracks'][objName]['IPOChannel'],")"
+			except:
+				seqKey['Vis']['Tracks'][objName]['IPOChannel'] = None
+				print "(2) Set IPOChannel pulldown value:", self.guiIpoChannel.itemIndex
+			try:
+				self.guiIpoObject.setTextValue(seqKey['Vis']['Tracks'][objName]['IPOObject'])
+				print "(1) Set IPOObject pulldown value:", self.guiIpoObject.itemIndex, "(",seqKey['Vis']['Tracks'][objName]['IPOObject'],")"
+			except:
+				seqKey['Vis']['Tracks'][objName]['IPOObject'] = None
+				print "(2) Set IPOObject pulldown value:", self.guiIpoObject.itemIndex
+			try:
+				self.guiIpoBone.setTextValue(seqKey['Vis']['Tracks'][objName]['IPOBone'])
+				print "(1) Set IPOBone pulldown value:", self.guiIpoBone.itemIndex, "(",seqKey['Vis']['Tracks'][objName]['IPOBone'],")"
+			except:
+				seqKey['Vis']['Tracks'][objName]['IPOBone'] = None
+				print "(2) Set IPOBone pulldown value:", self.guiIpoBone.itemIndex
+			#print seqPrefs
+			#guiNumFrames.value = seqPrefs['IFL']['IFLFrames'][control.itemIndex][1]
+		else:
+			self.guiIpoType.itemIndex = -1
+			self.guiIpoChannel.itemIndex = -1
+			self.guiIpoObject.itemIndex = -1
+			self.guiIpoBone.itemIndex = -1
+			self.clearIpoCurvePulldown()
+			self.clearIpoObjectPulldown()
+			self.clearIpoBonePulldown()
+			self.guiIpoType.enabled = False
+			self.guiIpoChannel.enabled = False
+			self.guiIpoObject.enabled = False
+			self.guiIpoBone.enabled = False
+		
+		if type == "Object":
+			self.guiIpoObjectTxt.label = "IPO Object:"
+			self.guiIpoBone.visible = False
+		elif type == "Material":
+			self.guiIpoObjectTxt.label = "IPO Material:"
+			self.guiIpoBone.visible = False
+		elif type == "Pose":
+			self.guiIpoObjectTxt.label = "IPO Armature:"
+			self.guiIpoBone.visible = True
+
+	
 	
 	# called when an item is selected in the Vis track list
 	def handleVisTrackListEvent(self, control):
 		guiVisTrackList = self.guiVisTrackList
-		if control.itemIndex > -1:
-			print "Reached the undesirable callback!"
-			seqName = self.guiSeqList.controls[self.guiSeqList.itemIndex].controls[0].label
-			objName = self.guiVisTrackList.controls[self.guiVisTrackList.itemIndex].controls[0].label
-			print "seqName=",seqName
-			seqPrefs = getSequenceKey(seqName)
-			# todo - add code here to update controls below the vis track list
-			#print seqPrefs
-			#guiNumFrames.value = seqPrefs['IFL']['IFLFrames'][control.itemIndex][1]
-		else:
-			# todo - add code here to update controls below the vis track list
-			#guiNumFrames.value = 1
-			pass
+		self.refreshIpoControls()
 
 	def handleVisTrackListItemEvent(self, control):
 		print "handleVisTrackListItemEvent called..."
@@ -3227,30 +3344,43 @@ class VisControlsClass:
 				self.guiSeqExistingSequences.items.append(seqName)
 
 	def populateIpoTypePulldown(self):		
+		self.guiIpoType.itemIndex = -1
 		for type in getIPOTypes():
 			self.guiIpoType.items.append(type)
 			
 	
 	def clearIpoObjectPulldown(self):
-		self.guiIpoObject.items = []
 		self.guiIpoObject.itemIndex = -1
+		self.guiIpoObject.items = []
 
 	def populateIpoObjectPulldown(self, type):
+		self.guiIpoObject.itemIndex = -1
 		self.clearIpoObjectPulldown()
 		objs = getAllSceneObjectNames(type)		
 		for obj in objs:
 			self.guiIpoObject.items.append(obj)
 
+	def clearIpoBonePulldown(self):
+		self.guiIpoBone.items = []
+		self.guiIpoBone.itemIndex = -1
+
+	def populateIpoBonePulldown(self, armature):
+		self.guiIpoBone.itemIndex = -1
+		self.clearIpoBonePulldown()
+		objs = getArmBoneNames(armature)
+		for obj in objs:
+			self.guiIpoBone.items.append(obj)
+
 	def clearIpoCurvePulldown(self):
-		self.guiIpoChannel.items = []
 		self.guiIpoChannel.itemIndex = -1
+		self.guiIpoChannel.items = []
 		
 	def populateIpoCurvePulldown(self, type):
+		self.guiIpoChannel.itemIndex = -1
 		self.clearIpoCurvePulldown()
 		for chann in getIPOChannelTypes(type):
 			self.guiIpoChannel.items.append(chann)
 
-	
 	def clearVisTrackList(self):
 		for i in range(0, len(self.guiVisTrackList.controls)):
 			del self.guiVisTrackList.controls[i].controls[:]
