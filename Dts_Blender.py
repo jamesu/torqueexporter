@@ -472,7 +472,9 @@ def cleanKeys():
 		actionFound = False
 		# is the action 
 		#print "*******************\n",key,"\n*******************\n"
-		if key['Action']['Enabled']:
+		try: actEnabled = key['Action']['Enabled']
+		except: actEnabled = False
+		if actEnabled:
 			for action_key in Armature.NLA.GetActions().keys():
 				if action_key == key:
 					actionFound = True
@@ -1818,7 +1820,10 @@ class ActionControlsClass:
 				seq['Vis']['StartFrame'] = seq['MaterialIpoStartFrame']
 				seq['Vis']['EndFrame'] = seq['MaterialIpoStartFrame']
 				del seq['MaterialIpoStartFrame']
-				
+			try: x = seq['Vis']['Tracks']
+			except:
+				# todo - set up tracks automatically for old style vis sequences.
+				seq['Vis']['Tracks'] = {}
 			try: x = seq['TotalFrames']
 			except: seq['TotalFrames'] = 0
 			
