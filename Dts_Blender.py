@@ -2935,9 +2935,9 @@ class VisControlsClass:
 		elif control.name == "guiEndFrame":
 			control.x, control.y, control.height, control.width = 133,280, 20,110
 		elif control.name == "guiVisTrackListTxt":
-			control.x, control.y, control.height, control.width = 10,263, 20,120
+			control.x, control.y, control.height, control.width = 10,258, 20,120
 		elif control.name == "guiVisTrackList":
-			control.x, control.y, control.height, control.width = 20,100, 155,223
+			control.x, control.y, control.height, control.width = 20,100, 145,223
 		elif control.name == "guiIpoTypeTxt":
 			control.x, control.y, control.height, control.width = 20,80, 20,223
 		elif control.name == "guiIpoType":
@@ -3413,7 +3413,7 @@ class VisControlsClass:
 					try:
 						trackEnabled = Prefs['Sequences'][seqName]['Vis']['Tracks'][obj.name]
 					except: 
-						Prefs['Sequences'][seqName]['Vis']['Tracks'][obj.name]  = {'hasVisTrack': False, 'curveObject':None, 'curveObjType':"Material", 'curve':"Alpha"} 
+						Prefs['Sequences'][seqName]['Vis']['Tracks'][obj.name]  = {'hasVisTrack': False, 'IPOObject':None, 'IPOBone':None, 'IPOType':"Material", 'IPOChannel':"Alpha"} 
 					# set the state of the enabled button
 					print "trackEnabled=", Prefs['Sequences'][seqName]['Vis']['Tracks'][obj.name]['hasVisTrack']
 					self.guiVisTrackList.controls[-1].controls[1].state = Prefs['Sequences'][seqName]['Vis']['Tracks'][obj.name]['hasVisTrack']
@@ -3683,15 +3683,12 @@ class MaterialControlsClass:
 			#print "Current image is:", imageName
 			bmat = None
 			# Do we have a blender material that matches the image name?
-			#print "Do we have a blender material that matches the image name?"
 			try: bmat = Blender.Material.Get(imageName)
 			except NameError:
 				# No blender material, do we have a prefs key for this material?
-				#print "No blender material, do we have a prefs key for this material?"
 				try: x = Prefs['Materials'][imageName]
 				except KeyError:
 					# no corresponding blender material and no existing texture material, so use reasonable defaults.
-					#print "no corresponding blender material and no existing texture material, so use reasonable defaults."
 					#print "Could not find a blender material that matches image (", imageName,") used on mesh, setting defaults."
 					Prefs['Materials'][imageName] = {}
 					pmi = Prefs['Materials'][imageName]
@@ -3717,12 +3714,9 @@ class MaterialControlsClass:
 				continue
 
 			# We have a blender material, do we have a prefs key for it?
-			#print "We have a blender material, do we have a prefs key for it?"
-			#print "Prefs['Materials'] = \n",Prefs['Materials']
 			try: x = Prefs['Materials'][bmat.name]			
 			except:
 				# No prefs key, so create one.
-				#print "No prefs key, so create one."
 				Prefs['Materials'][bmat.name] = {}
 				pmb = Prefs['Materials'][bmat.name]
 				# init everything to make sure all keys exist with sane values
