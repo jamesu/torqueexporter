@@ -723,14 +723,14 @@ class ShapeTree(SceneTree):
 				for armOb in Blender.Object.Get():
 					if (armOb.getType() != 'Armature'): continue
 					if armOb.getData().restPosition:
-						Blender.Draw.PupMenu("Warning%t|One or more of your armatures is locked into rest position. This can cause problems with exported animations.")
+						Blender.Draw.PupMenu("Warning%t|One or more of your armatures is locked into rest position. This will cause problems with exported animations.")
 						break
 
 				# Process sequences
 				print "************ Processing sequences ******************"
 				seqKeys = Prefs['Sequences'].keys()
 				if len(seqKeys) > 0:
-					progressBar.pushTask("Adding Sequences..." , len(actions.keys()*4), 0.8)
+					progressBar.pushTask("Adding Sequences..." , len(seqKeys*4), 0.8)
 					for seqName in seqKeys:
 						seqKey = getSequenceKey(seqName)
 
@@ -2733,7 +2733,7 @@ def getIPOChannelTypes(IPOType):
 	try: retVal = typesDict[IPOType]
 	except: retVal = []
 	return retVal
-
+	
 
 def getAllSceneObjectNames(IPOType):
 	scene = Blender.Scene.getCurrent()
