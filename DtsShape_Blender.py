@@ -1088,13 +1088,38 @@ class BlenderShape(DtsShape):
 		if seqPrefs['Cyclic']: 
 			sequence.flags |= sequence.Cyclic
 		
+		# figure out what the largest number of frames is for the sequence.
+		actionDuration = 0
+		IFLDuration = 0
+		visDuration = 0
+		actionNumFrames = 0
+		IFLNumFrames = 0
+		visNumFrames = 0
+		numFrames = 1
+		if seqPrefs['Action']['Enabled'] and action != None:
+			actionNumFrames = getNumFrames(action.getAllChannelIpos().values(), False)
+			if sequence.fps > 0: actionDuration = actionNumFrames / sequence.fps
+			else: actionDuration = 1
+			if actionNumFrames > numFrames: numFrames = actionNumFrames
+		if seqPrefs['IFL']['Enabled'] and action != None:
+			for frame in seqPrefs['IFL']['IFLFrames']:
+				IFLNumFrames += frame[1]
+			if IFLNumFrames > numFrames: numFrames = IFLNumFrames
+		if seqPrefs['Vis']['Enabled'] and action != None:
+			visNumFrames = seqPrefs['Vis']['EndFrame'] - seqPrefs['Vis']['StartFrame']
+			if visNumFrames > numFrames: numFrames = visNumFrames
+		
+		if sequence.fps > 0: sequence.duration = float(numFrames) / float(sequence.fps)
+		else: sequence.duration = 1
+		print "sequence.duration = ", sequence.duration
+		
 		if seqPrefs['Action']['Enabled'] and action != None and scene != None:
 			print "   Adding action data for", seqName
 			sequence = self.addAction(sequence, action, scene, context, seqPrefs)
 		if seqPrefs['Vis']['Enabled']:
 			print "   Adding visibility data for", seqName
-			numFrames = int(seqPrefs['Vis']['StartFrame']) - int(seqPrefs['Vis']['EndFrame'])
-			sequence = self.addSequenceMaterialIpos(sequence, numFrames, int(seqPrefs['Vis']['StartFrame']))
+			print "seqence = ", sequence
+			sequence = self.addSequenceMaterialIpos( sequence, numFrames, seqPrefs, int(seqPrefs['Vis']['StartFrame']), int(seqPrefs['Vis']['EndFrame']) )
 		if seqPrefs['IFL']['Enabled']:
 			print "   Adding IFL data for", seqName
 			sequence.numKeyFrames = 15
@@ -1106,7 +1131,7 @@ class BlenderShape(DtsShape):
 		
 		return sequence
 	
-	# Import a sequence
+	# Import an action
 	def addAction(self, sequence, action, scene, context, sequencePrefs):
 		'''
 		This adds an action to a shape as a sequence.
@@ -1487,7 +1512,7 @@ class BlenderShape(DtsShape):
 		return sequence
 
 	# Processes a material ipo and incorporates it into the Action
-	def addSequenceMaterialIpos(self, sequence, numFrames, startFrame=1):
+	def addSequenceMaterialIpos(self, sequence, numFrames, sequenceKey, startFrame, endFrame):
 		'''
 		This adds ObjectState tracks to the sequence.
 		
@@ -1501,15 +1526,15 @@ class BlenderShape(DtsShape):
 		
 		NOTE: this function needs to be called AFTER finalizeObjects, for obvious reasons.
 		'''
-		
+		print "   Addding Material Visibility Animation Data for", sequence.name
 		scene = Blender.Scene.GetCurrent()
 		context = Blender.Scene.GetCurrent().getRenderingContext()
 		sequence.matters_vis = [False]*len(self.objects)
-		sequence.matters_ifl = [False]*len(self.objects)
-		print "**!! sequence.matters_ifl=\n", sequence.matters_ifl
+
 		# First, scan for objects that have associated materials
 		usedMat = []
 		
+		'''
 		# Get a list of used materials
 		for i in range(0, len(self.objects)):
 			# Only first mesh of object is taken into account, as that represents the object in the highest detail level
@@ -1518,13 +1543,94 @@ class BlenderShape(DtsShape):
 			else:
 				if not (self.meshes[self.objects[i].firstMesh].mainMaterial in usedMat):
 					usedMat.append(self.meshes[self.objects[i].firstMesh].mainMaterial)
+		'''
 		
 		# Get frames for each used material
 		matFrames = [None]*len(usedMat)
 		if sequence.numKeyFrames > 0:
+			# todo - fix this, interpolateInc should be calculated in addSequence.and passed in to subsequence creation methods.
 			interpolateInc = numFrames / sequence.numKeyFrames
 		else:
 			interpolateInc = 1
+		
+
+		# includes last frame
+		numVisFrames = (sequenceKey['Vis']['EndFrame'] - sequenceKey['Vis']['StartFrame']) + 1
+		if numVisFrames > sequence.numKeyFrames: sequence.numKeyFrames = numVisFrames
+
+		# Build a list of objects actually used in the sequence, and set matters
+		print "    Building a list of used objects..."
+		usedObjects = {}
+		for keyedObjName in sequenceKey['Vis']['Tracks'].keys():
+			keyedObj = sequenceKey['Vis']['Tracks'][keyedObjName]
+			# skip this object if the vis track is not enabled
+			if not keyedObj['hasVisTrack']: continue
+			# find the corresponding dts object if it exists			
+			for i in range(0, len(self.objects)):
+				dObj = self.objects[i]
+				dObjName = self.sTable.get(dObj.name)
+				# Do the names of the objects match?
+				if dObjName == keyedObjName:
+					print "      found object:", dObjName
+					# See if the user set a valid curve
+					if keyedObj['IPOType'] == "Object":						
+						print "      IPOType = Object"
+						try:
+							
+							bObj = Blender.Object.Get(keyedObjName)
+							bIpo = bObj.getIpo()
+							print bObj.getIpo
+						except: continue
+						
+					if keyedObj['IPOType'] == "Pose":
+						print "      IPOType = Pose"
+						pass
+					
+					if keyedObj['IPOType'] == "Material":
+						print "      IPOType = Material"
+						try:
+							bMat = Blender.Material.Get(keyedObj['IPOObject'])
+							bIpo = bMat.getIpo()
+							print "      bIpo =", bIpo
+							IPOCurveName = getBlenderIPOChannelConst(keyedObj['IPOType'], keyedObj['IPOChannel'])
+							print "      IPOCurveName =", IPOCurveName
+							IPOCurve = None
+							IPOCurveConst = bIpo.curveConsts[IPOCurveName]
+							print "IPOCurve constants =", bIpo.curveConsts[IPOCurveName]						
+							IPOCurve = bIpo[IPOCurveConst]
+							print "      IPOCurve =", IPOCurve
+							
+							
+						except: 
+							# todo - write out log message indicating that the track was skipped
+							# due to lack of curve data.
+							continue
+						
+						sequence.matters_vis[i] = True
+						usedObjects[dObjName] = []
+						if sequence.baseObjectState == -1:
+							sequence.baseObjectState = len(self.objectstates)
+						print sequenceKey['Vis']
+						# include last frame
+						for fr in range(sequenceKey['Vis']['StartFrame'], sequenceKey['Vis']['EndFrame']+1, interpolateInc):
+							#usedObjects[dObjName].append[IPOCurve[fr]]
+							self.objectstates.append(ObjectState(IPOCurve[fr],0,0))
+							
+		return sequence						
+
+
+		'''
+		# Now we can dump each frame for the objects
+		for i in range(0, len(self.objects)):
+			for m in range(0, len(usedMat)):
+				if hasattr(self.meshes[self.objects[i].firstMesh], "mainMaterial") and (self.meshes[self.objects[i].firstMesh].mainMaterial == usedMat[m]) and (matFrames[m] != None):
+					sequence.matters_vis[i] = True
+					if sequence.baseObjectState == -1:
+						sequence.baseObjectState = len(self.objectstates)
+					
+					# Create objectstate's for each frame
+					for frame in matFrames[m]:
+						self.objectstates.append(ObjectState(frame, 0, 0))
 		for i in range(0, len(usedMat)):
 			matIdx = usedMat[i]
 
@@ -1555,7 +1661,6 @@ class BlenderShape(DtsShape):
 			for m in range(0, len(usedMat)):
 				if hasattr(self.meshes[self.objects[i].firstMesh], "mainMaterial") and (self.meshes[self.objects[i].firstMesh].mainMaterial == usedMat[m]) and (matFrames[m] != None):
 					sequence.matters_vis[i] = True
-					sequence.matters_ifl[i] = True
 					if sequence.baseObjectState == -1:
 						sequence.baseObjectState = len(self.objectstates)
 					
@@ -1568,8 +1673,8 @@ class BlenderShape(DtsShape):
 			if frame != None: del frame
 		del matFrames
 		del usedMat
-		
-		return sequence
+		'''		
+
 		
 	def convertAndDumpSequenceToDSQ(self, sequence, filename, version):
 		
