@@ -469,7 +469,7 @@ def cleanKeys():
 	for keyName in Prefs['Sequences'].keys():
 		#key = Prefs['Sequences'][keyName]
 		key = getSequenceKey(keyName)
-		#print "*******************\n",key,"\n*******************\n"
+		print "    ********\n",keyName,"********"
 		actionFound = False
 		try: actEnabled = key['Action']['Enabled']
 		except: actEnabled = False
@@ -477,19 +477,22 @@ def cleanKeys():
 			for action_key in Armature.NLA.GetActions().keys():
 				if action_key == key:
 					actionFound = True
+					print "    Found Action:", keyName
 					break
 		
 		if not actionFound:
+			print "    Action Not found:", keyName
 			key['Action']['Enabled'] = False
 			# see if any of the other sequence types are enabled
 			VisFound = False
-			try: IFLFound = Prefs['Sequences'][key]['IFL']['Enabled']
+			IFLFound = False
+			try: IFLFound = Prefs['Sequences'][keyName]['IFL']['Enabled']
 			except: IFLFound = False
-			try: VisFound = Prefs['Sequences'][key]['Vis']['Enabled']
+			try: VisFound = Prefs['Sequences'][keyName]['Vis']['Enabled']
 			except: VisFound = False
 			# if no sequence type is enabled for the key, get rid of it.
 			#print "**************    Deleting key:", keyName
-			if VisFound == False and IFLFound == False: del key
+			if VisFound == False and IFLFound == False: del Prefs['Sequences'][keyName]
 
 
 
@@ -735,9 +738,9 @@ class ShapeTree(SceneTree):
 						seqKey = getSequenceKey(seqName)
 
 						# does the sequence have anything to export?
-						print "seqKey['Action']['Enabled']",seqKey['Action']['Enabled']
-						print "seqKey['IFL']['Enabled']",seqKey['IFL']['Enabled']
-						print "seqKey['Vis']['Enabled']",seqKey['Vis']['Enabled']
+						print "seqKey['Action']['Enabled'] =",seqKey['Action']['Enabled']
+						print "seqKey['IFL']['Enabled'] =",seqKey['IFL']['Enabled']
+						print "seqKey['Vis']['Enabled'] =",seqKey['Vis']['Enabled']
 						if (seqKey['NoExport']) or not (seqKey['Action']['Enabled'] or seqKey['IFL']['Enabled'] or seqKey['Vis']['Enabled']):
 							print "not exporting sequence:",seqName
 							print "SeqKey=\n", seqKey
@@ -1811,7 +1814,6 @@ class ActionControlsClass:
 				actKey['BlendRefPoseFrame'] = seq['BlendRefPoseFrame']
 				del seq['BlendRefPoseFrame']
 				#print "      Moved BlendRefPoseFrame Key.."
-			actKey['Enabled'] = True
 			try: x = seq['Vis']
 			except: seq['Vis'] = {}
 			try: x = seq['Vis']['Enabled']
