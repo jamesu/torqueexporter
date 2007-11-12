@@ -1547,50 +1547,45 @@ class BlenderShape(DtsShape):
 		numVisFrames = int(((sequenceKey['Vis']['EndFrame'] - sequenceKey['Vis']['StartFrame']) + 1) / interpolateInc)
 		if numVisFrames > sequence.numKeyFrames: sequence.numKeyFrames = numVisFrames
 
-		# Build a list of objects actually used in the sequence, and set matters
-		#print "    Building a list of used objects..."
-		for keyedObjName in sequenceKey['Vis']['Tracks'].keys():
-			keyedObj = sequenceKey['Vis']['Tracks'][keyedObjName]
+		# Just do it.
+		for i in range(0, len(self.objects)):
+			dObj = self.objects[i]
+			dObjName = self.sTable.get(dObj.name)
+			try: keyedObj = sequenceKey['Vis']['Tracks'][dObjName]
+			except:
+				sequence.matters_vis[i] = False
+				continue
 			# skip this object if the vis track is not enabled
 			if not keyedObj['hasVisTrack']: continue
-			# find the corresponding dts object if it exists			
-			for i in range(0, len(self.objects)):
-				dObj = self.objects[i]
-				dObjName = self.sTable.get(dObj.name)
-				# Do the names of the objects match?
-				if dObjName == keyedObjName:
-					#print "      found object:", dObjName
-					# See if the user set a valid curve
+			
+			if keyedObj['IPOType'] == "Object":
+				bObj = Blender.Object.Get(keyedObj['IPOObject'])
+			elif keyedObj['IPOType'] == "Material":
+				bObj = Blender.Material.Get(keyedObj['IPOObject'])
+			try:
 
-					if keyedObj['IPOType'] == "Object":
-						bObj = Blender.Object.Get(keyedObj['IPOObject'])
-					elif keyedObj['IPOType'] == "Material":
-						bObj = Blender.Material.Get(keyedObj['IPOObject'])
-					try:
+				bIpo = bObj.getIpo()
+				IPOCurveName = getBlenderIPOChannelConst(keyedObj['IPOType'], keyedObj['IPOChannel'])
+				IPOCurve = None
+				IPOCurveConst = bIpo.curveConsts[IPOCurveName]
+				IPOCurve = bIpo[IPOCurveConst]
+				if IPOCurve == None: raise TypeError
+			except: 
+				Torque_Util.dump_writeln("Error: Could not get animation curve for visibility sequence: %s " % sequence.name)
+				continue
 
-						bIpo = bObj.getIpo()
-						IPOCurveName = getBlenderIPOChannelConst(keyedObj['IPOType'], keyedObj['IPOChannel'])
-						IPOCurve = None
-						IPOCurveConst = bIpo.curveConsts[IPOCurveName]
-						IPOCurve = bIpo[IPOCurveConst]
-						if IPOCurve == None: raise TypeError
-					except: 
-						Torque_Util.dump_writeln("Error: Could not get animation curve for visibility sequence: %s " % sequence.name)
-						continue
-					
-					sequence.matters_vis[i] = True
-					if sequence.baseObjectState == -1:
-						sequence.baseObjectState = len(self.objectstates)
-					# include last frame
-					for fr in range(sequenceKey['Vis']['StartFrame'], sequenceKey['Vis']['EndFrame']+1, interpolateInc):
-						#usedObjects[dObjName].append[IPOCurve[fr]]
-						self.objectstates.append(ObjectState(IPOCurve[fr],0,0))
-					# if the overall animation is longer than the vis animation, we need to pad with extra object states
-					i = numVisFrames
-					while i < sequence.numKeyFrames:
-						# repeat last frame until the end of the sequence
-						self.objectstates.append(ObjectState(IPOCurve[sequenceKey['Vis']['EndFrame']],0,0))
-						i += 1
+			sequence.matters_vis[i] = True
+			if sequence.baseObjectState == -1:
+				sequence.baseObjectState = len(self.objectstates)
+			# include last frame
+			for fr in range(sequenceKey['Vis']['StartFrame'], sequenceKey['Vis']['EndFrame']+1, interpolateInc):
+				self.objectstates.append(ObjectState(IPOCurve[fr],0,0))
+			# if the overall animation is longer than the vis animation, we need to pad with extra object states
+			i = numVisFrames
+			while i < sequence.numKeyFrames:
+				# repeat last frame until the end of the sequence
+				self.objectstates.append(ObjectState(IPOCurve[sequenceKey['Vis']['EndFrame']],0,0))
+				i += 1
 							
 		return sequence						
 
