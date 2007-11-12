@@ -1567,8 +1567,6 @@ class BlenderShape(DtsShape):
 					elif keyedObj['IPOType'] == "Material":
 						bObj = Blender.Material.Get(keyedObj['IPOObject'])
 					try:
-
-						bIpo = bObj.getIpo()
 						IPOCurveName = getBlenderIPOChannelConst(keyedObj['IPOType'], keyedObj['IPOChannel'])
 						IPOCurve = None
 						IPOCurveConst = bIpo.curveConsts[IPOCurveName]
