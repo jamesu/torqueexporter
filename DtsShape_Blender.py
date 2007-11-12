@@ -1567,6 +1567,8 @@ class BlenderShape(DtsShape):
 					elif keyedObj['IPOType'] == "Material":
 						bObj = Blender.Material.Get(keyedObj['IPOObject'])
 					try:
+
+						bIpo = bObj.getIpo()
 						IPOCurveName = getBlenderIPOChannelConst(keyedObj['IPOType'], keyedObj['IPOChannel'])
 						IPOCurve = None
 						IPOCurveConst = bIpo.curveConsts[IPOCurveName]
@@ -1577,7 +1579,6 @@ class BlenderShape(DtsShape):
 						continue
 					
 					sequence.matters_vis[i] = True
-					usedObjects[dObjName] = []
 					if sequence.baseObjectState == -1:
 						sequence.baseObjectState = len(self.objectstates)
 					# include last frame
