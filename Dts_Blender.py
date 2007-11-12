@@ -469,9 +469,8 @@ def cleanKeys():
 	for keyName in Prefs['Sequences'].keys():
 		#key = Prefs['Sequences'][keyName]
 		key = getSequenceKey(keyName)
-		actionFound = False
-		# is the action 
 		#print "*******************\n",key,"\n*******************\n"
+		actionFound = False
 		try: actEnabled = key['Action']['Enabled']
 		except: actEnabled = False
 		if actEnabled:
@@ -481,11 +480,12 @@ def cleanKeys():
 					break
 		
 		if not actionFound:
+			key['Action']['Enabled'] = False
 			# see if any of the other sequence types are enabled
 			VisFound = False
 			try: IFLFound = Prefs['Sequences'][key]['IFL']['Enabled']
 			except: IFLFound = False
-			try: VisFound = Prefs['Sequences'][key]['Action']['Enabled']
+			try: VisFound = Prefs['Sequences'][key]['Vis']['Enabled']
 			except: VisFound = False
 			# if no sequence type is enabled for the key, get rid of it.
 			#print "**************    Deleting key:", keyName
@@ -735,6 +735,9 @@ class ShapeTree(SceneTree):
 						seqKey = getSequenceKey(seqName)
 
 						# does the sequence have anything to export?
+						print "seqKey['Action']['Enabled']",seqKey['Action']['Enabled']
+						print "seqKey['IFL']['Enabled']",seqKey['IFL']['Enabled']
+						print "seqKey['Vis']['Enabled']",seqKey['Vis']['Enabled']
 						if (seqKey['NoExport']) or not (seqKey['Action']['Enabled'] or seqKey['IFL']['Enabled'] or seqKey['Vis']['Enabled']):
 							print "not exporting sequence:",seqName
 							print "SeqKey=\n", seqKey
@@ -812,7 +815,7 @@ class ShapeTree(SceneTree):
 
 						# Materialize
 						if sequenceKey['AnimateMaterial']:
-							self.Shape.addSequenceMaterialIpos(sequence, DtsShape_Blender.getNumFrames(actions[action_name].getAllChannelIpos().values(), False), sequenceKey['MaterialIpoStartFrame'])
+							self.Shape.addSequenceVisibility(sequence, DtsShape_Blender.getNumFrames(actions[action_name].getAllChannelIpos().values(), False), sequenceKey['MaterialIpoStartFrame'])
 						
 						try: x = sequenceKey['IFL']['Enabled']
 						except: sequenceKey['IFL']['Enabled'] = False
@@ -2722,13 +2725,12 @@ class IFLControlsClass:
 ***************************************************************************************************
 '''
 def getIPOTypes():
-	typeList = ["Object", "Material", "Pose"]
+	typeList = ["Object", "Material"]
 	return typeList
 
 def getIPOChannelTypes(IPOType):
 	typesDict = {	"Object": ["LocX", "LocY", "LocZ", "dLocX", "dLocY", "dLocZ", "RotX", "RotY", "RotZ", "dRotX", "dRotY", "dRotZ", "ScaleX", "ScaleY", "ScaleZ", "dScaleX", "dScaleY", "dScaleZ", "Layer", "Time", "ColR", "ColG", "ColB", "ColA", "FSteng", "FFall", "RDamp", "Damping", "Perm"],\
 			"Material":["R", "G", "B", "SpecR", "SpecG", "SpecB", "MirR", "MirG", "MirB", "Ref", "Alpha", "Emit", "Amb", "Spec", "Hard"],\
-			"Pose":["LocX", "LocY", "LocZ", "QuatW", "QuatX", "QuatY", "QuatZ", "Scale" ]\
 		    }
 	try: retVal = typesDict[IPOType]
 	except: retVal = []
@@ -2745,13 +2747,6 @@ def getAllSceneObjectNames(IPOType):
 	elif IPOType == "Material":
 		allObjs = Blender.Material.Get()
 		for obj in allObjs:
-			retVal.append(obj.name)
-
-	elif IPOType == "Pose":
-		allObjs = Blender.Object.Get()
-		for obj in allObjs:
-			if obj.getType() != "Armature":
-				continue
 			retVal.append(obj.name)
 
 	return retVal
@@ -2803,8 +2798,6 @@ class VisControlsClass:
 		self.guiIpoChannel = Common_Gui.ComboBox("guiIpoChannel", "IPO Channel", "Select the IPO curve to use for Visibility Animation", globalEvents.getNewID(), self.handleEvent, self.resize)
 		self.guiIpoObjectTxt = Common_Gui.SimpleText("guiIpoObjectTxt", "IPO Object:", None, self.resize)
 		self.guiIpoObject = Common_Gui.ComboBox("guiIpoObject", "IPO Object", "Select the object whose IPO curve will be used for Visibility Animation", globalEvents.getNewID(), self.handleEvent, self.resize)
-		self.guiIpoBoneTxt = Common_Gui.SimpleText("guiIpoBoneTxt", "IPO Bone:", None, self.resize)
-		self.guiIpoBone = Common_Gui.ComboBox("guiIpoBone", "IPO Bone", "Select the bone whose IPO curve will be used for Visibility Animation", globalEvents.getNewID(), self.handleEvent, self.resize)
 
 
 		# set initial states
@@ -2839,12 +2832,9 @@ class VisControlsClass:
 		self.guiSeqOptsContainer.addControl(self.guiIpoTypeTxt)
 		self.guiSeqOptsContainer.addControl(self.guiIpoChannelTxt)
 		self.guiSeqOptsContainer.addControl(self.guiIpoObjectTxt)
-		self.guiSeqOptsContainer.addControl(self.guiIpoBoneTxt)
 		self.guiSeqOptsContainer.addControl(self.guiIpoType)
 		self.guiSeqOptsContainer.addControl(self.guiIpoChannel)
 		self.guiSeqOptsContainer.addControl(self.guiIpoObject)
-		self.guiSeqOptsContainer.addControl(self.guiIpoBone)
-
 
 		
 		# populate the IFL sequence list
@@ -2881,11 +2871,9 @@ class VisControlsClass:
 		del self.guiIpoTypeTxt
 		del self.guiIpoChannelTxt
 		del self.guiIpoObjectTxt
-		del self.guiIpoBoneTxt
 		del self.guiIpoType
 		del self.guiIpoChannel
 		del self.guiIpoObject
-		del self.guiIpoBone
 
 
 
@@ -2955,17 +2943,6 @@ class VisControlsClass:
 			control.x, control.y, control.height, control.width = 20,36, 20,223
 		elif control.name == "guiIpoObject":
 			control.x, control.y, control.height, control.width = 110,31, 20,133
-		elif control.name == "guiIpoBoneTxt":
-			control.x, control.y, control.height, control.width = 20,14, 20,223
-		elif control.name == "guiIpoBone":
-			control.x, control.y, control.height, control.width = 110,9, 20,133
-
-		'''
-		self.guiIpoType
-		self.guiIpoChannel
-		self.guiIpoObject
-		self.guiIpoBone
-		'''
 
 	def createSequenceListItem(self, seqName):
 		startEvent = self.curSeqListEvent
@@ -3108,23 +3085,10 @@ class VisControlsClass:
 			if type == "":
 				self.clearIpoCurvePulldown()
 				self.clearIpoObjectPulldown()
-				self.clearIpoBonePulldown()
 				return
 			seqKey['Vis']['Tracks'][objName]['IPOType'] = type
 			seqKey['Vis']['Tracks'][objName]['IPOChannel'] = None
 			seqKey['Vis']['Tracks'][objName]['IPOObject'] = None
-			seqKey['Vis']['Tracks'][objName]['IPOBone'] = None
-			'''
-			self.populateIpoCurvePulldown(type)
-			self.populateIpoObjectPulldown(type)
-			#self.populateIpoBonePulldown(type)
-			if type == "Object":
-				self.guiIpoObjectTxt.label = "IPO Object:"
-			elif type == "Material":
-				self.guiIpoObjectTxt.label = "IPO Material:"
-			elif type == "Pose":
-				self.guiIpoObjectTxt.label = "IPO Armature:"
-			'''
 			self.refreshIpoControls()
 			
 			
@@ -3140,21 +3104,8 @@ class VisControlsClass:
 			seqKey = getSequenceKey(seqName)
 			objName = self.guiVisTrackList.controls[self.guiVisTrackList.itemIndex].controls[0].label
 			type = self.guiIpoType.getSelectedItemString()
-			if control.getSelectedItemString() == "":
-				self.clearIpoBonePulldown()
-				return
 			if control.itemIndex > -1:
 				seqKey['Vis']['Tracks'][objName]['IPOObject'] = self.guiIpoObject.getSelectedItemString()
-				if type == "Pose": self.populateIpoBonePulldown(self.guiIpoObject.getSelectedItemString())
-				else: self.clearIpoBonePulldown()			
-
-		elif control.name == "guiIpoBone":
-			seqName = self.guiSeqList.controls[self.guiSeqList.itemIndex].controls[0].label
-			seqKey = getSequenceKey(seqName)
-			objName = self.guiVisTrackList.controls[self.guiVisTrackList.itemIndex].controls[0].label
-			seqKey['Vis']['Tracks'][objName]['IPOBone'] = self.guiIpoBone.getSelectedItemString()
-			pass
-
 		
 	# called when an item is selected in the sequence list
 	def handleListEvent(self, control):
@@ -3224,12 +3175,10 @@ class VisControlsClass:
 			self.guiIpoType.enabled = True
 			self.guiIpoChannel.enabled = True
 			self.guiIpoObject.enabled = True
-			self.guiIpoBone.enabled = True
 			if objName == "" or objName == None:
 				self.guiIpoType.itemIndex = -1
 				self.guiIpoChannel.itemIndex = -1
 				self.guiIpoObject.itemIndex = -1
-				self.guiIpoBone.itemIndex = -1
 			if type != "":
 				print "Populating pulldowns..."
 				print "type =",type
@@ -3237,12 +3186,10 @@ class VisControlsClass:
 				self.populateIpoObjectPulldown(type)
 				#arm = self.guiIpoObject.getSelectedItemString()
 				arm = seqKey['Vis']['Tracks'][objName]['IPOObject']
-				self.populateIpoBonePulldown(arm)
 			else:
 				print "Clearing pulldowns..."
 				self.clearIpoCurvePulldown()
 				self.clearIpoObjectPulldown()
-				self.clearIpoBonePulldown()
 			print "seqName=", seqName
 			print "objName=", objName
 			# todo - add code here to update controls below the vis track list
@@ -3264,36 +3211,20 @@ class VisControlsClass:
 			except:
 				seqKey['Vis']['Tracks'][objName]['IPOObject'] = None
 				print "(2) Set IPOObject pulldown value:", self.guiIpoObject.itemIndex
-			try:
-				self.guiIpoBone.setTextValue(seqKey['Vis']['Tracks'][objName]['IPOBone'])
-				print "(1) Set IPOBone pulldown value:", self.guiIpoBone.itemIndex, "(",seqKey['Vis']['Tracks'][objName]['IPOBone'],")"
-			except:
-				seqKey['Vis']['Tracks'][objName]['IPOBone'] = None
-				print "(2) Set IPOBone pulldown value:", self.guiIpoBone.itemIndex
-			#print seqPrefs
-			#guiNumFrames.value = seqPrefs['IFL']['IFLFrames'][control.itemIndex][1]
 		else:
 			self.guiIpoType.itemIndex = -1
 			self.guiIpoChannel.itemIndex = -1
 			self.guiIpoObject.itemIndex = -1
-			self.guiIpoBone.itemIndex = -1
 			self.clearIpoCurvePulldown()
 			self.clearIpoObjectPulldown()
-			self.clearIpoBonePulldown()
 			self.guiIpoType.enabled = False
 			self.guiIpoChannel.enabled = False
 			self.guiIpoObject.enabled = False
-			self.guiIpoBone.enabled = False
 		
 		if type == "Object":
 			self.guiIpoObjectTxt.label = "IPO Object:"
-			self.guiIpoBone.visible = False
 		elif type == "Material":
 			self.guiIpoObjectTxt.label = "IPO Material:"
-			self.guiIpoBone.visible = False
-		elif type == "Pose":
-			self.guiIpoObjectTxt.label = "IPO Armature:"
-			self.guiIpoBone.visible = True
 
 	
 	
@@ -3365,17 +3296,6 @@ class VisControlsClass:
 		for obj in objs:
 			self.guiIpoObject.items.append(obj)
 
-	def clearIpoBonePulldown(self):
-		self.guiIpoBone.items = []
-		self.guiIpoBone.itemIndex = -1
-
-	def populateIpoBonePulldown(self, armature):
-		self.guiIpoBone.itemIndex = -1
-		self.clearIpoBonePulldown()
-		objs = getArmBoneNames(armature)
-		for obj in objs:
-			self.guiIpoBone.items.append(obj)
-
 	def clearIpoCurvePulldown(self):
 		self.guiIpoChannel.itemIndex = -1
 		self.guiIpoChannel.items = []
@@ -3418,7 +3338,7 @@ class VisControlsClass:
 					try:
 						trackEnabled = Prefs['Sequences'][seqName]['Vis']['Tracks'][obj.name]
 					except: 
-						Prefs['Sequences'][seqName]['Vis']['Tracks'][obj.name]  = {'hasVisTrack': False, 'IPOObject':None, 'IPOBone':None, 'IPOType':"Material", 'IPOChannel':"Alpha"} 
+						Prefs['Sequences'][seqName]['Vis']['Tracks'][obj.name]  = {'hasVisTrack': False, 'IPOObject':None, 'IPOType':"Material", 'IPOChannel':"Alpha"} 
 					# set the state of the enabled button
 					print "trackEnabled=", Prefs['Sequences'][seqName]['Vis']['Tracks'][obj.name]['hasVisTrack']
 					self.guiVisTrackList.controls[-1].controls[1].state = Prefs['Sequences'][seqName]['Vis']['Tracks'][obj.name]['hasVisTrack']
