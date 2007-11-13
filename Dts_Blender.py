@@ -1930,7 +1930,7 @@ class ActionControlsClass:
 			control.width = 300
 		elif control.name == "guiActTitle":
 			control.x = 10
-			control.y = newheight-20
+			control.y = newheight-25
 		elif control.name == "guiActOpts":
 			control.x = newwidth - 180
 			control.y = 0
@@ -1938,11 +1938,7 @@ class ActionControlsClass:
 			control.height = newheight
 		elif control.name == "guiOptsTitle":
 			control.x = 5
-			control.y = newheight - 15
-		# Joe - ?
-		elif control.name == "sequence.opts.btitle":
-			control.x = 5
-			control.y = newheight - 110
+			control.y = newheight - 25
 		elif control.name == "guiTriggerTitle":
 			control.x = 5
 			control.y = newheight - 215
@@ -2209,7 +2205,7 @@ class IFLControlsClass:
 		self.guiNumFrames.min = 1
 		self.guiNumImages.value = 1
 		self.guiNumFrames.value = 1
-		self.guiNumFrames.max = 65535 # <- reasonable?  I wonder if anyone wants to do day night cycles with IFL? - Joe G.
+		self.guiNumFrames.max = 65535 # <- reasonable?  I wonder if anyone wants to do day/night cycles with IFL? - Joe G.
 
 		# add controls to containers
 		guiSequenceIFLSubtab.addControl(self.guiSeqList)
@@ -2306,7 +2302,7 @@ class IFLControlsClass:
 		elif control.name == "guiSeqOptsContainer":
 			control.x, control.y, control.height, control.width = 241,0, 334,249
 		elif control.name == "guiSeqOptsContainerTitle":
-			control.x, control.y, control.height, control.width = 280,310, 20,82
+			control.x, control.y, control.height, control.width = 250,310, 20,82
 		elif control.name == "guiMatTxt":
 			control.x, control.y, control.height, control.width = 10,278, 20,120
 		elif control.name == "guiMat":
@@ -2569,6 +2565,7 @@ class IFLControlsClass:
 			self.clearImageFramesList()
 			self.guiNumFrames.value = 1
 			self.guiSeqOptsContainer.enabled = False
+			self.guiSeqOptsContainerTitle.label = "Sequence: None Selected"
 		else:
 			self.guiSeqOptsContainer.enabled = True
 			seqName = control.controls[control.itemIndex].controls[0].label
@@ -2580,6 +2577,7 @@ class IFLControlsClass:
 			try: self.guiNumFrames.value = seqPrefs['IFL']['IFLFrames'][1]
 			except: self.guiNumFrames.value = 1
 			self.populateImageFramesList(seqName)
+			self.guiSeqOptsContainerTitle.label = ("Sequence: %s" % seqName)
 	
 	def handleListItemEvent(self, control):
 		print "handleListItemEvent called..."
@@ -2802,9 +2800,9 @@ class VisControlsClass:
 		guiSequenceVisibilitySubtab.addControl(self.guiSeqAddToExistingTxt)
 		guiSequenceVisibilitySubtab.addControl(self.guiSeqExistingSequences)
 		guiSequenceVisibilitySubtab.addControl(self.guiSeqAddToExisting)
-		guiSequenceVisibilitySubtab.addControl(self.guiSeqListTitle)
-		guiSequenceVisibilitySubtab.addControl(self.guiSeqOptsContainerTitle)
+		guiSequenceVisibilitySubtab.addControl(self.guiSeqListTitle)		
 		guiSequenceVisibilitySubtab.addControl(self.guiSeqOptsContainer)
+		self.guiSeqOptsContainer.addControl(self.guiSeqOptsContainerTitle)
 		self.guiSeqOptsContainer.addControl(self.guiVisTrackListTxt)
 		self.guiSeqOptsContainer.addControl(self.guiVisTrackList)
 		self.guiSeqOptsContainer.addControl(self.guiStartFrame)
@@ -2903,7 +2901,7 @@ class VisControlsClass:
 		elif control.name == "guiSeqOptsContainer":
 			control.x, control.y, control.height, control.width = 241,0, 334,249
 		elif control.name == "guiSeqOptsContainerTitle":
-			control.x, control.y, control.height, control.width = 280,310, 20,82
+			control.x, control.y, control.height, control.width = 10,310, 20,82
 		elif control.name == "guiStartFrame":
 			control.x, control.y, control.height, control.width = 20,280, 20,110
 		elif control.name == "guiEndFrame":
@@ -3093,15 +3091,11 @@ class VisControlsClass:
 		print "handleListEvent called..."
 		if control.itemIndex < 0:
 			self.guiSeqName.value = ""
-			#self.guiMat.selectStringItem("")
-			#self.guiNumImages.value = 1
-			#self.guiNumFrames.value = 1
-			#self.clearImageFramesList()
-			#self.guiNumFrames.value = 1
 			self.guiSeqOptsContainer.enabled = False
 			self.clearVisTrackList()
 			self.guiStartFrame.value = 1
 			self.guiEndFrame.value = 1
+			self.guiSeqOptsContainerTitle.label = "Sequence: None Selected"
 		else:
 			self.guiSeqOptsContainer.enabled = True
 			seqName = control.controls[control.itemIndex].controls[0].label
@@ -3110,15 +3104,7 @@ class VisControlsClass:
 			self.populateVisTrackList(seqName)
 			self.guiStartFrame.value = seqKey['Vis']['StartFrame']
 			self.guiEndFrame.value = seqKey['Vis']['EndFrame']
-
-			#self.guiMat.selectStringItem(seqPrefs['IFL']['Material'])
-			#self.guiNumImages.value = seqPrefs['IFL']['NumImages']
-			#print seqPrefs['IFL']['IFLFrames']
-			#try: self.guiNumFrames.value = seqPrefs['IFL']['IFLFrames'][1]
-			#except: self.guiNumFrames.value = 1
-			#self.populateImageFramesList(seqName)
-	
-
+			self.guiSeqOptsContainerTitle.label = ("Sequence: %s" % seqName)
 
 	def handleListItemEvent(self, control):
 		print "handleListItemEvent called..."
@@ -3325,16 +3311,6 @@ class VisControlsClass:
 					self.guiVisTrackList.controls[-1].controls[1].state = Prefs['Sequences'][seqName]['Vis']['Tracks'][obj.name]['hasVisTrack']
 					
 					
-					
-		'''
-		self.clearVisTrackList()
-		guiVisTrackList = self.guiVisTrackList
-		
-		IFLMat = Prefs['Sequences'][seqName]['Vis']['IFLFrames']
-		for fr in IFLMat:
-			print "fr:",fr
-			guiVisTrackList.addControl(self.createFramesListItem(fr[0], fr[1]))
-		'''
 		
 		
 		
@@ -3353,12 +3329,14 @@ class MaterialControlsClass:
 		# panel state
 		self.curSeqListEvent = 40
 
+		self.guiMaterialListTitle = Common_Gui.SimpleText("guiMaterialListTitle", "U/V Textures:", None, self.resize)
 		self.guiMaterialList = Common_Gui.ListContainer("guiMaterialList", "material.list", self.handleEvent, self.resize)
 		self.guiMaterialList.fade_mode = 0
 		self.guiMaterialOptions = Common_Gui.BasicContainer("guiMaterialOptions", "", None, self.resize)
+		self.guiMaterialOptionsTitle = Common_Gui.SimpleText("guiMaterialOptionsTitle", "Material: None Selected", None, self.resize)
 		self.guiMaterialTransFrame = Common_Gui.BasicFrame("guiMaterialTransFrame", "", None, 29, None, self.resize)
 		self.guiMaterialAdvancedFrame = Common_Gui.BasicFrame("guiMaterialAdvancedFrame", "", None, 30, None, self.resize)
-		self.guiMaterialImportRefreshButton = Common_Gui.BasicButton("guiMaterialImportRefreshButton", "Import / Refresh", "Import Blender materials and settings", 7, self.handleEvent, self.resize)
+		self.guiMaterialImportRefreshButton = Common_Gui.BasicButton("guiMaterialImportRefreshButton", "Refresh", "Import Blender materials and settings", 7, self.handleEvent, self.resize)
 		self.guiMaterialSWrapButton = Common_Gui.ToggleButton("guiMaterialSWrapButton", "SWrap", "SWrap", 9, self.handleEvent, self.resize)
 		self.guiMaterialTWrapButton = Common_Gui.ToggleButton("guiMaterialTWrapButton", "TWrap", "TWrap", 10, self.handleEvent, self.resize)
 		self.guiMaterialTransButton = Common_Gui.ToggleButton("guiMaterialTransButton", "Translucent", "Translucent", 11, self.handleEvent, self.resize)
@@ -3397,10 +3375,12 @@ class MaterialControlsClass:
 		
 		
 		# add controls to their respective containers
+		guiMaterialsSubtab.addControl(self.guiMaterialListTitle)
 		guiMaterialsSubtab.addControl(self.guiMaterialList)
 		guiMaterialsSubtab.addControl(self.guiMaterialOptions)
 		guiMaterialsSubtab.addControl(self.guiMaterialImportRefreshButton)
 
+		self.guiMaterialOptions.addControl(self.guiMaterialOptionsTitle)
 		self.guiMaterialOptions.addControl(self.guiMaterialTransFrame)
 		self.guiMaterialOptions.addControl(self.guiMaterialAdvancedFrame)
 		self.guiMaterialOptions.addControl(self.guiMaterialSWrapButton)
@@ -3437,7 +3417,9 @@ class MaterialControlsClass:
 		Note: __del__ is not guaranteed to be called for objects that still
 		exist when the interpreter exits.
 		'''
+		del self.guiMaterialListTitle
 		del self.guiMaterialList
+		del self.guiMaterialOptionsTitle
 		del self.guiMaterialOptions
 		del self.guiMaterialTransFrame
 		del self.guiMaterialAdvancedFrame
@@ -3461,6 +3443,7 @@ class MaterialControlsClass:
 		del self.guiMaterialReflectanceMapMenu
 		del self.guiMaterialReflectanceSlider
 		del self.guiMaterialDetailScaleSlider
+		
 
 	
 	def updateOldPrefs(self):
@@ -3473,8 +3456,12 @@ class MaterialControlsClass:
 	
 	def resize(self, control, newwidth, newheight):
 		# handle control resize events.
-		if control.name == "guiMaterialList":
+		if control.name == "guiMaterialListTitle":
+			control.x, control.y, control.height, control.width = 10,310, 20,150
+		elif control.name == "guiMaterialList":
 			control.x, control.y, control.height, control.width = 10,30, newheight - 70,150
+		elif control.name == "guiMaterialOptionsTitle":
+			control.x, control.y, control.height, control.width = 25,310, 20,150
 		elif control.name == "guiMaterialOptions":
 			control.x, control.y, control.height, control.width = 161,0, 335,328
 		elif control.name == "guiMaterialTransFrame":
@@ -3482,7 +3469,7 @@ class MaterialControlsClass:
 		elif control.name == "guiMaterialAdvancedFrame":
 			control.x, control.y, control.height, control.width = 8,newheight-325, 75,315
 		elif control.name == "guiMaterialImportRefreshButton":
-			control.x, control.y, control.width = 15,newheight-30, 100
+			control.x, control.y, control.width = 10,newheight-330, 100
 		elif control.name == "guiMaterialSWrapButton":
 			control.x, control.y, control.width = 195,newheight-105, 60
 		elif control.name == "guiMaterialTWrapButton":
@@ -3766,6 +3753,7 @@ class MaterialControlsClass:
 				guiMaterialOptions.controlDict['guiMaterialReflectanceMapMenu'].selectStringItem(matList[materialName]['RefMapTex'])
 				guiMaterialOptions.controlDict['guiMaterialReflectanceSlider'].value = matList[materialName]['reflectance'] * 100.0
 				guiMaterialOptions.controlDict['guiMaterialDetailScaleSlider'].value = matList[materialName]['detailScale'] * 100.0
+				self.guiMaterialOptionsTitle.label = ("Material: %s" % materialName)
 			else:
 				guiMaterialOptions.controlDict['guiMaterialSWrapButton'].state = False
 				guiMaterialOptions.controlDict['guiMaterialTWrapButton'].state = False
@@ -3786,6 +3774,7 @@ class MaterialControlsClass:
 				guiMaterialOptions.controlDict['guiMaterialReflectanceSlider'].value = 0
 				guiMaterialOptions.controlDict['guiMaterialDetailScaleSlider'].value = 100
 				guiMaterialOptions.enabled = False
+				self.guiMaterialOptionsTitle.label = "Material: None Selected"
 
 
 		if guiMaterialList.itemIndex == -1: return
