@@ -491,7 +491,6 @@ def cleanKeys():
 			try: VisFound = Prefs['Sequences'][keyName]['Vis']['Enabled']
 			except: VisFound = False
 			# if no sequence type is enabled for the key, get rid of it.
-			#print "**************    Deleting key:", keyName
 			if VisFound == False and IFLFound == False: del Prefs['Sequences'][keyName]
 
 
@@ -1693,10 +1692,8 @@ class ActionControlsClass:
 		self.guiRefresh = Common_Gui.BasicButton("guiRefresh", "Refresh", "Refresh list of sequences", 7, self.handleEvent, self.resize)
 		self.guiActOpts = Common_Gui.BasicContainer("guiActOpts", "sequence.prefs", None, self.resize)
 		self.guiOptsTitle = Common_Gui.SimpleText("guiOptsTitle", "Sequence: None Selected", None, self.resize)
-		self.guiFramecount = Common_Gui.NumberPicker("guiFramecount", "Frame Samples", "Amount of frames to export", 10, self.handleEvent, self.resize)
-		self.guiGroundframeCount = Common_Gui.NumberPicker("guiGroundframeCount", "Ground Frames", "Amount of ground frames to export", 11, self.handleEvent, self.resize)
-		self.guiMatAnim = Common_Gui.ToggleButton("guiMatAnim", "Mat Anim", "Animate Materials", 12, self.handleEvent, self.resize)
-		self.guiMatStartFrame = Common_Gui.NumberPicker("guiMatStartFrame", "Start", "Frame to start exporting material track", 13, self.handleEvent, self.resize)
+		self.guiSampleFrames = Common_Gui.NumberPicker("guiSampleFrames", "Frame Samples", "Amount of frames to export", 10, self.handleEvent, self.resize)
+		self.guiGroundFrameSamples = Common_Gui.NumberPicker("guiGroundFrameSamples", "Ground Frames", "Amount of ground frames to export", 11, self.handleEvent, self.resize)
 		self.guiPriority = Common_Gui.NumberPicker("guiPriority", "Priority", "Sequence playback priority", 23, self.handleEvent, self.resize)
 		self.guiRefPoseTitle = Common_Gui.SimpleText("guiRefPoseTitle", "Ref Pose for ", None, self.resize)
 		self.guiRefPoseMenu = Common_Gui.ComboBox("guiRefPoseMenu", "Use Action", "Select an action containing your refernce pose for this blend.", 20, self.handleEvent, self.resize)
@@ -1715,9 +1712,7 @@ class ActionControlsClass:
 		self.guiActOpts.enabled = False
 		self.guiActOpts.fade_mode = 5
 		self.guiActOpts.borderColor = None
-		self.guiFramecount.min = 1
-		self.guiMatStartFrame.min = 1
-		self.guiMatStartFrame.max = Blender.Scene.GetCurrent().getRenderingContext().endFrame()	
+		self.guiSampleFrames.min = 1
 		self.guiPriority.min = 0
 		self.guiPriority.max = 64 # this seems resonable
 		self.guiRefPoseTitle.visible = False
@@ -1735,24 +1730,22 @@ class ActionControlsClass:
 		guiSeqActSubtab.addControl(self.guiRefresh)
 		guiSeqActSubtab.addControl(self.guiActOpts)
 
-		self.guiActOpts.addControl(self.guiOptsTitle)
-		self.guiActOpts.addControl(self.guiFramecount)
-		self.guiActOpts.addControl(self.guiGroundframeCount)
-		self.guiActOpts.addControl(self.guiMatAnim)
-		self.guiActOpts.addControl(self.guiMatStartFrame)
+		self.guiActOpts.addControl(self.guiOptsTitle) # 0
+		self.guiActOpts.addControl(self.guiSampleFrames) # 1
+		self.guiActOpts.addControl(self.guiGroundFrameSamples) # 2
 
-		self.guiActOpts.addControl(self.guiTriggerTitle)
-		self.guiActOpts.addControl(self.guiTriggerMenu)
-		self.guiActOpts.addControl(self.guiTriggerState)
-		self.guiActOpts.addControl(self.guiTriggerStateOn)
-		self.guiActOpts.addControl(self.guiTriggerFrame)
-		self.guiActOpts.addControl(self.guiTriggerAdd)
-		self.guiActOpts.addControl(self.guiTriggerDel)
+		self.guiActOpts.addControl(self.guiTriggerTitle) # 5
+		self.guiActOpts.addControl(self.guiTriggerMenu) # 6
+		self.guiActOpts.addControl(self.guiTriggerState) # 7
+		self.guiActOpts.addControl(self.guiTriggerStateOn) # 8
+		self.guiActOpts.addControl(self.guiTriggerFrame) # 9
+		self.guiActOpts.addControl(self.guiTriggerAdd) # 10
+		self.guiActOpts.addControl(self.guiTriggerDel) # 11
 
-		self.guiActOpts.addControl(self.guiRefPoseTitle)
-		self.guiActOpts.addControl(self.guiRefPoseMenu)
-		self.guiActOpts.addControl(self.guiRefPoseFrame)
-		self.guiActOpts.addControl(self.guiPriority)
+		self.guiActOpts.addControl(self.guiRefPoseTitle) # 12
+		self.guiActOpts.addControl(self.guiRefPoseMenu) # 13
+		self.guiActOpts.addControl(self.guiRefPoseFrame) # 14
+		self.guiActOpts.addControl(self.guiPriority) # 15
 
 
 
@@ -1845,12 +1838,12 @@ class ActionControlsClass:
 			self.populateSequenceActionList()
 		elif control.name == "guiActList":
 			# Clear triggers menu
-			del self.guiActOpts.controls[6].items[:]
+			del self.guiActOpts.controlDict["guiTriggerMenu"].items[:]
 			if control.itemIndex != -1:
 				sequenceName = control.controls[control.itemIndex].controls[0].label
 				sequencePrefs = getSequenceKey(sequenceName)
 				#print "** Responding to Action list event, seqKey:\n", sequencePrefs
-				self.guiActOpts.controls[0].label = "Sequence '%s'" % sequenceName
+				self.guiActOpts.controlDict['guiOptsTitle'].label = "Sequence '%s'" % sequenceName
 
 				try:
 					action = Blender.Armature.NLA.GetActions()[sequenceName]
@@ -1864,69 +1857,63 @@ class ActionControlsClass:
 				if sequencePrefs['Action']['NumGroundFrames'] > maxNumFrames:
 					sequencePrefs['Action']['NumGroundFrames'] = maxNumFrames
 				self.guiActOpts.enabled = True
-				self.guiActOpts.controls[1].value = sequencePrefs['Action']['InterpolateFrames']
-				self.guiActOpts.controls[1].max = maxNumFrames
-				self.guiActOpts.controls[2].value = sequencePrefs['Action']['NumGroundFrames']
-				self.guiActOpts.controls[2].max = maxNumFrames
-				self.guiActOpts.controls[3].state = sequencePrefs['Vis']['Enabled']
-				self.guiActOpts.controls[4].value = sequencePrefs['Vis']['StartFrame']
+				self.guiActOpts.controlDict['guiSampleFrames'].value = sequencePrefs['Action']['InterpolateFrames']
+				self.guiActOpts.controlDict['guiSampleFrames'].max = maxNumFrames
+				self.guiActOpts.controlDict['guiGroundFrameSamples'].value = sequencePrefs['Action']['NumGroundFrames']
+				self.guiActOpts.controlDict['guiGroundFrameSamples'].max = maxNumFrames
 
 				# added for blend anim ref pose selection
 				# make sure the user didn't delete the action containing the refrence pose
 				# out from underneath us while we weren't looking.
 				try: blah = Blender.Armature.NLA.GetActions()[sequencePrefs['Action']['BlendRefPoseAction']]
 				except: sequencePrefs['Action']['BlendRefPoseAction'] = sequenceName
-				self.guiActOpts.controls[12].label = "Ref pose for '%s'" % sequenceName
-				self.guiActOpts.controls[13].setTextValue(sequencePrefs['Action']['BlendRefPoseAction'])
-				self.guiActOpts.controls[14].min = 1
-				self.guiActOpts.controls[14].max = DtsShape_Blender.getNumFrames(Blender.Armature.NLA.GetActions()[sequencePrefs['Action']['BlendRefPoseAction']].getAllChannelIpos().values(), False)
-				self.guiActOpts.controls[14].value = sequencePrefs['Action']['BlendRefPoseFrame']
+				self.guiActOpts.controlDict['guiRefPoseTitle'].label = "Ref pose for '%s'" % sequenceName
+				self.guiActOpts.controlDict['guiRefPoseMenu'].setTextValue(sequencePrefs['Action']['BlendRefPoseAction'])
+				self.guiActOpts.controlDict['guiRefPoseFrame'].min = 1
+				self.guiActOpts.controlDict['guiRefPoseFrame'].max = DtsShape_Blender.getNumFrames(Blender.Armature.NLA.GetActions()[sequencePrefs['Action']['BlendRefPoseAction']].getAllChannelIpos().values(), False)
+				self.guiActOpts.controlDict['guiRefPoseFrame'].value = sequencePrefs['Action']['BlendRefPoseFrame']
 				# hack, there must be a better way to handle this.
 				try:
-					self.guiActOpts.controls[15].value = sequencePrefs['Priority']
+					self.guiActOpts.controlDict['guiPriority'].value = sequencePrefs['Priority']
 				except KeyError:
-					self.guiActOpts.controls[15].value = 0
+					self.guiActOpts.controlDict['guiPriority'].value = 0
 
 
 				# Triggers
 				for t in sequencePrefs['Triggers']:
 					if t[2]: stateStr = "(ON)"
 					else: stateStr = "(OFF)"
-					self.guiActOpts.controls[6].items.append((self.triggerMenuTemplate % (t[1], t[0])) + stateStr)
+					self.guiActOpts.controlDict['guiTriggerMenu'].items.append((self.triggerMenuTemplate % (t[1], t[0])) + stateStr)
+				self.guiActOpts.controlDict['guiTriggerMenu'].itemIndex = 0
 
-				self.guiActOpts.controls[6].itemIndex = 0
-				self.guiActOpts.controls[9].max = maxNumFrames
+				self.guiActOpts.controlDict['guiTriggerFrame'].max = maxNumFrames
 				self.guiSequenceUpdateTriggers(sequencePrefs['Triggers'], 0)
 				# show/hide ref pose stuff.
 				if sequencePrefs['Action']['Blend'] == True:
-					self.guiActOpts.controls[12].visible = True
-					self.guiActOpts.controls[13].visible = True
-					self.guiActOpts.controls[14].visible = True
+					self.guiActOpts.controlDict['guiRefPoseTitle'].visible = True
+					self.guiActOpts.controlDict['guiRefPoseMenu'].visible = True
+					self.guiActOpts.controlDict['guiRefPoseFrame'].visible = True
 				else:
-					self.guiActOpts.controls[12].visible = False
-					self.guiActOpts.controls[13].visible = False
-					self.guiActOpts.controls[14].visible = False
+					self.guiActOpts.controlDict['guiRefPoseTitle'].visible = False
+					self.guiActOpts.controlDict['guiRefPoseMenu'].visible = False
+					self.guiActOpts.controlDict['guiRefPoseFrame'].visible = False
 
 			else:
 				self.guiActOpts.enabled = False
-				self.guiActOpts.controls[0].label = "Sequence: None Selected"
+				self.guiActOpts.controlDict['guiOptsTitle'].label = "Sequence: None Selected"
 		else:
 			if self.guiActList.itemIndex != -1:
 				sequenceName = self.guiActList.controls[self.guiActList.itemIndex].controls[0].label
 				sequencePrefs = getSequenceKey(sequenceName)
-				if control.name == "guiFramecount":
+				if control.name == "guiSampleFrames":
 					sequencePrefs['Action']['InterpolateFrames'] = control.value
-				elif control.name == "guiGroundframeCount":
+				elif control.name == "guiGroundFrameSamples":
 					sequencePrefs['Action']['NumGroundFrames'] = control.value
-				elif control.name == "guiMatAnim":
-					sequencePrefs['Vis']['Enabled'] = control.state
-				elif control.name == "guiMatStartFrame":
-					sequencePrefs['Vis']['StartFrame'] = control.value
 				# added for blend ref pose selection
 				elif control.name == "guiRefPoseMenu":
 					sequencePrefs['Action']['BlendRefPoseAction'] = control.items[control.itemIndex]
 					sequencePrefs['Action']['BlendRefPoseFrame'] = 1
-					self.guiActOpts.controls[14].value = sequencePrefs['Action']['BlendRefPoseFrame']
+					self.guiActOpts.controlDict['guiRefPoseFrame'].value = sequencePrefs['Action']['BlendRefPoseFrame']
 				elif control.name == "guiRefPoseFrame":
 					sequencePrefs['Action']['BlendRefPoseFrame'] = control.value
 				elif control.name == "guiPriority":
@@ -1972,22 +1959,14 @@ class ActionControlsClass:
 			control.y = 5
 			control.width = 100
 		# Sequence options
-		elif control.name == "guiFramecount":
-			control.x = 5
-			control.y = newheight - 45
-			control.width = newwidth - 10
-		elif control.name == "guiGroundframeCount":
+		elif control.name == "guiSampleFrames":
 			control.x = 5
 			control.y = newheight - 70
 			control.width = newwidth - 10
-		elif control.name == "guiMatAnim":
+		elif control.name == "guiGroundFrameSamples":
 			control.x = 5
 			control.y = newheight - 95
-			control.width = 65
-		elif control.name == "guiMatStartFrame":
-			control.x = 72
-			control.y = newheight - 95
-			control.width = 102
+			control.width = newwidth - 10
 		# Triggers
 		elif control.name == "guiTriggerMenu":
 			control.x = 5
@@ -2030,13 +2009,13 @@ class ActionControlsClass:
 
 	def guiSequenceUpdateTriggers(self, triggerList, itemIndex):
 		if (len(triggerList) == 0) or (itemIndex >= len(triggerList)):
-			self.guiActOpts.controls[7].value = 0
-			self.guiActOpts.controls[8].state = False
-			self.guiActOpts.controls[9].value = 0
+			self.guiActOpts.controlDict['guiTriggerState'].value = 0
+			self.guiActOpts.controlDict['guiTriggerStateOn'].state = False
+			self.guiActOpts.controlDict['guiTriggerFrame'].value = 0
 		else:
-			self.guiActOpts.controls[7].value = triggerList[itemIndex][0] # Trigger State
-			self.guiActOpts.controls[9].value = triggerList[itemIndex][1] # Time
-			self.guiActOpts.controls[8].state = triggerList[itemIndex][2] # On
+			self.guiActOpts.controlDict['guiTriggerState'].value = triggerList[itemIndex][0] # Trigger State			
+			self.guiActOpts.controlDict['guiTriggerStateOn'].state = triggerList[itemIndex][2] # On
+			self.guiActOpts.controlDict['guiTriggerFrame'].value = triggerList[itemIndex][1] # Time
 
 	
 
@@ -2046,17 +2025,17 @@ class ActionControlsClass:
 
 		sequenceName = self.guiActList.controls[self.guiActList.itemIndex].controls[0].label
 		sequencePrefs = getSequenceKey(sequenceName)
-		itemIndex = self.guiActOpts.controls[6].itemIndex
+		itemIndex = self.guiActOpts.controlDict['guiTriggerMenu'].itemIndex
 
 		if control.name == "guiTriggerMenu":
 			self.guiSequenceUpdateTriggers(sequencePrefs['Triggers'], itemIndex)
 		elif control.name == "guiTriggerAdd":
 			# Add
 			sequencePrefs['Triggers'].append([1, 1, True])
-			self.guiActOpts.controls[6].items.append((self.triggerMenuTemplate % (1, 1)) + "(ON)")
-			self.guiActOpts.controls[6].itemIndex = len(sequencePrefs['Triggers'])-1
-			self.guiSequenceUpdateTriggers(sequencePrefs['Triggers'], self.guiActOpts.controls[6].itemIndex)
-		elif (len(self.guiActOpts.controls[6].items) != 0):
+			self.guiActOpts.controlDict['guiTriggerMenu'].items.append((self.triggerMenuTemplate % (1, 1)) + "(ON)")
+			self.guiActOpts.controlDict['guiTriggerMenu'].itemIndex = len(sequencePrefs['Triggers'])-1
+			self.guiSequenceUpdateTriggers(sequencePrefs['Triggers'], self.guiActOpts.controlDict['guiTriggerMenu'].itemIndex)
+		elif (len(self.guiActOpts.controlDict['guiTriggerMenu'].items) != 0):
 			if control.name == "guiTriggerState":
 				sequencePrefs['Triggers'][itemIndex][0] = control.value
 			elif control.name == "guiTriggerStateOn":
@@ -2066,11 +2045,11 @@ class ActionControlsClass:
 			elif control.name == "guiTriggerDel":
 				# Remove
 				del sequencePrefs['Triggers'][itemIndex]
-				del self.guiActOpts.controls[6].items[itemIndex]
+				del self.guiActOpts.controlDict['guiTriggerMenu'].items[itemIndex]
 				# Must decrement itemIndex if we are out of bounds
 				if itemIndex <= len(sequencePrefs['Triggers']):
-					self.guiActOpts.controls[6].itemIndex = len(sequencePrefs['Triggers'])-1
-					itemIndex = self.guiActOpts.controls[6].itemIndex
+					self.guiActOpts.controlDict['guiTriggerMenu'].itemIndex = len(sequencePrefs['Triggers'])-1
+					itemIndex = self.guiActOpts.controlDict['guiTriggerMenu'].itemIndex
 				self.guiSequenceUpdateTriggers(sequencePrefs['Triggers'], itemIndex)
 
 			# Update menu caption
@@ -2078,7 +2057,7 @@ class ActionControlsClass:
 				return
 			if sequencePrefs['Triggers'][itemIndex][2]: stateStr = "(ON)"
 			else: stateStr = "(OFF)"
-			self.guiActOpts.controls[6].items[itemIndex] = (self.triggerMenuTemplate % (sequencePrefs['Triggers'][itemIndex][1], sequencePrefs['Triggers'][itemIndex][0])) + stateStr
+			self.guiActOpts.controlDict['guiTriggerMenu'].items[itemIndex] = (self.triggerMenuTemplate % (sequencePrefs['Triggers'][itemIndex][1], sequencePrefs['Triggers'][itemIndex][0])) + stateStr
 	
 	def populateSequenceActionList(self):
 		actions = Armature.NLA.GetActions()
@@ -2095,8 +2074,8 @@ class ActionControlsClass:
 			self.guiActList.addControl(self.createSequenceActionListitem(key, startEvent))
 			startEvent += 4
 			# add any new animations to the ref pose combo box
-			if not (key in self.guiActOpts.controls[13].items):
-				self.guiActOpts.controls[13].items.append(key)
+			if not (key in self.guiActOpts.controlDict['guiRefPoseMenu'].items):
+				self.guiActOpts.controlDict['guiRefPoseMenu'].items.append(key)
 
 	def clearSequenceActionList(self):
 
@@ -2130,13 +2109,13 @@ class ActionControlsClass:
 			sequencePrefs['Action']['Blend'] = control.state
 			# if blend is true, show the ref pose controls
 			if sequencePrefs['Action']['Blend'] == True:
-				self.guiActOpts.controls[12].visible = True
-				self.guiActOpts.controls[13].visible = True
-				self.guiActOpts.controls[14].visible = True
+				self.guiActOpts.controlDict['guiRefPoseTitle'].visible = True
+				self.guiActOpts.controlDict['guiRefPoseMenu'].visible = True
+				self.guiActOpts.controlDict['guiRefPoseFrame'].visible = True
 			else:
-				self.guiActOpts.controls[12].visible = False
-				self.guiActOpts.controls[13].visible = False
-				self.guiActOpts.controls[14].visible = False
+				self.guiActOpts.controlDict['guiRefPoseTitle'].visible = False
+				self.guiActOpts.controlDict['guiRefPoseMenu'].visible = False
+				self.guiActOpts.controlDict['guiRefPoseFrame'].visible = False
 		elif realItem == 3:
 			sequencePrefs['Cyclic'] = control.state
 
