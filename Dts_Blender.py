@@ -463,6 +463,68 @@ def getSequenceKey(value):
 		print "Returning new sequence for", value, "..."
 		return Prefs['Sequences'][value]
 
+# Creates an independent copy of a sequence key
+def copySequenceKey(value):
+	print "!!!!!! copySequenceKey called for sequence: %s !!!!!!!!!!!" % value
+	global Prefs, dummySequence
+	print "************  Creating new sequence key ******"
+	retVal = dummySequence.copy()
+
+	retVal['Dsq'] = Prefs['Sequences'][value]['Dsq']
+	retVal['Cyclic'] = Prefs['Sequences'][value]['Cyclic']
+	retVal['NoExport'] = Prefs['Sequences'][value]['NoExport']
+	retVal['Priority'] = Prefs['Sequences'][value]['Priority']
+	retVal['TotalFrames'] = Prefs['Sequences'][value]['TotalFrames']
+
+
+	# Create anything that cannot be copied (reference objects like lists)
+
+	retVal['Triggers'] = []
+	# copy triggers
+	for entry in Prefs['Sequences'][value]['Triggers']:
+		retVal['Triggers'].append([])
+		for item in entry:
+			retVal['Triggers'][-1].append(item)
+
+	# copy action key
+	retVal['Action'] = {}
+	retVal['Action']['Enabled'] = Prefs['Sequences'][value]['Action']['Enabled']
+	retVal['Action']['NumGroundFrames'] = Prefs['Sequences'][value]['Action']['NumGroundFrames']
+	retVal['Action']['BlendRefPoseAction'] = Prefs['Sequences'][value]['Action']['BlendRefPoseAction']
+	retVal['Action']['BlendRefPoseFrame'] = Prefs['Sequences'][value]['Action']['BlendRefPoseFrame']
+	retVal['Action']['InterpolateFrames'] = Prefs['Sequences'][value]['Action']['InterpolateFrames']
+	retVal['Action']['Blend'] = Prefs['Sequences'][value]['Action']['Blend']
+	
+
+	# copy IFL key
+	retVal['IFL'] = {}
+	retVal['IFL']['Enabled'] = Prefs['Sequences'][value]['IFL']['Enabled']
+	retVal['IFL']['Material'] = Prefs['Sequences'][value]['IFL']['Material']
+	retVal['IFL']['NumImages'] = Prefs['Sequences'][value]['IFL']['NumImages']
+	retVal['IFL']['TotalFrames'] = Prefs['Sequences'][value]['IFL']['TotalFrames']
+	# copy IFL Frames
+	retVal['IFLFrames'] = []
+	for entry in Prefs['Sequences'][value]['IFL']['IFLFrames']:
+		retVal['IFLFrames'].append([])
+		for item in entry:
+			retVal['IFLFrames'][-1].append(item)
+	
+	# copy Vis key
+	retVal['Vis'] = {}
+	retVal['Vis']['Enabled'] = Prefs['Sequences'][value]['Vis']['Enabled']
+	retVal['Vis']['StartFrame'] = Prefs['Sequences'][value]['Vis']['StartFrame']
+	retVal['Vis']['EndFrame'] = Prefs['Sequences'][value]['Vis']['EndFrame']
+	# copy visibility tracks
+	retVal['Vis']['Tracks'] = {}
+	for trackName in Prefs['Sequences'][value]['Vis']['Tracks'].keys():
+		retVal['Vis']['Tracks'][trackName] = {}
+		retVal['Vis']['Tracks'][trackName]['hasVisTrack'] = Prefs['Sequences'][value]['Vis']['Tracks'][trackName]['hasVisTrack']
+		retVal['Vis']['Tracks'][trackName]['IPOType'] = Prefs['Sequences'][value]['Vis']['Tracks'][trackName]['IPOType']
+		retVal['Vis']['Tracks'][trackName]['IPOChannel'] = Prefs['Sequences'][value]['Vis']['Tracks'][trackName]['IPOChannel']
+		retVal['Vis']['Tracks'][trackName]['IPOObject'] = Prefs['Sequences'][value]['Vis']['Tracks'][trackName]['IPOObject']
+
+	return retVal
+
 # Cleans up extra sequence keys that may not be used anymore (e.g. action deleted)
 def cleanKeys():
 	print "************* Cleaning sequence keys *******************"
@@ -502,6 +564,131 @@ def createActionKeys():
 	for action in Blender.Armature.NLA.GetActions():
 		#print action
 		getSequenceKey(action)
+
+
+# Intelligently renames sequence keys.
+def renameSequence(oldName, newName):
+	global Prefs
+	seq = Prefs['Sequences'][oldName]
+
+	# todo - validate sequence name
+	if not validateSequenceName(newName): return
+
+	# copy the key
+	newKey = copySequenceKey(oldName)
+	# insert the copied key into the prefs under the new name
+	Prefs['Sequences'][newName] = newKey
+
+	if Prefs['Sequences']['Action']['Enabled']:
+		# disable the IFL and Vis attributes of the old key
+		Prefs['Sequences'][oldName]['IFL']['Enabled'] = False
+		Prefs['Sequences'][oldName]['Vis']['Enabled'] = False
+	# delete old key
+	else:
+		del Prefs['Sequences'][oldName]
+
+
+def updateOldPrefs():
+
+	print "*********     Updating old action preferences ***********"
+	global Prefs
+	#print "Prefs['Sequences'].keys():",Prefs['Sequences'].keys()
+	for seqName in Prefs['Sequences'].keys():
+		seq = getSequenceKey(seqName)
+		#print "*** seq:",seq
+		# Move keys into the new "Action" subkey.and delete old keys
+		try: x = seq['Action']
+		except:
+			seq['Action'] = {}
+			#print "      Created New Action Key.."
+		actKey = seq['Action']
+		try: x = actKey['Enabled']
+		except: 
+			actKey['Enabled'] = True
+			#print "      Created Enabled Key.."
+		try: x = actKey['InterpolateFrames']
+		except:
+			actKey['InterpolateFrames'] = seq['InterpolateFrames']
+			del seq['InterpolateFrames']
+			#print "      Moved InterpolateFrames Key.."
+		try: x = actKey['NumGroundFrames']
+		except:
+			actKey['NumGroundFrames'] = seq['NumGroundFrames']
+			del seq['NumGroundFrames']
+			#print "      Moved NumGroundFrames Key.."
+		try: x = actKey['Blend']
+		except:
+			actKey['Blend'] = seq['Blend']
+			del seq['Blend']
+			#print "      Moved Blend Key.."
+		try: x = actKey['BlendRefPoseAction']
+		except:
+			actKey['BlendRefPoseAction'] = seq['BlendRefPoseAction']
+			del seq['BlendRefPoseAction']
+			#print "      Moved BlendRefPoseAction Key.."
+		try: x = actKey['BlendRefPoseFrame']
+		except:
+			actKey['BlendRefPoseFrame'] = seq['BlendRefPoseFrame']
+			del seq['BlendRefPoseFrame']
+			#print "      Moved BlendRefPoseFrame Key.."
+		try: x = seq['Vis']
+		except: seq['Vis'] = {}
+		try: x = seq['Vis']['Enabled']
+		except:
+			seq['Vis']['Enabled'] = seq['AnimateMaterial']
+			del seq['AnimateMaterial']
+		try: x = seq['Vis']['StartFrame']
+		except:			
+			seq['Vis']['StartFrame'] = seq['MaterialIpoStartFrame']
+			print "        Set start frame to:", seq['Vis']['StartFrame']
+			try:
+				action = Blender.Armature.NLA.GetActions()[seqName]
+				seq['Vis']['EndFrame'] = seq['Vis']['StartFrame'] + DtsShape_Blender.getNumFrames(action.getAllChannelIpos().values(), False)
+				print "        Set end frame to:", seq['Vis']['EndFrame']
+			except:
+				seq['Vis']['EndFrame'] = seq['Vis']['StartFrame']
+				print "        Set end frame to:", seq['Vis']['EndFrame']
+
+			del seq['MaterialIpoStartFrame']
+		try: x = seq['Vis']['Tracks']
+		except:
+			# todo - set up tracks automatically for old style vis sequences.
+			seq['Vis']['Tracks'] = {}
+		try: x = seq['TotalFrames']
+		except: seq['TotalFrames'] = 0
+
+	print " ****** Updating old IFL sequence preferences ****** "
+	# loop through all actions in the preferences and add the 'IFL' key to them with some reasonable default values.
+	for seqName in Prefs['Sequences'].keys():
+		#seq = Prefs['Sequences'][seqName]
+		seq = getSequenceKey(seqName)
+		try: x = seq['IFL']
+		except KeyError:
+			#print "Resetting IFL Sequence:",seqName
+			seq['IFL'] = {}
+			seq['IFL']['Enabled'] = False
+			seq['IFL']['Material'] = None
+			seq['IFL']['NumImages'] = 0
+			seq['IFL']['TotalFrames'] = 0
+			seq['IFL']['IFLFrames'] = []
+
+	'''
+	print " ****** Updating old Visibility sequence preferences ****** "
+	# loop through all actions in the preferences and add the 'Vis' key to them with some reasonable default values.
+	# todo - place vis key generation here
+	for seqName in Prefs['Sequences'].keys():
+		#seq = Prefs['Sequences'][seqName]
+		seq = getSequenceKey(seqName)
+		try: x = seq['Vis']
+		except KeyError:
+			#print "Resetting Vis Sequence:",seqName
+			seq['Vis'] = {}
+			seq['Vis']['Enabled'] = False
+			seq['Vis']['StartFrame'] = 1
+			seq['Vis']['EndFrame'] = 1
+			seq['Vis']['Enabled'] = True
+			seq['Vis']['Tracks'] = {}
+	'''
 
 '''
 	Class to handle the 'World' branch
@@ -932,6 +1119,7 @@ def handleScene():
 	scn = Blender.Scene.GetCurrent()
 	scn.update(1)
 	export_tree = SceneTree(None,Blender.Scene.GetCurrent())
+	updateOldPrefs()
 	Torque_Util.dump_writeln("Cleaning Preference Keys")
 	cleanKeys()
 	createActionKeys()
@@ -1112,6 +1300,11 @@ def guiHeaderResize(control, newwidth, newheight):
 		control.y = 5
 
 
+def validateSequenceName(name):
+	# todo - validate sequence name
+	return True
+	pass
+
 
 '''
 ***************************************************************************************************
@@ -1131,7 +1324,7 @@ class SomeControlsClass:
 		
 		# add controls to containers
 		
-		# populate bone grid
+		# populate lists
 
 	def cleanup(self):
 
@@ -1143,9 +1336,6 @@ class SomeControlsClass:
 
 		pass
 
-	def updateOldPrefs(self):
-		global Prefs
-		pass
 
 	def handleEvent(self, control):
 		pass
@@ -1326,10 +1516,6 @@ class GeneralControlsClass:
 	def refreshAll(self):
 		pass
 
-	def updateOldPrefs(self):
-		global Prefs
-		pass
-
 	def handleEvent(self, control):
 		global Prefs
 		global guiGeneralSubtab
@@ -1491,8 +1677,6 @@ class ArmatureControlsClass:
 		global guiArmatureSubtab
 		global globalEvents
 
-		self.updateOldPrefs()
-		
 		# initialize GUI controls
 		self.guiBoneText = Common_Gui.SimpleText("guiBoneText", "Bones that should be exported :", None, self.resize)
 		self.guiBoneList = Common_Gui.BoneListContainer("guiBoneList", None, None, self.resize)
@@ -1528,10 +1712,6 @@ class ArmatureControlsClass:
 		pass
 
 	
-	def updateOldPrefs(self):
-		global Prefs
-		pass
-
 	def refreshAll(self):
 		pass
 
@@ -1700,8 +1880,6 @@ class ActionControlsClass:
 		global guiSeqActSubtab
 		global globalEvents
 		
-		self.updateOldPrefs()
-		
 		self.triggerMenuTemplate = "Frame:%d Trigger:%d "
 		
 		# initialize GUI controls
@@ -1784,66 +1962,6 @@ class ActionControlsClass:
 		pass
 
 	
-	def updateOldPrefs(self):
-		print "*********     Updating old action preferences ***********"
-		global Prefs
-		#print "Prefs['Sequences'].keys():",Prefs['Sequences'].keys()
-		for seqName in Prefs['Sequences'].keys():
-			seq = getSequenceKey(seqName)
-			#print "*** seq:",seq
-			# Move keys into the new "Action" subkey.and delete old keys
-			try: x = seq['Action']
-			except:
-				seq['Action'] = {}
-				#print "      Created New Action Key.."
-			actKey = seq['Action']
-			try: x = actKey['Enabled']
-			except: 
-				actKey['Enabled'] = True
-				#print "      Created Enabled Key.."
-			try: x = actKey['InterpolateFrames']
-			except:
-				actKey['InterpolateFrames'] = seq['InterpolateFrames']
-				del seq['InterpolateFrames']
-				#print "      Moved InterpolateFrames Key.."
-			try: x = actKey['NumGroundFrames']
-			except:
-				actKey['NumGroundFrames'] = seq['NumGroundFrames']
-				del seq['NumGroundFrames']
-				#print "      Moved NumGroundFrames Key.."
-			try: x = actKey['Blend']
-			except:
-				actKey['Blend'] = seq['Blend']
-				del seq['Blend']
-				#print "      Moved Blend Key.."
-			try: x = actKey['BlendRefPoseAction']
-			except:
-				actKey['BlendRefPoseAction'] = seq['BlendRefPoseAction']
-				del seq['BlendRefPoseAction']
-				#print "      Moved BlendRefPoseAction Key.."
-			try: x = actKey['BlendRefPoseFrame']
-			except:
-				actKey['BlendRefPoseFrame'] = seq['BlendRefPoseFrame']
-				del seq['BlendRefPoseFrame']
-				#print "      Moved BlendRefPoseFrame Key.."
-			try: x = seq['Vis']
-			except: seq['Vis'] = {}
-			try: x = seq['Vis']['Enabled']
-			except:
-				seq['Vis']['Enabled'] = seq['AnimateMaterial']
-				del seq['AnimateMaterial']
-			try: x = seq['Vis']['StartFrame']
-			except:
-				seq['Vis']['StartFrame'] = seq['MaterialIpoStartFrame']
-				seq['Vis']['EndFrame'] = seq['MaterialIpoStartFrame']
-				del seq['MaterialIpoStartFrame']
-			try: x = seq['Vis']['Tracks']
-			except:
-				# todo - set up tracks automatically for old style vis sequences.
-				seq['Vis']['Tracks'] = {}
-			try: x = seq['TotalFrames']
-			except: seq['TotalFrames'] = 0
-
 	def refreshAll(self):		
 		self.clearSequenceActionList()
 		self.populateSequenceActionList()
@@ -2191,9 +2309,6 @@ class IFLControlsClass:
 		global guiSequenceIFLSubtab		
 		global globalEvents
 
-		# update old style prefs that don't have 'IFL' sequence keys
-		self.updateOldPrefs()
-
 		# panel state
 		self.curSeqListEvent = 40
 
@@ -2282,23 +2397,6 @@ class IFLControlsClass:
 		del self.guiSeqOptsContainerTitle
 		del self.guiSeqOptsContainer
 
-
-	def updateOldPrefs(self):
-		print " ****** Updating old IFL sequence preferences ****** "
-		# loop through all actions in the preferences and add the 'IFL' key to them with some reasonable default values.
-		global Prefs
-		for seqName in Prefs['Sequences'].keys():
-			#seq = Prefs['Sequences'][seqName]
-			seq = getSequenceKey(seqName)
-			try: x = seq['IFL']
-			except KeyError:
-				#print "Resetting IFL Sequence:",seqName
-				seq['IFL'] = {}
-				seq['IFL']['Enabled'] = False
-				seq['IFL']['Material'] = None
-				seq['IFL']['NumImages'] = 0
-				seq['IFL']['TotalFrames'] = 0
-				seq['IFL']['IFLFrames'] = []
 
 	# called when we switch to this control page to make sure everything is in sync.
 	def refreshAll(self):
@@ -2509,14 +2607,18 @@ class IFLControlsClass:
 				else:
 					print "Removing sequence key for",seqName
 					del Prefs['Sequences'][seqName]
+		
 		elif control.name == "guiSeqRename":
 			guiSeqList = self.guiSeqList
 			# todo - validate sequence name
 			seqName = guiSeqList.controls[guiSeqList.itemIndex].controls[0].label
 			# Move sequence values to new key and delete the old.
-			Prefs['Sequences'][self.guiSeqName.value] = Prefs['Sequences'][seqName]
-			del Prefs['Sequences'][seqName]
+			#Prefs['Sequences'][self.guiSeqName.value] = Prefs['Sequences'][seqName]
+			#del Prefs['Sequences'][seqName]
+			renameSequence(seqName, self.guiSeqName.value)
 			guiSeqList.controls[guiSeqList.itemIndex].controls[0].label = self.guiSeqName.value			
+		
+		
 		elif control.name == "guiSeqAddToExisting":
 			existingSequences = self.guiSeqExistingSequences
 			itemIndex = existingSequences.itemIndex
@@ -2799,8 +2901,6 @@ class VisControlsClass:
 		global guiSequenceVisibilitySubtab		
 		global globalEvents
 		self.eatComboClick = False
-		# update old style prefs that don't have 'IFL' sequence keys
-		self.updateOldPrefs()
 		
 		# panel state
 		self.curSeqListEvent = 40
@@ -2908,24 +3008,6 @@ class VisControlsClass:
 
 
 
-	def updateOldPrefs(self):
-		print " ****** Updating old Visibility sequence preferences ****** "
-		# loop through all actions in the preferences and add the 'Vis' key to them with some reasonable default values.
-		# todo - place vis key generation here
-		global Prefs
-		for seqName in Prefs['Sequences'].keys():
-			#seq = Prefs['Sequences'][seqName]
-			seq = getSequenceKey(seqName)
-			try: x = seq['Vis']
-			except KeyError:
-				#print "Resetting Vis Sequence:",seqName
-				seq['Vis'] = {}
-				seq['Vis']['Enabled'] = False
-				seq['Vis']['StartFrame'] = 1
-				seq['Vis']['EndFrame'] = 1
-				seq['Vis']['Enabled'] = True
-				seq['Vis']['Tracks'] = {}
-
 	def refreshAll(self):
 		self.populateVisSeqList()
 		self.populateExistingSeqPulldown()
@@ -3030,6 +3112,7 @@ class VisControlsClass:
 	
 	# add a new Visibility sequence in the GUI and the prefs
 	def AddNewVisSeq(self, seqName):
+		print "()()()()() Adding new vis sequence ()()()()()"
 		seq = getSequenceKey(seqName)
 
 		# add vis stuff
@@ -3083,9 +3166,7 @@ class VisControlsClass:
 			guiSeqList = self.guiSeqList
 			# todo - validate sequence name
 			seqName = guiSeqList.controls[guiSeqList.itemIndex].controls[0].label
-			# Move sequence values to new key and delete the old.
-			Prefs['Sequences'][self.guiSeqName.value] = Prefs['Sequences'][seqName]
-			del Prefs['Sequences'][seqName]
+			renameSequence(seqName, self.guiSeqName.value)
 			guiSeqList.controls[guiSeqList.itemIndex].controls[0].label = self.guiSeqName.value
 			self.populateVisTrackList(self.guiSeqName.value)
 
@@ -3482,9 +3563,6 @@ class MaterialControlsClass:
 		self.guiMaterialOptions.addControl(self.guiMaterialReflectanceSlider)
 		self.guiMaterialOptions.addControl(self.guiMaterialDetailScaleSlider)
 
-		# update old style preferences
-		self.updateOldPrefs()
-		
 		# populate the Material list
 		self.populateMaterialList()
 		
@@ -3524,14 +3602,6 @@ class MaterialControlsClass:
 		del self.guiMaterialDetailScaleSlider
 		
 
-	
-	def updateOldPrefs(self):
-		# loop through all actions in the preferences and add the 'IFL' key to them with some reasonable default values.
-		global Prefs
-		for matName in Prefs['Materials'].keys():
-			pmi = Prefs['Materials'][matName]
-			try: x = pmi['IFLMaterial']
-			except: pmi['IFLMaterial'] = False
 	
 	def resize(self, control, newwidth, newheight):
 		# handle control resize events.
