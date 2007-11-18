@@ -1113,6 +1113,7 @@ class BlenderShape(DtsShape):
 			if visNumFrames > numFrames: numFrames = visNumFrames
 		
 		print "numFrames =", numFrames
+		sequence.numKeyFrames = numFrames
 		print "sequence.fps =", sequence.fps
 		if sequence.fps > 0: sequence.duration = float(numFrames) / float(sequence.fps)
 		else: sequence.duration = 1
@@ -1127,7 +1128,7 @@ class BlenderShape(DtsShape):
 			sequence = self.addSequenceVisibility( sequence, numFrames, seqPrefs, int(seqPrefs['Vis']['StartFrame']), int(seqPrefs['Vis']['EndFrame']) )
 		if seqPrefs['IFL']['Enabled']:
 			print "   Adding IFL data for", seqName
-			sequence.numKeyFrames = 15
+			#sequence.numKeyFrames = 15
 			if sequence.duration == 0:
 				sequence.duration = sequence.numKeyFrames * (1.0 / sequence.fps)
 			sequence = self.addSequenceIFL(sequence, seqPrefs)
@@ -1521,17 +1522,16 @@ class BlenderShape(DtsShape):
 		'''
 		This adds ObjectState tracks to the sequence.
 		
-		Since blender's Action's don't support material ipo's, we need to use the ipo direct from the Material.
-		In addition, a starting point must be defined, which is useful in using a the ipo in more than 1 animation track.
-		
-		Material ipo's aren't much use to us unless we know which object's they relate to. Luckily,
-		the BlenderMesh class can tell us if the material we are adding is associated with a particular object.
-		At the moment, only the visibility of the objects are animated, which is controlled by the "Alpha" value of the
-		Material ipo.
-		
+		Since blender's Actions don't support object or material ipo's, we need to use the ipos directly.
+		In addition, a starting point and end point must be defined, which is useful in using a the ipo in more than 1 animation track.
+		If the visibility subsequence is shorter than the other subsequences belonging to the same sequence,
+		sampling of the IPOs will continue past the end of the subsequence until the full sequence is finished.
+		If the visibility sequence is longer than the other subsequences, other subsequences will be sampled past the end of their
+		runs until the full sequence is finished.
+
 		NOTE: this function needs to be called AFTER finalizeObjects, for obvious reasons.
 		'''
-		print "   Adding Mesh Visibility Animation Data for", sequence.name
+
 		scene = Blender.Scene.GetCurrent()
 		context = Blender.Scene.GetCurrent().getRenderingContext()
 		sequence.matters_vis = [False]*len(self.objects)
@@ -1577,15 +1577,12 @@ class BlenderShape(DtsShape):
 			sequence.matters_vis[i] = True
 			if sequence.baseObjectState == -1:
 				sequence.baseObjectState = len(self.objectstates)
-			# include last frame
-			for fr in range(sequenceKey['Vis']['StartFrame'], sequenceKey['Vis']['EndFrame']+1, interpolateInc):
-				self.objectstates.append(ObjectState(IPOCurve[fr],0,0))
-			# if the overall animation is longer than the vis animation, we need to pad with extra object states
-			i = numVisFrames
-			while i < sequence.numKeyFrames:
-				# repeat last frame until the end of the sequence
-				self.objectstates.append(ObjectState(IPOCurve[sequenceKey['Vis']['EndFrame']],0,0))
-				i += 1
+			# add the object states, include the last frame
+			#print "###### Interpolation Increment is:", interpolateInc
+			for fr in range(sequenceKey['Vis']['StartFrame'], sequenceKey['Vis']['StartFrame'] + sequence.numKeyFrames, interpolateInc):
+				#print "#####  Writing IPO for frame:%2i (%f)" % (int(fr), IPOCurve[fr])
+				#print "#####  Writing IPO Value:", IPOCurve[fr]
+				self.objectstates.append(ObjectState(IPOCurve[int(fr)],0,0))
 							
 		return sequence						
 
@@ -1735,6 +1732,7 @@ class BlenderShape(DtsShape):
 		pathSep = "/"
 		if "\\" in self.preferences['exportBasepath']: pathSep = "\\"
 		
+		# Write out shape script
 		if writeShapeScript:
 			Torque_Util.dump_writeln("   Writing script%s%s%s.cs" % (self.preferences['exportBasepath'], pathSep, self.preferences['exportBasename']))
 			shapeScript = open("%s%s%s.cs" % (self.preferences['exportBasepath'], pathSep, self.preferences['exportBasename']), "w")
@@ -1752,6 +1750,7 @@ class BlenderShape(DtsShape):
 			shapeScript.write("};")
 			shapeScript.close()
 
+		# Write out TSE Material Script
 		if self.preferences['TSEMaterial']:
 			Torque_Util.dump_writeln("   Writing material script %s%smaterials.cs" % (self.preferences['exportBasepath'], pathSep))
 			materialScript = open("%s%smaterials.cs" % (self.preferences['exportBasepath'], pathSep), "w")
@@ -1760,7 +1759,18 @@ class BlenderShape(DtsShape):
 				materialScript.write(materialDef)
 			materialScript.write("// End of generated script\n")
 			materialScript.close()
-				
+		
+		# Write out IFL File
+		# Now we can dump each frame for the objects
+		for seqName in self.preferences['Sequences'].keys():
+			seqKey = self.preferences['Sequences'][seqName]
+			if seqKey['IFL']['Enabled'] and not seqKey['NoExport']:
+				Torque_Util.dump_writeln("   Writing IFL script %s%s%s.ifl" % (self.preferences['exportBasepath'], pathSep, seqKey['IFL']['Material']))
+				IFLScript = open("%s%s%s.ifl" % (self.preferences['exportBasepath'], pathSep, seqKey['IFL']['Material']), "w")
+				for frame in seqKey['IFL']['IFLFrames']:
+					IFLScript.write("%s %i\n" % (frame[0], frame[1]))
+
+		
 	def dumpShapeInfo(self):
 		Torque_Util.dump_writeln("   > Nodes")
 		for n in range(0, len(self.nodes)):
