@@ -396,18 +396,6 @@ def saveTextPrefs():
 	# representation of the config dictionary
 	text_doc.write(str(Prefs))
 
-'''
-dummySequence = {'Dsq' : False,
-'Cyclic' : False,
-'Blend' : False,
-'Triggers' : [], # [State, Time, On]
-'AnimateMaterial' : False,
-'MaterialIpoStartFrame' : 1,
-'InterpolateFrames' : 0,
-'NoExport' : False,
-'NumGroundFrames' : 0,
-'Priority' : 0}
-'''
 
 dummySequence =	\
 {
@@ -491,11 +479,11 @@ def copySequenceKey(value):
 	retVal['IFL']['NumImages'] = Prefs['Sequences'][value]['IFL']['NumImages']
 	retVal['IFL']['TotalFrames'] = Prefs['Sequences'][value]['IFL']['TotalFrames']
 	# copy IFL Frames
-	retVal['IFLFrames'] = []
+	retVal['IFL']['IFLFrames'] = []
 	for entry in Prefs['Sequences'][value]['IFL']['IFLFrames']:
-		retVal['IFLFrames'].append([])
+		retVal['IFL']['IFLFrames'].append([])
 		for item in entry:
-			retVal['IFLFrames'][-1].append(item)
+			retVal['IFL']['IFLFrames'][-1].append(item)
 	
 	# copy Vis key
 	retVal['Vis'] = {}
@@ -515,6 +503,7 @@ def copySequenceKey(value):
 
 # Cleans up extra sequence keys that may not be used anymore (e.g. action deleted)
 def cleanKeys():
+	print "cleanKeys called..."
 	# Sequences
 	for keyName in Prefs['Sequences'].keys():
 		key = getSequenceKey(keyName)
@@ -522,8 +511,8 @@ def cleanKeys():
 		try: actEnabled = key['Action']['Enabled']
 		except: actEnabled = False
 		if actEnabled:
-			for action_key in Armature.NLA.GetActions().keys():
-				if action_key == key:
+			for actionName in Armature.NLA.GetActions().keys():
+				if actionName == keyName:
 					actionFound = True
 					break
 		
@@ -537,13 +526,15 @@ def cleanKeys():
 			try: VisFound = Prefs['Sequences'][keyName]['Vis']['Enabled']
 			except: VisFound = False
 			# if no sequence type is enabled for the key, get rid of it.
-			if VisFound == False and IFLFound == False: del Prefs['Sequences'][keyName]
+			if VisFound == False and IFLFound == False:
+				print "Removing sequence key:",keyName
+				del Prefs['Sequences'][keyName]
 
 
 
 # Creates action keys that don't already exist
 def createActionKeys():
-	for action in Blender.Armature.NLA.GetActions():
+	for action in Blender.Armature.NLA.GetActions().keys():
 		getSequenceKey(action)
 
 
@@ -560,7 +551,7 @@ def renameSequence(oldName, newName):
 	# insert the copied key into the prefs under the new name
 	Prefs['Sequences'][newName] = newKey
 
-	if Prefs['Sequences']['Action']['Enabled']:
+	if Prefs['Sequences'][oldName]['Action']['Enabled']:
 		# disable the IFL and Vis attributes of the old key
 		Prefs['Sequences'][oldName]['IFL']['Enabled'] = False
 		Prefs['Sequences'][oldName]['Vis']['Enabled'] = False
@@ -1036,7 +1027,11 @@ def handleScene():
 	export_tree = SceneTree(None,Blender.Scene.GetCurrent())
 	updateOldPrefs()
 	Torque_Util.dump_writeln("Cleaning Preference Keys")
+	print "Before cleaning keys, keys are:\n"
+	print Prefs['Sequences'].keys()
 	cleanKeys()
+	print "After cleaning keys, keys are:\n"
+	print Prefs['Sequences'].keys()
 	createActionKeys()
 
 def export():
