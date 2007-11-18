@@ -1131,7 +1131,7 @@ class BlenderShape(DtsShape):
 			#sequence.numKeyFrames = 15
 			if sequence.duration == 0:
 				sequence.duration = sequence.numKeyFrames * (1.0 / sequence.fps)
-			sequence = self.addSequenceIFL(sequence, seqPrefs)
+			sequence = self.addSequenceIFL(sequence, numFrames, seqPrefs)
 			
 		self.sequences.append(sequence)
 		
@@ -1508,13 +1508,23 @@ class BlenderShape(DtsShape):
 
 
 	# Add sequence matters for IFL animation.
-	def addSequenceIFL(self, sequence, sequenceKey):
+	def addSequenceIFL(self, sequence, numFrames, sequenceKey):
 		sequence.matters_ifl = [False]*len(self.materials.materials)
+		if sequence.numKeyFrames > 0:
+			# todo - fix this, interpolateInc should be calculated in addSequence.and passed in to subsequence creation methods.
+			interpolateInc = numFrames / sequence.numKeyFrames
+		else:
+			interpolateInc = 1
 		# Now we can dump each frame for the objects
-		for i in range(0, len(self.materials.materials)):
-			mat = self.materials.materials[i]			
-			if sequenceKey['IFL']['Material'] == mat.name:
-				sequence.matters_ifl[i] = True
+		for i in range(0, len(self.iflmaterials)):
+					mat = self.iflmaterials[i]
+					IFLMatName = self.sTable.get(mat.name)
+					if sequenceKey['IFL']['Material'] == IFLMatName[0:len(IFLMatName)-4]:
+						print "Setting matters to true for IFL material", i
+						sequence.matters_ifl[i] = True
+					else:
+						print "Not setting matters to true for IFL material",self.sTable.get(mat.name)
+
 		return sequence
 
 	# Processes a material ipo and incorporates it into the Action
