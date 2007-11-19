@@ -1105,6 +1105,7 @@ class BlenderShape(DtsShape):
 			else: actionDuration = 1
 			if actionNumFrames > numFrames: numFrames = actionNumFrames
 		if seqPrefs['IFL']['Enabled']:
+			#IFLNumFrames = len(seqPrefs['IFL']['IFLFrames'])
 			for frame in seqPrefs['IFL']['IFLFrames']:
 				IFLNumFrames += frame[1]
 			if IFLNumFrames > numFrames: numFrames = IFLNumFrames
@@ -1115,8 +1116,13 @@ class BlenderShape(DtsShape):
 		print "numFrames =", numFrames
 		sequence.numKeyFrames = numFrames
 		print "sequence.fps =", sequence.fps
-		if sequence.fps > 0: sequence.duration = float(numFrames) / float(sequence.fps)
+		
+		if seqPrefs['IFL']['Enabled']:
+			sequence.duration = float(numFrames) / 30.0
+		elif sequence.fps > 0:
+			sequence.duration = float(numFrames) / float(sequence.fps)
 		else: sequence.duration = 1
+
 		print "sequence.duration = ", sequence.duration
 		
 		if seqPrefs['Action']['Enabled'] and action != None and scene != None:
@@ -1510,20 +1516,20 @@ class BlenderShape(DtsShape):
 	# Add sequence matters for IFL animation.
 	def addSequenceIFL(self, sequence, numFrames, sequenceKey):
 		sequence.matters_ifl = [False]*len(self.materials.materials)
-		if sequence.numKeyFrames > 0:
-			# todo - fix this, interpolateInc should be calculated in addSequence.and passed in to subsequence creation methods.
-			interpolateInc = numFrames / sequence.numKeyFrames
-		else:
-			interpolateInc = 1
+		if sequence.baseObjectState == -1:
+			sequence.baseObjectState = len(self.objectstates)
+
 		# Now we can dump each frame for the objects
+		# Sequence matters_ifl indexes iflmaterials.
 		for i in range(0, len(self.iflmaterials)):
 					mat = self.iflmaterials[i]
 					IFLMatName = self.sTable.get(mat.name)
 					if sequenceKey['IFL']['Material'] == IFLMatName[0:len(IFLMatName)-4]:
-						print "Setting matters to true for IFL material", i
+						#print "Setting matters to true for IFL material", i
 						sequence.matters_ifl[i] = True
 					else:
-						print "Not setting matters to true for IFL material",self.sTable.get(mat.name)
+						#print "Not setting matters to true for IFL material",self.sTable.get(mat.name)
+						pass
 
 		return sequence
 
