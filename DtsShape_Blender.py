@@ -1104,11 +1104,6 @@ class BlenderShape(DtsShape):
 			if sequence.fps > 0: actionDuration = actionNumFrames / sequence.fps
 			else: actionDuration = 1
 			if actionNumFrames > numFrames: numFrames = actionNumFrames
-		if seqPrefs['IFL']['Enabled']:
-			#IFLNumFrames = len(seqPrefs['IFL']['IFLFrames'])
-			for frame in seqPrefs['IFL']['IFLFrames']:
-				IFLNumFrames += frame[1]
-			if IFLNumFrames > numFrames: numFrames = IFLNumFrames
 		if seqPrefs['Vis']['Enabled']:
 			visNumFrames = (seqPrefs['Vis']['EndFrame'] - seqPrefs['Vis']['StartFrame'])+1
 			if visNumFrames > numFrames: numFrames = visNumFrames
@@ -1116,18 +1111,27 @@ class BlenderShape(DtsShape):
 		print "numFrames =", numFrames
 		sequence.numKeyFrames = numFrames
 		print "sequence.fps =", sequence.fps
-		
-		if seqPrefs['IFL']['Enabled']:
-			sequence.duration = float(numFrames) / 30.0
-		elif sequence.fps > 0:
+
+		if sequence.fps > 0:
 			sequence.duration = float(numFrames) / float(sequence.fps)
 		else: sequence.duration = 1
+		
+		# IFL frames are in 1/30 sec increments (hardcoded in TGE), so we need
+		# to compute a separate duration for them and see if it's longer than
+		# the overall sequence duration.
+		if seqPrefs['IFL']['Enabled']:
+			#IFLNumFrames = len(seqPrefs['IFL']['IFLFrames'])
+			for frame in seqPrefs['IFL']['IFLFrames']:
+				IFLNumFrames += frame[1]
+			if IFLNumFrames > numFrames: numFrames = IFLNumFrames
+			if (float(IFLNumFrames) / 30.0) > sequence.duration:
+				sequence.duration = (float(IFLNumFrames) / 30.0)
 
 		print "sequence.duration = ", sequence.duration
 		
 		if seqPrefs['Action']['Enabled'] and action != None and scene != None:
 			print "   Adding action data for", seqName
-			sequence = self.addAction(sequence, action, scene, context, seqPrefs)
+			sequence = self.addAction(sequence, action, numFrames, scene, context, seqPrefs)
 		if seqPrefs['Vis']['Enabled']:
 			print "   Adding visibility data for", seqName
 			print "seqence = ", sequence
@@ -1144,7 +1148,7 @@ class BlenderShape(DtsShape):
 		return sequence
 	
 	# Import an action
-	def addAction(self, sequence, action, scene, context, sequencePrefs):
+	def addAction(self, sequence, action, numOverallFrames, scene, context, sequencePrefs):
 		'''
 		This adds an action to a shape as a sequence.
 		
@@ -1338,6 +1342,7 @@ class BlenderShape(DtsShape):
 			act.setActive(arm)
 			
 		# loop through all of the frames
+		if numOverallFrames > numFrames: numFrames = numOverallFrames
 		for frame in range(1, numFrames):
 			# Set the current frame in blender
 			#context.currentFrame(int(frame*interpolateInc))
