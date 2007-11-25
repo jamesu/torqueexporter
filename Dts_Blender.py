@@ -155,9 +155,6 @@ def loadOldTextPrefs(text_doc):
 				elif cur_token == "DTSVersion":
 					tok.advanceToken(False)
 					Prefs['DTSVersion'] = int(tok.getToken())
-				#elif cur_token == "PrimType":
-				#	tok.advanceToken(False)
-				#	Prefs['PrimType'] = (tok.getToken())
 				elif cur_token == "StripMeshes":
 					tok.advanceToken(False)
 					Prefs['StripMeshes'] = int(tok.getToken())
@@ -303,11 +300,10 @@ def loadOldTextPrefs(text_doc):
 
 def initPrefs():
 	Prefs = {}
-	Prefs['Version'] = 0.95 # NOTE: change version if anything *major* is changed.
+	Prefs['Version'] = 96 # NOTE: change version if anything *major* is changed.
 	Prefs['DTSVersion'] = 24
 	Prefs['WriteShapeScript'] = False
 	Prefs['Sequences'] = {}
-	#Prefs['StripMeshes'] = False
 	Prefs['PrimType'] = 'Tris'
 	Prefs['MaxStripSize'] = 6
 	Prefs['ClusterDepth'] = 1
@@ -316,7 +312,6 @@ def initPrefs():
 	Prefs['BannedBones'] = []
 	Prefs['CollapseRootTransform'] = True
 	Prefs['TSEMaterial'] = False
-	
 	Prefs['exportBasename'] = basename(Blender.Get("filename"))
 	Prefs['exportBasepath'] = basepath(Blender.Get("filename"))
 	return Prefs
@@ -637,23 +632,6 @@ def updateOldPrefs():
 			seq['IFL']['TotalFrames'] = 0
 			seq['IFL']['IFLFrames'] = []
 
-	'''
-	print " ****** Updating old Visibility sequence preferences ****** "
-	# loop through all actions in the preferences and add the 'Vis' key to them with some reasonable default values.
-	# todo - place vis key generation here
-	for seqName in Prefs['Sequences'].keys():
-		#seq = Prefs['Sequences'][seqName]
-		seq = getSequenceKey(seqName)
-		try: x = seq['Vis']
-		except KeyError:
-			#print "Resetting Vis Sequence:",seqName
-			seq['Vis'] = {}
-			seq['Vis']['Enabled'] = False
-			seq['Vis']['StartFrame'] = 1
-			seq['Vis']['EndFrame'] = 1
-			seq['Vis']['Enabled'] = True
-			seq['Vis']['Tracks'] = {}
-	'''
 
 '''
 	Class to handle the 'World' branch
