@@ -543,9 +543,6 @@ def renameSequence(oldName, newName):
 	global Prefs
 	seq = Prefs['Sequences'][oldName]
 
-	# todo - validate sequence name
-	if not validateSequenceName(newName): return
-
 	# copy the key
 	newKey = copySequenceKey(oldName)
 	# insert the copied key into the prefs under the new name
@@ -893,8 +890,8 @@ class ShapeTree(SceneTree):
 
 						# does the sequence have anything to export?
 						if (seqKey['NoExport']) or not (seqKey['Action']['Enabled'] or seqKey['IFL']['Enabled'] or seqKey['Vis']['Enabled']):
-							print "not exporting sequence:",seqName
-							print "SeqKey=\n", seqKey
+							#print "not exporting sequence:",seqName
+							#print "SeqKey=\n", seqKey
 							progressBar.update()
 							progressBar.update()
 							progressBar.update()
@@ -1210,7 +1207,31 @@ def guiHeaderResize(control, newwidth, newheight):
 		control.y = 5
 
 
-def validateSequenceName(name):
+# Used to validate a sequence name entered by the user.
+# Sequence names must be unique for 
+def validateSequenceName(seqName, seqType):
+	global Prefs
+
+	# check the obvious stuff first.
+	# is the sequence name blank?
+	if seqName == "" or seqName == None:
+		Blender.Draw.PupMenu("The sequence name is not valid (blank).%t|Cancel")
+		return False
+	
+	
+	seqPrefs = Prefs['Sequences']
+	# loop thorough each sequence and see what we've got.
+	for pSeqName in seqPrefs.keys():
+		if pSeqName != seqName: continue
+		seq = seqPrefs[seqName]
+		if (seq['IFL']['Enabled'] and seqType == "IFL")\
+		or (seq['Vis']['Enabled'] and seqType == "Vis"):
+			message = ("%s animation sequence named %s already exists." % (seqType, seqName)) + "%t|Cancel"
+			Blender.Draw.PupMenu(message)
+			return False
+
+	#if name in existingSequences: return False
+	
 	# todo - validate sequence name
 	return True
 	pass
@@ -2412,6 +2433,8 @@ class IFLControlsClass:
 
 		# add sequence to GUI sequence list		
 		self.guiSeqList.addControl(self.createSequenceListItem(seqName))
+		self.guiSeqList.selectItem(len(self.guiSeqList.controls)-1)
+		self.guiSeqOptsContainer.enabled = True
 		# refresh the Image frames list
 		self.clearImageFramesList()
 		self.populateImageFramesList(seqName)
@@ -2478,9 +2501,8 @@ class IFLControlsClass:
 			pass
 		elif control.name == "guiSeqAdd":
 			# todo - validate sequence name
-			self.AddNewIFLSeq(self.guiSeqName.value)
-			self.guiSeqName.value = ""
-			self.guiSeqList.selectItem(len(self.guiSeqList.controls)-1)
+			if validateSequenceName(self.guiSeqName.value, "IFL"):
+				self.AddNewIFLSeq(self.guiSeqName.value)
 		elif control.name == "guiSeqDel":
 			guiSeqList = self.guiSeqList
 			if guiSeqList.itemIndex > -1 and guiSeqList.itemIndex < len(guiSeqList.controls):
@@ -2495,11 +2517,12 @@ class IFLControlsClass:
 		
 		elif control.name == "guiSeqRename":
 			guiSeqList = self.guiSeqList
-			# todo - validate sequence name
+			# todo - validate sequence name			
 			seqName = guiSeqList.controls[guiSeqList.itemIndex].controls[0].label
 			# Move sequence values to new key and delete the old.
-			renameSequence(seqName, self.guiSeqName.value)
-			guiSeqList.controls[guiSeqList.itemIndex].controls[0].label = self.guiSeqName.value			
+			if validateSequenceName(self.guiSeqName.value, "IFL"):
+				renameSequence(seqName, self.guiSeqName.value)
+				guiSeqList.controls[guiSeqList.itemIndex].controls[0].label = self.guiSeqName.value			
 		
 		
 		elif control.name == "guiSeqAddToExisting":
@@ -2507,9 +2530,10 @@ class IFLControlsClass:
 			itemIndex = existingSequences.itemIndex
 			if itemIndex >=0 and itemIndex < len(existingSequences.items):
 				existingName = existingSequences.getSelectedItemString()
-				self.AddNewIFLSeq(existingName)
-				del existingSequences.items[itemIndex]
-				existingSequences.selectStringItem("")
+				if validateSequenceName(existingName, "IFL"):
+					self.AddNewIFLSeq(existingName)
+					del existingSequences.items[itemIndex]
+					existingSequences.selectStringItem("")
 		elif control.name == "guiMat":
 			guiSeqList = self.guiSeqList
 			guiMat = self.guiMat
@@ -2976,10 +3000,11 @@ class VisControlsClass:
 			pass
 		elif control.name == "guiSeqAdd":
 			# todo - validate sequence name
-			self.AddNewVisSeq(self.guiSeqName.value)
-			self.guiSeqName.value = ""
-			self.guiSeqList.selectItem(len(self.guiSeqList.controls)-1)
-			self.guiSeqOptsContainer.enabled = True
+			if validateSequenceName(self.guiSeqName.value, "Vis"):
+				self.AddNewVisSeq(self.guiSeqName.value)
+				self.guiSeqName.value = ""
+				self.guiSeqList.selectItem(len(self.guiSeqList.controls)-1)
+				self.guiSeqOptsContainer.enabled = True
 		elif control.name == "guiSeqDel":
 			guiSeqList = self.guiSeqList
 			if guiSeqList.itemIndex > -1 and guiSeqList.itemIndex < len(guiSeqList.controls):
@@ -2998,18 +3023,20 @@ class VisControlsClass:
 			guiSeqList = self.guiSeqList
 			# todo - validate sequence name
 			seqName = guiSeqList.controls[guiSeqList.itemIndex].controls[0].label
-			renameSequence(seqName, self.guiSeqName.value)
-			guiSeqList.controls[guiSeqList.itemIndex].controls[0].label = self.guiSeqName.value
-			self.populateVisTrackList(self.guiSeqName.value)
+			if validateSequenceName(self.guiSeqName.value, "Vis"):
+				renameSequence(seqName, self.guiSeqName.value)
+				guiSeqList.controls[guiSeqList.itemIndex].controls[0].label = self.guiSeqName.value
+				self.populateVisTrackList(self.guiSeqName.value)
 
 		elif control.name == "guiSeqAddToExisting":
 			existingSequences = self.guiSeqExistingSequences
 			itemIndex = existingSequences.itemIndex
 			if itemIndex >=0 and itemIndex < len(existingSequences.items):
 				existingName = existingSequences.getSelectedItemString()
-				self.AddNewVisSeq(existingName)
-				del existingSequences.items[itemIndex]
-				existingSequences.selectStringItem("")
+				if validateSequenceName(existingName, "Vis"):
+					self.AddNewVisSeq(existingName)
+					del existingSequences.items[itemIndex]
+					existingSequences.selectStringItem("")
 		elif control.name == "guiStartFrame":
 			guiSeqList = self.guiSeqList
 			if guiSeqList.itemIndex > -1 and guiSeqList.itemIndex < len(guiSeqList.controls):
