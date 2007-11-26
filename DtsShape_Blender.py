@@ -864,10 +864,9 @@ class BlenderShape(DtsShape):
 				duration = sequence.numKeyFrames / sequence.ground_target
 				if frame_idx >= (duration * (sequence.numGroundFrames+1))-1:
 					# We are ready, lets stomp!
-					bound_obj = Blender.Object.Get("Bounds")
-					bound_parent = bound_obj.getParent()
 					try:
-					
+						bound_obj = Blender.Object.Get("Bounds")
+						bound_parent = bound_obj.getParent()
 						if bound_parent != None and bound_parent.getType() == 'Armature':
 							pose = bound_parent.getPose()
 							pos = self.poseUtil.getBoneLocWS(bound_parent.getName(), bound_obj.parentbonename, pose)
