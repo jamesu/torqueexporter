@@ -124,6 +124,7 @@ def pythonizeFileName(filename):
 '''
 #-------------------------------------------------------------------------------------------------
 	
+# todo - Can this function be removed?
 # Loads preferences from a text buffer (old version)
 def loadOldTextPrefs(text_doc):
 	global Prefs, dummySequence
@@ -396,7 +397,6 @@ dummySequence =	\
 {
 'Dsq': False,
 'Cyclic': False,
-'Triggers': [], # [State, Time, On]
 'NoExport': False,
 'Priority': 0,
 'TotalFrames': 36,
@@ -404,6 +404,7 @@ dummySequence =	\
 
 # Gets a sequence key from the preferences
 # Creates default if key does not exist
+# this function needs to be updated whenever the structure of the preferences changes
 def getSequenceKey(value):	
 	global Prefs, dummySequence
 	if value == "N/A":
@@ -414,7 +415,7 @@ def getSequenceKey(value):
 		Prefs['Sequences'][value] = dummySequence.copy()
 		# Create anything that cannot be copied (reference objects like lists),
 		# and set everything that needs a default
-		Prefs['Sequences'][value]['Triggers'] = []
+		Prefs['Sequences'][value]['Triggers'] = [] # [State, Time, On]
 		Prefs['Sequences'][value]['Action'] = {'Enabled': False,'NumGroundFrames': 0,'BlendRefPoseAction': None,'BlendRefPoseFrame': 8,'InterpolateFrames': 0,'Blend': False}
 		Prefs['Sequences'][value]['IFL'] = { 'Enabled': False,'Material': None,'NumImages': 0,'TotalFrames': 0,'IFLFrames': []}
 		Prefs['Sequences'][value]['Vis'] = { 'Enabled': False,'StartFrame': 1,'EndFrame': 1, 'Tracks':{}}
@@ -498,19 +499,20 @@ def copySequenceKey(value):
 
 # Cleans up extra sequence keys that may not be used anymore (e.g. action deleted)
 def cleanKeys():
-	print "cleanKeys called..."
 	# Sequences
 	for keyName in Prefs['Sequences'].keys():
 		key = getSequenceKey(keyName)
 		actionFound = False
 		try: actEnabled = key['Action']['Enabled']
 		except: actEnabled = False
+		# if action is enabled for the sequence
 		if actEnabled:
 			for actionName in Armature.NLA.GetActions().keys():
 				if actionName == keyName:
+					# we found a (hopefully) valid action
 					actionFound = True
 					break
-		
+		# if we didn't find a valid action
 		if not actionFound:
 			key['Action']['Enabled'] = False
 			# see if any of the other sequence types are enabled
@@ -522,7 +524,6 @@ def cleanKeys():
 			except: VisFound = False
 			# if no sequence type is enabled for the key, get rid of it.
 			if VisFound == False and IFLFound == False:
-				print "Removing sequence key:",keyName
 				del Prefs['Sequences'][keyName]
 
 
@@ -562,9 +563,7 @@ def updateOldPrefs():
 		try: x = seq['Action']
 		except:
 			seq['Action'] = {}
-
 		actKey = seq['Action']
-
 		try: x = actKey['Enabled']
 		except: 
 			actKey['Enabled'] = True
@@ -573,35 +572,28 @@ def updateOldPrefs():
 		except:
 			actKey['InterpolateFrames'] = seq['InterpolateFrames']
 			del seq['InterpolateFrames']
-
 		try: x = actKey['NumGroundFrames']
 		except:
 			actKey['NumGroundFrames'] = seq['NumGroundFrames']
 			del seq['NumGroundFrames']
-
 		try: x = actKey['Blend']
 		except:
 			actKey['Blend'] = seq['Blend']
 			del seq['Blend']
-
 		try: x = actKey['BlendRefPoseAction']
 		except:
 			actKey['BlendRefPoseAction'] = seq['BlendRefPoseAction']
 			del seq['BlendRefPoseAction']
-
 		try: x = actKey['BlendRefPoseFrame']
 		except:
 			actKey['BlendRefPoseFrame'] = seq['BlendRefPoseFrame']
 			del seq['BlendRefPoseFrame']
-
 		try: x = seq['Vis']
 		except: seq['Vis'] = {}
-
 		try: x = seq['Vis']['Enabled']
 		except:
 			seq['Vis']['Enabled'] = seq['AnimateMaterial']
 			del seq['AnimateMaterial']
-
 		try: x = seq['Vis']['StartFrame']
 		except:			
 			seq['Vis']['StartFrame'] = seq['MaterialIpoStartFrame']
@@ -611,12 +603,10 @@ def updateOldPrefs():
 			except:
 				seq['Vis']['EndFrame'] = seq['Vis']['StartFrame']
 			del seq['MaterialIpoStartFrame']
-
 		try: x = seq['Vis']['Tracks']
 		except:
 			# todo - set up tracks automatically for old style vis sequences.
 			seq['Vis']['Tracks'] = {}
-
 		try: x = seq['TotalFrames']
 		except: seq['TotalFrames'] = 0
 
@@ -786,7 +776,6 @@ class ShapeTree(SceneTree):
 								armatures.append(child)
 							elif child.getType() == "Camera":
 								# Treat these like nodes
-								# Joe : hey neat :)
 								nodes.append(child)
 							elif child.getType() == "Mesh":
 								meshList.append(child)
@@ -868,15 +857,13 @@ class ShapeTree(SceneTree):
 
 						# does the sequence have anything to export?
 						if (seqKey['NoExport']) or not (seqKey['Action']['Enabled'] or seqKey['IFL']['Enabled'] or seqKey['Vis']['Enabled']):
-							#print "not exporting sequence:",seqName
-							#print "SeqKey=\n", seqKey
 							progressBar.update()
 							progressBar.update()
 							progressBar.update()
 							progressBar.update()
 							continue
 						
-						# add the sequence
+						# try to add the sequence
 						try: action = actions[seqName]
 						except: action = None
 						sequence = self.Shape.addSequence(seqName, context, seqKey, scene, action)
@@ -1064,6 +1051,7 @@ guiBoneList = None
 globalEvents = Common_Gui.EventTable(1)
 
 
+# Special callbacks for gui control tabs
 
 def guiBaseCallback(control):
 	global guiSequenceTab, guiArmatureTab, guiMaterialsTab, guiGeneralTab, guiAboutTab, guiTabBar
@@ -1118,6 +1106,7 @@ def guiSequenceTabsCallback(control):
 
 
 			
+# Resize callback for all global gui controls
 def guiBaseResize(control, newwidth, newheight):
 	tabContainers = ["guiSequenceTab", "guiGeneralTab", "guiArmatureTab", "guiAboutTab", "guiMaterialsTab"]
 	tabSubContainers = ["guiSeqActSubtab", "guiSequenceIFLSubtab", "guiSequenceVisibilitySubtab","guiSequenceUVSubtab","guiSequenceMorphSubtab", "guiSequenceNLASubtab", "guiMaterialsSubtab", "guiGeneralSubtab", "guiArmatureSubtab", "guiAboutSubtab"]
@@ -1175,7 +1164,7 @@ def guiBaseResize(control, newwidth, newheight):
 
 
 
-			
+# Resize callback for gui header	
 def guiHeaderResize(control, newwidth, newheight):
 	if control.name == "guiHeaderText":
 		control.x = 5
@@ -1186,7 +1175,8 @@ def guiHeaderResize(control, newwidth, newheight):
 
 
 # Used to validate a sequence name entered by the user.
-# Sequence names must be unique for 
+# Sequence names must be unique amongst other sequences
+# having the same type.
 def validateSequenceName(seqName, seqType):
 	global Prefs
 
@@ -1208,9 +1198,6 @@ def validateSequenceName(seqName, seqType):
 			Blender.Draw.PupMenu(message)
 			return False
 
-	#if name in existingSequences: return False
-	
-	# todo - validate sequence name
 	return True
 	pass
 
@@ -1419,7 +1406,32 @@ class GeneralControlsClass:
 		Note: __del__ is not guaranteed to be called for objects that still
 		exist when the interpreter exits.
 		'''
-		pass
+		del self.guiStripText
+		del self.guiTriMeshesButton
+		del self.guiTriListsButton
+		del self.guiStripMeshesButton
+		del self.guiMaxStripSizeSlider
+		# --
+		del self.guiClusterText
+		del self.guiClusterWriteDepth
+		del self.guiClusterDepth
+		# --
+		del self.guiBillboardText
+		del self.guiBillboardButton
+		del self.guiBillboardEquator
+		del self.guiBillboardPolar
+		del self.guiBillboardPolarAngle
+		del self.guiBillboardDim
+		del self.guiBillboardPoles
+		del self.guiBillboardSize
+		# --
+		del self.guiOutputText
+		del self.guiShapeScriptButton
+		del self.guiCustomFilename
+		del self.guiCustomFilenameSelect
+		del self.guiCustomFilenameDefaults
+		del self.guiTSEMaterial
+		del self.guiLogToOutputFolder
 
 	def refreshAll(self):
 		pass
@@ -1617,7 +1629,15 @@ class ArmatureControlsClass:
 		Note: __del__ is not guaranteed to be called for objects that still
 		exist when the interpreter exits.
 		'''
-		pass
+		del self.guiBoneText		
+		del self.guiMatchText
+		del self.guiPatternText
+		del self.guiPatternOn
+		del self.guiPatternOff
+		del self.guiRefresh		
+		for control in self.guiBoneList.controls: del control
+		del self.guiBoneList.controls
+		del self.guiBoneList
 
 	
 	def refreshAll(self):
@@ -1758,10 +1778,12 @@ class ArmatureControlsClass:
 	def clearBoneGrid(self):
 		global guiBoneList
 		del self.guiBoneList.controls[:]
+		#for control in self.guiBoneList.controls:
+		#	del control
+		
 
 	def guiBoneGridCallback(self, control):
 		global Prefs
-
 		real_name = control.name.upper()
 		if control.state:
 			# Remove entry from BannedBones
@@ -1865,7 +1887,25 @@ class ActionControlsClass:
 		Note: __del__ is not guaranteed to be called for objects that still
 		exist when the interpreter exits.
 		'''
-		pass
+		del self.guiActTitle
+		del self.guiActList
+		del self.guiToggle
+		del self.guiRefresh
+		del self.guiActOpts
+		del self.guiOptsTitle
+		del self.guiSampleFrames
+		del self.guiGroundFrameSamples
+		del self.guiPriority
+		del self.guiRefPoseTitle
+		del self.guiRefPoseMenu
+		del self.guiRefPoseFrame
+		del self.guiTriggerTitle
+		del self.guiTriggerMenu
+		del self.guiTriggerState
+		del self.guiTriggerStateOn
+		del self.guiTriggerFrame
+		del self.guiTriggerAdd
+		del self.guiTriggerDel
 
 	
 	def refreshAll(self):		
