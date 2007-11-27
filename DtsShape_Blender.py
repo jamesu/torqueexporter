@@ -856,6 +856,11 @@ class BlenderShape(DtsShape):
 	
 	# adds a ground frame to a sequence
 	def addGroundFrame(self, sequence, frame_idx, boundsStartMat):
+		# quit trying to export ground frames if we have had an error.
+		try: x = self.GroundFrameError
+		except: self.GroundFrameError = False
+		if self.GroundFrameError: return
+		
 		# Add ground frames if enabled
 		if sequence.has_ground:
 			# Check if we have any more ground frames to add
@@ -864,7 +869,7 @@ class BlenderShape(DtsShape):
 				duration = sequence.numKeyFrames / sequence.ground_target
 				if frame_idx >= (duration * (sequence.numGroundFrames+1))-1:
 					# We are ready, lets stomp!
-					try:
+					try:						
 						bound_obj = Blender.Object.Get("Bounds")
 						bound_parent = bound_obj.getParent()
 						if bound_parent != None and bound_parent.getType() == 'Armature':
@@ -883,10 +888,13 @@ class BlenderShape(DtsShape):
 							matf = boundsStartMat.inverse() * matf 
 							rot = Quaternion().fromMatrix(matf).inverse()
 							self.groundTranslations.append(pos)
-							self.groundRotations.append(rot)
+							self.groundRotations.append(rot)							
 							
 						sequence.numGroundFrames += 1
 					except ValueError:
+						# record the error state so we don't repeat ourselves.
+						self.GroundFrameError = True
+						sequence.has_ground = False # <- nope, no ground frames.
 						Torque_Util.dump_writeln("Warning: Error getting ground frame %d" % sequence.numGroundFrames)
 						Torque_Util.dump_writeln("  You must have an object named Bounds in your scene to export ground frames.")
 
