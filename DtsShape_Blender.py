@@ -1133,9 +1133,8 @@ class BlenderShape(DtsShape):
 				Torque_Util.dump_writeln("   Skipping Action animation for sequence %s, because no Blender action could be found for the animation. " % seqName)
 			else:
 				ActionIsValid = True
-
 		
-		# See if we have any valid animations at all... 
+		# Did we have any valid animations at all for the sequence?
 		if not (visIsValid or IFLIsValid or ActionIsValid):
 			Torque_Util.dump_writeln("   Skipping sequence %s, no animation types were valid for the sequence. " % seqName)
 			return None
@@ -1166,19 +1165,28 @@ class BlenderShape(DtsShape):
 			sequence.flags |= sequence.Cyclic
 		
 		# figure out what the largest number of frames is for the sequence.
-		actionDuration = 0
-		IFLDuration = 0
-		visDuration = 0
 		actionNumFrames = 0
 		IFLNumFrames = 0
 		visNumFrames = 0
 		numFrames = 1
-		# find te max num frames of everything except IFL
+		# calculate the duration of each animation type that's present.
+		IFLDuration = 0
+		visDuration = 0
+		actionDuration = 0		
+		
+		# use interpolate frames for actions only
+		
+		# find the max num frames of everything except IFL
 		if ActionIsValid:
-			actionNumFrames = getNumFrames(action.getAllChannelIpos().values(), False)
-			if sequence.fps > 0: actionDuration = actionNumFrames / sequence.fps
+			#actionNumFrames = getNumFrames(action.getAllChannelIpos().values(), False)
+			#if sequence.fps > 0: actionDuration = actionNumFrames / sequence.fps
+			#else: actionDuration = 1
+			#if actionNumFrames > numFrames: numFrames = actionNumFrames
+			actionNumFrames = seqPrefs['Action']['InterpolateFrames']
+			if sequence.fps > 0: actionDuration = getNumFrames(action.getAllChannelIpos().values(), False) / sequence.fps
 			else: actionDuration = 1
 			if actionNumFrames > numFrames: numFrames = actionNumFrames
+
 		if visIsValid:
 			visNumFrames = (seqPrefs['Vis']['EndFrame'] - seqPrefs['Vis']['StartFrame'])+1
 			if visNumFrames > numFrames: numFrames = visNumFrames
@@ -1636,7 +1644,7 @@ class BlenderShape(DtsShape):
 			interpolateInc = numFrames / sequence.numKeyFrames
 		else:
 			interpolateInc = 1
-		
+		print "interpolateInc =", interpolateInc
 
 		# includes last frame
 		numVisFrames = int(((sequenceKey['Vis']['EndFrame'] - sequenceKey['Vis']['StartFrame']) + 1) / interpolateInc)
