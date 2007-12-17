@@ -559,6 +559,11 @@ def updateOldPrefs():
 	for seqName in Prefs['Sequences'].keys():
 		seq = getSequenceKey(seqName)
 
+
+		# Do the really old stuff first
+		try: x = seq['Priority']
+		except: seq['Priority'] = 0
+
 		# Move keys into the new "Action" subkey.and delete old keys
 		try: x = seq['Action']
 		except:
@@ -989,11 +994,7 @@ def handleScene():
 	export_tree = SceneTree(None,Blender.Scene.GetCurrent())
 	updateOldPrefs()
 	Torque_Util.dump_writeln("Cleaning Preference Keys")
-	print "Before cleaning keys, keys are:\n"
-	print Prefs['Sequences'].keys()
 	cleanKeys()
-	print "After cleaning keys, keys are:\n"
-	print Prefs['Sequences'].keys()
 	createActionKeys()
 
 def export():
@@ -1959,11 +1960,7 @@ class ActionControlsClass:
 				self.guiActOpts.controlDict['guiRefPoseFrame'].min = 1
 				self.guiActOpts.controlDict['guiRefPoseFrame'].max = DtsShape_Blender.getNumFrames(Blender.Armature.NLA.GetActions()[sequencePrefs['Action']['BlendRefPoseAction']].getAllChannelIpos().values(), False)
 				self.guiActOpts.controlDict['guiRefPoseFrame'].value = sequencePrefs['Action']['BlendRefPoseFrame']
-				# hack, there must be a better way to handle this. todo
-				try:
-					self.guiActOpts.controlDict['guiPriority'].value = sequencePrefs['Priority']
-				except KeyError:
-					self.guiActOpts.controlDict['guiPriority'].value = 0
+				self.guiActOpts.controlDict['guiPriority'].value = sequencePrefs['Priority']
 
 
 				# Triggers
@@ -2338,6 +2335,15 @@ class IFLControlsClass:
 		del self.guiSeqListTitle
 		del self.guiSeqOptsContainerTitle
 		del self.guiSeqOptsContainer
+		del self.guiMatTxt
+		del self.guiMat
+		del self.guiNumImagesTxt
+		del self.guiNumImages
+		del self.guiFramesListTxt
+		del self.guiFramesList
+		del self.guiFramesListSelectedTxt
+		del self.guiNumFrames
+		del self.guiApplyToAll
 
 
 	# called when we switch to this control page to make sure everything is in sync.
@@ -2518,7 +2524,6 @@ class IFLControlsClass:
 		if control.name == "guiSeqName":
 			pass
 		elif control.name == "guiSeqAdd":
-			# todo - validate sequence name
 			if validateSequenceName(self.guiSeqName.value, "IFL"):
 				self.AddNewIFLSeq(self.guiSeqName.value)
 		elif control.name == "guiSeqDel":
@@ -2531,18 +2536,14 @@ class IFLControlsClass:
 				if seqKey['Action']['Enabled'] == True or seqKey['Vis']['Enabled'] == True:
 					self.guiSeqExistingSequences.items.append(seqName)
 				else:
-					del Prefs['Sequences'][seqName]
-		
+					del Prefs['Sequences'][seqName]		
 		elif control.name == "guiSeqRename":
 			guiSeqList = self.guiSeqList
-			# todo - validate sequence name			
 			seqName = guiSeqList.controls[guiSeqList.itemIndex].controls[0].label
 			# Move sequence values to new key and delete the old.
 			if validateSequenceName(self.guiSeqName.value, "IFL"):
 				renameSequence(seqName, self.guiSeqName.value)
-				guiSeqList.controls[guiSeqList.itemIndex].controls[0].label = self.guiSeqName.value			
-		
-		
+				guiSeqList.controls[guiSeqList.itemIndex].controls[0].label = self.guiSeqName.value		
 		elif control.name == "guiSeqAddToExisting":
 			existingSequences = self.guiSeqExistingSequences
 			itemIndex = existingSequences.itemIndex
@@ -2559,8 +2560,6 @@ class IFLControlsClass:
 			# set the pref for the selected sequence
 			if guiSeqList.itemIndex > -1 and itemIndex >=0 and itemIndex < len(guiMat.items):
 				seqName = guiSeqList.controls[guiSeqList.itemIndex].controls[0].label
-				
-				
 				if Prefs['Sequences'][seqName]['IFL']['Material'] != control.getSelectedItemString():
 					Prefs['Sequences'][seqName]['IFL']['Material'] = control.getSelectedItemString()
 					# replace existing frame names with new ones					
@@ -2580,9 +2579,7 @@ class IFLControlsClass:
 					# add initial image frame
 					self.handleGuiNumImagesEvent(self.guiNumImages)
 					self.clearImageFramesList()
-					self.populateImageFramesList(seqName)
-
-			
+					self.populateImageFramesList(seqName)			
 		elif control.name == "guiNumFrames":			
 			guiSeqList = self.guiSeqList
 			guiFramesList = self.guiFramesList
@@ -2745,7 +2742,6 @@ class IFLControlsClass:
 
 
 # helper functions for VisControlsClass
-
 def getIPOTypes():
 	typeList = ["Object", "Material"]
 	return typeList
@@ -2816,7 +2812,6 @@ class VisControlsClass:
 		self.guiEndFrame = Common_Gui.NumberPicker("guiEndFrame", "End Frame", "End frame for visibility IPO curve samples", globalEvents.getNewID(), self.handleEvent, self.resize)
 		self.guiVisTrackListTxt = Common_Gui.SimpleText("guiVisTrackListTxt", "Object Visibility Tracks:", None, self.resize)
 		self.guiVisTrackList = Common_Gui.ListContainer("guiVisTrackList", "", self.handleVisTrackListEvent, self.resize)
-
 		self.guiIpoTypeTxt = Common_Gui.SimpleText("guiIpoTypeTxt", "IPO Type:", None, self.resize)
 		self.guiIpoType = Common_Gui.ComboBox("guiIpoType", "IPO Type", "Select the type of IPO curve to use for Visibility Animation", globalEvents.getNewID(), self.handleEvent, self.resize)
 		self.guiIpoChannelTxt = Common_Gui.SimpleText("guiIpoChannelTxt", "IPO Channel:", None, self.resize)
@@ -2893,11 +2888,13 @@ class VisControlsClass:
 		del self.guiSeqOptsContainer
 		del self.guiStartFrame
 		del self.guiEndFrame
+		del self.guiVisTrackListTxt
+		del self.guiVisTrackList
 		del self.guiIpoTypeTxt
-		del self.guiIpoChannelTxt
-		del self.guiIpoObjectTxt
 		del self.guiIpoType
+		del self.guiIpoChannelTxt
 		del self.guiIpoChannel
+		del self.guiIpoObjectTxt
 		del self.guiIpoObject
 
 
@@ -3017,7 +3014,6 @@ class VisControlsClass:
 		if control.name == "guiSeqName":
 			pass
 		elif control.name == "guiSeqAdd":
-			# todo - validate sequence name
 			if validateSequenceName(self.guiSeqName.value, "Vis"):
 				self.AddNewVisSeq(self.guiSeqName.value)
 				self.guiSeqName.value = ""
@@ -3039,13 +3035,11 @@ class VisControlsClass:
 				self.clearVisTrackList(seqName)
 		elif control.name == "guiSeqRename":
 			guiSeqList = self.guiSeqList
-			# todo - validate sequence name
 			seqName = guiSeqList.controls[guiSeqList.itemIndex].controls[0].label
 			if validateSequenceName(self.guiSeqName.value, "Vis"):
 				renameSequence(seqName, self.guiSeqName.value)
 				guiSeqList.controls[guiSeqList.itemIndex].controls[0].label = self.guiSeqName.value
 				self.populateVisTrackList(self.guiSeqName.value)
-
 		elif control.name == "guiSeqAddToExisting":
 			existingSequences = self.guiSeqExistingSequences
 			itemIndex = existingSequences.itemIndex
@@ -3061,14 +3055,12 @@ class VisControlsClass:
 				seqName = guiSeqList.controls[guiSeqList.itemIndex].controls[0].label
 				seqKey = getSequenceKey(seqName)
 				seqKey['Vis']['StartFrame'] = control.value
-
 		elif control.name == "guiEndFrame":
 			guiSeqList = self.guiSeqList
 			if guiSeqList.itemIndex > -1 and guiSeqList.itemIndex < len(guiSeqList.controls):
 				seqName = guiSeqList.controls[guiSeqList.itemIndex].controls[0].label
 				seqKey = getSequenceKey(seqName)
 				seqKey['Vis']['EndFrame'] = control.value
-
 		elif control.name == "guiIpoType":
 			seqName = self.guiSeqList.controls[self.guiSeqList.itemIndex].controls[0].label
 			seqKey = getSequenceKey(seqName)
@@ -3082,15 +3074,12 @@ class VisControlsClass:
 			seqKey['Vis']['Tracks'][objName]['IPOChannel'] = None
 			seqKey['Vis']['Tracks'][objName]['IPOObject'] = None
 			self.refreshIpoControls()
-			
-			
 		elif control.name == "guiIpoChannel":
 			seqName = self.guiSeqList.controls[self.guiSeqList.itemIndex].controls[0].label
 			seqKey = getSequenceKey(seqName)
 			objName = self.guiVisTrackList.controls[self.guiVisTrackList.itemIndex].controls[0].label
 			channel = self.guiIpoChannel.getSelectedItemString()
 			seqKey['Vis']['Tracks'][objName]['IPOChannel'] = channel
-			pass
 		elif control.name == "guiIpoObject":
 			seqName = self.guiSeqList.controls[self.guiSeqList.itemIndex].controls[0].label
 			seqKey = getSequenceKey(seqName)
@@ -3127,7 +3116,6 @@ class VisControlsClass:
 		seqName = self.guiSeqList.controls[calcIdx].controls[0].label
 		realItem = control.evt - 40 - (calcIdx*2)
 		sequencePrefs = getSequenceKey(seqName)
-
 		if realItem == 0:
 			sequencePrefs['NoExport'] = not control.state
 		elif realItem == 1:
@@ -3201,11 +3189,9 @@ class VisControlsClass:
 		seqName = self.guiSeqList.controls[self.guiSeqList.itemIndex].controls[0].label
 		objName = self.guiVisTrackList.controls[calcIdx].controls[0].label
 		sequencePrefs = getSequenceKey(seqName)
-		Prefs['Sequences'][seqName]['Vis']['Tracks'][objName]['hasVisTrack'] = control.state
-
-	
+		Prefs['Sequences'][seqName]['Vis']['Tracks'][objName]['hasVisTrack'] = control.state	
 		
-	# this method assumes that the sequence list is empty prior to it being called.
+	# this method clears the sequence list and then repopulates it.
 	def populateVisSeqList(self):
 		self.curSeqListEvent = 40
 		self.clearVisSeqList()
@@ -3323,8 +3309,7 @@ class MaterialControlsClass:
 		self.curSeqListEvent = 40
 
 		self.guiMaterialListTitle = Common_Gui.SimpleText("guiMaterialListTitle", "U/V Textures:", None, self.resize)
-		self.guiMaterialList = Common_Gui.ListContainer("guiMaterialList", "material.list", self.handleEvent, self.resize)
-		self.guiMaterialList.fade_mode = 0
+		self.guiMaterialList = Common_Gui.ListContainer("guiMaterialList", "material.list", self.handleEvent, self.resize)		
 		self.guiMaterialOptions = Common_Gui.BasicContainer("guiMaterialOptions", "", None, self.resize)
 		self.guiMaterialOptionsTitle = Common_Gui.SimpleText("guiMaterialOptionsTitle", "Material: None Selected", None, self.resize)
 		self.guiMaterialTransFrame = Common_Gui.BasicFrame("guiMaterialTransFrame", "", None, 29, None, self.resize)
@@ -3352,6 +3337,7 @@ class MaterialControlsClass:
 
 
 		# set initial control states and default values
+		self.guiMaterialList.fade_mode = 0
 		self.guiMaterialReflectanceSlider.min, self.guiMaterialReflectanceSlider.max = 0, 100
 		self.guiMaterialDetailScaleSlider.min, self.guiMaterialDetailScaleSlider.max = 1, 1000
 		self.guiMaterialDetailScaleSlider.value = 100
@@ -3409,8 +3395,8 @@ class MaterialControlsClass:
 		'''
 		del self.guiMaterialListTitle
 		del self.guiMaterialList
-		del self.guiMaterialOptionsTitle
 		del self.guiMaterialOptions
+		del self.guiMaterialOptionsTitle
 		del self.guiMaterialTransFrame
 		del self.guiMaterialAdvancedFrame
 		del self.guiMaterialImportRefreshButton
@@ -3426,9 +3412,9 @@ class MaterialControlsClass:
 		del self.guiMaterialIFLMatButton
 		del self.guiMaterialDetailMapButton
 		del self.guiMaterialBumpMapButton
-		del self.guiMaterialShowAdvancedButton
 		del self.guiMaterialRefMapButton
 		del self.guiMaterialDetailMapMenu
+		del self.guiMaterialShowAdvancedButton
 		del self.guiMaterialBumpMapMenu
 		del self.guiMaterialReflectanceMapMenu
 		del self.guiMaterialReflectanceSlider
