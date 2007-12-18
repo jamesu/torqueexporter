@@ -1035,6 +1035,7 @@ def export():
 # Controls referenced in functions
 guiSequenceTab, guiGeneralTab, guiArmatureTab, guiAboutTab, guiTabBar, guiHeaderTab = None, None, None, None, None, None
 
+SeqCommonControls = None
 IFLControls = None
 VisControls = None
 MaterialControls = None
@@ -1081,16 +1082,17 @@ def guiBaseCallback(control):
 		ctrl[1].enabled = False
 		
 def guiSequenceTabsCallback(control):
-	global guiSeqActButton, guiSequenceIFLButton, guiSequenceVisibilityButton, guiSequenceUVButton, guiSequenceMorphButton, guiSequenceTabBar
-	global guiSeqActSubtab, guiSequenceIFLSubtab, guiSequenceVisibilitySubtab, guiSequenceUVSubtab, guiSequenceMorphSubtab
-	global ActionControls, IFLControls, VisControls
+	global guiSeqCommonButton, guiSeqActButton, guiSequenceIFLButton, guiSequenceVisibilityButton, guiSequenceUVButton, guiSequenceMorphButton, guiSequenceTabBar
+	global guiSeqCommonSubtab, guiSeqActSubtab, guiSequenceIFLSubtab, guiSequenceVisibilitySubtab, guiSequenceUVSubtab, guiSequenceMorphSubtab
+	global SeqCommonControls, ActionControls, IFLControls, VisControls
 	
 	# Need to associate the button with it's corresponding tab container and refresh method
-	ctrls = [[guiSeqActButton,guiSeqActSubtab, ActionControls],\
-		[guiSequenceIFLButton,guiSequenceIFLSubtab, IFLControls],\
-		[guiSequenceVisibilityButton,guiSequenceVisibilitySubtab, VisControls],\
-		[guiSequenceUVButton,guiSequenceUVSubtab, None],\
-		[guiSequenceMorphButton,guiSequenceMorphSubtab, None]]
+	ctrls = [[guiSeqCommonButton, guiSeqCommonSubtab, SeqCommonControls],\
+		[guiSeqActButton, guiSeqActSubtab, ActionControls],\
+		[guiSequenceIFLButton, guiSequenceIFLSubtab, IFLControls],\
+		[guiSequenceVisibilityButton, guiSequenceVisibilitySubtab, VisControls],\
+		[guiSequenceUVButton, guiSequenceUVSubtab, None],\
+		[guiSequenceMorphButton, guiSequenceMorphSubtab, None]]
 	for ctrl in ctrls:
 		if control.name == ctrl[0].name:
 			# turn on the tab button, show and enable the tab container
@@ -1110,7 +1112,7 @@ def guiSequenceTabsCallback(control):
 # Resize callback for all global gui controls
 def guiBaseResize(control, newwidth, newheight):
 	tabContainers = ["guiSequenceTab", "guiGeneralTab", "guiArmatureTab", "guiAboutTab", "guiMaterialsTab"]
-	tabSubContainers = ["guiSeqActSubtab", "guiSequenceIFLSubtab", "guiSequenceVisibilitySubtab","guiSequenceUVSubtab","guiSequenceMorphSubtab", "guiSequenceNLASubtab", "guiMaterialsSubtab", "guiGeneralSubtab", "guiArmatureSubtab", "guiAboutSubtab"]
+	tabSubContainers = ["guiSeqCommonSubtab", "guiSeqActSubtab", "guiSequenceIFLSubtab", "guiSequenceVisibilitySubtab","guiSequenceUVSubtab","guiSequenceMorphSubtab", "guiSequenceNLASubtab", "guiMaterialsSubtab", "guiGeneralSubtab", "guiArmatureSubtab", "guiAboutSubtab"]
 	
 	if control.name == "guiTabBar":
 		control.x, control.y = 0, 378
@@ -1147,21 +1149,24 @@ def guiBaseResize(control, newwidth, newheight):
 		control.width, control.height = 70, 25
 	
 	# Sequences sub-tab buttons
+	elif control.name == "guiSeqCommonButton":
+		control.x, control.y = 10, 0
+		control.width, control.height = 75, 25
 	elif control.name == "guiSeqActButton":
-		control.x, control.y = 15, 0
-		control.width, control.height = 60, 25
+		control.x, control.y = 87, 0
+		control.width, control.height = 50, 25
 	elif control.name == "guiSequenceIFLButton":
-		control.x, control.y = 77, 0
+		control.x, control.y = 139, 0
 		control.width, control.height = 35, 25
 	elif control.name == "guiSequenceVisibilityButton":
-		control.x, control.y = 114, 0
-		control.width, control.height = 60, 25
-	elif control.name == "guiSequenceUVButton":
 		control.x, control.y = 176, 0
+		control.width, control.height = 55, 25
+	elif control.name == "guiSequenceUVButton":
+		control.x, control.y = 233, 0
 		control.width, control.height = 70, 25
 	elif control.name == "guiSequenceMorphButton":
-		control.x, control.y = 248, 0
-		control.width, control.height = 65, 25
+		control.x, control.y = 305, 0
+		control.width, control.height = 50, 25
 
 
 
@@ -1794,6 +1799,82 @@ class ArmatureControlsClass:
 					break
 		else:
 			Prefs['BannedBones'].append(real_name)
+
+
+
+'''
+***************************************************************************************************
+*
+* Class that creates and owns the GUI controls on the "Common/All" sub-panel of the Sequences panel.
+*
+***************************************************************************************************
+'''
+class SeqCommonControlsClass:
+	def __init__(self):
+		global guiSeqCommonSubtab
+		global globalEvents
+		
+		# initialize GUI controls
+		self.guiSeqList = Common_Gui.ListContainer("guiSeqList", "sequence.list", self.handleListEvent, self.resize)
+		self.guiSeqListTitle = Common_Gui.SimpleText("guiSeqListTitle", "All Sequences:", None, self.resize)
+		self.guiSeqOptsContainerTitle = Common_Gui.SimpleText("guiSeqOptsContainerTitle", "Sequence: None Selected", None, self.resize)
+		self.guiSeqOptsContainer = Common_Gui.BasicContainer("guiSeqOptsContainer", "guiSeqOptsContainer", None, self.resize)
+
+		# set initial states
+		self.guiSeqOptsContainer.enabled = False
+		self.guiSeqOptsContainer.fade_mode = 5
+		self.guiSeqOptsContainer.borderColor = None
+		self.guiSeqList.fade_mode = 0
+
+		# add controls to containers
+		guiSeqCommonSubtab.addControl(self.guiSeqList)
+		guiSeqCommonSubtab.addControl(self.guiSeqListTitle)
+		guiSeqCommonSubtab.addControl(self.guiSeqOptsContainerTitle)
+		guiSeqCommonSubtab.addControl(self.guiSeqOptsContainer)
+
+		
+		# set initial states
+		
+		# add controls to containers
+		
+		# populate lists
+
+	def cleanup(self):
+
+		# Must destroy any GUI objects that are referenced in a non-global scope
+		# explicitly before interpreter shutdown to avoid the dreaded
+		# "error totblock" message when exiting Blender.
+		# Note: __del__ is not guaranteed to be called for objects that still
+		# exist when the interpreter exits.
+
+		pass
+
+
+	def handleEvent(self, control):
+		pass
+
+	def handleListEvent(self, control):
+		pass
+
+		
+	def resize(self, control, newwidth, newheight):
+		#self.guiSeqOptsContainerTitle = Common_Gui.SimpleText("guiSeqOptsContainerTitle", "Sequence: None Selected", None, self.resize)
+		if control.name == "guiSeqList":
+			control.x, control.y, control.height, control.width = 10,50, newheight - 90,230
+			#control.x, control.y, control.height, control.width = 10,100, 200,230
+		elif control.name == "guiSeqListTitle":
+			control.x, control.y, control.height, control.width = 10,310, 20,82
+		elif control.name == "guiSeqOptsContainer":
+			control.x, control.y, control.height, control.width = 241,0, 334,249
+		elif control.name == "guiSeqOptsContainerTitle":
+			control.x, control.y, control.height, control.width = 250,310, 20,82
+	
+	def refreshAll(self):		
+		#self.clearSequenceActionList()
+		#self.populateSequenceActionList()
+		pass
+
+
 
 
 		
@@ -3899,8 +3980,8 @@ def initGui():
 	
 	global guiTabBar, guiSequencesTabBar
 	
-	global guiSeqActButton, guiSequenceIFLButton, guiSequenceVisibilityButton, guiSequenceUVButton, guiSequenceMorphButton
-	global guiSeqActSubtab, guiSequenceIFLSubtab, guiSequenceVisibilitySubtab, guiSequenceUVSubtab, guiSequenceMorphSubtab
+	global guiSeqCommonButton, guiSeqActButton, guiSequenceIFLButton, guiSequenceVisibilityButton, guiSequenceUVButton, guiSequenceMorphButton
+	global guiSeqCommonSubtab, guiSeqActSubtab, guiSequenceIFLSubtab, guiSequenceVisibilitySubtab, guiSequenceUVSubtab, guiSequenceMorphSubtab
 	                                
 	Common_Gui.initGui(exit_callback)
 	
@@ -3916,6 +3997,7 @@ def initGui():
 	guiExportButton = Common_Gui.BasicButton("guiExportButton", "Export", "Export .dts shape", globalEvents.getNewID("Export"), guiBaseCallback, guiBaseResize)
 	
 	# Sequence Subtab button controls
+	guiSeqCommonButton = Common_Gui.TabButton("guiSeqCommonButton", "Common/All", "All Animations", None, guiSequenceTabsCallback, guiBaseResize)
 	guiSeqActButton = Common_Gui.TabButton("guiSeqActButton", "Actions", "Action Animations", None, guiSequenceTabsCallback, guiBaseResize)
 	guiSeqActButton.state = True
 	guiSequenceIFLButton = Common_Gui.TabButton("guiSequenceIFLButton", "IFL", "IFL Animations", None, guiSequenceTabsCallback, guiBaseResize)
@@ -3959,6 +4041,9 @@ def initGui():
 	guiAboutTab.enabled, guiAboutTab.visible = False, False
 	
 	# Sub-container Controls
+	guiSeqCommonSubtab = Common_Gui.TabContainer("guiSeqCommonSubtab", None, guiSeqCommonButton, None, guiBaseResize)
+	guiSeqCommonSubtab.fade_mode = 1
+	guiSeqCommonSubtab.enabled, guiSeqCommonSubtab.visible = False, False
 	guiSeqActSubtab = Common_Gui.TabContainer("guiSeqActSubtab", None, guiSeqActButton, None, guiBaseResize)
 	guiSeqActSubtab.fade_mode = 1
 	guiSeqActSubtab.enabled, guiSeqActSubtab.visible = True, True
@@ -4005,6 +4090,7 @@ def initGui():
 		
 	Common_Gui.addGuiControl(guiSequenceTab)
 	guiSequenceTab.borderColor = [0,0,0,0]
+	guiSequenceTab.addControl(guiSeqCommonSubtab)
 	guiSequenceTab.addControl(guiSeqActSubtab)
 	guiSequenceTab.addControl(guiSequenceIFLSubtab)
 	guiSequenceTab.addControl(guiSequenceVisibilitySubtab)
@@ -4014,6 +4100,7 @@ def initGui():
 	guiMaterialsTab.addControl(guiMaterialsSubtab)
 	
 	guiSequenceTab.addControl(guiSequencesTabBar)
+	guiSequencesTabBar.addControl(guiSeqCommonButton)
 	guiSequencesTabBar.addControl(guiSeqActButton)
 	guiSequencesTabBar.addControl(guiSequenceIFLButton)
 	guiSequencesTabBar.addControl(guiSequenceVisibilityButton)
@@ -4021,6 +4108,7 @@ def initGui():
 	guiSequencesTabBar.addControl(guiSequenceMorphButton)
 
 
+	guiSeqCommonSubtab.borderColor = [0,0,0,0]
 	guiSeqActSubtab.borderColor = [0,0,0,0]
 	guiSequenceIFLSubtab.borderColor = [0,0,0,0]
 	guiSequenceVisibilitySubtab.borderColor = [0,0,0,0]
@@ -4048,6 +4136,7 @@ def initGui():
 	
 
 	# Initialize all tab pages
+	SeqCommonControls = SeqCommonControlsClass()
 	ActionControls = ActionControlsClass()
 	IFLControls = IFLControlsClass()
 	VisControls = VisControlsClass()
@@ -4058,7 +4147,7 @@ def initGui():
 
 # Called when gui exits
 def exit_callback():
-	global IFLControls, ActionControls, MaterialControls, ArmatureControls, GeneralControls, AboutControls
+	global SeqCommonControls, IFLControls, ActionControls, MaterialControls, ArmatureControls, GeneralControls, AboutControls
 	Torque_Util.dump_setout("stdout")
 	ActionControls.clearSequenceActionList()
 	ArmatureControls.clearBoneGrid()
