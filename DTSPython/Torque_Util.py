@@ -395,3 +395,110 @@ def getBlenderIPOChannelConst(IPOType, IPOChannel):
 	try: retVal = constDict[IPOType][IPOChannel]
 	except: retVal = ""
 	return retVal
+
+
+# Helper functions for dealing with sequences
+
+import Blender
+def validateAction(seqName, seqPrefs):
+	# Check to see if there's a valid action animation
+	ActionIsValid = False
+	if seqPrefs['Action']['Enabled']:
+		action = (seqName in Blender.Armature.NLA.GetActions().keys())
+		if action == None:
+			print "   Skipping Action animation for sequence %s, because no Blender action could be found for the animation. " % seqName
+		else:
+			ActionIsValid = True
+	
+	return ActionIsValid
+
+def validateIFL(seqName, seqPrefs):
+	# Check to see if there's a valid IFL animation
+	IFLIsValid = False
+	if seqPrefs['IFL']['Enabled']:
+		if seqPrefs['IFL']['Material'] == None or seqPrefs['IFL']['Material'] == "":
+			Torque_Util.dump_writeln("   Skipping IFL animation for sequence %s, because no IFL Material was specified for the animation. " % seqName)
+		else: IFLIsValid = True
+	return IFLIsValid
+
+def validateVisibility(seqName, seqPrefs):
+	# Check to see if there's a valid visibility animation
+	visIsValid = False
+	if seqPrefs['Vis']['Enabled']:
+		print "Vis is enabled..."
+		# do we have any tracks?
+		if len(seqPrefs['Vis']['Tracks']) > 0:
+			print "We have tracks, but are any of them enabled?"
+			# We have tracks, but are any of them enabled?
+			for trackName in seqPrefs['Vis']['Tracks'].keys():
+				track = seqPrefs['Vis']['Tracks'][trackName]
+				# is the current track enabled?
+				#print "is the current track enabled?"
+				if not track['hasVisTrack']: continue
+				#print "Has the user has defined an IPO Type?"
+				# Has the user has defined an IPO Type?
+				if track['IPOType'] == "" or track['IPOType'] == None: continue
+				#print "Has the user has defined an IPO channel?"
+				# Has the user has defined an IPO channel?
+				if track['IPOChannel'] == "" or track['IPOChannel'] == None: continue
+				#print "Has the user defined an IPO Object?"
+				# Has the user defined an IPO Object?
+				if track['IPOObject'] == "" or track['IPOObject'] == None: continue
+				# is the object valid?
+				try:
+					bObj = None
+					if track['IPOType'] == "Object":
+						bObj = Blender.Object.Get(track['IPOObject'])
+					elif track['IPOType'] == "Material":
+						bObj = Blender.Material.Get(track['IPOObject'])
+					bIpo = bObj.getIpo()
+					IPOCurveName = getBlenderIPOChannelConst(track['IPOType'], track['IPOChannel'])
+					IPOCurve = None
+					IPOCurveConst = bIpo.curveConsts[IPOCurveName]
+					IPOCurve = bIpo[IPOCurveConst]
+					if IPOCurve == None: raise TypeError
+				except: continue
+				# If we've gotten this far, the track is valid and exportable.
+				visIsValid = True
+				break
+	return visIsValid
+	
+def getNumActFrames(seqName, seqPrefs):
+	actionNumFrames = seqPrefs['Action']['InterpolateFrames']
+	return actionNumFrames
+
+def getNumIFLFrames(seqName, seqPrefs):
+	IFLNumFrames = 0
+	for frame in seqPrefs['IFL']['IFLFrames']:
+		IFLNumFrames += frame[1]
+	return IFLNumFrames
+
+def getNumVisFrames(seqName, seqPrefs):
+	visNumFrames = (seqPrefs['Vis']['EndFrame'] - seqPrefs['Vis']['StartFrame'])+1
+	return visNumFrames
+	
+def getSeqNumFrames(seqName, seqPrefs):
+
+	visIsValid = validateVisibility(seqName, seqPrefs)
+	IFLIsValid = validateIFL(seqName, seqPrefs)
+	actionIsValid = validateAction(seqName, seqPrefs)
+
+	# Did we have any valid animations at all for the sequence?
+	if not (visIsValid or IFLIsValid or actionIsValid):
+		return None
+
+	numFrames = 0
+	# find the max num frames of everything except IFL
+	if actionIsValid:
+		actionNumFrames = getNumActFrames(seqName, seqPrefs)
+		if actionNumFrames > numFrames: numFrames = actionNumFrames
+
+	if visIsValid:
+		visNumFrames = getNumVisFrames(seqName, seqPrefs)
+		if visNumFrames > numFrames: numFrames = visNumFrames
+
+	if IFLIsValid:
+		IFLNumFrames = getNumIFLFrames(seqName, seqPrefs)
+		if IFLNumFrames > numFrames: numFrames = IFLNumFrames
+
+	return numFrames
