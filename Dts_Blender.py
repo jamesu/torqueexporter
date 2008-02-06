@@ -1977,11 +1977,8 @@ class SeqCommonControlsClass:
 			self.guiSeqOptsContainer.controlDict['guiSeqFPS'].value = float(seqPrefs['FPS'])
 			self.guiSeqDurationLock.state = seqPrefs['DurationLocked']
 			self.guiSeqFPSLock.state = seqPrefs['FPSLocked']
-
-			#self.guiSeqOptsContainer.controlDict['guiSampleFrames'].value = 
-			#self.guiSeqOptsContainer.controlDict['guiSampleFrames'].max = maxNumFrames
+			self.guiPriority.value = seqPrefs['Priority']
 			self.guiSeqFramesLabel.label = "Highest Frame Count:  " + str(Torque_Util.getSeqNumFrames(seqName, seqPrefs))
-
 
 			# Triggers
 			for t in seqPrefs['Triggers']:
