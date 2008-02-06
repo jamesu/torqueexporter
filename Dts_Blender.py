@@ -1323,7 +1323,7 @@ class GeneralControlsClass:
 		global globalEvents
 		
 		# initialize GUI controls
-		self.guiStripText = Common_Gui.SimpleText("guiStripText", "Geometry type", None, self.resize)
+		self.guiStripText = Common_Gui.SimpleText("guiStripText", "Geometry type:", None, self.resize)
 		self.guiTriMeshesButton = Common_Gui.ToggleButton("guiTriMeshesButton", "Triangles", "Generate individual triangles for meshes", 6, self.handleEvent, self.resize)
 		self.guiTriListsButton = Common_Gui.ToggleButton("guiTriListsButton", "Triangle Lists", "Generate triangle lists for meshes", 7, self.handleEvent, self.resize)
 		self.guiStripMeshesButton = Common_Gui.ToggleButton("guiStripMeshesButton", "Triangle Strips", "Generate triangle strips for meshes", 8, self.handleEvent, self.resize)
@@ -1333,7 +1333,7 @@ class GeneralControlsClass:
 		self.guiClusterWriteDepth = Common_Gui.ToggleButton("guiClusterWriteDepth", "Write Depth ", "Always Write the Depth on Cluster meshes", 10, self.handleEvent, self.resize)
 		self.guiClusterDepth = Common_Gui.NumberSlider("guiClusterDepth", "Depth", "Maximum depth Clusters meshes should be calculated to", 11, self.handleEvent, self.resize)
 		# --
-		self.guiBillboardText = Common_Gui.SimpleText("guiBillboardText", "Billboard", None, self.resize)
+		self.guiBillboardText = Common_Gui.SimpleText("guiBillboardText", "Auto-Billboard LOD:", None, self.resize)
 		self.guiBillboardButton = Common_Gui.ToggleButton("guiBillboardButton", "Enable", "Add a billboard detail level to the shape", 12, self.handleEvent, self.resize)
 		self.guiBillboardEquator = Common_Gui.NumberPicker("guiBillboardEquator", "Equator", "Number of images around the equator", 13, self.handleEvent, self.resize)
 		self.guiBillboardPolar = Common_Gui.NumberPicker("guiBillboardPolar", "Polar", "Number of images around the polar", 14, self.handleEvent, self.resize)
@@ -1342,7 +1342,7 @@ class GeneralControlsClass:
 		self.guiBillboardPoles = Common_Gui.ToggleButton("guiBillboardPoles", "Poles", "Take images at the poles", 17, self.handleEvent, self.resize)
 		self.guiBillboardSize = Common_Gui.NumberSlider("guiBillboardSize", "Size", "Size of billboard's detail level", 18, self.handleEvent, self.resize)
 		# --
-		self.guiOutputText = Common_Gui.SimpleText("guiOutputText", "Output", None, self.resize)
+		self.guiOutputText = Common_Gui.SimpleText("guiOutputText", "Output:", None, self.resize)
 		self.guiShapeScriptButton =  Common_Gui.ToggleButton("guiShapeScriptButton", "Write Shape Script", "Write .cs script that details the .dts and all .dsq sequences", 19, self.handleEvent, self.resize)
 		self.guiCustomFilename = Common_Gui.TextBox("guiCustomFilename", "Filename: ", "Filename to write to", 20, self.handleEvent, self.resize)
 		self.guiCustomFilenameSelect = Common_Gui.BasicButton("guiCustomFilenameSelect", "Select...", "Select a filename and destination for export", 21, self.handleEvent, self.resize)
@@ -1388,6 +1388,11 @@ class GeneralControlsClass:
 		except:
 			Prefs['LogToOutputFolder'] = True
 			self.guiLogToOutputFolder.state = True
+		# Hiding these for now, since cluster mesh sorting is still broken.
+		self.guiClusterText.visible = False
+		self.guiClusterWriteDepth.visible = False
+		self.guiClusterDepth.visible = False
+		
 		
 		
 		# add controls to containers
