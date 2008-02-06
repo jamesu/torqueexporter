@@ -1139,7 +1139,7 @@ class BlenderShape(DtsShape):
 		The second part of the function determines what the action animates.
 		
 		The third part of the function adds the keyframes, making heavy use of the getPoseTransform function. You can control the
-		amount of frames exported via the 'InterpolateFrames' option.
+		amount of frames exported via the 'FrameSamples' option.
 		
 		Finally, the sequence data is dumped to the shape. Additionally, if the sequence has been marked as a dsq,
 		the dsq writer function is invoked - the data for that particular sequence is then removed from the shape.
@@ -1240,19 +1240,19 @@ class BlenderShape(DtsShape):
 		sequence.numKeyFrames = getNumFrames(action.getAllChannelIpos().values(), False)
 
 		# calc the interpolation increment
-		interpolateInc = float(sequence.numKeyFrames) / float(sequencePrefs['Action']['InterpolateFrames'])
+		interpolateInc = float(sequence.numKeyFrames) / float(sequencePrefs['Action']['FrameSamples'])
 		# make sure it's not less than 1
 		if interpolateInc < 1.0: interpolateInc = 1.0
 
 		# Print different messages depending if we used interpolate or not
-		Torque_Util.dump_writeln("      Frames: %d " % sequencePrefs['Action']['InterpolateFrames'])
+		Torque_Util.dump_writeln("      Frames: %d " % sequencePrefs['Action']['FrameSamples'])
 		
 		# Depending on what we have, set the bases accordingly
 		if sequence.has_ground: sequence.firstGroundFrame = len(self.groundTranslations)
 		else: sequence.firstGroundFrame = -1
 		
 		# this is the number of frames we are exporting.
-		numFrames = sequencePrefs['Action']['InterpolateFrames']+1
+		numFrames = sequencePrefs['Action']['FrameSamples']+1
 		
 		remove_last = False
 		baseTransforms = []
