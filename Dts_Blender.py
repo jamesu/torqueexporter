@@ -1917,13 +1917,11 @@ class SeqCommonControlsClass:
 			elif control.name == "guiPriority":
 				seqPrefs['Priority'] = control.value
 			elif control.name == "guiSeqDurationLock":
-				# todo - need sequence prefs for duration lock
 				seqPrefs['DurationLocked'] = control.state
 				seqPrefs['FPSLocked'] = False
 				self.guiSeqDurationLock.state = True
 				self.guiSeqFPSLock.state = False
 			elif control.name == "guiSeqFPSLock":
-				# todo - need sequence prefs for fps lock
 				seqPrefs['FPSLocked'] = control.state
 				seqPrefs['DurationLocked'] = False
 				self.guiSeqDurationLock.state = False
@@ -1964,7 +1962,8 @@ class SeqCommonControlsClass:
 
 			try:
 				action = Blender.Armature.NLA.GetActions()[seqName]
-				maxNumFrames = DtsShape_Blender.getNumFrames(action.getAllChannelIpos().values(), False)
+				#maxNumFrames = DtsShape_Blender.getNumFrames(action.getAllChannelIpos().values(), False)
+				maxNumFrames = getSeqNumFrames(seqName, seqPrefs)
 			except:
 				maxNumFrames = 0
 
@@ -2364,9 +2363,10 @@ class ActionControlsClass:
 		elif control.name == "guiOptsTitle":
 			control.x = 5
 			control.y = newheight - 25
-		elif control.name == "guiTriggerTitle":
+		elif control.name == "guiGroundFrameSamples":
 			control.x = 5
-			control.y = newheight - 215
+			control.y = newheight - 70
+			control.width = newwidth - 10
 		elif control.name == "guiRefPoseTitle":
 			control.x = 5
 			control.y = newheight - 140
