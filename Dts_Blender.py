@@ -3572,7 +3572,7 @@ class MaterialControlsClass:
 		self.guiMaterialListTitle = Common_Gui.SimpleText("guiMaterialListTitle", "U/V Textures:", None, self.resize)
 		self.guiMaterialList = Common_Gui.ListContainer("guiMaterialList", "material.list", self.handleEvent, self.resize)		
 		self.guiMaterialOptions = Common_Gui.BasicContainer("guiMaterialOptions", "", None, self.resize)
-		self.guiMaterialOptionsTitle = Common_Gui.SimpleText("guiMaterialOptionsTitle", "Material: None Selected", None, self.resize)
+		self.guiMaterialOptionsTitle = Common_Gui.SimpleText("guiMaterialOptionsTitle", "DTS Material: None Selected", None, self.resize)
 		self.guiMaterialTransFrame = Common_Gui.BasicFrame("guiMaterialTransFrame", "", None, 29, None, self.resize)
 		self.guiMaterialAdvancedFrame = Common_Gui.BasicFrame("guiMaterialAdvancedFrame", "", None, 30, None, self.resize)
 		self.guiMaterialImportRefreshButton = Common_Gui.BasicButton("guiMaterialImportRefreshButton", "Refresh", "Import Blender materials and settings", 7, self.handleEvent, self.resize)
@@ -3970,7 +3970,7 @@ class MaterialControlsClass:
 				guiMaterialOptions.controlDict['guiMaterialReflectanceMapMenu'].selectStringItem(matList[materialName]['RefMapTex'])
 				guiMaterialOptions.controlDict['guiMaterialReflectanceSlider'].value = matList[materialName]['reflectance'] * 100.0
 				guiMaterialOptions.controlDict['guiMaterialDetailScaleSlider'].value = matList[materialName]['detailScale'] * 100.0
-				self.guiMaterialOptionsTitle.label = ("Material: %s" % materialName)
+				self.guiMaterialOptionsTitle.label = ("DTS Material: %s" % materialName)
 			else:
 				guiMaterialOptions.controlDict['guiMaterialSWrapButton'].state = False
 				guiMaterialOptions.controlDict['guiMaterialTWrapButton'].state = False
@@ -3991,7 +3991,7 @@ class MaterialControlsClass:
 				guiMaterialOptions.controlDict['guiMaterialReflectanceSlider'].value = 0
 				guiMaterialOptions.controlDict['guiMaterialDetailScaleSlider'].value = 100
 				guiMaterialOptions.enabled = False
-				self.guiMaterialOptionsTitle.label = "Material: None Selected"
+				self.guiMaterialOptionsTitle.label = "DTS Material: None Selected"
 
 
 		if guiMaterialList.itemIndex == -1: return
