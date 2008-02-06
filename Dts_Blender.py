@@ -4178,7 +4178,7 @@ def initGui():
 	
 	# Sequence Subtab button controls
 	guiSeqCommonButton = Common_Gui.TabButton("guiSeqCommonButton", "Common/All", "All Animations", None, guiSequenceTabsCallback, guiBaseResize)
-	guiSeqActButton = Common_Gui.TabButton("guiSeqActButton", "Actions", "Action Animations", None, guiSequenceTabsCallback, guiBaseResize)
+	guiSeqActButton = Common_Gui.TabButton("guiSeqActButton", "Action", "Action Animations", None, guiSequenceTabsCallback, guiBaseResize)
 	guiSeqActButton.state = True
 	guiSequenceIFLButton = Common_Gui.TabButton("guiSequenceIFLButton", "IFL", "IFL Animations", None, guiSequenceTabsCallback, guiBaseResize)
 	guiSequenceVisibilityButton = Common_Gui.TabButton("guiSequenceVisibilityButton", "Visibility", "Visibility Animations", None, guiSequenceTabsCallback, guiBaseResize)
