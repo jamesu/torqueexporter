@@ -463,7 +463,7 @@ def validateVisibility(seqName, seqPrefs):
 	return visIsValid
 	
 def getNumActFrames(seqName, seqPrefs):
-	actionNumFrames = seqPrefs['Action']['InterpolateFrames']
+	actionNumFrames = seqPrefs['Action']['FrameSamples']
 	return actionNumFrames
 
 def getNumIFLFrames(seqName, seqPrefs):
