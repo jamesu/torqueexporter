@@ -1195,7 +1195,7 @@ def guiHeaderResize(control, newwidth, newheight):
 # Used to validate a sequence name entered by the user.
 # Sequence names must be unique amongst other sequences
 # having the same type.
-def validateseqName(seqName, seqType):
+def validateSequenceName(seqName, seqType):
 	global Prefs
 
 	# check the obvious stuff first.
@@ -2817,7 +2817,7 @@ class IFLControlsClass:
 		if control.name == "guiSeqName":
 			pass
 		elif control.name == "guiSeqAdd":
-			if validateseqName(self.guiSeqName.value, "IFL"):
+			if validateSequenceName(self.guiSeqName.value, "IFL"):
 				self.AddNewIFLSeq(self.guiSeqName.value)
 		elif control.name == "guiSeqDel":
 			guiSeqList = self.guiSeqList
@@ -2834,7 +2834,7 @@ class IFLControlsClass:
 			guiSeqList = self.guiSeqList
 			seqName = guiSeqList.controls[guiSeqList.itemIndex].controls[0].label
 			# Move sequence values to new key and delete the old.
-			if validateseqName(self.guiSeqName.value, "IFL"):
+			if validateSequenceName(self.guiSeqName.value, "IFL"):
 				renameSequence(seqName, self.guiSeqName.value)
 				guiSeqList.controls[guiSeqList.itemIndex].controls[0].label = self.guiSeqName.value		
 		elif control.name == "guiSeqAddToExisting":
@@ -2842,7 +2842,7 @@ class IFLControlsClass:
 			itemIndex = existingSequences.itemIndex
 			if itemIndex >=0 and itemIndex < len(existingSequences.items):
 				existingName = existingSequences.getSelectedItemString()
-				if validateseqName(existingName, "IFL"):
+				if validateSequenceName(existingName, "IFL"):
 					self.AddNewIFLSeq(existingName)
 					del existingSequences.items[itemIndex]
 					existingSequences.selectStringItem("")
@@ -3307,7 +3307,7 @@ class VisControlsClass:
 		if control.name == "guiSeqName":
 			pass
 		elif control.name == "guiSeqAdd":
-			if validateseqName(self.guiSeqName.value, "Vis"):
+			if validateSequenceName(self.guiSeqName.value, "Vis"):
 				self.AddNewVisSeq(self.guiSeqName.value)
 				self.guiSeqName.value = ""
 				self.guiSeqList.selectItem(len(self.guiSeqList.controls)-1)
@@ -3329,7 +3329,7 @@ class VisControlsClass:
 		elif control.name == "guiSeqRename":
 			guiSeqList = self.guiSeqList
 			seqName = guiSeqList.controls[guiSeqList.itemIndex].controls[0].label
-			if validateseqName(self.guiSeqName.value, "Vis"):
+			if validateSequenceName(self.guiSeqName.value, "Vis"):
 				renameSequence(seqName, self.guiSeqName.value)
 				guiSeqList.controls[guiSeqList.itemIndex].controls[0].label = self.guiSeqName.value
 				self.populateVisTrackList(self.guiSeqName.value)
@@ -3338,7 +3338,7 @@ class VisControlsClass:
 			itemIndex = existingSequences.itemIndex
 			if itemIndex >=0 and itemIndex < len(existingSequences.items):
 				existingName = existingSequences.getSelectedItemString()
-				if validateseqName(existingName, "Vis"):
+				if validateSequenceName(existingName, "Vis"):
 					self.AddNewVisSeq(existingName)
 					del existingSequences.items[itemIndex]
 					existingSequences.selectStringItem("")
