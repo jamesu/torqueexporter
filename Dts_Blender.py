@@ -2008,7 +2008,7 @@ class SeqCommonControlsClass:
 			control.x, control.y, control.height, control.width = 250,310, 20,82
 		elif control.name == "guiTriggerTitle":
 			control.x = 5
-			control.y = newheight - 215
+			control.y = newheight - 237
 		# Sequence options
 		elif control.name == "guiSeqFramesLabel":
 			control.x = 5
@@ -2039,20 +2039,20 @@ class SeqCommonControlsClass:
 		# Triggers
 		elif control.name == "guiTriggerMenu":
 			control.x = 5
-			control.y = newheight - 245
+			control.y = newheight - 267
 			control.width = newwidth - 10
-		elif control.name == "guiTriggerState":
-			control.x = 5
-			control.y = newheight - 267
-			control.width = newwidth - 150
-		elif control.name == "guiTriggerStateOn":
-			control.x = 137
-			control.y = newheight - 267
-			control.width = newwidth - 142
 		elif control.name == "guiTriggerFrame":
 			control.x = 5
 			control.y = newheight - 289
-			control.width = newwidth - 10
+			control.width = 100
+		elif control.name == "guiTriggerState":
+			control.x = 106
+			control.y = newheight - 289
+			control.width = 100
+		elif control.name == "guiTriggerStateOn":
+			control.x = 207
+			control.y = newheight - 289
+			control.width = 34
 		elif control.name == "guiTriggerAdd":
 			control.x = 5
 			control.y = newheight - 311
@@ -2384,35 +2384,6 @@ class ActionControlsClass:
 			control.x = 5
 			control.y = newheight - 70
 			control.width = newwidth - 10
-		elif control.name == "guiGroundFrameSamples":
-			control.x = 5
-			control.y = newheight - 95
-			control.width = newwidth - 10
-		# Triggers
-		elif control.name == "guiTriggerMenu":
-			control.x = 5
-			control.y = newheight - 245
-			control.width = newwidth - 10
-		elif control.name == "guiTriggerState":
-			control.x = 5
-			control.y = newheight - 267
-			control.width = newwidth - 50
-		elif control.name == "guiTriggerStateOn":
-			control.x = 137
-			control.y = newheight - 267
-			control.width = newwidth - 142
-		elif control.name == "guiTriggerFrame":
-			control.x = 5
-			control.y = newheight - 289
-			control.width = newwidth - 10
-		elif control.name == "guiTriggerAdd":
-			control.x = 5
-			control.y = newheight - 311
-			control.width = (newwidth / 2) - 6
-		elif control.name == "guiTriggerDel":
-			control.x = (newwidth / 2)
-			control.y = newheight - 311
-			control.width = (newwidth / 2) - 6
 		# reference pose controls
 		elif control.name == "guiRefPoseMenu":
 			control.x = 5
