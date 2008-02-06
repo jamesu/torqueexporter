@@ -416,9 +416,8 @@ def validateIFL(seqName, seqPrefs):
 	# Check to see if there's a valid IFL animation
 	IFLIsValid = False
 	if seqPrefs['IFL']['Enabled']:
-		if seqPrefs['IFL']['Material'] == None or seqPrefs['IFL']['Material'] == "":
-			Torque_Util.dump_writeln("   Skipping IFL animation for sequence %s, because no IFL Material was specified for the animation. " % seqName)
-		else: IFLIsValid = True
+		if seqPrefs['IFL']['Material'] != None and seqPrefs['IFL']['Material'] != "":
+			IFLIsValid = True
 	return IFLIsValid
 
 def validateVisibility(seqName, seqPrefs):
@@ -502,3 +501,17 @@ def getSeqNumFrames(seqName, seqPrefs):
 		if IFLNumFrames > numFrames: numFrames = IFLNumFrames
 
 	return numFrames
+
+def recalcSeqDurationAndFPS(seqName, seqPrefs):
+	numFrames = getSeqNumFrames(seqName, seqPrefs)
+	if validateIFL(seqName, seqPrefs):
+		# set FPS to 30 and calc duration
+		seqPrefs['FPS'] = 30.0
+		seqPrefs['Duration'] = float(numFrames) / 30.0
+	# do we need to recalculate FPS, or Duration?
+	elif seqPrefs['DurationLocked']:
+		# recalc FPS
+		seqPrefs['FPS'] = float(numFrames) / seqPrefs['Duration']
+	elif seqPrefs['FPSLocked']:
+		# recalc duration
+		seqPrefs['Duration'] = float(numFrames) / seqPrefs['FPS']
