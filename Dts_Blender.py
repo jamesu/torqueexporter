@@ -2262,19 +2262,11 @@ class ActionControlsClass:
 		del self.guiRefresh
 		del self.guiSeqOpts
 		del self.guiOptsTitle
-		#del self.guiSampleFrames
-		#del self.guiGroundFrameSamples
-		#del self.guiPriority
+		del self.guiSampleFrames
+		del self.guiGroundFrameSamples
 		del self.guiRefPoseTitle
 		del self.guiRefPoseMenu
 		del self.guiRefPoseFrame
-		#del self.guiTriggerTitle
-		#del self.guiTriggerMenu
-		#del self.guiTriggerState
-		#del self.guiTriggerStateOn
-		#del self.guiTriggerFrame
-		#del self.guiTriggerAdd
-		#del self.guiTriggerDel
 
 	
 	def refreshAll(self):		
@@ -2782,8 +2774,8 @@ class IFLControlsClass:
 		i = len(guiFramesList.controls)
 		while len(guiFramesList.controls) < control.value:
 			newItemName = textPortion + self.numToPaddedString(startNum + i, numPadding)
-			guiFramesList.addControl(self.createFramesListItem(newItemName))
-			Prefs['Sequences'][seqName]['IFL']['IFLFrames'].append([newItemName,1])
+			guiFramesList.addControl(self.createFramesListItem(newItemName, self.guiNumFrames.value))
+			Prefs['Sequences'][seqName]['IFL']['IFLFrames'].append([newItemName, self.guiNumFrames.value])
 			i += 1
 
 	def handleEvent(self, control):
