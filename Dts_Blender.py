@@ -2262,7 +2262,6 @@ class ActionControlsClass:
 		del self.guiRefresh
 		del self.guiSeqOpts
 		del self.guiOptsTitle
-		del self.guiSampleFrames
 		del self.guiGroundFrameSamples
 		del self.guiRefPoseTitle
 		del self.guiRefPoseMenu
