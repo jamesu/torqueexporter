@@ -125,6 +125,7 @@ def pythonizeFileName(filename):
 #-------------------------------------------------------------------------------------------------
 	
 # todo - Can this function be removed?
+'''
 # Loads preferences from a text buffer (old version)
 def loadOldTextPrefs(text_doc):
 	global Prefs, dummySequence
@@ -298,6 +299,7 @@ def loadOldTextPrefs(text_doc):
 			Torque_Util.dump_writeln("   Warning : Unexpected token %s!" % cur_token)
 
 	return True
+'''
 
 def initPrefs():
 	Prefs = {}
@@ -416,7 +418,7 @@ def getSequenceKey(value):
 		# Create anything that cannot be copied (reference objects like lists),
 		# and set everything that needs a default
 		Prefs['Sequences'][value]['Triggers'] = [] # [State, Time, On]
-		Prefs['Sequences'][value]['Action'] = {'Enabled': False,'NumGroundFrames': 0,'BlendRefPoseAction': None,'BlendRefPoseFrame': 8,'InterpolateFrames': 0,'Blend': False}
+		Prefs['Sequences'][value]['Action'] = {'Enabled': False,'NumGroundFrames': 0,'BlendRefPoseAction': None,'BlendRefPoseFrame': 8,'FrameSamples': 0,'Blend': False}
 		Prefs['Sequences'][value]['IFL'] = { 'Enabled': False,'Material': None,'NumImages': 0,'TotalFrames': 0,'IFLFrames': []}
 		Prefs['Sequences'][value]['Vis'] = { 'Enabled': False,'StartFrame': 1,'EndFrame': 1, 'Tracks':{}}
 		Prefs['Sequences'][value]['Action']['enabled'] = True
@@ -431,7 +433,7 @@ def getSequenceKey(value):
 			Prefs['Sequences'][value]['Action']['Enabled'] = False
 			maxNumFrames = 0		
 
-		Prefs['Sequences'][value]['Action']['InterpolateFrames'] = maxNumFrames
+		Prefs['Sequences'][value]['Action']['FrameSamples'] = maxNumFrames
 		# default reference pose for blends is in the middle of the same action
 		Prefs['Sequences'][value]['Action']['BlendRefPoseAction'] = value			
 		Prefs['Sequences'][value]['Action']['BlendRefPoseFrame'] = maxNumFrames/2
@@ -464,7 +466,7 @@ def copySequenceKey(value):
 	retVal['Action']['NumGroundFrames'] = Prefs['Sequences'][value]['Action']['NumGroundFrames']
 	retVal['Action']['BlendRefPoseAction'] = Prefs['Sequences'][value]['Action']['BlendRefPoseAction']
 	retVal['Action']['BlendRefPoseFrame'] = Prefs['Sequences'][value]['Action']['BlendRefPoseFrame']
-	retVal['Action']['InterpolateFrames'] = Prefs['Sequences'][value]['Action']['InterpolateFrames']
+	retVal['Action']['FrameSamples'] = Prefs['Sequences'][value]['Action']['FrameSamples']
 	retVal['Action']['Blend'] = Prefs['Sequences'][value]['Action']['Blend']
 	
 
@@ -573,10 +575,20 @@ def updateOldPrefs():
 		except: 
 			actKey['Enabled'] = True
 
-		try: x = actKey['InterpolateFrames']
+		#try: x = actKey['InterpolateFrames']
+		#except:
+		#	actKey['InterpolateFrames'] = seq['InterpolateFrames']
+		#	del seq['InterpolateFrames']
+		try: x = actKey['FrameSamples']
 		except:
-			actKey['InterpolateFrames'] = seq['InterpolateFrames']
-			del seq['InterpolateFrames']
+			try: actKey['FrameSamples'] = actKey['InterpolateFrames']
+			except:
+				try: actKey['FrameSamples'] = seq['InterpolateFrames']
+				except: actKey['FrameSamples'] = getNumActFrames(seqName, seq)
+			try: del actKey['InterpolateFrames']
+			except:
+				try: del seq['InterpolateFrames']
+				except: pass
 		try: x = actKey['NumGroundFrames']
 		except:
 			actKey['NumGroundFrames'] = seq['NumGroundFrames']
@@ -1918,7 +1930,7 @@ class SeqCommonControlsClass:
 			seqName = self.guiSeqList.controls[self.guiSeqList.itemIndex].controls[0].label
 			seqPrefs = getSequenceKey(seqName)
 			if control.name == "guiSampleFrames":
-				seqPrefs['Action']['InterpolateFrames'] = control.value
+				seqPrefs['Action']['FrameSamples'] = control.value
 			elif control.name == "guiPriority":
 				seqPrefs['Priority'] = control.value
 			elif control.name == "guiSeqDurationLock":
@@ -2300,8 +2312,8 @@ class ActionControlsClass:
 				# Update gui control states
 				# make sure the user didn't delete the action containing the refrence pose
 				# out from underneath us while we weren't looking.
-				if seqPrefs['Action']['InterpolateFrames'] > maxNumFrames:
-					seqPrefs['Action']['InterpolateFrames'] = maxNumFrames
+				if seqPrefs['Action']['FrameSamples'] > maxNumFrames:
+					seqPrefs['Action']['FrameSamples'] = maxNumFrames
 				try: blah = Blender.Armature.NLA.GetActions()[seqPrefs['Action']['BlendRefPoseAction']]
 				except: seqPrefs['Action']['BlendRefPoseAction'] = seqName
 				self.guiSeqOpts.controlDict['guiRefPoseTitle'].label = "Ref pose for '%s'" % seqName
