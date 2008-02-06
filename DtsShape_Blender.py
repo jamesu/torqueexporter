@@ -1071,69 +1071,14 @@ class BlenderShape(DtsShape):
 	# Adds a generic sequence
 	def addSequence(self, seqName, context, seqPrefs, scene = None, action=None):
 		#print "Adding new sequence:",seqName
-		# Before exporting anything, determine what we actually have to export, and what's valid.
-				
-		# Check to see if there's a valid visibility animation
-		visIsValid = False
-		if seqPrefs['Vis']['Enabled']:
-			print "Vis is enabled..."
-			# do we have any tracks?
-			if len(seqPrefs['Vis']['Tracks']) > 0:
-				print "We have tracks, but are any of them enabled?"
-				# We have tracks, but are any of them enabled?
-				for trackName in seqPrefs['Vis']['Tracks'].keys():
-					track = seqPrefs['Vis']['Tracks'][trackName]
-					# is the current track enabled?
-					#print "is the current track enabled?"
-					if not track['hasVisTrack']: continue
-					#print "Has the user has defined an IPO Type?"
-					# Has the user has defined an IPO Type?
-					if track['IPOType'] == "" or track['IPOType'] == None: continue
-					#print "Has the user has defined an IPO channel?"
-					# Has the user has defined an IPO channel?
-					if track['IPOChannel'] == "" or track['IPOChannel'] == None: continue
-					#print "Has the user defined an IPO Object?"
-					# Has the user defined an IPO Object?
-					if track['IPOObject'] == "" or track['IPOObject'] == None: continue
-					# is the object valid?
-					try:
-						bObj = None
-						if track['IPOType'] == "Object":
-							bObj = Blender.Object.Get(track['IPOObject'])
-						elif track['IPOType'] == "Material":
-							bObj = Blender.Material.Get(track['IPOObject'])
-						bIpo = bObj.getIpo()
-						IPOCurveName = getBlenderIPOChannelConst(track['IPOType'], track['IPOChannel'])
-						IPOCurve = None
-						IPOCurveConst = bIpo.curveConsts[IPOCurveName]
-						IPOCurve = bIpo[IPOCurveConst]
-						if IPOCurve == None: raise TypeError
-					except: continue
-					# If we've gotten this far, the track is valid and exportable.
-					visIsValid = True
-					break
-			else:
-				# no tracks, so the vis sequence is invalid.
-				Torque_Util.dump_writeln("   Warning: Could not get IPO animation curve for visibility sequence: %s " % sequence.name)
-			if not visIsValid:
-				Torque_Util.dump_writeln("   Skipping Visibility animation for sequence %s, because no valid object visibility tracks exist for the animation. " % seqName)
+		Torque_Util.recalcSeqDurationAndFPS(seqName, seqPrefs)
 
+		numFrames = getSeqNumFrames(seqName, seqPrefs)
 
-		# Check to see if there's a valid IFL animation
-		IFLIsValid = False
-		if seqPrefs['IFL']['Enabled']:
-			if seqPrefs['IFL']['Material'] == None or seqPrefs['IFL']['Material'] == "":
-				Torque_Util.dump_writeln("   Skipping IFL animation for sequence %s, because no IFL Material was specified for the animation. " % seqName)
-			else: IFLIsValid = True
-		
-		# Check to see if there's a valid action animation
-		ActionIsValid = False
-		if seqPrefs['Action']['Enabled']:
-			if action == None:
-				Torque_Util.dump_writeln("   Skipping Action animation for sequence %s, because no Blender action could be found for the animation. " % seqName)
-			else:
-				ActionIsValid = True
-		
+		visIsValid = validateVisibility(seqName, seqPrefs)
+		IFLIsValid = validateIFL(seqName, seqPrefs)
+		ActionIsValid = validateAction(seqName, seqPrefs)
+
 		# Did we have any valid animations at all for the sequence?
 		if not (visIsValid or IFLIsValid or ActionIsValid):
 			Torque_Util.dump_writeln("   Skipping sequence %s, no animation types were valid for the sequence. " % seqName)
@@ -1160,71 +1105,23 @@ class BlenderShape(DtsShape):
 			sequence.matters_scale.append(False)
 			sequence.frames.append(0)
 		
-		sequence.fps = context.framesPerSec()
+		sequence.fps = seqPrefs['FPS']
 		if seqPrefs['Cyclic']: 
 			sequence.flags |= sequence.Cyclic
-		
-		# figure out what the largest number of frames is for the sequence.
-		actionNumFrames = 0
-		IFLNumFrames = 0
-		visNumFrames = 0
-		numFrames = 1
-		# calculate the duration of each animation type that's present.
-		IFLDuration = 0
-		visDuration = 0
-		actionDuration = 0		
-		
-		# use interpolate frames for actions only
-		
-		# find the max num frames of everything except IFL
-		if ActionIsValid:
-			#actionNumFrames = getNumFrames(action.getAllChannelIpos().values(), False)
-			#if sequence.fps > 0: actionDuration = actionNumFrames / sequence.fps
-			#else: actionDuration = 1
-			#if actionNumFrames > numFrames: numFrames = actionNumFrames
-			actionNumFrames = seqPrefs['Action']['InterpolateFrames']
-			if sequence.fps > 0: actionDuration = getNumFrames(action.getAllChannelIpos().values(), False) / sequence.fps
-			else: actionDuration = 1
-			if actionNumFrames > numFrames: numFrames = actionNumFrames
 
-		if visIsValid:
-			visNumFrames = (seqPrefs['Vis']['EndFrame'] - seqPrefs['Vis']['StartFrame'])+1
-			if visNumFrames > numFrames: numFrames = visNumFrames
-		
-		#print "numFrames =", numFrames
-		sequence.numKeyFrames = numFrames
-		#print "sequence.fps =", sequence.fps
-
-		if sequence.fps > 0:
-			sequence.duration = float(numFrames) / float(sequence.fps)
-		else: sequence.duration = 1
-		
-		# IFL frames are in 1/30 sec increments (hardcoded in TGE), so we need
-		# to compute a separate duration for them and see if it's longer than
-		# the overall sequence duration.
-		if IFLIsValid:
-			#IFLNumFrames = len(seqPrefs['IFL']['IFLFrames'])
-			for frame in seqPrefs['IFL']['IFLFrames']:
-				IFLNumFrames += frame[1]
-			#if IFLNumFrames > numFrames: numFrames = IFLNumFrames
-			if (float(IFLNumFrames) / 30.0) > sequence.duration:
-				sequence.duration = (float(IFLNumFrames) / 30.0)
-
-		#print "sequence.duration = ", sequence.duration
-		
+		sequence.duration = seqPrefs['Duration']
+	
+		print "\n\n********** Sequence =", sequence, " *********\n\n"
+	
 		if ActionIsValid:
 			#print "   Adding action data for", seqName
 			sequence = self.addAction(sequence, action, numFrames, scene, context, seqPrefs)
 		if visIsValid:
 			#print "   Adding visibility data for", seqName
-			#print "seqence = ", sequence
 			sequence = self.addSequenceVisibility( sequence, numFrames, seqPrefs, int(seqPrefs['Vis']['StartFrame']), int(seqPrefs['Vis']['EndFrame']) )
 		if IFLIsValid:
 			#print "   Adding IFL data for", seqName
-			#sequence.numKeyFrames = 15
-			if sequence.duration == 0:
-				sequence.duration = sequence.numKeyFrames * (1.0 / sequence.fps)
-			sequence = self.addSequenceIFL(sequence, numFrames, seqPrefs)
+			sequence = self.addSequenceIFL(sequence, getNumIFLFrames(seqName, seqPrefs), seqPrefs)
 			
 		self.sequences.append(sequence)
 		
@@ -1452,10 +1349,10 @@ class BlenderShape(DtsShape):
 		
 		# if nothing was actually animated abandon exporting the action.
 		if not (sequence.has_loc or sequence.has_rot or sequence.has_scale):
-			Torque_Util.dump_writeln("Warning: Action has no keyframes, aborting export for this sequence.")
-			del sequence.frames
-			del sequence
-			return None
+			Torque_Util.dump_writeln("Warning: Action has no keyframes, aborting export for this animation.")
+			#del sequence.frames
+			#del sequence
+			#return None
 
 		# set the aligned scale flag if we have scale.
 		if sequence.has_scale: sequence.flags |= Sequence.AlignedScale
