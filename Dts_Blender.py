@@ -2318,11 +2318,13 @@ class ActionControlsClass:
 			seqPrefs['Action']['EndFrame'] = DtsShape_Blender.getNumFrames(action.getAllChannelIpos().values(), False)
 			self.guiStartFrame.value = seqPrefs['Action']['StartFrame']
 			self.guiEndFrame.value = seqPrefs['Action']['EndFrame']
+			self.guiFrameSamples.max = seqPrefs['Action']['EndFrame'] - seqPrefs['Action']['StartFrame']
 		else:
 			seqPrefs['Action']['StartFrame'] = self.guiStartFrame.value
 			self.guiEndFrame.min = seqPrefs['Action']['StartFrame']
 			seqPrefs['Action']['EndFrame'] = self.guiEndFrame.value
 			self.guiStartFrame.max = seqPrefs['Action']['EndFrame']
+			self.guiFrameSamples.max = seqPrefs['Action']['EndFrame'] - seqPrefs['Action']['StartFrame']
 
 	def handleEvent(self, control):
 		global guiSeqOpts, guiSeqList
@@ -2343,7 +2345,7 @@ class ActionControlsClass:
 				
 				try:
 					action = Blender.Armature.NLA.GetActions()[seqName]
-					maxNumFrames = getNumActFrames(seqName, seqPrefs)
+					maxNumFrames = seqPrefs['Action']['EndFrame'] - seqPrefs['Action']['StartFrame']
 				except:
 					maxNumFrames = 0
 
