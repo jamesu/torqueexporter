@@ -1678,6 +1678,8 @@ class SeqCommonControlsClass:
 		# initialize GUI controls
 		self.guiSeqList = Common_Gui.ListContainer("guiSeqList", "sequence.list", self.handleListEvent, self.resize)
 		self.guiSeqListTitle = Common_Gui.SimpleText("guiSeqListTitle", "All Sequences:", None, self.resize)
+		self.guiToggle = Common_Gui.ToggleButton("guiToggle", "Toggle All", "Toggle export of all sequences", 6, self.handleEvent, self.resize)
+		self.guiRefresh = Common_Gui.BasicButton("guiRefresh", "Refresh", "Refresh list of sequences", 7, self.handleEvent, self.resize)
 		self.guiSeqOptsContainerTitle = Common_Gui.SimpleText("guiSeqOptsContainerTitle", "Sequence: None Selected", None, self.resize)
 		self.guiSeqOptsContainer = Common_Gui.BasicContainer("guiSeqOptsContainer", "guiSeqOptsContainer", None, self.resize)
 		self.guiSeqFramesLabel =  Common_Gui.SimpleText("guiSeqFramesLabel", "Highest Frame Count:  ", None, self.resize)
@@ -1693,17 +1695,16 @@ class SeqCommonControlsClass:
 		self.guiTriggerFrame = Common_Gui.NumberPicker("guiTriggerFrame", "Frame", "Frame to activate trigger on", 17, self.handleTriggersEvent, self.resize)
 		self.guiTriggerAdd = Common_Gui.BasicButton("guiTriggerAdd", "Add", "Add new trigger", 18, self.handleTriggersEvent, self.resize)
 		self.guiTriggerDel = Common_Gui.BasicButton("guiTriggerDel", "Del", "Delete currently selected trigger", 19, self.handleTriggersEvent, self.resize)
+
 		# set initial states
+		self.guiToggle.state = False
 		self.guiSeqOptsContainer.enabled = False
 		self.guiSeqOptsContainer.fade_mode = 5
 		self.guiSeqOptsContainer.borderColor = None
 		self.guiSeqList.fade_mode = 0
-		
-		
 		self.guiSeqDuration.min = 0.01
 		self.guiSeqDuration.max = 3600.00
 		self.guiSeqFPS.min = 0.001
-		
 		self.guiPriority.min = 0
 		self.guiPriority.max = 64 # this seems resonable
 		self.guiTriggerState.min, self.guiTriggerState.max = 1, 32
@@ -1713,6 +1714,8 @@ class SeqCommonControlsClass:
 		# add controls to containers
 		guiSeqCommonSubtab.addControl(self.guiSeqList)
 		guiSeqCommonSubtab.addControl(self.guiSeqListTitle)
+		guiSeqCommonSubtab.addControl(self.guiToggle)
+		guiSeqCommonSubtab.addControl(self.guiRefresh)
 		guiSeqCommonSubtab.addControl(self.guiSeqOptsContainerTitle)
 		guiSeqCommonSubtab.addControl(self.guiSeqOptsContainer)
 		self.guiSeqOptsContainer.addControl(self.guiSeqFramesLabel)
@@ -1720,8 +1723,6 @@ class SeqCommonControlsClass:
 		self.guiSeqOptsContainer.addControl(self.guiSeqDurationLock)
 		self.guiSeqOptsContainer.addControl(self.guiSeqFPSLock)
 		self.guiSeqOptsContainer.addControl(self.guiSeqFPS)
-		
-
 		self.guiSeqOptsContainer.addControl(self.guiTriggerTitle) # 5
 		self.guiSeqOptsContainer.addControl(self.guiTriggerMenu) # 6
 		self.guiSeqOptsContainer.addControl(self.guiTriggerState) # 7
@@ -1758,7 +1759,15 @@ class SeqCommonControlsClass:
 
 
 	def handleEvent(self, control):
-		if self.guiSeqList.itemIndex != -1:
+		if control.name == "guiToggle":
+			for child in self.guiSeqList.controls:
+				child.controls[1].state = control.state
+				getSequenceKey(child.controls[0].label)['NoExport'] = not control.state
+		elif control.name == "guiRefresh":
+			self.clearSequenceList()
+			self.populateSequenceList()
+
+		elif self.guiSeqList.itemIndex != -1:
 			seqName = self.guiSeqList.controls[self.guiSeqList.itemIndex].controls[0].label
 			seqPrefs = getSequenceKey(seqName)
 			if control.name == "guiSampleFrames":
@@ -1878,7 +1887,6 @@ class SeqCommonControlsClass:
 			control.x = newwidth - 68
 			control.y = newheight - 120
 			control.width = 60
-
 		# sequence priority
 		elif control.name == "guiPriority":
 			control.x = 5
@@ -1909,6 +1917,15 @@ class SeqCommonControlsClass:
 			control.x = (newwidth / 2)
 			control.y = newheight - 311
 			control.width = (newwidth / 2) - 6
+		# Sequence list buttons
+		elif control.name == "guiToggle":
+			control.x = 10
+			control.y = 5
+			control.width = 100
+		elif control.name == "guiRefresh":
+			control.x = 112
+			control.y = 5
+			control.width = 100
 
 	
 	def refreshAll(self):		
@@ -2099,7 +2116,7 @@ class ActionControlsClass:
 		self.guiSeqOpts.addControl(self.guiRefPoseFrame) # 14
 
 		# populate actions list
-		self.populateSequenceActionList()
+		self.populateSequenceList()
 
 
 		
@@ -2130,7 +2147,7 @@ class ActionControlsClass:
 	
 	def refreshAll(self):		
 		self.clearSequenceList()
-		self.populateSequenceActionList()
+		self.populateSequenceList()
 		pass
 			
 	# This method validates the current control states, adjusts preference values, and generally keeps everything consistent
@@ -2172,7 +2189,7 @@ class ActionControlsClass:
 				getSequenceKey(child.controls[0].label)['NoExport'] = not control.state
 		elif control.name == "guiRefresh":
 			self.clearSequenceList()
-			self.populateSequenceActionList()
+			self.populateSequenceList()
 		else:
 			if self.guiSeqList.itemIndex != -1:
 				seqName = self.guiSeqList.controls[self.guiSeqList.itemIndex].controls[0].label
@@ -2341,7 +2358,7 @@ class ActionControlsClass:
 			control.width = 100
 
 	
-	def populateSequenceActionList(self):
+	def populateSequenceList(self):
 		actions = Armature.NLA.GetActions()
 		keys = actions.keys()
 		keys.sort()
