@@ -2080,6 +2080,8 @@ class ActionControlsClass:
 		self.guiAutoSamples = Common_Gui.ToggleButton("guiAutoSamples", "Use all frames in range", "When turned on, every frame in the defined range is exported.", 25, self.handleEvent, self.resize)
 		self.guiFrameSamples = Common_Gui.NumberPicker("guiFrameSamples", "Frame Samples", "Number of frames to export", 28, self.handleEvent, self.resize)
 		self.guiGroundFrameSamples = Common_Gui.NumberPicker("guiGroundFrameSamples", "Ground Frames", "Amount of ground frames to export", 27, self.handleEvent, self.resize)
+		self.guiBlendControlsBox = Common_Gui.BasicFrame("guiBlendControlsBox", None, None, None, None, self.resize)
+		self.guiBlendSequence = Common_Gui.ToggleButton("guiBlendSequence", "Blend animation", "Export action as a Torque blend sequence", 8, self.handleEvent, self.resize)
 		self.guiRefPoseTitle = Common_Gui.SimpleText("guiRefPoseTitle", "Ref Pose for ", None, self.resize)
 		self.guiRefPoseMenu = Common_Gui.ComboBox("guiRefPoseMenu", "Use Action", "Select an action containing your refernce pose for this blend.", 20, self.handleEvent, self.resize)
 		self.guiRefPoseFrame = Common_Gui.NumberPicker("guiRefPoseFrame", "Frame", "Frame to use for reference pose", 21, self.handleEvent, self.resize)
@@ -2087,6 +2089,7 @@ class ActionControlsClass:
 		# set initial states
 		self.guiSeqList.fade_mode = 0
 		self.guiToggle.state = False
+		self.guiBlendSequence.state = False
 		self.guiSeqOpts.enabled = False
 		self.guiSeqOpts.fade_mode = 5
 		self.guiSeqOpts.borderColor = None
@@ -2111,6 +2114,8 @@ class ActionControlsClass:
 		self.guiSeqOpts.addControl(self.guiAutoSamples)
 		self.guiSeqOpts.addControl(self.guiFrameSamples)
 		self.guiSeqOpts.addControl(self.guiGroundFrameSamples) # 2
+		self.guiSeqOpts.addControl(self.guiBlendControlsBox)
+		self.guiSeqOpts.addControl(self.guiBlendSequence)
 		self.guiSeqOpts.addControl(self.guiRefPoseTitle) # 12
 		self.guiSeqOpts.addControl(self.guiRefPoseMenu) # 13
 		self.guiSeqOpts.addControl(self.guiRefPoseFrame) # 14
@@ -2140,6 +2145,8 @@ class ActionControlsClass:
 		del self.guiAutoSamples
 		del self.guiFrameSamples
 		del self.guiGroundFrameSamples
+		del self.guiBlendControlsBox
+		del self.guiBlendSequence
 		del self.guiRefPoseTitle
 		del self.guiRefPoseMenu
 		del self.guiRefPoseFrame
@@ -2195,7 +2202,19 @@ class ActionControlsClass:
 				seqName = self.guiSeqList.controls[self.guiSeqList.itemIndex].controls[0].label
 				seqPrefs = getSequenceKey(seqName)
 				# blend ref pose selection
-				if control.name == "guiRefPoseMenu":
+				if control.name == "guiBlendSequence":
+					seqPrefs['Action']['Blend'] = control.state
+					# if blend is true, show the ref pose controls
+					if seqPrefs['Action']['Blend'] == True:
+						self.guiSeqOpts.controlDict['guiRefPoseTitle'].visible = True
+						self.guiSeqOpts.controlDict['guiRefPoseMenu'].visible = True
+						self.guiSeqOpts.controlDict['guiRefPoseFrame'].visible = True
+					else:
+						self.guiSeqOpts.controlDict['guiRefPoseTitle'].visible = False
+						self.guiSeqOpts.controlDict['guiRefPoseMenu'].visible = False
+						self.guiSeqOpts.controlDict['guiRefPoseFrame'].visible = False
+
+				elif control.name == "guiRefPoseMenu":
 					seqPrefs['Action']['BlendRefPoseAction'] = control.items[control.itemIndex]
 					seqPrefs['Action']['BlendRefPoseFrame'] = 1
 					self.guiSeqOpts.controlDict['guiRefPoseFrame'].value = seqPrefs['Action']['BlendRefPoseFrame']
@@ -2279,8 +2298,8 @@ class ActionControlsClass:
 				self.guiFrameSamples.enabled = True
 
 			# show/hide ref pose stuff.
-			if seqPrefs['Action']['Blend'] == True:
-
+			self.guiBlendSequence.state = seqPrefs['Action']['Blend']
+			if seqPrefs['Action']['Blend'] == True:				
 				self.guiSeqOpts.controlDict['guiRefPoseTitle'].visible = True
 				self.guiSeqOpts.controlDict['guiRefPoseMenu'].visible = True
 				self.guiSeqOpts.controlDict['guiRefPoseFrame'].visible = True
@@ -2334,19 +2353,29 @@ class ActionControlsClass:
 			control.width = newwidth - 10
 		elif control.name == "guiGroundFrameSamples":
 			control.x = 5
-			control.y = newheight - 180
+			control.y = newheight - 197
 			control.width = newwidth - 10
+		elif control.name == "guiBlendSequence":
+			control.x = 10
+			control.width = newwidth - 20
+			control.y = newheight - 246
+		elif control.name == "guiBlendControlsBox":
+			control.x = 5
+			control.y = newheight - 323
+			control.width = newwidth - 10
+			control.height = 89
+
 		elif control.name == "guiRefPoseTitle":
-			control.x = 5
-			control.y = newheight - 206
+			control.x = 8
+			control.y = newheight - 263
 		elif control.name == "guiRefPoseMenu":
-			control.x = 5
-			control.y = newheight - 236
-			control.width = (newwidth) - 10
+			control.x = 8
+			control.y = newheight - 293
+			control.width = (newwidth) - 16
 		elif control.name == "guiRefPoseFrame":
-			control.x = 5
-			control.y = newheight - 261
-			control.width = (newwidth) - 10
+			control.x = 8
+			control.y = newheight - 318
+			control.width = (newwidth) - 16
 		# Sequence list buttons
 		elif control.name == "guiToggle":
 			control.x = 10
@@ -2369,8 +2398,8 @@ class ActionControlsClass:
 		for key in keys:
 			# skip the fake action (hack for blender 2.41 bug)
 			if key == "DTSEXPFAKEACT": continue		
-			self.guiSeqList.addControl(self.createSequenceListitem(key, startEvent))
-			startEvent += 4
+			self.guiSeqList.addControl(self.createSequenceListItem(key, startEvent))
+			startEvent += 3
 			# add any new animations to the ref pose combo box
 			if not (key in self.guiSeqOpts.controlDict['guiRefPoseMenu'].items):
 				self.guiSeqOpts.controlDict['guiRefPoseMenu'].items.append(key)
@@ -2392,10 +2421,10 @@ class ActionControlsClass:
 		if control.evt == 40:
 			calcIdx = 0
 		else:
-			calcIdx = (control.evt - 40) / 4
+			calcIdx = (control.evt - 40) / 3
 
 		seqName = self.guiSeqList.controls[calcIdx].controls[0].label
-		realItem = control.evt - 40 - (calcIdx*4)
+		realItem = control.evt - 40 - (calcIdx*3)
 		seqPrefs = getSequenceKey(seqName)
 
 		if realItem == 0:
@@ -2403,20 +2432,9 @@ class ActionControlsClass:
 		elif realItem == 1:
 			seqPrefs['Dsq'] = control.state
 		elif realItem == 2:
-			seqPrefs['Action']['Blend'] = control.state
-			# if blend is true, show the ref pose controls
-			if seqPrefs['Action']['Blend'] == True:
-				self.guiSeqOpts.controlDict['guiRefPoseTitle'].visible = True
-				self.guiSeqOpts.controlDict['guiRefPoseMenu'].visible = True
-				self.guiSeqOpts.controlDict['guiRefPoseFrame'].visible = True
-			else:
-				self.guiSeqOpts.controlDict['guiRefPoseTitle'].visible = False
-				self.guiSeqOpts.controlDict['guiRefPoseMenu'].visible = False
-				self.guiSeqOpts.controlDict['guiRefPoseFrame'].visible = False
-		elif realItem == 3:
 			seqPrefs['Cyclic'] = control.state
 
-	def createSequenceListitem(self, seq_name, startEvent):
+	def createSequenceListItem(self, seq_name, startEvent):
 		seqPrefs = getSequenceKey(seq_name)
 		seqPrefs['Action']['Enabled'] = True
 		# Note on positions:
@@ -2429,18 +2447,14 @@ class ActionControlsClass:
 		guiName = Common_Gui.SimpleText("", seq_name, None, None)
 		guiName.x, guiName.y = 5, 5
 		guiExport = Common_Gui.ToggleButton("guiExport", "Export", "Export Sequence", startEvent, self.handleListItemEvent, None)
-		guiExport.x, guiExport.y = 70, 5
+		guiExport.x, guiExport.y = 122, 5
 		guiExport.width, guiExport.height = 50, 15
 		guiExport.state = not seqPrefs['NoExport']
 		guiDSQ = Common_Gui.ToggleButton("guiDSQ", "Dsq", "Export Sequence as DSQ", startEvent+1, self.handleListItemEvent, None)
-		guiDSQ.x, guiDSQ.y = 122, 5
+		guiDSQ.x, guiDSQ.y = 174, 5
 		guiDSQ.width, guiDSQ.height = 50, 15
 		guiDSQ.state = seqPrefs['Dsq']
-		guiBlend = Common_Gui.ToggleButton("guiBlend", "Blend", "Export Sequence as Blend", startEvent+2, self.handleListItemEvent, None)
-		guiBlend.x, guiBlend.y = 174, 5
-		guiBlend.width, guiBlend.height = 50, 15
-		guiBlend.state = seqPrefs['Action']['Blend']
-		guiCyclic = Common_Gui.ToggleButton("guiCyclic", "Cyclic", "Export Sequence as Cyclic", startEvent+3, self.handleListItemEvent, None)
+		guiCyclic = Common_Gui.ToggleButton("guiCyclic", "Cyclic", "Export Sequence as Cyclic", startEvent+2, self.handleListItemEvent, None)
 		guiCyclic.x, guiCyclic.y = 226, 5
 		guiCyclic.width, guiCyclic.height = 50, 15
 		guiCyclic.state = seqPrefs['Cyclic']
@@ -2449,7 +2463,6 @@ class ActionControlsClass:
 		guiContainer.addControl(guiName)
 		guiContainer.addControl(guiExport)
 		guiContainer.addControl(guiDSQ)
-		guiContainer.addControl(guiBlend)
 		guiContainer.addControl(guiCyclic)
 
 		return guiContainer
