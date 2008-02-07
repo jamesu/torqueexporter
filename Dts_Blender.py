@@ -1695,6 +1695,23 @@ class SeqCommonControlsClass:
 		self.guiTriggerFrame = Common_Gui.NumberPicker("guiTriggerFrame", "Frame", "Frame to activate trigger on", 17, self.handleTriggersEvent, self.resize)
 		self.guiTriggerAdd = Common_Gui.BasicButton("guiTriggerAdd", "Add", "Add new trigger", 18, self.handleTriggersEvent, self.resize)
 		self.guiTriggerDel = Common_Gui.BasicButton("guiTriggerDel", "Del", "Delete currently selected trigger", 19, self.handleTriggersEvent, self.resize)
+		
+		self.guiSeqGraph = Common_Gui.BarGraph("guiSeqGraph", "", 5, "Graph of animation frames for sequence", 20, self.handleTriggersEvent, self.resize)
+		self.guiSeqGraph.setBarText(4, "Act Frames:")
+		self.guiSeqGraph.setBarText(3, "IFL Frames:")
+		self.guiSeqGraph.setBarText(2, "Vis Frames:")
+		self.guiSeqGraph.setBarText(1, "Tex Frames:")
+		self.guiSeqGraph.setBarText(0, "Mor Frames:")
+		self.guiSeqGraph.setBarValue(4, 0.9)
+		self.guiSeqGraph.setBarValue(3, 0.5)
+		self.guiSeqGraph.setBarValue(2, 0.75)
+		self.guiSeqGraph.setBarValue(1, 0.2)
+		self.guiSeqGraph.setBarValue(0, 0.8)
+		self.guiSeqGraph.setBarColor(4, (0.5, 1.0, 0.5))
+		self.guiSeqGraph.setBarColor(3, (0.5, 1.0, 0.5))
+		self.guiSeqGraph.setBarColor(2, (0.5, 1.0, 0.5))
+		self.guiSeqGraph.setBarColor(1, (0.5, 1.0, 0.5))
+		self.guiSeqGraph.setBarColor(0, (0.5, 1.0, 0.5))
 
 		# set initial states
 		self.guiToggle.state = False
@@ -1731,6 +1748,7 @@ class SeqCommonControlsClass:
 		self.guiSeqOptsContainer.addControl(self.guiTriggerAdd) # 10
 		self.guiSeqOptsContainer.addControl(self.guiTriggerDel) # 11
 		self.guiSeqOptsContainer.addControl(self.guiPriority) # 15
+		self.guiSeqOptsContainer.addControl(self.guiSeqGraph)
 		
 		
 		# set initial states
@@ -1845,10 +1863,12 @@ class SeqCommonControlsClass:
 
 			self.guiSeqOptsContainer.controlDict['guiTriggerFrame'].max = maxNumFrames
 			self.guiSequenceUpdateTriggers(seqPrefs['Triggers'], 0)
+			self.refreshBarChart(seqName, seqPrefs)
 
 		else:
 			self.guiSeqOptsContainer.enabled = False
 			self.guiSeqOptsContainerTitle.label = "Sequence: None Selected"
+			self.clearBarChart()
 
 		
 	def resize(self, control, newwidth, newheight):
@@ -1862,9 +1882,6 @@ class SeqCommonControlsClass:
 			control.x, control.y, control.height, control.width = 241,0, 334,249
 		elif control.name == "guiSeqOptsContainerTitle":
 			control.x, control.y, control.height, control.width = 250,310, 20,82
-		elif control.name == "guiTriggerTitle":
-			control.x = 5
-			control.y = newheight - 237
 		# Sequence options
 		elif control.name == "guiSeqFramesLabel":
 			control.x = 5
@@ -1886,35 +1903,42 @@ class SeqCommonControlsClass:
 			control.x = newwidth - 68
 			control.y = newheight - 120
 			control.width = 60
-		# sequence priority
 		elif control.name == "guiPriority":
 			control.x = 5
-			control.y = newheight - 170
+			control.y = newheight - 145
 			control.width = newwidth - 10
+		elif control.name == "guiSeqGraph":
+			control.x = 5
+			control.y = 95
+			control.height = 85
+			control.width = newwidth - 10		
 		# Triggers
+		elif control.name == "guiTriggerTitle":
+			control.x = 5
+			control.y = 76
 		elif control.name == "guiTriggerMenu":
 			control.x = 5
-			control.y = newheight - 267
+			control.y = 49
 			control.width = newwidth - 10
 		elif control.name == "guiTriggerFrame":
 			control.x = 5
-			control.y = newheight - 289
+			control.y = 27
 			control.width = 100
 		elif control.name == "guiTriggerState":
 			control.x = 106
-			control.y = newheight - 289
+			control.y = 27
 			control.width = 100
 		elif control.name == "guiTriggerStateOn":
 			control.x = 207
-			control.y = newheight - 289
+			control.y = 27
 			control.width = 34
 		elif control.name == "guiTriggerAdd":
 			control.x = 5
-			control.y = newheight - 311
+			control.y = 5
 			control.width = (newwidth / 2) - 6
 		elif control.name == "guiTriggerDel":
 			control.x = (newwidth / 2)
-			control.y = newheight - 311
+			control.y = 5
 			control.width = (newwidth / 2) - 6
 		# Sequence list buttons
 		elif control.name == "guiToggle":
@@ -1929,6 +1953,65 @@ class SeqCommonControlsClass:
 	
 	def refreshAll(self):		
 		self.populateSequenceList()
+
+	def refreshBarChart(self, seqName, seqPrefs):
+		maxFrames = getSeqNumFrames(seqName, seqPrefs)
+		if maxFrames == 0: maxFrames = 0.0001 # heh.
+		actFrames = getNumActFrames(seqName, seqPrefs)
+		IFLFrames = getNumIFLFrames(seqName, seqPrefs)
+		visFrames = getNumVisFrames(seqName, seqPrefs)
+		
+		if validateAction(seqName, seqPrefs):
+			self.guiSeqGraph.setBarText(4, "Act Frames:%i" % getNumActFrames(seqName, seqPrefs))
+			self.guiSeqGraph.setBarValue(4, float(actFrames)/float(maxFrames))
+		else:
+			self.guiSeqGraph.setBarText(4, "Act Frames: None")
+			self.guiSeqGraph.setBarValue(4, 0)
+		
+		if validateIFL(seqName, seqPrefs):
+			self.guiSeqGraph.setBarText(3, "IFL Frames:%i" % getNumIFLFrames(seqName, seqPrefs))
+			self.guiSeqGraph.setBarValue(3, float(IFLFrames)/float(maxFrames))
+		else:
+			self.guiSeqGraph.setBarText(3, "IFL Frames: None")
+			self.guiSeqGraph.setBarValue(3, 0)
+		
+		if validateVisibility(seqName, seqPrefs):
+			self.guiSeqGraph.setBarText(2, "Vis Frames:%i" % getNumVisFrames(seqName, seqPrefs))
+			self.guiSeqGraph.setBarValue(2, float(visFrames)/float(maxFrames))
+		else:
+			self.guiSeqGraph.setBarText(2, "Vis Frames: None")
+			self.guiSeqGraph.setBarValue(2, 0)
+			
+		self.guiSeqGraph.setBarText(1, "Tex Frames: N/A")
+		self.guiSeqGraph.setBarText(0, "Mor Frames: N/A")
+		self.guiSeqGraph.setBarValue(1, 0.0)
+		self.guiSeqGraph.setBarValue(0, 0.0)
+
+		if actFrames == maxFrames: self.guiSeqGraph.setBarColor(4, (0.4, 1.0, 0.4))
+		else: self.guiSeqGraph.setBarColor(4, (1.0, 1.0, 0.0))
+		if IFLFrames == maxFrames: self.guiSeqGraph.setBarColor(3, (0.4, 1.0, 0.4))
+		else: self.guiSeqGraph.setBarColor(3, (1.0, 1.0, 0.0))
+		if visFrames == maxFrames: self.guiSeqGraph.setBarColor(2, (0.4, 1.0, 0.4))
+		else: self.guiSeqGraph.setBarColor(2, (1.0, 1.0, 0.0))
+		self.guiSeqGraph.setBarColor(1, (0.0, 0.0, 0.0))
+		self.guiSeqGraph.setBarColor(0, (0.0, 0.0, 0.0))
+
+	def clearBarChart(self):	
+		self.guiSeqGraph.setBarText(4, "Act Frames:")
+		self.guiSeqGraph.setBarText(3, "IFL Frames:")
+		self.guiSeqGraph.setBarText(2, "Vis Frames:")
+		self.guiSeqGraph.setBarText(1, "Tex Frames:")
+		self.guiSeqGraph.setBarText(0, "Mor Frames:")
+		self.guiSeqGraph.setBarValue(4, 0.0)
+		self.guiSeqGraph.setBarValue(3, 0.0)
+		self.guiSeqGraph.setBarValue(2, 0.0)
+		self.guiSeqGraph.setBarValue(1, 0.0)
+		self.guiSeqGraph.setBarValue(0, 0.0)
+		self.guiSeqGraph.setBarColor(4, (0.4, 1.0, 0.4))
+		self.guiSeqGraph.setBarColor(3, (0.4, 1.0, 0.4))
+		self.guiSeqGraph.setBarColor(2, (0.4, 1.0, 0.4))
+		self.guiSeqGraph.setBarColor(1, (0.4, 1.0, 0.4))
+		self.guiSeqGraph.setBarColor(0, (0.4, 1.0, 0.4))
 
 
 	def guiSequenceUpdateTriggers(self, triggerList, itemIndex):
