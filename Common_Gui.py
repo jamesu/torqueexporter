@@ -197,6 +197,105 @@ class BasicFrame(BasicControl):
 		
 		BGL.glEnd()
 
+class BarGraph(BasicControl):
+	def __init__(self, name=None, text=None, numBars=1, tooltip=None, evt=None, callback=None, resize_callback=None):
+		BasicControl.__init__(self, name, text, tooltip, evt, callback, resize_callback)
+		self.width = 100
+		self.height = 20
+		self.borderColor = [0.0,0.0,0.0,0.0]
+		self.numBars = numBars
+		self.barText = []
+		self.barVals = []
+		self.barColors = []
+		for i in range(0, numBars):
+			self.barText.append("")
+			self.barVals.append(1.0)
+			self.barColors.append((0.0,0.0,0.0))
+		
+	def setBarText(self, barNum, text):
+		self.barText[barNum] = text
+
+	# Input values must be normalized (between 0 and 1)
+	def setBarValue(self, barNum, value):
+		self.barVals[barNum] = value
+		
+	def setBarColor(self, barNum, color=(0.0,0.0,0.0)):
+		self.barColors[barNum] = color
+
+	def onDraw(self, offset):
+		real_x = offset[0] + self.x
+		real_y = offset[1] + self.y
+		
+		# draw colored bars
+		barHeight = self.height / self.numBars		
+		for i in range(0, self.numBars):
+			r, g, b = self.barColors[i]
+			BGL.glColor3f(r, g, b)
+			print "drawing color bar (%i)..." % i
+			barWidth = self.barVals[i] * self.width
+			barLeft = real_x
+			barRight = barWidth + real_x
+			barTop = real_y + (i * barHeight) + barHeight
+			barBottom = real_y + (i * barHeight)
+			BGL.glRecti(barLeft, barBottom, barRight, barTop)
+
+		# Draw border
+		BGL.glBegin(BGL.GL_LINES)
+		BGL.glColor4f(self.borderColor[0],self.borderColor[1],self.borderColor[2], self.borderColor[3])
+		# Left up
+		BGL.glVertex2i(real_x,real_y)
+		BGL.glVertex2i(real_x,real_y+self.height)
+		# Top right
+		BGL.glVertex2i(real_x,real_y+self.height)
+		BGL.glVertex2i(real_x+self.width-1,real_y+self.height)
+		# Right down
+		BGL.glVertex2i(real_x+self.width,real_y+self.height)
+		BGL.glVertex2i(real_x+self.width,real_y)
+		# Bottom left
+		BGL.glVertex2i(real_x+self.width,real_y)
+		BGL.glVertex2i(real_x,real_y)
+
+		# Draw bar outlines from bottom to top
+		barHeight = self.height / self.numBars		
+		for i in range(0, self.numBars):
+			print "drawing bar (%i)..." % i
+			barWidth = self.barVals[i] * self.width
+			barLeft = real_x
+			barRight = barWidth + real_x
+			barTop = real_y + (i * barHeight) + barHeight
+			barBottom = real_y + (i * barHeight)
+			
+			BGL.glBegin(BGL.GL_LINES)
+			BGL.glColor4f(self.borderColor[0],self.borderColor[1],self.borderColor[2], self.borderColor[3])
+			# Left up
+			BGL.glVertex2i(barLeft,barBottom)
+			BGL.glVertex2i(barLeft,barTop)
+			# Top right
+			BGL.glVertex2i(barLeft,barTop)
+			BGL.glVertex2i(barRight,barTop)
+			# Right down
+			BGL.glVertex2i(barRight,barTop)
+			BGL.glVertex2i(barRight,barBottom)
+			# Bottom left
+			BGL.glVertex2i(barRight,barBottom)
+			BGL.glVertex2i(barLeft,barBottom)
+		
+		BGL.glColor3f(0.0, 0.0, 0.0)
+		BGL.glEnd()
+		
+		
+		# Draw bar text
+		barHeight = self.height / self.numBars		
+		for i in range(0, self.numBars):
+			text_x = real_x + 5
+			text_y = real_y + (i * barHeight) + 4
+			BGL.glRasterPos2i(text_x, text_y)
+			print "Drawing text for bar %i: %s" % (i, self.barText[i])
+			width = Draw.Text(self.barText[i], 'normal')
+
+		
+		
+
 
 class BasicButton(BasicControl):
 	def __init__(self, name=None, text=None, tooltip=None, evt=None, callback=None, resize_callback=None):
