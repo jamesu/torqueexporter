@@ -122,184 +122,6 @@ def pythonizeFileName(filename):
 '''
 	Preferences Code
 '''
-#-------------------------------------------------------------------------------------------------
-	
-# todo - Can this function be removed?
-'''
-# Loads preferences from a text buffer (old version)
-def loadOldTextPrefs(text_doc):
-	global Prefs, dummySequence
-
-	cur_parse = 0
-
-	text_arr = array('c')
-	txt = ""
-	lines = text_doc.asLines()
-	for l in lines: txt += "%s\n" % l
-	text_arr.fromstring(txt)
-	seq_name = None
-	tok = Tokenizer(text_arr)
-	while tok.advanceToken(True):
-		cur_token = tok.getToken()
-		if cur_token == "Version":
-			tok.advanceToken(False)
-			if not ( (float(tok.getToken())) > 0.0 and (float(tok.getToken()) <= 0.2) ):
-				Torque_Util.dump_writeln("   Error: Loading different version config file than is supported")
-				return False
-		elif cur_token == "{":
-			cur_parse = 1
-			while tok.advanceToken(True):
-				cur_token = tok.getToken()
-				# Parse Main Section
-				if cur_token == "WriteShapeScript":
-					tok.advanceToken(False)
-					Prefs['WriteShapeScript'] = int(tok.getToken())
-				elif cur_token == "DTSVersion":
-					tok.advanceToken(False)
-					Prefs['DTSVersion'] = int(tok.getToken())
-				elif cur_token == "StripMeshes":
-					tok.advanceToken(False)
-					Prefs['StripMeshes'] = int(tok.getToken())
-				elif cur_token == "MaxStripSize":
-					tok.advanceToken(False)
-					Prefs['MaxStripSize'] = int(tok.getToken())
-				elif cur_token == "UseStickyCoords": tok.advanceToken(False)
-				elif cur_token == "WriteSequences":
-					tok.advanceToken(False)
-					#Prefs['WriteSequences'] = int(tok.getToken())
-				elif cur_token == "ClusterDepth":
-					tok.advanceToken(False)
-					Prefs['ClusterDepth'] = int(tok.getToken())
-				elif cur_token == "AlwaysWriteDepth":
-					tok.advanceToken(False)
-					Prefs['AlwaysWriteDepth"'] = int(tok.getToken())
-				elif cur_token == "Billboard":
-					tok.advanceToken(False)
-					Prefs['Billboard']['Enabled'] = bool(int(tok.getToken()))
-					if int(tok.getToken()):
-						cur_parse = 2
-				elif cur_token == "Sequence":
-					tok.advanceToken(False)
-					seq_name = tok.getToken()
-					Prefs['Sequences'][seq_name] = dummySequence.copy()
-					Prefs['Sequences'][seq_name]['Triggers'] = []
-					# set defaults for ref pose stuff
-					# Get number of frames for this sequence
-					#try:
-					action = Blender.Armature.NLA.GetActions()[seq_name]
-					Prefs['Sequences'][seq_name]['InterpolateFrames'] = DtsShape_Blender.getNumFrames(action.getAllChannelIpos().values(), False)
-					Prefs['Sequences'][seq_name]['BlendRefPoseAction'] = seq_name
-					blendRefPoseFrame = Prefs['Sequences'][seq_name]['InterpolateFrames']/2
-					if blendRefPoseFrame < 1: blendRefPoseFrame = 1
-					Prefs['Sequences'][seq_name]['BlendRefPoseFrame'] = blendRefPoseFrame
-					Prefs['Sequences'][seq_name]['Priority'] = 0
-
-					cur_parse = 3
-				elif cur_token == "BannedBones":
-					tok.advanceToken(False)
-					Prefs['BannedBones'].append("%s" % tok.getToken())
-				elif (cur_token == "{") and (cur_parse == 2):
-					# Parse Billboard Section
-					while tok.advanceToken(True):
-						cur_token = tok.getToken()
-						if cur_token == "Equator":
-							tok.advanceToken(False)
-							Prefs['Billboard']['Equator'] = int(tok.getToken())
-						elif cur_token == "Polar":
-							tok.advanceToken(False)
-							Prefs['Billboard']['Polar'] = int(tok.getToken())
-						elif cur_token == "PolarAngle":
-							tok.advanceToken(False)
-							Prefs['Billboard']['PolarAngle'] = float(tok.getToken())
-						elif cur_token == "Dim":
-							tok.advanceToken(False)
-							Prefs['Billboard']['Dim'] = int(tok.getToken())
-						elif cur_token == "IncludePoles":
-							tok.advanceToken(False)
-							Prefs['Billboard']['IncludePoles'] = bool(int(tok.getToken()))
-						elif cur_token == "Size":
-							tok.advanceToken(False)
-							Prefs['Billboard']['Size'] = int(tok.getToken())
-						elif cur_token == "}":
-							break
-						else:
-							Torque_Util.dump_writeln("   Unrecognised Billboard token : %s" % cur_token)
-					cur_parse = 1
-				elif (cur_token == "{") and (cur_parse == 3):
-					useKeyframes = True
-					# Parse Sequence Section
-					while tok.advanceToken(True):
-						cur_token = tok.getToken()
-						if cur_token == "Dsq":
-							tok.advanceToken(False)
-							Prefs['Sequences'][seq_name]['Dsq'] = bool(int(tok.getToken()))
-						elif cur_token == "Cyclic":
-							tok.advanceToken(False)
-							Prefs['Sequences'][seq_name]['Cyclic'] = bool(int(tok.getToken()))
-						elif cur_token == "Blend":
-							tok.advanceToken(False)
-							# Lets always set the actions to not be blends when loading style old prefs.
-							# This hopefully forces the user to look at how blend anims are handled now.
-							#Prefs['Sequences'][seq_name]['Blend'] = bool(int(tok.getToken()))
-							Prefs['Sequences'][seq_name]['Blend'] = False
-						elif (cur_token == "Interpolate_Count") or (cur_token == "Interpolate"):
-							tok.advanceToken(False)
-							useKeyframes = True
-						elif cur_token == "NoExport":
-							tok.advanceToken(False)
-							Prefs['Sequences'][seq_name]['NoExport'] = bool(int(tok.getToken()))
-						elif cur_token == "NumGroundFrames":
-							tok.advanceToken(False)
-							Prefs['Sequences'][seq_name]['NumGroundFrames'] = int(tok.getToken())
-						elif cur_token == "Triggers":
-							tok.advanceToken(False)
-							triggers_left = int(tok.getToken())
-							for t in range(0, triggers_left): Prefs['Sequences'][seq_name]['Triggers'].append([0,0, True])
-							while tok.advanceToken(True):
-								cur_token = tok.getToken()
-								if cur_token == "Value":
-									tok.advanceToken(False)
-									stValue = int(tok.getToken())
-									if stValue < 0:
-										stValue += 32
-										Prefs['Sequences'][seq_name]['Triggers'][-triggers_left][2] = False
-									Prefs['Sequences'][seq_name]['Triggers'][-triggers_left][0] = stValue
-								elif cur_token == "Time":
-									tok.advanceToken(False)
-									Prefs['Sequences'][seq_name]['Triggers'][-triggers_left][1] = 0
-									triggers_left -= 1
-								elif cur_token == "}":
-									break
-								elif cur_token == "{":
-									pass
-								else:
-									Torque_Util.dump_writeln("   Unrecognised Sequence Trigger token : %s" % cur_token)
-						elif cur_token == "}":
-							cur_parse = 1
-							seq_name = None
-							break
-						else:
-							Torque_Util.dump_writeln("   Unrecognised Sequence token : %s" % cur_token)
-
-					cur_parse = 1
-					# Get number of frames for this sequence
-					if seq_name != None:
-						try:
-							action = Blender.NLA.Action.Get(seq_name)
-							Prefs['Sequences'][seq_name]['InterpolateFrames'] = DtsShape_Blender.getNumFrames(None, action.getAllChannelIpos().values(), useKeyframes)
-						except:
-							Torque_Util.dump_writeln("   Warning : sequence '%s' doesn't exist!" % seq_name)
-							Prefs['Sequences'][seq_name]['InterpolateFrames'] = 0
-				elif cur_token == "}":
-					cur_parse = 0
-					break
-				else:
-					Torque_Util.dump_writeln("   Unrecognised token : %s" % cur_token)
-		else:
-			Torque_Util.dump_writeln("   Warning : Unexpected token %s!" % cur_token)
-
-	return True
-'''
 
 def initPrefs():
 	Prefs = {}
@@ -361,9 +183,10 @@ def loadPrefs():
 				savePrefs()
 				return True
 			else:
-				if not loadOldTextPrefs(text_doc):
-					print "Error: failed to load old preferences!"
-					return False
+				print "Error: failed to load old preferences!"
+				print " To generate new preferences, delete the TorqueExporter_SCONF"
+				print " text buffer, then save and reload the .blend file."
+				return False
 				# We'll leave it up to the user to delete the text object
 		
 		Torque_Util.dump_writeln("Loaded Preferences.")
@@ -2194,9 +2017,8 @@ class SeqCommonControlsClass:
 		return guiContainer
 
 	def populateSequenceList(self):
-		print "Populating Common/All Sequence list"
 		self.clearSequenceList()
-		# loop through all actions in the preferences and check for IFL animations
+		# loop through all actions in the preferences
 		global Prefs
 		keys = Prefs['Sequences'].keys()
 		keys.sort()
@@ -2383,10 +2205,8 @@ class ActionControlsClass:
 						self.guiFrameSamples.enabled = True
 					self.updateSequenceControls(seqName, seqPrefs)
 				elif control.name == "guiFrameSamples":
-					print "Processing guiFrameSamples event."
 					seqPrefs['Action']['FrameSamples'] = control.value
 				elif control.name == "guiGroundFrameSamples":
-					print "Processing event for control guiGroundFrameSamples."
 					seqPrefs['Action']['NumGroundFrames'] = control.value
 
 
@@ -2395,9 +2215,8 @@ class ActionControlsClass:
 		if control.itemIndex != -1:
 			seqName = control.controls[control.itemIndex].controls[0].label
 			seqPrefs = getSequenceKey(seqName)
-			self.guiSeqOpts.controlDict['guiOptsTitle'].label = "Sequence '%s'" % seqName
 			self.guiSeqOpts.enabled = True
-
+			self.guiSeqOpts.controlDict['guiOptsTitle'].label = "Sequence '%s'" % seqName
 			try:
 				action = Blender.Armature.NLA.GetActions()[seqName]
 				maxNumFrames = (seqPrefs['Action']['EndFrame'] - seqPrefs['Action']['StartFrame']) + 1
@@ -2484,7 +2303,6 @@ class ActionControlsClass:
 			control.x = 5
 			control.y = newheight - 92
 			control.width = 83
-			print newwidth
 		elif control.name == "guiEndFrame":
 			control.x = 90
 			control.y = newheight - 92
