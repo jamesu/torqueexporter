@@ -1736,7 +1736,6 @@ class SeqCommonControlsClass:
 		# set initial states
 		self.triggerMenuTemplate = "Frame:%d Trigger:%d "
 		
-		# add controls to containers
 		
 		# populate lists
 		self.populateSequenceList()
@@ -1929,7 +1928,6 @@ class SeqCommonControlsClass:
 
 	
 	def refreshAll(self):		
-		self.clearSequenceList()
 		self.populateSequenceList()
 
 
@@ -2364,7 +2362,6 @@ class ActionControlsClass:
 			control.y = newheight - 323
 			control.width = newwidth - 10
 			control.height = 89
-
 		elif control.name == "guiRefPoseTitle":
 			control.x = 8
 			control.y = newheight - 263
@@ -4127,7 +4124,7 @@ def initGui():
 	global guiBonePatternText
 	global GlobalEvents
 	
-	global IFLControls, VisControls, ActionControls, MaterialControls, ArmatureControls, GeneralControls, AboutControls
+	global SeqCommonControls, IFLControls, VisControls, ActionControls, MaterialControls, ArmatureControls, GeneralControls, AboutControls
 	
 	global guiTabBar, guiSequencesTabBar
 	
