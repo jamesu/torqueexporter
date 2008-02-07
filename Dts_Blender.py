@@ -586,7 +586,8 @@ def updateOldPrefs():
 		try: x = actKey['AutoFrames']
 		except: actKey['AutoFrames'] = True
 
-
+		try: x = actKey['AutoSamples']
+		except: actKey['AutoSamples'] = True
 		try: x = actKey['FrameSamples']
 		except:
 			try: actKey['FrameSamples'] = actKey['InterpolateFrames']
@@ -2229,7 +2230,7 @@ class ActionControlsClass:
 		
 		# initialize GUI controls
 		self.guiActTitle = Common_Gui.SimpleText("guiActTitle", "Action Sequences :", None, self.resize)
-		self.guiSeqList = Common_Gui.ListContainer("guiSeqList", "sequence.list", self.handleEvent, self.resize)		
+		self.guiSeqList = Common_Gui.ListContainer("guiSeqList", "sequence.list", self.handleListEvent, self.resize)		
 		self.guiToggle = Common_Gui.ToggleButton("guiToggle", "Toggle All", "Toggle export of all sequences", 6, self.handleEvent, self.resize)
 		self.guiRefresh = Common_Gui.BasicButton("guiRefresh", "Refresh", "Refresh list of sequences", 7, self.handleEvent, self.resize)
 		self.guiSeqOpts = Common_Gui.BasicContainer("guiSeqOpts", "sequence.prefs", None, self.resize)
@@ -2237,6 +2238,7 @@ class ActionControlsClass:
 		self.guiStartFrame = Common_Gui.NumberPicker("guiStartFrame", "Sta fr:", "When exporting the action, start with this frame #", 22, self.handleEvent, self.resize)
 		self.guiEndFrame = Common_Gui.NumberPicker("guiEndFrame", "End fr:", "When exporting the action, end with this frame #", 23, self.handleEvent, self.resize)
 		self.guiAutoFrames = Common_Gui.ToggleButton("guiAutoFrames", "Auto Start/End frames", "Automatically determine frame range", 24, self.handleEvent, self.resize)
+		self.guiAutoSamples = Common_Gui.ToggleButton("guiAutoSamples", "Use all frames in range", "When turned on, every frame in the defined range is exported.", 25, self.handleEvent, self.resize)
 		self.guiFrameSamples = Common_Gui.NumberPicker("guiFrameSamples", "Frame Samples", "Number of frames to export", 28, self.handleEvent, self.resize)
 		self.guiGroundFrameSamples = Common_Gui.NumberPicker("guiGroundFrameSamples", "Ground Frames", "Amount of ground frames to export", 27, self.handleEvent, self.resize)
 		self.guiRefPoseTitle = Common_Gui.SimpleText("guiRefPoseTitle", "Ref Pose for ", None, self.resize)
@@ -2264,11 +2266,10 @@ class ActionControlsClass:
 		guiSeqActSubtab.addControl(self.guiRefresh)
 		guiSeqActSubtab.addControl(self.guiSeqOpts)
 		self.guiSeqOpts.addControl(self.guiOptsTitle)
-
 		self.guiSeqOpts.addControl(self.guiStartFrame)
 		self.guiSeqOpts.addControl(self.guiEndFrame)
 		self.guiSeqOpts.addControl(self.guiAutoFrames)
-
+		self.guiSeqOpts.addControl(self.guiAutoSamples)
 		self.guiSeqOpts.addControl(self.guiFrameSamples)
 		self.guiSeqOpts.addControl(self.guiGroundFrameSamples) # 2
 		self.guiSeqOpts.addControl(self.guiRefPoseTitle) # 12
@@ -2297,6 +2298,7 @@ class ActionControlsClass:
 		del self.guiStartFrame
 		del self.guiEndFrame
 		del self.guiAutoFrames
+		del self.guiAutoSamples
 		del self.guiFrameSamples
 		del self.guiGroundFrameSamples
 		del self.guiRefPoseTitle
@@ -2305,29 +2307,40 @@ class ActionControlsClass:
 
 	
 	def refreshAll(self):		
-		self.clearSequenceActionList()
+		self.clearSequenceList()
 		self.populateSequenceActionList()
 		pass
 			
-	def updateFrameControls(self, seqName, seqPrefs):
-		if seqPrefs['Action']['AutoFrames']:
-			# todo - popup warning when trying to change this value if auto frames is set.
-			print "This value cannot be set when the \"Auto Start/End frames\" option is turned on."
+	# This method validates the current control states, adjusts preference values, and generally keeps everything consistent
+	def updateSequenceControls(self, seqName, seqPrefs):
+		# update affected preferences
+		if not seqPrefs['Action']['AutoFrames']:
+			seqPrefs['Action']['EndFrame'] = self.guiEndFrame.value
+			seqPrefs['Action']['StartFrame'] = self.guiStartFrame.value
+		else:
 			seqPrefs['Action']['StartFrame'] = 1
 			action = Blender.Armature.NLA.GetActions()[seqName]
 			seqPrefs['Action']['EndFrame'] = DtsShape_Blender.getNumFrames(action.getAllChannelIpos().values(), False)
-		else:
-			seqPrefs['Action']['StartFrame'] = self.guiStartFrame.value
-			seqPrefs['Action']['EndFrame'] = self.guiEndFrame.value
-		maxFrames = (seqPrefs['Action']['EndFrame'] - seqPrefs['Action']['StartFrame']) + 1
-		self.guiStartFrame.max = seqPrefs['Action']['EndFrame']
-		self.guiFrameSamples.max = maxFrames
-		self.guiGroundFrameSamples.max = maxFrames
-		self.guiEndFrame.min = seqPrefs['Action']['StartFrame']
-		seqPrefs['Action']['NumGroundFrames'] = self.guiGroundFrameSamples.value
-		self.guiStartFrame.value = seqPrefs['Action']['StartFrame']
-		self.guiEndFrame.value = seqPrefs['Action']['EndFrame']
+		try:
+			action = Blender.Armature.NLA.GetActions()[seqName]
+			maxFrames = (seqPrefs['Action']['EndFrame'] - seqPrefs['Action']['StartFrame']) + 1
+		except:
+			maxFrames = 0
+		if seqPrefs['Action']['FrameSamples'] > maxFrames or seqPrefs['Action']['AutoSamples']: seqPrefs['Action']['FrameSamples'] = maxFrames
+		if seqPrefs['Action']['NumGroundFrames'] > maxFrames: seqPrefs['Action']['NumGroundFrames'] = maxFrames
 
+		# refresh control states
+
+		self.guiFrameSamples.max = maxFrames
+		self.guiFrameSamples.value = seqPrefs['Action']['FrameSamples']
+		self.guiGroundFrameSamples.max = maxFrames
+		self.guiGroundFrameSamples.value = seqPrefs['Action']['NumGroundFrames']
+		self.guiEndFrame.min = seqPrefs['Action']['StartFrame']
+		self.guiEndFrame.value = seqPrefs['Action']['EndFrame']
+		self.guiStartFrame.max = seqPrefs['Action']['EndFrame']
+		self.guiStartFrame.value = seqPrefs['Action']['StartFrame']
+
+	
 	def handleEvent(self, control):
 		global guiSeqOpts, guiSeqList
 
@@ -2336,57 +2349,8 @@ class ActionControlsClass:
 				child.controls[1].state = control.state
 				getSequenceKey(child.controls[0].label)['NoExport'] = not control.state
 		elif control.name == "guiRefresh":
-			self.clearSequenceActionList()
+			self.clearSequenceList()
 			self.populateSequenceActionList()
-		elif control.name == "guiSeqList":
-			if control.itemIndex != -1:
-				seqName = control.controls[control.itemIndex].controls[0].label
-				seqPrefs = getSequenceKey(seqName)
-				self.guiSeqOpts.controlDict['guiOptsTitle'].label = "Sequence '%s'" % seqName
-				self.guiSeqOpts.enabled = True
-				
-				try:
-					action = Blender.Armature.NLA.GetActions()[seqName]
-					maxNumFrames = seqPrefs['Action']['EndFrame'] - seqPrefs['Action']['StartFrame']
-				except:
-					maxNumFrames = 0
-
-				# Update gui control states
-				# make sure the user didn't delete the action containing the refrence pose
-				# out from underneath us while we weren't looking.
-				if seqPrefs['Action']['FrameSamples'] > maxNumFrames:
-					seqPrefs['Action']['FrameSamples'] = maxNumFrames
-				try: blah = Blender.Armature.NLA.GetActions()[seqPrefs['Action']['BlendRefPoseAction']]
-				except: seqPrefs['Action']['BlendRefPoseAction'] = seqName
-				self.guiSeqOpts.controlDict['guiRefPoseTitle'].label = "Ref pose for '%s'" % seqName
-				self.guiSeqOpts.controlDict['guiRefPoseMenu'].setTextValue(seqPrefs['Action']['BlendRefPoseAction'])
-				self.guiSeqOpts.controlDict['guiRefPoseFrame'].min = 1
-				self.guiSeqOpts.controlDict['guiRefPoseFrame'].max = getNumActFrames(seqPrefs['Action']['BlendRefPoseAction'], seqPrefs)
-				self.guiSeqOpts.controlDict['guiRefPoseFrame'].value = seqPrefs['Action']['BlendRefPoseFrame']
-				self.guiSeqOpts.controlDict['guiGroundFrameSamples'].value = seqPrefs['Action']['NumGroundFrames']
-				self.guiSeqOpts.controlDict['guiGroundFrameSamples'].max = maxNumFrames
-				self.guiSeqOpts.controlDict['guiFrameSamples'].value = seqPrefs['Action']['FrameSamples']
-				self.guiSeqOpts.controlDict['guiFrameSamples'].max = maxNumFrames
-				self.guiStartFrame.value = seqPrefs['Action']['StartFrame']
-				self.guiEndFrame.value = seqPrefs['Action']['EndFrame']
-				self.guiEndFrame.min = seqPrefs['Action']['StartFrame']
-				self.guiStartFrame.max = seqPrefs['Action']['EndFrame']
-				self.guiAutoFrames.state = seqPrefs['Action']['AutoFrames']
-				
-				self.updateFrameControls(seqName, seqPrefs)
-				# show/hide ref pose stuff.
-				if seqPrefs['Action']['Blend'] == True:
-					self.guiSeqOpts.controlDict['guiRefPoseTitle'].visible = True
-					self.guiSeqOpts.controlDict['guiRefPoseMenu'].visible = True
-					self.guiSeqOpts.controlDict['guiRefPoseFrame'].visible = True
-				else:
-					self.guiSeqOpts.controlDict['guiRefPoseTitle'].visible = False
-					self.guiSeqOpts.controlDict['guiRefPoseMenu'].visible = False
-					self.guiSeqOpts.controlDict['guiRefPoseFrame'].visible = False
-
-			else:
-				self.guiSeqOpts.enabled = False
-				self.guiSeqOpts.controlDict['guiOptsTitle'].label = "Sequence: None Selected"
 		else:
 			if self.guiSeqList.itemIndex != -1:
 				seqName = self.guiSeqList.controls[self.guiSeqList.itemIndex].controls[0].label
@@ -2399,13 +2363,25 @@ class ActionControlsClass:
 				elif control.name == "guiRefPoseFrame":
 					seqPrefs['Action']['BlendRefPoseFrame'] = control.value
 				elif control.name == "guiStartFrame":
-					self.updateFrameControls(seqName, seqPrefs)
+					self.updateSequenceControls(seqName, seqPrefs)
 				elif control.name == "guiEndFrame":
-					self.updateFrameControls(seqName, seqPrefs)
+					self.updateSequenceControls(seqName, seqPrefs)
 				elif control.name == "guiAutoFrames":
 					seqPrefs['Action']['AutoFrames'] = control.state
-					self.updateFrameControls(seqName, seqPrefs)
-
+					if seqPrefs['Action']['AutoFrames']:
+						self.guiEndFrame.enabled = False
+						self.guiStartFrame.enabled = False
+					else:
+						self.guiEndFrame.enabled = True
+						self.guiStartFrame.enabled = True
+					self.updateSequenceControls(seqName, seqPrefs)					
+				elif control.name == "guiAutoSamples":
+					seqPrefs['Action']['AutoSamples'] = control.state
+					if seqPrefs['Action']['AutoSamples']:
+						self.guiFrameSamples.enabled = False
+					else:
+						self.guiFrameSamples.enabled = True
+					self.updateSequenceControls(seqName, seqPrefs)
 				elif control.name == "guiFrameSamples":
 					print "Processing guiFrameSamples event."
 					seqPrefs['Action']['FrameSamples'] = control.value
@@ -2413,6 +2389,73 @@ class ActionControlsClass:
 					print "Processing event for control guiGroundFrameSamples."
 					seqPrefs['Action']['NumGroundFrames'] = control.value
 
+
+	# This method handles list events (list item selection changed)
+	def handleListEvent(self, control):
+		if control.itemIndex != -1:
+			seqName = control.controls[control.itemIndex].controls[0].label
+			seqPrefs = getSequenceKey(seqName)
+			self.guiSeqOpts.controlDict['guiOptsTitle'].label = "Sequence '%s'" % seqName
+			self.guiSeqOpts.enabled = True
+
+			try:
+				action = Blender.Armature.NLA.GetActions()[seqName]
+				maxNumFrames = (seqPrefs['Action']['EndFrame'] - seqPrefs['Action']['StartFrame']) + 1
+			except:
+				maxNumFrames = 0
+
+			# Update gui control states
+			# make sure the user didn't delete the action containing the refrence pose
+			# out from underneath us while we weren't looking.
+			if seqPrefs['Action']['FrameSamples'] > maxNumFrames:
+				seqPrefs['Action']['FrameSamples'] = maxNumFrames
+			try: blah = Blender.Armature.NLA.GetActions()[seqPrefs['Action']['BlendRefPoseAction']]
+			except: seqPrefs['Action']['BlendRefPoseAction'] = seqName
+			self.guiSeqOpts.controlDict['guiRefPoseTitle'].label = "Ref pose for '%s'" % seqName
+			self.guiSeqOpts.controlDict['guiRefPoseMenu'].setTextValue(seqPrefs['Action']['BlendRefPoseAction'])
+			self.guiSeqOpts.controlDict['guiRefPoseFrame'].min = 1
+			self.guiSeqOpts.controlDict['guiRefPoseFrame'].max = getNumActFrames(seqPrefs['Action']['BlendRefPoseAction'], seqPrefs)
+			self.guiSeqOpts.controlDict['guiRefPoseFrame'].value = seqPrefs['Action']['BlendRefPoseFrame']
+			self.guiSeqOpts.controlDict['guiGroundFrameSamples'].value = seqPrefs['Action']['NumGroundFrames']
+			self.guiSeqOpts.controlDict['guiGroundFrameSamples'].max = maxNumFrames
+			self.guiSeqOpts.controlDict['guiFrameSamples'].value = seqPrefs['Action']['FrameSamples']
+			self.guiSeqOpts.controlDict['guiFrameSamples'].max = maxNumFrames
+			self.guiStartFrame.value = seqPrefs['Action']['StartFrame']
+			self.guiEndFrame.value = seqPrefs['Action']['EndFrame']
+			self.guiEndFrame.min = seqPrefs['Action']['StartFrame']
+			self.guiStartFrame.max = seqPrefs['Action']['EndFrame']
+			self.guiAutoFrames.state = seqPrefs['Action']['AutoFrames']
+			self.guiAutoSamples.state = seqPrefs['Action']['AutoSamples']
+
+			self.updateSequenceControls(seqName, seqPrefs)
+
+
+			if seqPrefs['Action']['AutoFrames']:
+				self.guiEndFrame.enabled = False
+				self.guiStartFrame.enabled = False
+			else:
+				self.guiEndFrame.enabled = True
+				self.guiStartFrame.enabled = True
+
+			if seqPrefs['Action']['AutoSamples']:
+				self.guiFrameSamples.enabled = False
+			else:
+				self.guiFrameSamples.enabled = True
+
+			# show/hide ref pose stuff.
+			if seqPrefs['Action']['Blend'] == True:
+
+				self.guiSeqOpts.controlDict['guiRefPoseTitle'].visible = True
+				self.guiSeqOpts.controlDict['guiRefPoseMenu'].visible = True
+				self.guiSeqOpts.controlDict['guiRefPoseFrame'].visible = True
+			else:
+				self.guiSeqOpts.controlDict['guiRefPoseTitle'].visible = False
+				self.guiSeqOpts.controlDict['guiRefPoseMenu'].visible = False
+				self.guiSeqOpts.controlDict['guiRefPoseFrame'].visible = False
+
+		else:
+			self.guiSeqOpts.enabled = False
+			self.guiSeqOpts.controlDict['guiOptsTitle'].label = "Sequence: None Selected"
 
 
 	def resize(self, control, newwidth, newheight):
@@ -2433,6 +2476,10 @@ class ActionControlsClass:
 			control.x = 5
 			control.y = newheight - 25
 		# Sequence options
+		elif control.name == "guiAutoFrames":
+			control.x = 5
+			control.y = newheight - 70
+			control.width = newwidth - 10
 		elif control.name == "guiStartFrame":
 			control.x = 5
 			control.y = newheight - 92
@@ -2442,34 +2489,29 @@ class ActionControlsClass:
 			control.x = 90
 			control.y = newheight - 92
 			control.width = 83
-		elif control.name == "guiAutoFrames":
-			control.x = 5
-			control.y = newheight - 70
-			control.width = newwidth - 10
-		elif control.name == "guiFrameSamples":
+		elif control.name == "guiAutoSamples":
 			control.x = 5
 			control.y = newheight - 125
 			control.width = newwidth - 10
+		elif control.name == "guiFrameSamples":
+			control.x = 5
+			control.y = newheight - 147
+			control.width = newwidth - 10
 		elif control.name == "guiGroundFrameSamples":
 			control.x = 5
-			control.y = newheight - 158
+			control.y = newheight - 180
 			control.width = newwidth - 10
 		elif control.name == "guiRefPoseTitle":
 			control.x = 5
-			control.y = newheight - 184
-		# reference pose controls
+			control.y = newheight - 206
 		elif control.name == "guiRefPoseMenu":
 			control.x = 5
-			control.y = newheight - 214
+			control.y = newheight - 236
 			control.width = (newwidth) - 10
 		elif control.name == "guiRefPoseFrame":
 			control.x = 5
-			control.y = newheight - 239
+			control.y = newheight - 261
 			control.width = (newwidth) - 10
-		elif control.name == "guiPriority":
-			control.x = 5
-			control.y = newheight - 120
-			control.width = newwidth - 10
 		# Sequence list buttons
 		elif control.name == "guiToggle":
 			control.x = 10
@@ -2492,13 +2534,13 @@ class ActionControlsClass:
 		for key in keys:
 			# skip the fake action (hack for blender 2.41 bug)
 			if key == "DTSEXPFAKEACT": continue		
-			self.guiSeqList.addControl(self.createSequenceActionListitem(key, startEvent))
+			self.guiSeqList.addControl(self.createSequenceListitem(key, startEvent))
 			startEvent += 4
 			# add any new animations to the ref pose combo box
 			if not (key in self.guiSeqOpts.controlDict['guiRefPoseMenu'].items):
 				self.guiSeqOpts.controlDict['guiRefPoseMenu'].items.append(key)
 
-	def clearSequenceActionList(self):
+	def clearSequenceList(self):
 
 		for i in range(0, len(self.guiSeqList.controls)):
 			del self.guiSeqList.controls[i].controls[:]
@@ -2539,7 +2581,7 @@ class ActionControlsClass:
 		elif realItem == 3:
 			seqPrefs['Cyclic'] = control.state
 
-	def createSequenceActionListitem(self, seq_name, startEvent):
+	def createSequenceListitem(self, seq_name, startEvent):
 		seqPrefs = getSequenceKey(seq_name)
 		seqPrefs['Action']['Enabled'] = True
 		# Note on positions:
@@ -4410,7 +4452,7 @@ def initGui():
 def exit_callback():
 	global SeqCommonControls, IFLControls, ActionControls, MaterialControls, ArmatureControls, GeneralControls, AboutControls
 	Torque_Util.dump_setout("stdout")
-	ActionControls.clearSequenceActionList()
+	ActionControls.clearSequenceList()
 	ArmatureControls.clearBoneGrid()
 	# todo - clear lists on other panels before cleaning up.	
 	IFLControls.cleanup()
