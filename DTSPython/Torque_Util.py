@@ -473,7 +473,7 @@ def getNumIFLFrames(seqName, seqPrefs):
 	return IFLNumFrames
 
 def getNumVisFrames(seqName, seqPrefs):
-	visNumFrames = (seqPrefs['Vis']['EndFrame'] - seqPrefs['Vis']['StartFrame'])+1
+	visNumFrames = (seqPrefs['Vis']['EndFrame'] - seqPrefs['Vis']['StartFrame']) + 1
 	return visNumFrames
 	
 def getSeqNumFrames(seqName, seqPrefs):
