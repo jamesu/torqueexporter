@@ -1988,11 +1988,11 @@ class SeqCommonControlsClass:
 		self.guiSeqGraph.setBarValue(0, 0.0)
 
 		if actFrames == maxFrames: self.guiSeqGraph.setBarColor(4, (0.4, 1.0, 0.4))
-		else: self.guiSeqGraph.setBarColor(4, (1.0, 1.0, 0.0))
+		else: self.guiSeqGraph.setBarColor(4, (1.0, float(actFrames)/float(maxFrames), 0.0))
 		if IFLFrames == maxFrames: self.guiSeqGraph.setBarColor(3, (0.4, 1.0, 0.4))
-		else: self.guiSeqGraph.setBarColor(3, (1.0, 1.0, 0.0))
+		else: self.guiSeqGraph.setBarColor(3, (1.0, float(IFLFrames)/float(maxFrames), 0.0))
 		if visFrames == maxFrames: self.guiSeqGraph.setBarColor(2, (0.4, 1.0, 0.4))
-		else: self.guiSeqGraph.setBarColor(2, (1.0, 1.0, 0.0))
+		else: self.guiSeqGraph.setBarColor(2, (1.0, float(visFrames)/float(maxFrames), 0.0))
 		self.guiSeqGraph.setBarColor(1, (0.0, 0.0, 0.0))
 		self.guiSeqGraph.setBarColor(0, (0.0, 0.0, 0.0))
 
