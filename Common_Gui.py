@@ -226,6 +226,10 @@ class BarGraph(BasicControl):
 		real_x = offset[0] + self.x
 		real_y = offset[1] + self.y
 		
+		# draw background
+		BGL.glColor3f(0.6627, 0.6627, 0.6627)
+		BGL.glRecti(real_x+1, real_y+1, (real_x + self.width - 1), (real_y + self.height - 1))
+
 		# draw colored bars
 		barHeight = self.height / self.numBars		
 		for i in range(0, self.numBars):
@@ -238,7 +242,9 @@ class BarGraph(BasicControl):
 			barTop = real_y + (i * barHeight) + barHeight
 			barBottom = real_y + (i * barHeight)
 			BGL.glRecti(barLeft, barBottom, barRight, barTop)
-
+		
+		BGL.glColor3f(0.0, 0.0, 0.0)
+		
 		# Draw border
 		BGL.glBegin(BGL.GL_LINES)
 		BGL.glColor4f(self.borderColor[0],self.borderColor[1],self.borderColor[2], self.borderColor[3])
@@ -255,10 +261,23 @@ class BarGraph(BasicControl):
 		BGL.glVertex2i(real_x+self.width,real_y)
 		BGL.glVertex2i(real_x,real_y)
 
-		# Draw bar outlines from bottom to top
 		barHeight = self.height / self.numBars		
+
+		BGL.glColor3f(0.62745, 0.62745, 0.62745)
+		#BGL.glColor3f(0.62745, 0.0, 0.0)
+		# Draw bar "lanes" from bottom to top
+		for i in range(1, self.numBars):
+			barWidth = self.width
+			barLeft = real_x
+			barRight = barWidth + real_x
+			barBottom = real_y + (i * barHeight)
+			# Bottom left
+			BGL.glVertex2i(barLeft,barBottom)
+			BGL.glVertex2i(barRight,barBottom)
+		
+		BGL.glColor3f(0.0, 0.0, 0.0)
+		# Draw bar outlines from bottom to top
 		for i in range(0, self.numBars):
-			print "drawing bar (%i)..." % i
 			barWidth = self.barVals[i] * self.width
 			barLeft = real_x
 			barRight = barWidth + real_x
@@ -290,7 +309,6 @@ class BarGraph(BasicControl):
 			text_x = real_x + 5
 			text_y = real_y + (i * barHeight) + 4
 			BGL.glRasterPos2i(text_x, text_y)
-			print "Drawing text for bar %i: %s" % (i, self.barText[i])
 			width = Draw.Text(self.barText[i], 'normal')
 
 		
