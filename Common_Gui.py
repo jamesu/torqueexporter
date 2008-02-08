@@ -235,8 +235,8 @@ class BarGraph(BasicControl):
 		for i in range(0, self.numBars):
 			r, g, b = self.barColors[i]
 			BGL.glColor3f(r, g, b)
-			print "drawing color bar (%i)..." % i
-			barWidth = self.barVals[i] * self.width
+			barWidth = (self.barVals[i] * self.width)-1
+			if barWidth < 0: barWidth = 0
 			barLeft = real_x
 			barRight = barWidth + real_x
 			barTop = real_y + (i * barHeight) + barHeight
@@ -264,7 +264,6 @@ class BarGraph(BasicControl):
 		barHeight = self.height / self.numBars		
 
 		BGL.glColor3f(0.62745, 0.62745, 0.62745)
-		#BGL.glColor3f(0.62745, 0.0, 0.0)
 		# Draw bar "lanes" from bottom to top
 		for i in range(1, self.numBars):
 			barWidth = self.width
@@ -874,15 +873,15 @@ class ListContainer(BasicContainer):
 							# In addition, to avoid going off the list we don't consider any children near the end.
 							
 							if Window.GetMouseButtons() & Window.MButs.L:
-								usefulChildren = len(self.controls)-self.maxVisibleControls()
-								#print "Scrollbar useful children : %d" % usefulChildren
+								maxUsefulChildren = len(self.controls)-self.maxVisibleControls()
+								#print "Scrollbar useful children : %d" % maxUsefulChildren
 								#print str(newpos) + " | h:%d th:%d" % (self.height, self.thumbHeight)
 								if newpos[1] <= self.thumbHeight:
 									#print "YOU CLICKED UNDER THE THUMB HEIGHT"
-									self.scrollPosition = usefulChildren
+									self.scrollPosition = maxUsefulChildren
 									self.thumbPosition = self.thumbHeight
 								else:
-									self.scrollPosition = int(( 1.0-(float(newpos[1]-self.thumbHeight) / (self.height - self.thumbHeight))) * usefulChildren)
+									self.scrollPosition = int(( 1.0-(float(newpos[1]-self.thumbHeight) / (self.height - self.thumbHeight))) * maxUsefulChildren)
 									self.thumbPosition = newpos[1]
 									
 								#print "Scrollbar DRAGGING, Position calculated as : %d" % self.scrollPosition
@@ -925,6 +924,22 @@ class ListContainer(BasicContainer):
 		
 		# Whoops
 		return False
+	
+	
+	def scrollToSelectedItem(self):
+		print "*********** scrollToSelectedItem reached *********"
+		maxUsefulChildren = float(len(self.controls)-self.maxVisibleControls())
+		if maxUsefulChildren <= 0: maxUsefulChildren = 0.0001
+		scrollBarHeight = float(self.height - (3 * self.thumbHeight))
+		scrollPos = float(1 + self.itemIndex - self.maxVisibleControls())
+		if scrollPos < 0: scrollPos = 0.0
+		self.scrollPosition = int(scrollPos)
+		print "maxUsefulChildren =",maxUsefulChildren
+		scrollRatio = (scrollPos) / maxUsefulChildren
+		print "scrollRatio = ", scrollRatio
+		rawPixelPos = int(scrollRatio * scrollBarHeight)
+		self.thumbPosition = int(scrollBarHeight - rawPixelPos) + (2 * int(self.thumbHeight))
+
 	
 	def needYScroll(self):
 		if len(self.controls) != 0:
@@ -973,6 +988,7 @@ class ListContainer(BasicContainer):
 				for c in self.controls[self.itemIndex].controls:
 					if c.__class__ == SimpleText:
 						c.color = [curTextCol[0]/255.0, curTextCol[1]/255.0, curTextCol[2]/255.0, curTextCol[3]/255.0]
+		
 
 	def removeItem(self, idx):
 		if idx < 0: return
@@ -990,6 +1006,7 @@ class ListContainer(BasicContainer):
 
 
 	def onDraw(self, offset):
+		print "Drawing List..."
 		BGL.glRasterPos2i(offset[0]+self.x, offset[1]+self.y)
 		BGL.glColor4f(self.color[0], self.color[1], self.color[2], self.color[3])
 		
@@ -1039,7 +1056,7 @@ class ListContainer(BasicContainer):
 		idx = 0
 		for control in self.getVisibleControls():
 			control.y = curY
-			orgColor = control.color
+			orgColor = control.color[:]
 			if idx != self.itemIndex:
 				if control.fade_mode == 0:
 					if (idx & 1) == 0:
@@ -1049,7 +1066,7 @@ class ListContainer(BasicContainer):
 						control.color = [ orgColor [0] + 0.05, orgColor [1] + 0.05,
 								  orgColor [2] + 0.05, orgColor [3] ]
 			control.onDraw([real_x, real_y])
-			control.color = orgColor
+			control.color = orgColor[:]
 			curY -= self.childHeight
 			idx += 1
 			
