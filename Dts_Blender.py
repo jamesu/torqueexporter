@@ -2272,7 +2272,30 @@ class ActionControlsClass:
 
 	
 	def refreshAll(self):		
+		# store last sequence selection
+		seqName = None
+		seqPrefs = None
+		if self.guiSeqList.itemIndex != -1:
+			seqName = self.guiSeqList.controls[self.guiSeqList.itemIndex].controls[0].label
+			seqPrefs = getSequenceKey(seqName)
+		
+		# repopulate the sequence list
 		self.populateSequenceList()
+		
+		# restore last sequence selection
+		for itemIndex in range(0, len(self.guiSeqList.controls)):
+			#print "Checking item",itemIndex
+			#print "self.guiSeqList.controls[itemIndex].controls[0].label =",self.guiSeqList.controls[itemIndex].controls[0].label
+			#print "seqName =",seqName
+			if self.guiSeqList.controls[itemIndex].controls[0].label == seqName:
+				#print "found matching control for",seqName
+				self.guiSeqList.selectItem(itemIndex)
+				self.guiSeqList.scrollToSelectedItem()
+				if self.guiSeqList.callback: self.guiSeqList.callback(self.guiSeqList)
+				return
+		self.guiSeqList.selectItem(0)
+		self.guiSeqList.scrollToSelectedItem()
+		if self.guiSeqList.callback: self.guiSeqList.callback(self.guiSeqList)
 
 			
 	# This method validates the current control states, adjusts preference values, and generally keeps everything consistent
@@ -2657,7 +2680,7 @@ class IFLControlsClass:
 		self.guiSeqOptsContainer.addControl(self.guiApplyToAll)
 		
 		# populate the IFL sequence list
-		self.populateIFLList()
+		self.populateSequenceList()
 		
 		# populate the ifl material pulldown
 		self.populateIFLMatPulldown()
@@ -2697,9 +2720,33 @@ class IFLControlsClass:
 
 	# called when we switch to this control page to make sure everything is in sync.
 	def refreshAll(self):
-		self.populateIFLList()
+		# store last sequence selection
+		seqName = None
+		seqPrefs = None
+		if self.guiSeqList.itemIndex != -1:
+			seqName = self.guiSeqList.controls[self.guiSeqList.itemIndex].controls[0].label
+			seqPrefs = getSequenceKey(seqName)
+		
+		# repopulate the sequence list
+		self.populateSequenceList()
 		self.populateExistingSeqPulldown()
-	
+
+		
+		# restore last sequence selection
+		for itemIndex in range(0, len(self.guiSeqList.controls)):
+			#print "Checking item",itemIndex
+			#print "self.guiSeqList.controls[itemIndex].controls[0].label =",self.guiSeqList.controls[itemIndex].controls[0].label
+			#print "seqName =",seqName
+			if self.guiSeqList.controls[itemIndex].controls[0].label == seqName:
+				#print "found matching control for",seqName
+				self.guiSeqList.selectItem(itemIndex)
+				self.guiSeqList.scrollToSelectedItem()
+				if self.guiSeqList.callback: self.guiSeqList.callback(self.guiSeqList)
+				return
+		self.guiSeqList.selectItem(0)
+		self.guiSeqList.scrollToSelectedItem()
+		if self.guiSeqList.callback: self.guiSeqList.callback(self.guiSeqList)
+
 	def resize(self, control, newwidth, newheight):
 		# handle control resize events.
 		if control.name == "guiSeqList":
@@ -3001,7 +3048,7 @@ class IFLControlsClass:
 			guiNumFrames.value = 1
 		
 
-	def populateIFLList(self):
+	def populateSequenceList(self):
 		self.clearIFLList()
 		# loop through all actions in the preferences and check for IFL animations
 		global Prefs
@@ -3207,7 +3254,7 @@ class VisControlsClass:
 
 		
 		# populate the IFL sequence list
-		self.populateVisSeqList()
+		self.populateSequenceList()
 		
 		# populate the IPO type pulldown
 		self.populateIpoTypePulldown()
@@ -3249,8 +3296,33 @@ class VisControlsClass:
 
 
 	def refreshAll(self):
-		self.populateVisSeqList()
+		# store last sequence selection
+		seqName = None
+		seqPrefs = None
+		if self.guiSeqList.itemIndex != -1:
+			seqName = self.guiSeqList.controls[self.guiSeqList.itemIndex].controls[0].label
+			seqPrefs = getSequenceKey(seqName)
+		
+		# repopulate the sequence list
+		self.populateSequenceList()
 		self.populateExistingSeqPulldown()
+
+		
+		# restore last sequence selection
+		for itemIndex in range(0, len(self.guiSeqList.controls)):
+			#print "Checking item",itemIndex
+			#print "self.guiSeqList.controls[itemIndex].controls[0].label =",self.guiSeqList.controls[itemIndex].controls[0].label
+			#print "seqName =",seqName
+			if self.guiSeqList.controls[itemIndex].controls[0].label == seqName:
+				#print "found matching control for",seqName
+				self.guiSeqList.selectItem(itemIndex)
+				self.guiSeqList.scrollToSelectedItem()
+				if self.guiSeqList.callback: self.guiSeqList.callback(self.guiSeqList)
+				return
+		self.guiSeqList.selectItem(0)
+		self.guiSeqList.scrollToSelectedItem()
+		if self.guiSeqList.callback: self.guiSeqList.callback(self.guiSeqList)
+
 
 	
 	def resize(self, control, newwidth, newheight):
@@ -3541,7 +3613,7 @@ class VisControlsClass:
 		Prefs['Sequences'][seqName]['Vis']['Tracks'][objName]['hasVisTrack'] = control.state	
 		
 	# this method clears the sequence list and then repopulates it.
-	def populateVisSeqList(self):
+	def populateSequenceList(self):
 		self.curSeqListEvent = 40
 		self.clearVisSeqList()
 		# loop through all actions in the preferences and check for IFL animations
