@@ -405,9 +405,7 @@ def validateAction(seqName, seqPrefs):
 	ActionIsValid = False
 	if seqPrefs['Action']['Enabled']:
 		action = (seqName in Blender.Armature.NLA.GetActions().keys())
-		if action == None:
-			print "   Skipping Action animation for sequence %s, because no Blender action could be found for the animation. " % seqName
-		else:
+		if action != None:
 			ActionIsValid = True
 	
 	return ActionIsValid
@@ -424,10 +422,8 @@ def validateVisibility(seqName, seqPrefs):
 	# Check to see if there's a valid visibility animation
 	visIsValid = False
 	if seqPrefs['Vis']['Enabled']:
-		print "Vis is enabled..."
 		# do we have any tracks?
 		if len(seqPrefs['Vis']['Tracks']) > 0:
-			print "We have tracks, but are any of them enabled?"
 			# We have tracks, but are any of them enabled?
 			for trackName in seqPrefs['Vis']['Tracks'].keys():
 				track = seqPrefs['Vis']['Tracks'][trackName]
@@ -484,7 +480,7 @@ def getSeqNumFrames(seqName, seqPrefs):
 
 	# Did we have any valid animations at all for the sequence?
 	if not (visIsValid or IFLIsValid or actionIsValid):
-		return None
+		return 0
 
 	numFrames = 0
 	# find the max num frames of everything except IFL
