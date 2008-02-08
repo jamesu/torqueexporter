@@ -237,8 +237,9 @@ def getSequenceKey(value):
 	try:
 		return Prefs['Sequences'][value]	
 	except KeyError:
+		# create a copy of the dummy sequence
 		Prefs['Sequences'][value] = dummySequence.copy()
-		# Create anything that cannot be copied (reference objects like lists),
+
 		# and set everything that needs a default
 		Prefs['Sequences'][value]['Triggers'] = [] # [State, Time, On]
 		Prefs['Sequences'][value]['Action'] = {'Enabled': False,'NumGroundFrames': 0,'BlendRefPoseAction': None,'BlendRefPoseFrame': 8,'FrameSamples': 0,'Blend': False}
@@ -268,13 +269,17 @@ def getSequenceKey(value):
 def copySequenceKey(value):
 	global Prefs, dummySequence
 	retVal = dummySequence.copy()
+
+	# global sequence stuff
 	retVal['Dsq'] = Prefs['Sequences'][value]['Dsq']
 	retVal['Cyclic'] = Prefs['Sequences'][value]['Cyclic']
 	retVal['NoExport'] = Prefs['Sequences'][value]['NoExport']
 	retVal['Priority'] = Prefs['Sequences'][value]['Priority']
 	retVal['TotalFrames'] = Prefs['Sequences'][value]['TotalFrames']
-
-
+	retVal['Duration'] = Prefs['Sequences'][value]['Duration']
+	retVal['FPS'] = Prefs['Sequences'][value]['FPS']
+	retVal['DurationLocked'] = Prefs['Sequences'][value]['DurationLocked']
+	retVal['FPSLocked'] = Prefs['Sequences'][value]['FPSLocked']
 	# Create anything that cannot be copied (reference objects like lists)
 	retVal['Triggers'] = []
 	# copy triggers
@@ -282,16 +287,22 @@ def copySequenceKey(value):
 		retVal['Triggers'].append([])
 		for item in entry:
 			retVal['Triggers'][-1].append(item)
+			
 
 	# copy action key
 	retVal['Action'] = {}
 	retVal['Action']['Enabled'] = Prefs['Sequences'][value]['Action']['Enabled']
+	retVal['Action']['StartFrame'] = Prefs['Sequences'][value]['Action']['StartFrame']
+	retVal['Action']['EndFrame'] = Prefs['Sequences'][value]['Action']['EndFrame']
+	retVal['Action']['AutoSamples'] = Prefs['Sequences'][value]['Action']['AutoSamples']
+	retVal['Action']['AutoFrames'] = Prefs['Sequences'][value]['Action']['AutoFrames']
+	retVal['Action']['FrameSamples'] = Prefs['Sequences'][value]['Action']['FrameSamples']
 	retVal['Action']['NumGroundFrames'] = Prefs['Sequences'][value]['Action']['NumGroundFrames']
 	retVal['Action']['BlendRefPoseAction'] = Prefs['Sequences'][value]['Action']['BlendRefPoseAction']
 	retVal['Action']['BlendRefPoseFrame'] = Prefs['Sequences'][value]['Action']['BlendRefPoseFrame']
-	retVal['Action']['FrameSamples'] = Prefs['Sequences'][value]['Action']['FrameSamples']
 	retVal['Action']['Blend'] = Prefs['Sequences'][value]['Action']['Blend']
-	
+
+
 
 	# copy IFL key
 	retVal['IFL'] = {}
@@ -403,9 +414,11 @@ def updateOldPrefs():
 		
 		try: x = actKey['EndFrame']
 		except:
-			action = Blender.Armature.NLA.GetActions()[seqName]
-			actKey['EndFrame'] = DtsShape_Blender.getNumFrames(action.getAllChannelIpos().values(), False)
-
+			try:
+				action = Blender.Armature.NLA.GetActions()[seqName]
+				actKey['EndFrame'] = DtsShape_Blender.getNumFrames(action.getAllChannelIpos().values(), False)
+			except:
+				actKey['EndFrame'] = 0
 		try: x = actKey['AutoFrames']
 		except: actKey['AutoFrames'] = True
 
@@ -461,9 +474,15 @@ def updateOldPrefs():
 
 		try: x = seq['FPS']
 		except:
-			seq['FPS'] = Blender.Scene.GetCurrent().getRenderingContext().framesPerSec()
-			if seq['FPS'] == 0: seq['FPS'] = 2
-		try: x = seq['Duration']
+			try:
+				seq['FPS'] = float(Blender.Scene.GetCurrent().getRenderingContext().framesPerSec())
+				if seq['FPS'] == 0: seq['FPS'] = 25
+			except:
+				seq['FPS'] = 25
+			
+		print "Torque_Util.getSeqNumFrames(seqName, seq)=",Torque_Util.getSeqNumFrames(seqName, seq)
+		print "seq['FPS']=",seq['FPS']
+		try: x = seq['Duration']		
 		except: seq['Duration'] = float(Torque_Util.getSeqNumFrames(seqName, seq)) / float(seq['FPS'])
 		try: x = seq['DurationLocked']
 		except: seq['DurationLocked'] = False
@@ -1771,8 +1790,31 @@ class SeqCommonControlsClass:
 		pass
 
 	def refreshAll(self):		
-		self.clearSequenceList()
+		# store last sequence selection
+		seqName = None
+		seqPrefs = None
+		if self.guiSeqList.itemIndex != -1:
+			seqName = self.guiSeqList.controls[self.guiSeqList.itemIndex].controls[0].label
+			seqPrefs = getSequenceKey(seqName)
+		
+		# repopulate the sequence list
 		self.populateSequenceList()
+		
+		# restore last sequence selection
+		for itemIndex in range(0, len(self.guiSeqList.controls)):
+			#print "Checking item",itemIndex
+			#print "self.guiSeqList.controls[itemIndex].controls[0].label =",self.guiSeqList.controls[itemIndex].controls[0].label
+			#print "seqName =",seqName
+			if self.guiSeqList.controls[itemIndex].controls[0].label == seqName:
+				#print "found matching control for",seqName
+				self.guiSeqList.selectItem(itemIndex)
+				self.guiSeqList.scrollToSelectedItem()
+				if self.guiSeqList.callback: self.guiSeqList.callback(self.guiSeqList)
+				return
+		self.guiSeqList.selectItem(0)
+		self.guiSeqList.scrollToSelectedItem()
+		if self.guiSeqList.callback: self.guiSeqList.callback(self.guiSeqList)
+		
 
 
 	def handleEvent(self, control):
@@ -1781,8 +1823,7 @@ class SeqCommonControlsClass:
 				child.controls[1].state = control.state
 				getSequenceKey(child.controls[0].label)['NoExport'] = not control.state
 		elif control.name == "guiRefresh":
-			self.clearSequenceList()
-			self.populateSequenceList()
+			self.refreshAll()
 
 		elif self.guiSeqList.itemIndex != -1:
 			seqName = self.guiSeqList.controls[self.guiSeqList.itemIndex].controls[0].label
@@ -1874,7 +1915,7 @@ class SeqCommonControlsClass:
 	def resize(self, control, newwidth, newheight):
 		#self.guiSeqOptsContainerTitle = Common_Gui.SimpleText("guiSeqOptsContainerTitle", "Sequence: None Selected", None, self.resize)
 		if control.name == "guiSeqList":
-			control.x, control.y, control.height, control.width = 10,50, newheight - 90,230
+			control.x, control.y, control.height, control.width = 10,28, newheight - 68,230
 			#control.x, control.y, control.height, control.width = 10,100, 200,230
 		elif control.name == "guiSeqListTitle":
 			control.x, control.y, control.height, control.width = 10,310, 20,82
@@ -1951,9 +1992,6 @@ class SeqCommonControlsClass:
 			control.width = 100
 
 	
-	def refreshAll(self):		
-		self.populateSequenceList()
-
 	def refreshBarChart(self, seqName, seqPrefs):
 		maxFrames = getSeqNumFrames(seqName, seqPrefs)
 		if maxFrames == 0: maxFrames = 0.0001 # heh.
@@ -2234,9 +2272,8 @@ class ActionControlsClass:
 
 	
 	def refreshAll(self):		
-		self.clearSequenceList()
 		self.populateSequenceList()
-		pass
+
 			
 	# This method validates the current control states, adjusts preference values, and generally keeps everything consistent
 	def updateSequenceControls(self, seqName, seqPrefs):
@@ -2276,7 +2313,6 @@ class ActionControlsClass:
 				child.controls[1].state = control.state
 				getSequenceKey(child.controls[0].label)['NoExport'] = not control.state
 		elif control.name == "guiRefresh":
-			self.clearSequenceList()
 			self.populateSequenceList()
 		else:
 			if self.guiSeqList.itemIndex != -1:
@@ -2468,6 +2504,7 @@ class ActionControlsClass:
 
 	
 	def populateSequenceList(self):
+		self.clearSequenceList()
 		actions = Armature.NLA.GetActions()
 		keys = actions.keys()
 		keys.sort()
