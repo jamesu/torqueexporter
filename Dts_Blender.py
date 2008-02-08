@@ -1885,31 +1885,31 @@ class SeqCommonControlsClass:
 		# Sequence options
 		elif control.name == "guiSeqFramesLabel":
 			control.x = 5
-			control.y = newheight - 66
+			control.y = newheight - 156
 			control.width = newwidth - 10
 		elif control.name == "guiSeqDuration":
 			control.x = 5
-			control.y = newheight - 95
+			control.y = newheight - 185
 			control.width = newwidth - 75
 		elif control.name == "guiSeqDurationLock":
 			control.x = newwidth - 68
-			control.y = newheight - 95
+			control.y = newheight - 185
 			control.width = 60
 		elif control.name == "guiSeqFPS":
 			control.x = 5
-			control.y = newheight - 120
+			control.y = newheight - 207
 			control.width = newwidth - 75
 		elif control.name == "guiSeqFPSLock":
 			control.x = newwidth - 68
-			control.y = newheight - 120
+			control.y = newheight - 207
 			control.width = 60
 		elif control.name == "guiPriority":
 			control.x = 5
-			control.y = newheight - 145
+			control.y = newheight - 240
 			control.width = newwidth - 10
 		elif control.name == "guiSeqGraph":
 			control.x = 5
-			control.y = 95
+			control.y = 195
 			control.height = 85
 			control.width = newwidth - 10		
 		# Triggers
