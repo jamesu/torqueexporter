@@ -844,7 +844,7 @@ class ShapeTree(SceneTree):
 						armBoneList.append(bone.name)
 					# sort each armature's bone list before
 					# appending it to the main list.
-					armBoneList.sort()
+					armBoneList.sort(lambda x, y: cmp(x.lower(),y.lower()))
 					for bone in armBoneList:
 						boneList.append(bone)
 		return boneList
@@ -2157,7 +2157,7 @@ class SeqCommonControlsClass:
 		# loop through all actions in the preferences
 		global Prefs
 		keys = Prefs['Sequences'].keys()
-		keys.sort()
+		keys.sort(lambda x, y: cmp(x.lower(),y.lower()))
 		for seqName in keys:
 			seq = getSequenceKey(seqName)
 			self.guiSeqList.addControl(self.createSequenceListItem(seqName))
@@ -2530,7 +2530,7 @@ class ActionControlsClass:
 		self.clearSequenceList()
 		actions = Armature.NLA.GetActions()
 		keys = actions.keys()
-		keys.sort()
+		keys.sort(lambda x, y: cmp(x.lower(),y.lower()))
 
 		# There are a finite number of events we can allocate in blender, so we need to
 		# assign events in batches of the maximum number of visible list items.
@@ -3053,7 +3053,7 @@ class IFLControlsClass:
 		# loop through all actions in the preferences and check for IFL animations
 		global Prefs
 		keys = Prefs['Sequences'].keys()
-		keys.sort()
+		keys.sort(lambda x, y: cmp(x.lower(),y.lower()))
 		for seqName in keys:
 			seq = getSequenceKey(seqName)
 			if seq['IFL']['Enabled'] == True:
@@ -3075,7 +3075,7 @@ class IFLControlsClass:
 		# loop through all actions in the preferences and check for sequences without IFL animations
 		global Prefs
 		keys = Prefs['Sequences'].keys()
-		keys.sort()
+		keys.sort(lambda x, y: cmp(x.lower(),y.lower()))
 		for seqName in keys:
 			seq = getSequenceKey(seqName)
 			if seq['IFL']['Enabled'] == False:
@@ -3092,7 +3092,7 @@ class IFLControlsClass:
 		try: x = Prefs['Materials'].keys()
 		except: Prefs['Materials'] = {}
 		keys = Prefs['Materials'].keys()
-		keys.sort()
+		keys.sort(lambda x, y: cmp(x.lower(),y.lower()))
 		for matName in Prefs['Materials'].keys():
 			mat = Prefs['Materials'][matName]
 			try: x = mat['IFLMaterial']
@@ -3619,7 +3619,7 @@ class VisControlsClass:
 		# loop through all actions in the preferences and check for IFL animations
 		global Prefs
 		keys = Prefs['Sequences'].keys()
-		keys.sort()
+		keys.sort(lambda x, y: cmp(x.lower(),y.lower()))
 		for seqName in keys:
 			seq = getSequenceKey(seqName)
 			if seq['Vis']['Enabled'] == True:
@@ -3640,7 +3640,7 @@ class VisControlsClass:
 		# loop through all actions in the preferences and check for sequences without IFL animations
 		global Prefs
 		keys = Prefs['Sequences'].keys()
-		keys.sort()
+		keys.sort(lambda x, y: cmp(x.lower(),y.lower()))
 		for seqName in keys:
 			seq = getSequenceKey(seqName)
 			if seq['Vis']['Enabled'] == False:
@@ -3664,7 +3664,7 @@ class VisControlsClass:
 		self.guiIpoObject.itemIndex = -1
 		self.clearIpoObjectPulldown()
 		objs = getAllSceneObjectNames(type)		
-		objs.sort()
+		objs.sort(lambda x, y: cmp(x.lower(),y.lower()))
 		for obj in objs:
 			self.guiIpoObject.items.append(obj)
 
