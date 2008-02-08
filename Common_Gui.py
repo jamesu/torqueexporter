@@ -926,6 +926,7 @@ class ListContainer(BasicContainer):
 		return False
 	
 	
+
 	def scrollToSelectedItem(self):
 		print "*********** scrollToSelectedItem reached *********"
 		maxUsefulChildren = float(len(self.controls)-self.maxVisibleControls())
