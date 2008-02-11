@@ -2929,7 +2929,12 @@ class IFLControlsClass:
 			pass
 		elif control.name == "guiSeqAdd":
 			if validateSequenceName(self.guiSeqName.value, "IFL"):
+				self.guiSeqExistingSequences.selectStringItem(self.guiSeqName.value)
 				self.AddNewIFLSeq(self.guiSeqName.value)
+				# remove from existing sequences list if this sequence already exists			
+				if self.guiSeqExistingSequences.itemIndex != -1:
+					del self.guiSeqExistingSequences.items[self.guiSeqExistingSequences.itemIndex]
+				self.guiSeqExistingSequences.selectStringItem("")
 		elif control.name == "guiSeqDel":
 			guiSeqList = self.guiSeqList
 			if guiSeqList.itemIndex > -1 and guiSeqList.itemIndex < len(guiSeqList.controls):
@@ -2955,12 +2960,12 @@ class IFLControlsClass:
 				self.populateSequenceList()
 				# restore last sequence selection
 				for itemIndex in range(0, len(self.guiSeqList.controls)):
-					print "Checking for:", newName, " = ", self.guiSeqList.controls[itemIndex].controls[0].label
 					if self.guiSeqList.controls[itemIndex].controls[0].label == newName:
 						print "Selecting item..."
 						self.guiSeqList.selectItem(itemIndex)
 				self.guiSeqList.scrollToSelectedItem()
 				if self.guiSeqList.callback: self.guiSeqList.callback(self.guiSeqList)
+
 
 		elif control.name == "guiSeqAddToExisting":
 			existingSequences = self.guiSeqExistingSequences
