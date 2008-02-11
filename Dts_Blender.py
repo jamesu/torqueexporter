@@ -2972,7 +2972,10 @@ class IFLControlsClass:
 					del existingSequences.items[itemIndex]
 					existingSequences.selectStringItem("")
 					self.populateSequenceList()
-					self.guiSeqList.selectItem(existingName)
+					for itemIndex in range(0, len(self.guiSeqList.controls)):
+						if self.guiSeqList.controls[itemIndex].controls[0].label == existingName:
+							self.guiSeqList.selectItem(itemIndex)
+					#self.guiSeqList.selectItem(existingName)
 					self.guiSeqList.scrollToSelectedItem()
 					if self.guiSeqList.callback: self.guiSeqList.callback(self.guiSeqList)
 
