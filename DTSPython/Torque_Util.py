@@ -498,7 +498,8 @@ def getSeqNumFrames(seqName, seqPrefs):
 
 	return numFrames
 
-def recalcSeqDurationAndFPS(seqName, seqPrefs):
+# This function makes sure that the FPS and Duration values are in a valid range.
+def validateSeqDurationAndFPS(seqName, seqPrefs):
 	numFrames = getSeqNumFrames(seqName, seqPrefs)
 	maxDuration = 3600.0
 	minDuration = 0.00392 # minimum duration = 1/255 of a second
@@ -508,24 +509,51 @@ def recalcSeqDurationAndFPS(seqName, seqPrefs):
 		# set FPS to 30 and calc duration
 		seqPrefs['FPS'] = 30.0
 		seqPrefs['Duration'] = float(numFrames) / 30.0
-	# do we need to recalculate FPS, or Duration?
-	elif seqPrefs['DurationLocked']:
-		# recalc FPS
+	else:
 		if seqPrefs['Duration'] < minDuration:
 			seqPrefs['Duration'] = minDuration # minimum duration = 1/255 of a second
 		if seqPrefs['Duration'] > maxDuration:
 			seqPrefs['Duration'] = maxDuration # minimum duration = 1/255 of a second
-		seqPrefs['FPS'] = float(numFrames) / seqPrefs['Duration']
 		if seqPrefs['FPS'] < minFPS:
 			seqPrefs['FPS'] = minFPS
-	elif seqPrefs['FPSLocked']:
-		# recalc duration
-		if seqPrefs['FPS'] < minFPS:
-			seqPrefs['FPS'] = minFPS
-		seqPrefs['Duration'] = float(numFrames) / seqPrefs['FPS']
+			seqPrefs['Duration'] = float(numFrames) / seqPrefs['FPS']
+		if seqPrefs['FPS'] > maxFPS:
+			seqPrefs['FPS'] = maxFPS
+			seqPrefs['Duration'] = float(numFrames) / seqPrefs['FPS']
 		if seqPrefs['Duration'] < minDuration:
 			seqPrefs['Duration'] = minDuration
 			seqPrefs['FPS'] = float(numFrames) / seqPrefs['Duration']
 		if seqPrefs['Duration'] > maxDuration:
 			seqPrefs['Duration'] = maxDuration
 			seqPrefs['FPS'] = float(numFrames) / seqPrefs['Duration']
+
+# Call this function when the number of frames in the sequence has changed, or may have changed.
+#  updates either duration or FPS for the sequence, depending on which is locked.
+def updateSeqDurationAndFPS(seqName, seqPrefs):
+	numFrames = getSeqNumFrames(seqName, seqPrefs)
+	# validate to avoid zero division
+	validateSeqDurationAndFPS(seqName, seqPrefs)
+	if validateIFL(seqName, seqPrefs):
+		# set FPS to 30 and calc duration
+		seqPrefs['FPS'] = 30.0
+		seqPrefs['Duration'] = float(numFrames) / 30.0
+	# do we need to recalculate FPS, or Duration?
+	if seqPrefs['DurationLocked']:
+		# recalc FPS
+		seqPrefs['FPS'] = float(numFrames) / seqPrefs['Duration']
+	if seqPrefs['FPSLocked']:
+		# recalc duration
+		seqPrefs['Duration'] = float(numFrames) / seqPrefs['FPS']
+	# validate resulting values
+	validateSeqDurationAndFPS(seqName, seqPrefs)
+
+
+# Call this function when the Sequence FPS is changed manually to recalculate the duration.
+def recalcDuration(seqName, seqPrefs):
+	validateSeqDurationAndFPS(seqName, seqPrefs)
+	seqPrefs['Duration'] = float(getSeqNumFrames(seqName, seqPrefs)) / float(seqPrefs['FPS'])
+
+# call this function when the Sequence Duration is changed manually to recalculate the FPS.
+def recalcFPS(seqName, seqPrefs):
+	validateSeqDurationAndFPS(seqName, seqPrefs)
+	seqPrefs['FPS'] = float(getSeqNumFrames(seqName, seqPrefs)) / float(seqPrefs['Duration'])
