@@ -237,10 +237,10 @@ class BarGraph(BasicControl):
 			BGL.glColor3f(r, g, b)
 			barWidth = (self.barVals[i] * self.width)-1
 			if barWidth < 0: barWidth = 0
-			barLeft = real_x
-			barRight = barWidth + real_x
-			barTop = real_y + (i * barHeight) + barHeight
-			barBottom = real_y + (i * barHeight)
+			barLeft = int(real_x)
+			barRight = int(barWidth + real_x)
+			barTop = int(real_y + (i * barHeight) + barHeight)
+			barBottom = int(real_y + (i * barHeight))
 			BGL.glRecti(barLeft, barBottom, barRight, barTop)
 		
 		BGL.glColor3f(0.0, 0.0, 0.0)
