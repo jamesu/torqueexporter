@@ -2361,7 +2361,7 @@ class ActionControlsClass:
 				child.controls[1].state = control.state
 				getSequenceKey(child.controls[0].label)['NoExport'] = not control.state
 		elif control.name == "guiRefresh":
-			self.populateSequenceList()
+			self.refreshAll()
 		else:
 			if self.guiSeqList.itemIndex != -1:
 				seqName = self.guiSeqList.controls[self.guiSeqList.itemIndex].controls[0].label
@@ -2553,9 +2553,6 @@ class ActionControlsClass:
 	
 	def populateSequenceList(self):
 		self.clearSequenceList()
-		cleanKeys()
-		createActionKeys()
-
 		actions = Armature.NLA.GetActions()
 		keys = actions.keys()
 		keys.sort(lambda x, y: cmp(x.lower(),y.lower()))
