@@ -536,7 +536,7 @@ class NumberSlider(NumberPicker):
 		NumberPicker.__init__(self, name, text, tooltip, evt, callback, resize_callback)
 
 	def onDraw(self, offset):
-		self.data = Draw.Slider(self.text, self.evt, self.x+offset[0], self.y+offset[1], self.width, self.height, self.value, self.min, self.max, self.tooltip)
+		self.data = Draw.Slider(self.text, self.evt, self.x+offset[0], self.y+offset[1], self.width, self.height, self.value, self.min, self.max, 0, self.tooltip)
 												
 class SimpleText(BasicControl):
 	def __init__(self, name=None, label="", callback=None, resize_callback=None):
