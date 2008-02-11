@@ -496,7 +496,7 @@ class ComboBox(BasicControl):
 		return True
 
 	def onDraw(self, offset):
-		self.data = Draw.Menu(self.constructString(), self.evt, self.x+offset[0], self.y+offset[1], self.width, self.height, self.itemIndex)
+		self.data = Draw.Menu(self.constructString(), self.evt, self.x+offset[0], self.y+offset[1], self.width, self.height, self.itemIndex, self.tooltip)
 		
 class TextBox(BasicControl):
 	def __init__(self, name=None, text=None, tooltip=None, evt=None, callback=None, resize_callback=None):
@@ -529,14 +529,14 @@ class NumberPicker(BasicControl):
 		return True
 		
 	def onDraw(self, offset):
-		self.data = Draw.Number(self.text, self.evt, self.x+offset[0], self.y+offset[1], self.width, self.height, self.value, self.min, self.max)
+		self.data = Draw.Number(self.text, self.evt, self.x+offset[0], self.y+offset[1], self.width, self.height, self.value, self.min, self.max, self.tooltip)
 		
 class NumberSlider(NumberPicker):
 	def __init__(self, name=None, text=None, tooltip=None, evt=None, callback=None, resize_callback=None):
 		NumberPicker.__init__(self, name, text, tooltip, evt, callback, resize_callback)
 
 	def onDraw(self, offset):
-		self.data = Draw.Slider(self.text, self.evt, self.x+offset[0], self.y+offset[1], self.width, self.height, self.value, self.min, self.max)
+		self.data = Draw.Slider(self.text, self.evt, self.x+offset[0], self.y+offset[1], self.width, self.height, self.value, self.min, self.max, self.tooltip)
 												
 class SimpleText(BasicControl):
 	def __init__(self, name=None, label="", callback=None, resize_callback=None):
