@@ -1862,11 +1862,8 @@ class SeqCommonControlsClass:
 			if control.name == "guiSeqDuration":
 				if not Torque_Util.validateIFL(seqName, seqPrefs):
 					seqPrefs['Duration'] = float(control.value)					
-					
-					#if seqPrefs['Duration'] == 0.0: seqencePrefs['Duration'] = 0.03125					
-					#seqPrefs['FPS'] = float(getSeqNumFrames(seqName, seqPrefs)) / float(seqPrefs['Duration'])
-					#if seqPrefs['FPS'] == 0.0: seqPrefs['FPS'] = 0.00001
-					recalcSeqDurationAndFPS(seqName, seqPrefs)
+					recalcFPS(seqName, seqPrefs)
+					updateSeqDurationAndFPS(seqName, seqPrefs)
 					
 					self.guiSeqDuration.value = float(seqPrefs['Duration'])
 					self.guiSeqDuration.tooltip = "Playback Time: %f Seconds" % float(seqPrefs['Duration'])
@@ -1879,10 +1876,8 @@ class SeqCommonControlsClass:
 			elif control.name == "guiSeqFPS":
 				if not Torque_Util.validateIFL(seqName, seqPrefs):
 					seqPrefs['FPS'] = float(control.value)
-					
-					#if seqPrefs['FPS'] == 0.0: seqPrefs['FPS'] = 0.00001
-					#seqPrefs['Duration'] = float(getSeqNumFrames(seqName, seqPrefs)) / float(seqPrefs['FPS'])
-					recalcSeqDurationAndFPS(seqName, seqPrefs)
+					recalcDuration(seqName, seqPrefs)
+					updateSeqDurationAndFPS(seqName, seqPrefs)
 					
 					self.guiSeqDuration.value = float(seqPrefs['Duration'])
 					self.guiSeqDuration.tooltip = "Playback Time: %f Seconds" % float(seqPrefs['Duration'])
@@ -1916,7 +1911,7 @@ class SeqCommonControlsClass:
 				seqPrefs['Action']['NumGroundFrames'] = maxNumFrames
 			self.guiSeqOptsContainer.enabled = True
 			
-			recalcSeqDurationAndFPS(seqName, seqPrefs)
+			updateSeqDurationAndFPS(seqName, seqPrefs)
 			
 			self.guiSeqDuration.value = float(seqPrefs['Duration'])
 			self.guiSeqDuration.tooltip = "Playback Time: %f Seconds" % float(seqPrefs['Duration'])
