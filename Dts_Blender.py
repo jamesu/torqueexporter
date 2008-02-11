@@ -261,7 +261,13 @@ def getSequenceKey(value):
 			Prefs['Sequences'][value]['Action']['Enabled'] = False
 			maxNumFrames = 0		
 
+		Prefs['Sequences'][value]['Action']['StartFrame'] = 1
+		Prefs['Sequences'][value]['Action']['EndFrame'] = maxNumFrames
+		Prefs['Sequences'][value]['Action']['AutoSamples'] = True
+		Prefs['Sequences'][value]['Action']['AutoFrames'] = True
 		Prefs['Sequences'][value]['Action']['FrameSamples'] = maxNumFrames
+		Prefs['Sequences'][value]['Action']['NumGroundFrames'] = 0
+
 		# default reference pose for blends is in the middle of the same action
 		Prefs['Sequences'][value]['Action']['BlendRefPoseAction'] = value			
 		Prefs['Sequences'][value]['Action']['BlendRefPoseFrame'] = maxNumFrames/2
@@ -2288,11 +2294,7 @@ class ActionControlsClass:
 		
 		# restore last sequence selection
 		for itemIndex in range(0, len(self.guiSeqList.controls)):
-			#print "Checking item",itemIndex
-			#print "self.guiSeqList.controls[itemIndex].controls[0].label =",self.guiSeqList.controls[itemIndex].controls[0].label
-			#print "seqName =",seqName
 			if self.guiSeqList.controls[itemIndex].controls[0].label == seqName:
-				#print "found matching control for",seqName
 				self.guiSeqList.selectItem(itemIndex)
 				self.guiSeqList.scrollToSelectedItem()
 				if self.guiSeqList.callback: self.guiSeqList.callback(self.guiSeqList)
@@ -2532,6 +2534,9 @@ class ActionControlsClass:
 	
 	def populateSequenceList(self):
 		self.clearSequenceList()
+		cleanKeys()
+		createActionKeys()
+
 		actions = Armature.NLA.GetActions()
 		keys = actions.keys()
 		keys.sort(lambda x, y: cmp(x.lower(),y.lower()))
@@ -3485,7 +3490,12 @@ class VisControlsClass:
 				if seqKey['Action']['Enabled'] == True or seqKey['IFL']['Enabled'] == True:
 					self.guiSeqExistingSequences.items.append(seqName)
 				else:
-					del Prefs['Sequences'][seqName]
+					Prefs['Sequences'][seqName]['Vis'][Enabled] = False
+					seq['Vis']['StartFrame'] = 1
+					seq['Vis']['EndFrame'] = 1
+					seq['Vis']['Enabled'] = True
+					seq['Vis']['Tracks'] = {}
+					# todo - GC sequences here, if no animations enabled for sequences, delete them.
 				self.populateVisTrackList(seqName)
 			else:
 				self.clearVisTrackList(seqName)
