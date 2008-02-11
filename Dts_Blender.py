@@ -490,10 +490,12 @@ def updateOldPrefs():
 			except:
 				seq['FPS'] = 25
 			
-		print "Torque_Util.getSeqNumFrames(seqName, seq)=",Torque_Util.getSeqNumFrames(seqName, seq)
-		print "seq['FPS']=",seq['FPS']
 		try: x = seq['Duration']		
-		except: seq['Duration'] = float(Torque_Util.getSeqNumFrames(seqName, seq)) / float(seq['FPS'])
+		except:
+			try: seq['Duration'] = float(Torque_Util.getSeqNumFrames(seqName, seq)) / float(seq['FPS'])
+			except:
+				seq['Duration'] = 1.0
+				seq['FPS'] = 1.0
 		try: x = seq['DurationLocked']
 		except: seq['DurationLocked'] = False
 		try: x = seq['FPSLocked']
@@ -1748,9 +1750,12 @@ class SeqCommonControlsClass:
 		self.guiSeqOptsContainer.fade_mode = 5
 		self.guiSeqOptsContainer.borderColor = None
 		self.guiSeqList.fade_mode = 0
-		self.guiSeqDuration.min = 0.01
-		self.guiSeqDuration.max = 3600.00
-		self.guiSeqFPS.min = 0.001
+		self.guiSeqDuration.min = 0.00392  # minimum duration = 1/255 of a second
+		self.guiSeqDuration.max = 3600.0
+		self.guiSeqDuration.value = 0.00392
+		self.guiSeqFPS.min = 0.00027777778
+		self.guiSeqFPS.max = 255.0
+		self.guiSeqFPS.value = 25.0
 		self.guiPriority.min = 0
 		self.guiPriority.max = 64 # this seems resonable
 		self.guiTriggerState.min, self.guiTriggerState.max = 1, 32
@@ -1808,6 +1813,8 @@ class SeqCommonControlsClass:
 			seqPrefs = getSequenceKey(seqName)
 		
 		# repopulate the sequence list
+		cleanKeys()
+		createActionKeys()
 		self.populateSequenceList()
 		
 		# restore last sequence selection
@@ -1854,11 +1861,17 @@ class SeqCommonControlsClass:
 				self.guiSeqFPSLock.state = True
 			if control.name == "guiSeqDuration":
 				if not Torque_Util.validateIFL(seqName, seqPrefs):
-					seqPrefs['Duration'] = float(control.value)
-					if seqPrefs['Duration'] == 0.0: seqencePrefs['Duration'] = 0.03125
-					seqPrefs['FPS'] = float(getSeqNumFrames(seqName, seqPrefs)) / float(seqPrefs['Duration'])
+					seqPrefs['Duration'] = float(control.value)					
+					
+					#if seqPrefs['Duration'] == 0.0: seqencePrefs['Duration'] = 0.03125					
+					#seqPrefs['FPS'] = float(getSeqNumFrames(seqName, seqPrefs)) / float(seqPrefs['Duration'])
+					#if seqPrefs['FPS'] == 0.0: seqPrefs['FPS'] = 0.00001
+					recalcSeqDurationAndFPS(seqName, seqPrefs)
+					
 					self.guiSeqDuration.value = float(seqPrefs['Duration'])
+					self.guiSeqDuration.tooltip = "Playback Time: %f Seconds" % float(seqPrefs['Duration'])
 					self.guiSeqFPS.value = float(seqPrefs['FPS'])
+					self.guiSeqFPS.tooltip = "Playback Rate: %f Frames Per Second" % float(seqPrefs['FPS'])
 				else:
 					# todo - pop up a warning here about IFL being enabled
 					print "IFL Sequences are locked at 30 fps.  This value is not settable for this sequence."
@@ -1866,10 +1879,15 @@ class SeqCommonControlsClass:
 			elif control.name == "guiSeqFPS":
 				if not Torque_Util.validateIFL(seqName, seqPrefs):
 					seqPrefs['FPS'] = float(control.value)
-					if seqPrefs['FPS'] == 0.0: seqPrefs['FPS'] = .00005
-					seqPrefs['Duration'] = float(getSeqNumFrames(seqName, seqPrefs)) / float(seqPrefs['FPS'])
+					
+					#if seqPrefs['FPS'] == 0.0: seqPrefs['FPS'] = 0.00001
+					#seqPrefs['Duration'] = float(getSeqNumFrames(seqName, seqPrefs)) / float(seqPrefs['FPS'])
+					recalcSeqDurationAndFPS(seqName, seqPrefs)
+					
 					self.guiSeqDuration.value = float(seqPrefs['Duration'])
+					self.guiSeqDuration.tooltip = "Playback Time: %f Seconds" % float(seqPrefs['Duration'])
 					self.guiSeqFPS.value = float(seqPrefs['FPS'])
+					self.guiSeqFPS.tooltip = "Playback Rate: %f Frames Per Second" % float(seqPrefs['FPS'])
 				else:
 					# todo - pop up a warning here about IFL being enabled
 					print "IFL Sequences are locked at 30 fps.  This value is not settable for this sequence."
@@ -1897,9 +1915,13 @@ class SeqCommonControlsClass:
 			if seqPrefs['Action']['NumGroundFrames'] > maxNumFrames:
 				seqPrefs['Action']['NumGroundFrames'] = maxNumFrames
 			self.guiSeqOptsContainer.enabled = True
-			Torque_Util.recalcSeqDurationAndFPS(seqName, seqPrefs)
-			self.guiSeqOptsContainer.controlDict['guiSeqDuration'].value = float(seqPrefs['Duration'])
-			self.guiSeqOptsContainer.controlDict['guiSeqFPS'].value = float(seqPrefs['FPS'])
+			
+			recalcSeqDurationAndFPS(seqName, seqPrefs)
+			
+			self.guiSeqDuration.value = float(seqPrefs['Duration'])
+			self.guiSeqDuration.tooltip = "Playback Time: %f Seconds" % float(seqPrefs['Duration'])
+			self.guiSeqFPS.value = float(seqPrefs['FPS'])
+			self.guiSeqFPS.tooltip = "Playback Rate: %f Frames Per Second" % float(seqPrefs['FPS'])
 			self.guiSeqDurationLock.state = seqPrefs['DurationLocked']
 			self.guiSeqFPSLock.state = seqPrefs['FPSLocked']
 			self.guiPriority.value = seqPrefs['Priority']
@@ -1941,19 +1963,19 @@ class SeqCommonControlsClass:
 		elif control.name == "guiSeqDuration":
 			control.x = 5
 			control.y = newheight - 185
-			control.width = newwidth - 75
+			control.width = newwidth - 55
 		elif control.name == "guiSeqDurationLock":
-			control.x = newwidth - 68
+			control.x = newwidth - 48
 			control.y = newheight - 185
-			control.width = 60
+			control.width = 40
 		elif control.name == "guiSeqFPS":
 			control.x = 5
 			control.y = newheight - 207
-			control.width = newwidth - 75
+			control.width = newwidth - 55
 		elif control.name == "guiSeqFPSLock":
-			control.x = newwidth - 68
+			control.x = newwidth - 48
 			control.y = newheight - 207
-			control.width = 60
+			control.width = 40
 		elif control.name == "guiPriority":
 			control.x = 5
 			control.y = newheight - 240
@@ -2290,6 +2312,8 @@ class ActionControlsClass:
 			seqPrefs = getSequenceKey(seqName)
 		
 		# repopulate the sequence list
+		cleanKeys()
+		createActionKeys()
 		self.populateSequenceList()
 		
 		# restore last sequence selection
@@ -2737,6 +2761,8 @@ class IFLControlsClass:
 			seqPrefs = getSequenceKey(seqName)
 		
 		# repopulate the sequence list
+		cleanKeys()
+		createActionKeys()
 		self.populateSequenceList()
 		self.populateExistingSeqPulldown()
 
@@ -3344,6 +3370,8 @@ class VisControlsClass:
 			seqPrefs = getSequenceKey(seqName)
 		
 		# repopulate the sequence list
+		cleanKeys()
+		createActionKeys()
 		self.populateSequenceList()
 		self.populateExistingSeqPulldown()
 
