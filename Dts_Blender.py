@@ -220,11 +220,15 @@ def saveTextPrefs():
 
 dummySequence =	\
 {
-'Dsq': False,
-'Cyclic': False,
-'NoExport': False,
-'Priority': 0,
-'TotalFrames': 36,
+	'Dsq': False,
+	'Cyclic': False,
+	'NoExport': False,
+	'Priority': 0,
+	'TotalFrames': 0,
+	'Duration': 1,
+	'FPS': 25,
+	'DurationLocked': False,
+	'FPSLocked': True
 }
 
 # Gets a sequence key from the preferences
@@ -2734,11 +2738,7 @@ class IFLControlsClass:
 		
 		# restore last sequence selection
 		for itemIndex in range(0, len(self.guiSeqList.controls)):
-			#print "Checking item",itemIndex
-			#print "self.guiSeqList.controls[itemIndex].controls[0].label =",self.guiSeqList.controls[itemIndex].controls[0].label
-			#print "seqName =",seqName
 			if self.guiSeqList.controls[itemIndex].controls[0].label == seqName:
-				#print "found matching control for",seqName
 				self.guiSeqList.selectItem(itemIndex)
 				self.guiSeqList.scrollToSelectedItem()
 				if self.guiSeqList.callback: self.guiSeqList.callback(self.guiSeqList)
@@ -2746,6 +2746,7 @@ class IFLControlsClass:
 		self.guiSeqList.selectItem(0)
 		self.guiSeqList.scrollToSelectedItem()
 		if self.guiSeqList.callback: self.guiSeqList.callback(self.guiSeqList)
+		
 
 	def resize(self, control, newwidth, newheight):
 		# handle control resize events.
@@ -2853,7 +2854,14 @@ class IFLControlsClass:
 
 		# add sequence to GUI sequence list		
 		self.guiSeqList.addControl(self.createSequenceListItem(seqName))
-		self.guiSeqList.selectItem(len(self.guiSeqList.controls)-1)
+		self.populateSequenceList()
+		# restore last sequence selection
+		for itemIndex in range(0, len(self.guiSeqList.controls)):
+			if self.guiSeqList.controls[itemIndex].controls[0].label == seqName:
+				self.guiSeqList.selectItem(itemIndex)
+		self.guiSeqList.scrollToSelectedItem()
+		if self.guiSeqList.callback: self.guiSeqList.callback(self.guiSeqList)
+
 		self.guiSeqOptsContainer.enabled = True
 		# refresh the Image frames list
 		self.clearImageFramesList()
@@ -2933,13 +2941,27 @@ class IFLControlsClass:
 					self.guiSeqExistingSequences.items.append(seqName)
 				else:
 					del Prefs['Sequences'][seqName]		
+				self.populateSequenceList()
+				if self.guiSeqList.callback: self.guiSeqList.callback(self.guiSeqList)
+
 		elif control.name == "guiSeqRename":
 			guiSeqList = self.guiSeqList
 			seqName = guiSeqList.controls[guiSeqList.itemIndex].controls[0].label
+			newName = self.guiSeqName.value
 			# Move sequence values to new key and delete the old.
 			if validateSequenceName(self.guiSeqName.value, "IFL"):
 				renameSequence(seqName, self.guiSeqName.value)
-				guiSeqList.controls[guiSeqList.itemIndex].controls[0].label = self.guiSeqName.value		
+				#guiSeqList.controls[guiSeqList.itemIndex].controls[0].label = self.guiSeqName.value
+				self.populateSequenceList()
+				# restore last sequence selection
+				for itemIndex in range(0, len(self.guiSeqList.controls)):
+					print "Checking for:", newName, " = ", self.guiSeqList.controls[itemIndex].controls[0].label
+					if self.guiSeqList.controls[itemIndex].controls[0].label == newName:
+						print "Selecting item..."
+						self.guiSeqList.selectItem(itemIndex)
+				self.guiSeqList.scrollToSelectedItem()
+				if self.guiSeqList.callback: self.guiSeqList.callback(self.guiSeqList)
+
 		elif control.name == "guiSeqAddToExisting":
 			existingSequences = self.guiSeqExistingSequences
 			itemIndex = existingSequences.itemIndex
@@ -2949,6 +2971,11 @@ class IFLControlsClass:
 					self.AddNewIFLSeq(existingName)
 					del existingSequences.items[itemIndex]
 					existingSequences.selectStringItem("")
+					self.populateSequenceList()
+					self.guiSeqList.selectItem(existingName)
+					self.guiSeqList.scrollToSelectedItem()
+					if self.guiSeqList.callback: self.guiSeqList.callback(self.guiSeqList)
+
 		elif control.name == "guiMat":
 			guiSeqList = self.guiSeqList
 			guiMat = self.guiMat
