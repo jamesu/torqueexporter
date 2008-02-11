@@ -1007,7 +1007,6 @@ class ListContainer(BasicContainer):
 
 
 	def onDraw(self, offset):
-		print "Drawing List..."
 		BGL.glRasterPos2i(offset[0]+self.x, offset[1]+self.y)
 		BGL.glColor4f(self.color[0], self.color[1], self.color[2], self.color[3])
 		
