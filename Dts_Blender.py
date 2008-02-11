@@ -2342,7 +2342,6 @@ class ActionControlsClass:
 		if seqPrefs['Action']['NumGroundFrames'] > maxFrames: seqPrefs['Action']['NumGroundFrames'] = maxFrames
 
 		# refresh control states
-
 		self.guiFrameSamples.max = maxFrames
 		self.guiFrameSamples.value = seqPrefs['Action']['FrameSamples']
 		self.guiGroundFrameSamples.max = maxFrames
@@ -2351,6 +2350,20 @@ class ActionControlsClass:
 		self.guiEndFrame.value = seqPrefs['Action']['EndFrame']
 		self.guiStartFrame.max = seqPrefs['Action']['EndFrame']
 		self.guiStartFrame.value = seqPrefs['Action']['StartFrame']
+
+	def clearSequenceControls(self):
+		# refresh control states
+		self.guiFrameSamples.value = 0
+		self.guiGroundFrameSamples.value = 0
+		self.guiEndFrame.value = 0
+		self.guiStartFrame.value = 0
+		self.guiAutoFrames.state = False
+		self.guiAutoSamples.state = False
+		self.guiOptsTitle.label = "Sequence: None Selected"
+		self.guiBlendSequence.state = False
+		self.guiRefPoseTitle.visible = False
+		self.guiRefPoseMenu.visible = False
+		self.guiRefPoseFrame.visible = False
 
 	
 	def handleEvent(self, control):
@@ -2368,21 +2381,34 @@ class ActionControlsClass:
 				seqPrefs = getSequenceKey(seqName)
 				# blend ref pose selection
 				if control.name == "guiBlendSequence":
-					seqPrefs['Action']['Blend'] = control.state
+					seqPrefs['Action']['Blend'] = control.state					
 					# if blend is true, show the ref pose controls
 					if seqPrefs['Action']['Blend'] == True:
 						self.guiSeqOpts.controlDict['guiRefPoseTitle'].visible = True
 						self.guiSeqOpts.controlDict['guiRefPoseMenu'].visible = True
 						self.guiSeqOpts.controlDict['guiRefPoseFrame'].visible = True
+						# reset max to raw number of frames in ref pose action
+						try:
+							action = Blender.Armature.NLA.GetActions()[seqPrefs['Action']['BlendRefPoseAction']]
+							maxNumFrames = DtsShape_Blender.getNumFrames(action.getAllChannelIpos().values(), False)
+						except: maxNumFrames = 1
+						self.guiRefPoseFrame.max = maxNumFrames
 					else:
 						self.guiSeqOpts.controlDict['guiRefPoseTitle'].visible = False
 						self.guiSeqOpts.controlDict['guiRefPoseMenu'].visible = False
 						self.guiSeqOpts.controlDict['guiRefPoseFrame'].visible = False
+					
 
 				elif control.name == "guiRefPoseMenu":
 					seqPrefs['Action']['BlendRefPoseAction'] = control.items[control.itemIndex]
 					seqPrefs['Action']['BlendRefPoseFrame'] = 1
-					self.guiSeqOpts.controlDict['guiRefPoseFrame'].value = seqPrefs['Action']['BlendRefPoseFrame']
+					# reset max to raw number of frames in ref pose action
+					try:
+						action = Blender.Armature.NLA.GetActions()[seqPrefs['Action']['BlendRefPoseAction']]
+						maxNumFrames = DtsShape_Blender.getNumFrames(action.getAllChannelIpos().values(), False)
+					except: maxNumFrames = 1
+					self.guiRefPoseFrame.max = maxNumFrames
+					self.guiRefPoseFrame.value = seqPrefs['Action']['BlendRefPoseFrame']					
 				elif control.name == "guiRefPoseFrame":
 					seqPrefs['Action']['BlendRefPoseFrame'] = control.value
 				elif control.name == "guiStartFrame":
@@ -2434,7 +2460,12 @@ class ActionControlsClass:
 			self.guiSeqOpts.controlDict['guiRefPoseTitle'].label = "Ref pose for '%s'" % seqName
 			self.guiSeqOpts.controlDict['guiRefPoseMenu'].setTextValue(seqPrefs['Action']['BlendRefPoseAction'])
 			self.guiSeqOpts.controlDict['guiRefPoseFrame'].min = 1
-			self.guiSeqOpts.controlDict['guiRefPoseFrame'].max = getNumActFrames(seqPrefs['Action']['BlendRefPoseAction'], seqPrefs)
+			# reset max to raw number of frames in ref pose action
+			try:
+				action = Blender.Armature.NLA.GetActions()[seqPrefs['Action']['BlendRefPoseAction']]
+				maxNumFrames = DtsShape_Blender.getNumFrames(action.getAllChannelIpos().values(), False)
+			except: maxNumFrames = 1
+			self.guiRefPoseFrame.max = maxNumFrames
 			self.guiSeqOpts.controlDict['guiRefPoseFrame'].value = seqPrefs['Action']['BlendRefPoseFrame']
 			self.guiSeqOpts.controlDict['guiGroundFrameSamples'].value = seqPrefs['Action']['NumGroundFrames']
 			self.guiSeqOpts.controlDict['guiGroundFrameSamples'].max = maxNumFrames
@@ -2474,8 +2505,9 @@ class ActionControlsClass:
 				self.guiSeqOpts.controlDict['guiRefPoseFrame'].visible = False
 
 		else:
+			self.clearSequenceControls()
 			self.guiSeqOpts.enabled = False
-			self.guiSeqOpts.controlDict['guiOptsTitle'].label = "Sequence: None Selected"
+
 
 
 	def resize(self, control, newwidth, newheight):
@@ -2984,7 +3016,6 @@ class IFLControlsClass:
 				# restore last sequence selection
 				for itemIndex in range(0, len(self.guiSeqList.controls)):
 					if self.guiSeqList.controls[itemIndex].controls[0].label == newName:
-						print "Selecting item..."
 						self.guiSeqList.selectItem(itemIndex)
 				self.guiSeqList.scrollToSelectedItem()
 				if self.guiSeqList.callback: self.guiSeqList.callback(self.guiSeqList)
