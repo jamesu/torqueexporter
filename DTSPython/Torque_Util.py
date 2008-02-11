@@ -500,6 +500,10 @@ def getSeqNumFrames(seqName, seqPrefs):
 
 def recalcSeqDurationAndFPS(seqName, seqPrefs):
 	numFrames = getSeqNumFrames(seqName, seqPrefs)
+	maxDuration = 3600.0
+	minDuration = 0.00392 # minimum duration = 1/255 of a second
+	maxFPS = 255.0
+	minFPS = 0.00027777778 # minimum fps = 1 frame for every 3600 seconds
 	if validateIFL(seqName, seqPrefs):
 		# set FPS to 30 and calc duration
 		seqPrefs['FPS'] = 30.0
@@ -507,7 +511,21 @@ def recalcSeqDurationAndFPS(seqName, seqPrefs):
 	# do we need to recalculate FPS, or Duration?
 	elif seqPrefs['DurationLocked']:
 		# recalc FPS
+		if seqPrefs['Duration'] < minDuration:
+			seqPrefs['Duration'] = minDuration # minimum duration = 1/255 of a second
+		if seqPrefs['Duration'] > maxDuration:
+			seqPrefs['Duration'] = maxDuration # minimum duration = 1/255 of a second
 		seqPrefs['FPS'] = float(numFrames) / seqPrefs['Duration']
+		if seqPrefs['FPS'] < minFPS:
+			seqPrefs['FPS'] = minFPS
 	elif seqPrefs['FPSLocked']:
 		# recalc duration
+		if seqPrefs['FPS'] < minFPS:
+			seqPrefs['FPS'] = minFPS
 		seqPrefs['Duration'] = float(numFrames) / seqPrefs['FPS']
+		if seqPrefs['Duration'] < minDuration:
+			seqPrefs['Duration'] = minDuration
+			seqPrefs['FPS'] = float(numFrames) / seqPrefs['Duration']
+		if seqPrefs['Duration'] > maxDuration:
+			seqPrefs['Duration'] = maxDuration
+			seqPrefs['FPS'] = float(numFrames) / seqPrefs['Duration']
