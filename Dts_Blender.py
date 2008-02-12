@@ -995,7 +995,7 @@ def guiBaseCallback(control):
 			ctrl[1].visible = True
 			ctrl[1].enabled = True
 			Prefs['LastActivePanel'] = ctrl[2]
-			if ctrl[2] != "Sequences": Prefs['LastActiveSubPanel'] = None
+			#if ctrl[2] != "Sequences": Prefs['LastActiveSubPanel'] = None
 			continue
 		# disable all other tab containers and set tab button states to false.
 		ctrl[0].state = False
@@ -1042,7 +1042,7 @@ def restoreLastActivePanel():
 	 [guiArmatureButton,guiArmatureTab, "Armature"],\
 	 [guiAboutButton,guiAboutTab, "About"]]
 
-	subPanels =\
+	seqSubPanels =\
 	[[guiSeqCommonButton, guiSeqCommonSubtab, SeqCommonControls, "Common"],\
 	 [guiSeqActButton, guiSeqActSubtab, ActionControls, "Action"],\
 	 [guiSequenceIFLButton, guiSequenceIFLSubtab, IFLControls, "IFL"],\
@@ -1069,7 +1069,7 @@ def restoreLastActivePanel():
 		guiSequenceTab.enabled = True
 	
 	matchFound = False
-	for subPanel in subPanels:
+	for subPanel in seqSubPanels:
 		if subPanel[3] == Prefs['LastActiveSubPanel']:
 			# turn on the tab button, show and enable the tab container
 			subPanel[0].state = True
@@ -1078,7 +1078,7 @@ def restoreLastActivePanel():
 			if subPanel[2] != None:
 				subPanel[2].refreshAll()
 			matchFound = True
-			continue
+			continue			
 		# disable all other tab containers and set tab button states to false.
 		subPanel[0].state = False
 		subPanel[1].visible = False
