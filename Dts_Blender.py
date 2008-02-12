@@ -3453,6 +3453,14 @@ class VisControlsClass:
 		if self.guiSeqList.itemIndex != -1:
 			seqName = self.guiSeqList.controls[self.guiSeqList.itemIndex].controls[0].label
 			seqPrefs = getSequenceKey(seqName)
+
+		# get the currently selected vis track item before clearing the list
+		if self.guiVisTrackList.itemIndex > -1:
+			selection = self.guiVisTrackList.controls[self.guiVisTrackList.itemIndex].controls[0].label
+		else:
+			selection = None
+		print "Stored last selection:",selection
+
 		
 		# repopulate the sequence list
 		cleanKeys()
@@ -3471,9 +3479,19 @@ class VisControlsClass:
 				self.guiSeqList.selectItem(itemIndex)
 				self.guiSeqList.scrollToSelectedItem()
 				if self.guiSeqList.callback: self.guiSeqList.callback(self.guiSeqList)
+				# restore vis track list selection
+				for i in range(0, len(self.guiVisTrackList.controls)):
+					label = self.guiVisTrackList.controls[i].controls[0].label
+					if label == selection:
+						self.guiVisTrackList.selectItem(i)
+						self.guiVisTrackList.scrollToSelectedItem()
+						self.refreshIpoControls()
+						break
 				return
+
 		self.guiSeqList.selectItem(0)
 		self.guiSeqList.scrollToSelectedItem()
+
 		if self.guiSeqList.callback: self.guiSeqList.callback(self.guiSeqList)
 
 
@@ -3580,7 +3598,6 @@ class VisControlsClass:
 		# add sequence to GUI sequence list		
 		self.guiSeqList.addControl(self.createSequenceListItem(seqName))
 		# refresh the Image frames list
-		self.clearVisTrackList()
 		self.populateVisTrackList(seqName)
 	
 	def handleEvent(self, control):
@@ -3691,6 +3708,9 @@ class VisControlsClass:
 			self.guiStartFrame.value = seqKey['Vis']['StartFrame']
 			self.guiEndFrame.value = seqKey['Vis']['EndFrame']
 			self.guiSeqOptsContainerTitle.label = ("Sequence: %s" % seqName)
+		self.guiVisTrackList.selectItem(0)
+		self.guiVisTrackList.scrollToSelectedItem()
+
 
 	def handleListItemEvent(self, control):
 		# Determine sequence name
@@ -3771,10 +3791,7 @@ class VisControlsClass:
 
 	def handleVisTrackListItemEvent(self, control):
 		# Determine sequence name
-		if control.evt == 80:
-			calcIdx = 0
-		else:
-			calcIdx = (control.evt - 80)
+		calcIdx = (control.evt - 80)
 		seqName = self.guiSeqList.controls[self.guiSeqList.itemIndex].controls[0].label
 		objName = self.guiVisTrackList.controls[calcIdx].controls[0].label
 		seqPrefs = getSequenceKey(seqName)
@@ -3867,7 +3884,7 @@ class VisControlsClass:
 
 
 	def populateVisTrackList(self, seqName):
-		self.clearVisTrackList()
+		self.clearVisTrackList()		
 		shapeTree = export_tree.find("SHAPE")
 		if shapeTree != None:
 			# find the highest detail level.
@@ -3903,7 +3920,6 @@ class VisControlsClass:
 					self.guiVisTrackList.addControl(self.createVisTrackListItem(item))
 					try: self.guiVisTrackList.controls[-1].controls[1].state = Prefs['Sequences'][seqName]['Vis']['Tracks'][item]['hasVisTrack']
 					except: self.guiVisTrackList.controls[-1].controls[1].state = False
-					
 		
 		
 		
