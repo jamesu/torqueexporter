@@ -1056,7 +1056,6 @@ class ListContainer(BasicContainer):
 		 
 		# Now draw the scrollbar, if required
 		if self.needYScroll():
-			# Marker
 			# Draw a line around the thumb to highlight it better.
 			BGL.glColor4f(self.color[0] - 0.3,self.color[1] - 0.3,self.color[2] - 0.3, self.color[3])
 			BGL.glRecti(real_x+self.width-self.barWidth, real_y+self.thumbPosition-self.thumbHeight, real_x+self.width, real_y+self.thumbPosition)
@@ -1074,14 +1073,20 @@ class ListContainer(BasicContainer):
 		for control in self.getVisibleControls():
 			control.y = curY
 			orgColor = control.color[:]
-			if idx != self.itemIndex:
-				if control.fade_mode == 0:
-					if (idx & 1) == 0:
-						control.color = [ orgColor [0] - 0.05, orgColor [1] - 0.05,
-								  orgColor [2] - 0.05, orgColor [3] ]
-					else:
-						control.color = [ orgColor [0] + 0.05, orgColor [1] + 0.05,
-								  orgColor [2] + 0.05, orgColor [3] ]
+			#if idx != self.itemIndex:
+			if control.fade_mode == 0:
+				if ((idx+self.scrollPosition) & 1) == 0:
+					control.color = [ orgColor [0] - 0.05, orgColor [1] - 0.05,
+							  orgColor [2] - 0.05, orgColor [3] ]
+				else:
+					control.color = [ orgColor [0] + 0.05, orgColor [1] + 0.05,
+							  orgColor [2] + 0.05, orgColor [3] ]
+
+			if idx == (self.itemIndex - self.scrollPosition):
+				curCol = curTheme.get('ui').menu_hilite
+				curTextCol = curTheme.get('ui').menu_text_hi
+				control.color = [curCol[0]/255.0, curCol[1]/255.0, curCol[2]/255.0, curCol[3]/255.0]
+
 			control.onDraw([real_x, real_y])
 			control.color = orgColor[:]
 			curY -= self.childHeight
