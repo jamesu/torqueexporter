@@ -3879,18 +3879,30 @@ class VisControlsClass:
 			markerName = "detail" + str(numPortion)
 			for marker in getChildren(shapeTree.obj):
 				if marker.name.lower() != markerName: continue
-				# loop through all objects
+				# loop through all objects, and sort into two lists
+				enabledList = []
+				disabledList = []
 				for obj in getAllChildren(marker):
 					if obj.getType() != "Mesh": continue
 					if obj.name == "Bounds": continue
 					# process mesh objects
 					objData = obj.getData()
 					# add an entry in the track list for the mesh object.
-					self.guiVisTrackList.addControl(self.createVisTrackListItem(obj.name))					
+					#self.guiVisTrackList.addControl(self.createVisTrackListItem(obj.name))
 					# set the state of the enabled button
-					try: self.guiVisTrackList.controls[-1].controls[1].state = Prefs['Sequences'][seqName]['Vis']['Tracks'][obj.name]['hasVisTrack']
+					try: enabled = Prefs['Sequences'][seqName]['Vis']['Tracks'][obj.name]['hasVisTrack']
+					except: enabled = False
+					if enabled: enabledList.append(obj.name)
+					else: disabledList.append(obj.name)
+				# combine lists
+				enabledList.sort(lambda x, y: cmp(x.lower(),y.lower()))
+				disabledList.sort(lambda x, y: cmp(x.lower(),y.lower()))
+				combinedList = enabledList + disabledList
+				# add everything in the list
+				for item in combinedList:
+					self.guiVisTrackList.addControl(self.createVisTrackListItem(item))
+					try: self.guiVisTrackList.controls[-1].controls[1].state = Prefs['Sequences'][seqName]['Vis']['Tracks'][item]['hasVisTrack']
 					except: self.guiVisTrackList.controls[-1].controls[1].state = False
-					
 					
 		
 		
