@@ -3592,6 +3592,9 @@ class VisControlsClass:
 				self.populateVisTrackList(seqName)
 			else:
 				self.clearVisTrackList()
+			self.populateSequenceList()
+			if self.guiSeqList.callback: self.guiSeqList.callback(self.guiSeqList)
+
 		elif control.name == "guiSeqRename":
 			guiSeqList = self.guiSeqList
 			seqName = guiSeqList.controls[guiSeqList.itemIndex].controls[0].label
