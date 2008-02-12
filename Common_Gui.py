@@ -1032,7 +1032,7 @@ class ListContainer(BasicContainer):
 		BGL.glDisable(BGL.GL_BLEND)
 
 		# Draw the arrowheads for the scrolling list
-		BGL.glColor4f(self.color[0],self.color[1],self.color[2], self.color[3])
+		BGL.glColor4f(self.color[0]-0.4,self.color[1]-0.4,self.color[2]-0.4, self.color[3])
 		BGL.glBegin(BGL.GL_TRIANGLES)
 		BGL.glVertex2i (real_x + self.width - self.barWidth, real_y + self.height - self.thumbHeight)
 		BGL.glVertex2i (real_x + self.width - (self.barWidth >> 1), real_y + self.height)
@@ -1042,12 +1042,23 @@ class ListContainer(BasicContainer):
 		BGL.glVertex2i (real_x + self.width - (self.barWidth >> 1), real_y)
 		BGL.glVertex2i (real_x + self.width, real_y + self.thumbHeight)
 		BGL.glEnd()
+
+		BGL.glColor4f(self.color[0],self.color[1],self.color[2], self.color[3])
+		BGL.glBegin(BGL.GL_TRIANGLES)
+		BGL.glVertex2i (real_x + self.width - self.barWidth + 2, real_y + self.height - self.thumbHeight + 1)
+		BGL.glVertex2i (real_x + self.width - (self.barWidth >> 1), real_y + self.height - 3)
+		BGL.glVertex2i (real_x + self.width - 2, real_y + self.height - self.thumbHeight + 1)
+
+		BGL.glVertex2i (real_x + self.width - self.barWidth + 2, real_y + self.thumbHeight - 1)
+		BGL.glVertex2i (real_x + self.width - (self.barWidth >> 1), real_y + 3)
+		BGL.glVertex2i (real_x + self.width - 2, real_y + self.thumbHeight - 1)
+		BGL.glEnd()
 		 
 		# Now draw the scrollbar, if required
 		if self.needYScroll():
 			# Marker
 			# Draw a line around the thumb to highlight it better.
-			BGL.glColor4f(self.color[0] - 0.2,self.color[1] - 0.2,self.color[2] - 0.2, self.color[3])
+			BGL.glColor4f(self.color[0] - 0.4,self.color[1] - 0.4,self.color[2] - 0.4, self.color[3])
 			BGL.glRecti(real_x+self.width-self.barWidth, real_y+self.thumbPosition-self.thumbHeight, real_x+self.width, real_y+self.thumbPosition)
 			BGL.glColor4f(self.color[0],self.color[1],self.color[2], self.color[3])
 			#print "!!"+str(self.scrollPosition)
