@@ -1893,7 +1893,7 @@ class SeqCommonControlsClass:
 
 	def handleListEvent(self, control):
 		# Clear triggers menu
-		del self.guiSeqOptsContainer.controlDict["guiTriggerMenu"].items[:]
+		del self.guiTriggerMenu.items[:]
 		if control.itemIndex != -1:
 			seqName = control.controls[control.itemIndex].controls[0].label
 			seqPrefs = getSequenceKey(seqName)
@@ -1926,10 +1926,10 @@ class SeqCommonControlsClass:
 			for t in seqPrefs['Triggers']:
 				if t[2]: stateStr = "(ON)"
 				else: stateStr = "(OFF)"
-				self.guiSeqOptsContainer.controlDict['guiTriggerMenu'].items.append((self.triggerMenuTemplate % (t[1], t[0])) + stateStr)
-			self.guiSeqOptsContainer.controlDict['guiTriggerMenu'].itemIndex = 0
+				self.guiTriggerMenu.items.append((self.triggerMenuTemplate % (t[1], t[0])) + stateStr)
+			self.guiTriggerMenu.itemIndex = 0
 
-			self.guiSeqOptsContainer.controlDict['guiTriggerFrame'].max = maxNumFrames
+			self.guiTriggerFrame.max = maxNumFrames
 			self.guiSequenceUpdateTriggers(seqPrefs['Triggers'], 0)
 			self.refreshBarChart(seqName, seqPrefs)
 
@@ -2081,13 +2081,13 @@ class SeqCommonControlsClass:
 
 	def guiSequenceUpdateTriggers(self, triggerList, itemIndex):
 		if (len(triggerList) == 0) or (itemIndex >= len(triggerList)):
-			self.guiSeqOptsContainer.controlDict['guiTriggerState'].value = 0
-			self.guiSeqOptsContainer.controlDict['guiTriggerStateOn'].state = False
-			self.guiSeqOptsContainer.controlDict['guiTriggerFrame'].value = 0
+			self.guiTriggerState.value = 0
+			self.guiTriggerStateOn.state = False
+			self.guiTriggerFrame.value = 0
 		else:
-			self.guiSeqOptsContainer.controlDict['guiTriggerState'].value = triggerList[itemIndex][0] # Trigger State			
-			self.guiSeqOptsContainer.controlDict['guiTriggerStateOn'].state = triggerList[itemIndex][2] # On
-			self.guiSeqOptsContainer.controlDict['guiTriggerFrame'].value = triggerList[itemIndex][1] # Time
+			self.guiTriggerState.value = triggerList[itemIndex][0] # Trigger State			
+			self.guiTriggerStateOn.state = triggerList[itemIndex][2] # On
+			self.guiTriggerFrame.value = triggerList[itemIndex][1] # Time
 
 	
 
@@ -2097,17 +2097,17 @@ class SeqCommonControlsClass:
 
 		seqName = self.guiSeqList.controls[self.guiSeqList.itemIndex].controls[0].label
 		seqPrefs = getSequenceKey(seqName)
-		itemIndex = self.guiSeqOptsContainer.controlDict['guiTriggerMenu'].itemIndex
+		itemIndex = self.guiTriggerMenu.itemIndex
 
 		if control.name == "guiTriggerMenu":
 			self.guiSequenceUpdateTriggers(seqPrefs['Triggers'], itemIndex)
 		elif control.name == "guiTriggerAdd":
 			# Add
 			seqPrefs['Triggers'].append([1, 1, True])
-			self.guiSeqOptsContainer.controlDict['guiTriggerMenu'].items.append((self.triggerMenuTemplate % (1, 1)) + "(ON)")
-			self.guiSeqOptsContainer.controlDict['guiTriggerMenu'].itemIndex = len(seqPrefs['Triggers'])-1
-			self.guiSequenceUpdateTriggers(seqPrefs['Triggers'], self.guiSeqOptsContainer.controlDict['guiTriggerMenu'].itemIndex)
-		elif (len(self.guiSeqOptsContainer.controlDict['guiTriggerMenu'].items) != 0):
+			self.guiTriggerMenu.items.append((self.triggerMenuTemplate % (1, 1)) + "(ON)")
+			self.guiTriggerMenu.itemIndex = len(seqPrefs['Triggers'])-1
+			self.guiSequenceUpdateTriggers(seqPrefs['Triggers'], self.guiTriggerMenu.itemIndex)
+		elif (len(self.guiTriggerMenu.items) != 0):
 			if control.name == "guiTriggerState":
 				seqPrefs['Triggers'][itemIndex][0] = control.value
 			elif control.name == "guiTriggerStateOn":
@@ -2117,11 +2117,11 @@ class SeqCommonControlsClass:
 			elif control.name == "guiTriggerDel":
 				# Remove the trigger
 				del seqPrefs['Triggers'][itemIndex]
-				del self.guiSeqOptsContainer.controlDict['guiTriggerMenu'].items[itemIndex]
+				del self.guiTriggerMenu.items[itemIndex]
 				# Must decrement itemIndex if we are out of bounds
 				if itemIndex <= len(seqPrefs['Triggers']):
-					self.guiSeqOptsContainer.controlDict['guiTriggerMenu'].itemIndex = len(seqPrefs['Triggers'])-1
-					itemIndex = self.guiSeqOptsContainer.controlDict['guiTriggerMenu'].itemIndex
+					self.guiTriggerMenu.itemIndex = len(seqPrefs['Triggers'])-1
+					itemIndex = self.guiTriggerMenu.itemIndex
 				self.guiSequenceUpdateTriggers(seqPrefs['Triggers'], itemIndex)
 
 			# Update menu caption
@@ -2129,7 +2129,7 @@ class SeqCommonControlsClass:
 				return
 			if seqPrefs['Triggers'][itemIndex][2]: stateStr = "(ON)"
 			else: stateStr = "(OFF)"
-			self.guiSeqOptsContainer.controlDict['guiTriggerMenu'].items[itemIndex] = (self.triggerMenuTemplate % (seqPrefs['Triggers'][itemIndex][1], seqPrefs['Triggers'][itemIndex][0])) + stateStr
+			self.guiTriggerMenu.items[itemIndex] = (self.triggerMenuTemplate % (seqPrefs['Triggers'][itemIndex][1], seqPrefs['Triggers'][itemIndex][0])) + stateStr
 
 	def handleListItemEvent(self, control):
 		global Prefs
@@ -2384,9 +2384,9 @@ class ActionControlsClass:
 					seqPrefs['Action']['Blend'] = control.state					
 					# if blend is true, show the ref pose controls
 					if seqPrefs['Action']['Blend'] == True:
-						self.guiSeqOpts.controlDict['guiRefPoseTitle'].visible = True
-						self.guiSeqOpts.controlDict['guiRefPoseMenu'].visible = True
-						self.guiSeqOpts.controlDict['guiRefPoseFrame'].visible = True
+						self.guiRefPoseTitle.visible = True
+						self.guiRefPoseMenu.visible = True
+						self.guiRefPoseFrame.visible = True
 						# reset max to raw number of frames in ref pose action
 						try:
 							action = Blender.Armature.NLA.GetActions()[seqPrefs['Action']['BlendRefPoseAction']]
@@ -2394,9 +2394,9 @@ class ActionControlsClass:
 						except: maxNumFrames = 1
 						self.guiRefPoseFrame.max = maxNumFrames
 					else:
-						self.guiSeqOpts.controlDict['guiRefPoseTitle'].visible = False
-						self.guiSeqOpts.controlDict['guiRefPoseMenu'].visible = False
-						self.guiSeqOpts.controlDict['guiRefPoseFrame'].visible = False
+						self.guiRefPoseTitle.visible = False
+						self.guiRefPoseMenu.visible = False
+						self.guiRefPoseFrame.visible = False
 					
 
 				elif control.name == "guiRefPoseMenu":
@@ -2443,7 +2443,7 @@ class ActionControlsClass:
 			seqName = control.controls[control.itemIndex].controls[0].label
 			seqPrefs = getSequenceKey(seqName)
 			self.guiSeqOpts.enabled = True
-			self.guiSeqOpts.controlDict['guiOptsTitle'].label = "Sequence '%s'" % seqName
+			self.guiOptsTitle.label = "Sequence '%s'" % seqName
 			try:
 				action = Blender.Armature.NLA.GetActions()[seqName]
 				maxNumFrames = (seqPrefs['Action']['EndFrame'] - seqPrefs['Action']['StartFrame']) + 1
@@ -2457,20 +2457,20 @@ class ActionControlsClass:
 				seqPrefs['Action']['FrameSamples'] = maxNumFrames
 			try: blah = Blender.Armature.NLA.GetActions()[seqPrefs['Action']['BlendRefPoseAction']]
 			except: seqPrefs['Action']['BlendRefPoseAction'] = seqName
-			self.guiSeqOpts.controlDict['guiRefPoseTitle'].label = "Ref pose for '%s'" % seqName
-			self.guiSeqOpts.controlDict['guiRefPoseMenu'].setTextValue(seqPrefs['Action']['BlendRefPoseAction'])
-			self.guiSeqOpts.controlDict['guiRefPoseFrame'].min = 1
+			self.guiRefPoseTitle.label = "Ref pose for '%s'" % seqName
+			self.guiRefPoseMenu.setTextValue(seqPrefs['Action']['BlendRefPoseAction'])
+			self.guiRefPoseFrame.min = 1
 			# reset max to raw number of frames in ref pose action
 			try:
 				action = Blender.Armature.NLA.GetActions()[seqPrefs['Action']['BlendRefPoseAction']]
 				maxNumFrames = DtsShape_Blender.getNumFrames(action.getAllChannelIpos().values(), False)
 			except: maxNumFrames = 1
 			self.guiRefPoseFrame.max = maxNumFrames
-			self.guiSeqOpts.controlDict['guiRefPoseFrame'].value = seqPrefs['Action']['BlendRefPoseFrame']
-			self.guiSeqOpts.controlDict['guiGroundFrameSamples'].value = seqPrefs['Action']['NumGroundFrames']
-			self.guiSeqOpts.controlDict['guiGroundFrameSamples'].max = maxNumFrames
-			self.guiSeqOpts.controlDict['guiFrameSamples'].value = seqPrefs['Action']['FrameSamples']
-			self.guiSeqOpts.controlDict['guiFrameSamples'].max = maxNumFrames
+			self.guiRefPoseFrame.value = seqPrefs['Action']['BlendRefPoseFrame']
+			self.guiGroundFrameSamples.value = seqPrefs['Action']['NumGroundFrames']
+			self.guiGroundFrameSamples.max = maxNumFrames
+			self.guiFrameSamples.value = seqPrefs['Action']['FrameSamples']
+			self.guiFrameSamples.max = maxNumFrames
 			self.guiStartFrame.value = seqPrefs['Action']['StartFrame']
 			self.guiEndFrame.value = seqPrefs['Action']['EndFrame']
 			self.guiEndFrame.min = seqPrefs['Action']['StartFrame']
@@ -2496,13 +2496,13 @@ class ActionControlsClass:
 			# show/hide ref pose stuff.
 			self.guiBlendSequence.state = seqPrefs['Action']['Blend']
 			if seqPrefs['Action']['Blend'] == True:				
-				self.guiSeqOpts.controlDict['guiRefPoseTitle'].visible = True
-				self.guiSeqOpts.controlDict['guiRefPoseMenu'].visible = True
-				self.guiSeqOpts.controlDict['guiRefPoseFrame'].visible = True
+				self.guiRefPoseTitle.visible = True
+				self.guiRefPoseMenu.visible = True
+				self.guiRefPoseFrame.visible = True
 			else:
-				self.guiSeqOpts.controlDict['guiRefPoseTitle'].visible = False
-				self.guiSeqOpts.controlDict['guiRefPoseMenu'].visible = False
-				self.guiSeqOpts.controlDict['guiRefPoseFrame'].visible = False
+				self.guiRefPoseTitle.visible = False
+				self.guiRefPoseMenu.visible = False
+				self.guiRefPoseFrame.visible = False
 
 		else:
 			self.clearSequenceControls()
@@ -2598,8 +2598,8 @@ class ActionControlsClass:
 			self.guiSeqList.addControl(self.createSequenceListItem(key, startEvent))
 			startEvent += 3
 			# add any new animations to the ref pose combo box
-			if not (key in self.guiSeqOpts.controlDict['guiRefPoseMenu'].items):
-				self.guiSeqOpts.controlDict['guiRefPoseMenu'].items.append(key)
+			if not (key in self.guiRefPoseMenu.items):
+				self.guiRefPoseMenu.items.append(key)
 
 	def clearSequenceList(self):
 
@@ -4163,7 +4163,7 @@ class MaterialControlsClass:
 							pmb['NeverEnvMap'] = False
 							if textures[0].tex.image != None:
 								pmb['RefMapTex'] = stripImageExtension(textures[i].tex.image.getName())
-								guiMaterialOptions.controlDict['guiMaterialReflectanceMapMenu'].selectStringItem(stripImageExtension(textures[i].tex.image.getName()))
+								self.guiMaterialReflectanceMapMenu.selectStringItem(stripImageExtension(textures[i].tex.image.getName()))
 							else:
 								pmb['RefMapTex'] = None
 						# B) We have a normal map (basically a 3d bump map)
@@ -4171,7 +4171,7 @@ class MaterialControlsClass:
 							pmb['BumpMapFlag'] = True
 							if textures[0].tex.image != None:
 								pmb['BumpMapTex'] = stripImageExtension(textures[i].tex.image.getName())
-								guiMaterialOptions.controlDict['guiMaterialBumpMapMenu'].selectStringItem(stripImageExtension(textures[i].tex.image.getName()))
+								self.guiMaterialBumpMapMenu.selectStringItem(stripImageExtension(textures[i].tex.image.getName()))
 							else:
 								pmb['BumpMapTex'] = None
 						# C) We have a texture; Lets presume its a detail map (since its laid on top after all)
@@ -4179,7 +4179,7 @@ class MaterialControlsClass:
 							pmb['DetailMapFlag'] = True
 							if textures[0].tex.image != None:
 								pmb['DetailTex'] = stripImageExtension(textures[i].tex.image.getName())
-								guiMaterialOptions.controlDict['guiMaterialDetailMapMenu'].selectStringItem(stripImageExtension(textures[i].tex.image.getName()))
+								self.guiMaterialDetailMapMenu.selectStringItem(stripImageExtension(textures[i].tex.image.getName()))
 							else:
 								pmb['DetailTex'] = None
 
@@ -4208,44 +4208,44 @@ class MaterialControlsClass:
 				guiMaterialOptions.enabled = True
 				materialName = guiMaterialList.controls[control.itemIndex].controls[0].label
 				# referesh and repopulate the material option controls
-				guiMaterialOptions.controlDict['guiMaterialSWrapButton'].state = matList[materialName]['SWrap']
-				guiMaterialOptions.controlDict['guiMaterialTWrapButton'].state = matList[materialName]['TWrap']
-				guiMaterialOptions.controlDict['guiMaterialTransButton'].state = matList[materialName]['Translucent']
-				guiMaterialOptions.controlDict['guiMaterialAddButton'].state = matList[materialName]['Additive']
-				guiMaterialOptions.controlDict['guiMaterialSubButton'].state = matList[materialName]['Subtractive']
-				guiMaterialOptions.controlDict['guiMaterialSelfIllumButton'].state = matList[materialName]['SelfIlluminating']
-				guiMaterialOptions.controlDict['guiMaterialEnvMapButton'].state = not matList[materialName]['NeverEnvMap']
-				guiMaterialOptions.controlDict['guiMaterialMipMapButton'].state = not matList[materialName]['NoMipMap']
-				guiMaterialOptions.controlDict['guiMaterialMipMapZBButton'].state = matList[materialName]['MipMapZeroBorder']
-				guiMaterialOptions.controlDict['guiMaterialIFLMatButton'].state = matList[materialName]['IFLMaterial']
-				guiMaterialOptions.controlDict['guiMaterialDetailMapButton'].state = matList[materialName]['DetailMapFlag']
-				guiMaterialOptions.controlDict['guiMaterialBumpMapButton'].state = matList[materialName]['BumpMapFlag']
-				guiMaterialOptions.controlDict['guiMaterialRefMapButton'].state = matList[materialName]['ReflectanceMapFlag']			
-				guiMaterialOptions.controlDict['guiMaterialDetailMapMenu'].selectStringItem(matList[materialName]['DetailTex'])
-				guiMaterialOptions.controlDict['guiMaterialBumpMapMenu'].selectStringItem(matList[materialName]['BumpMapTex'])
-				guiMaterialOptions.controlDict['guiMaterialReflectanceMapMenu'].selectStringItem(matList[materialName]['RefMapTex'])
-				guiMaterialOptions.controlDict['guiMaterialReflectanceSlider'].value = matList[materialName]['reflectance'] * 100.0
-				guiMaterialOptions.controlDict['guiMaterialDetailScaleSlider'].value = matList[materialName]['detailScale'] * 100.0
+				self.guiMaterialSWrapButton.state = matList[materialName]['SWrap']
+				self.guiMaterialTWrapButton.state = matList[materialName]['TWrap']
+				self.guiMaterialTransButton.state = matList[materialName]['Translucent']
+				self.guiMaterialAddButton.state = matList[materialName]['Additive']
+				self.guiMaterialSubButton.state = matList[materialName]['Subtractive']
+				self.guiMaterialSelfIllumButton.state = matList[materialName]['SelfIlluminating']
+				self.guiMaterialEnvMapButton.state = not matList[materialName]['NeverEnvMap']
+				self.guiMaterialMipMapButton.state = not matList[materialName]['NoMipMap']
+				self.guiMaterialMipMapZBButton.state = matList[materialName]['MipMapZeroBorder']
+				self.guiMaterialIFLMatButton.state = matList[materialName]['IFLMaterial']
+				self.guiMaterialDetailMapButton.state = matList[materialName]['DetailMapFlag']
+				self.guiMaterialBumpMapButton.state = matList[materialName]['BumpMapFlag']
+				self.guiMaterialRefMapButton.state = matList[materialName]['ReflectanceMapFlag']			
+				self.guiMaterialDetailMapMenu.selectStringItem(matList[materialName]['DetailTex'])
+				self.guiMaterialBumpMapMenu.selectStringItem(matList[materialName]['BumpMapTex'])
+				self.guiMaterialReflectanceMapMenu.selectStringItem(matList[materialName]['RefMapTex'])
+				self.guiMaterialReflectanceSlider.value = matList[materialName]['reflectance'] * 100.0
+				self.guiMaterialDetailScaleSlider.value = matList[materialName]['detailScale'] * 100.0
 				self.guiMaterialOptionsTitle.label = ("DTS Material: %s" % materialName)
 			else:
-				guiMaterialOptions.controlDict['guiMaterialSWrapButton'].state = False
-				guiMaterialOptions.controlDict['guiMaterialTWrapButton'].state = False
-				guiMaterialOptions.controlDict['guiMaterialTransButton'].state = False
-				guiMaterialOptions.controlDict['guiMaterialAddButton'].state = False
-				guiMaterialOptions.controlDict['guiMaterialSubButton'].state = False
-				guiMaterialOptions.controlDict['guiMaterialSelfIllumButton'].state = False
-				guiMaterialOptions.controlDict['guiMaterialEnvMapButton'].state = False
-				guiMaterialOptions.controlDict['guiMaterialMipMapButton'].state = False
-				guiMaterialOptions.controlDict['guiMaterialMipMapZBButton'].state = False
-				guiMaterialOptions.controlDict['guiMaterialIFLMatButton'].state = False
-				guiMaterialOptions.controlDict['guiMaterialDetailMapButton'].state = False
-				guiMaterialOptions.controlDict['guiMaterialBumpMapButton'].state = False
-				guiMaterialOptions.controlDict['guiMaterialRefMapButton'].state = False
-				guiMaterialOptions.controlDict['guiMaterialDetailMapMenu'].selectStringItem("")
-				guiMaterialOptions.controlDict['guiMaterialBumpMapMenu'].selectStringItem("")
-				guiMaterialOptions.controlDict['guiMaterialReflectanceMapMenu'].selectStringItem("")
-				guiMaterialOptions.controlDict['guiMaterialReflectanceSlider'].value = 0
-				guiMaterialOptions.controlDict['guiMaterialDetailScaleSlider'].value = 100
+				self.guiMaterialSWrapButton.state = False
+				self.guiMaterialTWrapButton.state = False
+				self.guiMaterialTransButton.state = False
+				self.guiMaterialAddButton.state = False
+				self.guiMaterialSubButton.state = False
+				self.guiMaterialSelfIllumButton.state = False
+				self.guiMaterialEnvMapButton.state = False
+				self.guiMaterialMipMapButton.state = False
+				self.guiMaterialMipMapZBButton.state = False
+				self.guiMaterialIFLMatButton.state = False
+				self.guiMaterialDetailMapButton.state = False
+				self.guiMaterialBumpMapButton.state = False
+				self.guiMaterialRefMapButton.state = False
+				self.guiMaterialDetailMapMenu.selectStringItem("")
+				self.guiMaterialBumpMapMenu.selectStringItem("")
+				self.guiMaterialReflectanceMapMenu.selectStringItem("")
+				self.guiMaterialReflectanceSlider.value = 0
+				self.guiMaterialDetailScaleSlider.value = 100
 				guiMaterialOptions.enabled = False
 				self.guiMaterialOptionsTitle.label = "DTS Material: None Selected"
 
@@ -4259,40 +4259,40 @@ class MaterialControlsClass:
 		elif control.name == "guiMaterialTransButton":
 			if not control.state:
 				Prefs['Materials'][materialName]['Subtractive'] = False
-				guiMaterialOptions.controlDict['guiMaterialSubButton'].state = False
+				self.guiMaterialSubButton.state = False
 				Prefs['Materials'][materialName]['Additive'] = False
-				guiMaterialOptions.controlDict['guiMaterialAddButton'].state = False
+				self.guiMaterialAddButton.state = False
 			Prefs['Materials'][materialName]['Translucent'] = control.state
 		elif control.name == "guiMaterialAddButton":
 			if control.state:
 				Prefs['Materials'][materialName]['Translucent'] = True
-				guiMaterialOptions.controlDict['guiMaterialTransButton'].state = True
+				self.guiMaterialTransButton.state = True
 				Prefs['Materials'][materialName]['Subtractive'] = False
-				guiMaterialOptions.controlDict['guiMaterialSubButton'].state = False
+				self.guiMaterialSubButton.state = False
 			Prefs['Materials'][materialName]['Additive'] = control.state
 		elif control.name == "guiMaterialSubButton":
 			if control.state:
 				Prefs['Materials'][materialName]['Translucent'] = True
-				guiMaterialOptions.controlDict['guiMaterialTransButton'].state = True
+				self.guiMaterialTransButton.state = True
 				Prefs['Materials'][materialName]['Additive'] = False
-				guiMaterialOptions.controlDict['guiMaterialAddButton'].state = False
+				self.guiMaterialAddButton.state = False
 			Prefs['Materials'][materialName]['Subtractive'] = control.state
 		elif control.name == "guiMaterialSelfIllumButton":
 			Prefs['Materials'][materialName]['SelfIlluminating'] = control.state
 		elif control.name == "guiMaterialEnvMapButton":
 			if not control.state:
 				Prefs['Materials'][materialName]['ReflectanceMapFlag'] = False
-				guiMaterialOptions.controlDict['guiMaterialRefMapButton'].state = False
+				self.guiMaterialRefMapButton.state = False
 			Prefs['Materials'][materialName]['NeverEnvMap'] = not control.state
 		elif control.name == "guiMaterialMipMapButton":
 			if not control.state:
 				Prefs['Materials'][materialName]['MipMapZeroBorder'] = False
-				guiMaterialOptions.controlDict['guiMaterialMipMapZBButton'].state = False
+				self.guiMaterialMipMapZBButton.state = False
 			Prefs['Materials'][materialName]['NoMipMap'] = not control.state
 		elif control.name == "guiMaterialMipMapZBButton":
 			if control.state:
 				Prefs['Materials'][materialName]['NoMipMap'] = False
-				guiMaterialOptions.controlDict['guiMaterialMipMapButton'].state = True
+				self.guiMaterialMipMapButton.state = True
 			Prefs['Materials'][materialName]['MipMapZeroBorder'] = control.state
 		elif control.name == "guiMaterialIFLMatButton":
 			Prefs['Materials'][materialName]['IFLMaterial'] = control.state
@@ -4305,7 +4305,7 @@ class MaterialControlsClass:
 		elif control.name == "guiMaterialRefMapButton":
 			if control.state:
 				Prefs['Materials'][materialName]['NeverEnvMap'] = False
-				guiMaterialOptions.controlDict['guiMaterialEnvMapButton'].state = True
+				self.guiMaterialEnvMapButton.state = True
 			Prefs['Materials'][materialName]['ReflectanceMapFlag'] = control.state
 		elif control.name == "guiMaterialDetailMapMenu":
 			Prefs['Materials'][materialName]['DetailTex'] = control.getSelectedItemString()
@@ -4354,14 +4354,14 @@ class MaterialControlsClass:
 		guiMaterialList = self.guiMaterialList
 		guiMaterialOptions = self.guiMaterialOptions
 		# clear texture pulldowns
-		guiMaterialOptions.controlDict['guiMaterialDetailMapMenu'].items = []
-		guiMaterialOptions.controlDict['guiMaterialBumpMapMenu'].items = []
-		guiMaterialOptions.controlDict['guiMaterialReflectanceMapMenu'].items = []
+		self.guiMaterialDetailMapMenu.items = []
+		self.guiMaterialBumpMapMenu.items = []
+		self.guiMaterialReflectanceMapMenu.items = []
 		# populate the texture pulldowns
 		for img in Blender.Image.Get():
-			guiMaterialOptions.controlDict['guiMaterialDetailMapMenu'].items.append(stripImageExtension(img.getName()))
-			guiMaterialOptions.controlDict['guiMaterialBumpMapMenu'].items.append(stripImageExtension(img.getName()))
-			guiMaterialOptions.controlDict['guiMaterialReflectanceMapMenu'].items.append(stripImageExtension(img.getName()))
+			self.guiMaterialDetailMapMenu.items.append(stripImageExtension(img.getName()))
+			self.guiMaterialBumpMapMenu.items.append(stripImageExtension(img.getName()))
+			self.guiMaterialReflectanceMapMenu.items.append(stripImageExtension(img.getName()))
 
 
 		# autoimport blender materials
