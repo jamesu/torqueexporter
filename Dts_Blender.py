@@ -344,7 +344,11 @@ def copySequenceKey(value):
 	return retVal
 
 # Cleans up extra sequence keys that may not be used anymore (e.g. action deleted)
+# also calls cleanVisTracks to get rid of unused visibility tracks
 def cleanKeys():
+	global Prefs
+	# clean visibility tracks
+	cleanVisTracks()
 	# Sequences
 	for keyName in Prefs['Sequences'].keys():
 		key = getSequenceKey(keyName)
@@ -372,6 +376,25 @@ def cleanKeys():
 			if VisFound == False and IFLFound == False:
 				del Prefs['Sequences'][keyName]
 
+# Cleans up unused visibility tracks
+def cleanVisTracks():
+	global Prefs
+	for keyName in Prefs['Sequences'].keys():
+		key = getSequenceKey(keyName)
+		VisFound = False
+		try: VisFound = key['Vis']['Enabled']
+		except: VisFound = False
+		if not VisFound: continue
+		visKey = key['Vis']
+		# check each track in the prefs and see if it's enabled.
+		# if it's not enabled, get rid of the track key.
+		for trackName in visKey['Tracks'].keys():
+			track = visKey['Tracks'][trackName]
+			try: hasTrack = track['hasVisTrack']
+			except: hasTrack = False
+			if not hasTrack:
+				del Prefs['Sequences'][keyName]['Vis']['Tracks'][trackName]
+		
 
 
 # Creates action keys that don't already exist
@@ -1533,8 +1556,8 @@ class ArmatureControlsClass:
 		del self.guiPatternOn
 		del self.guiPatternOff
 		del self.guiRefresh		
-		for control in self.guiBoneList.controls: del control
-		del self.guiBoneList.controls
+		#for control in self.guiBoneList.controls: del control
+		#del self.guiBoneList.controls
 		del self.guiBoneList
 
 	
@@ -3669,7 +3692,12 @@ class VisControlsClass:
 		seqKey = getSequenceKey(seqName)
 		try: type = seqKey['Vis']['Tracks'][objName]['IPOType']
 		except: type = ""
-		if guiVisTrackList.itemIndex > -1:
+		foundKey = True
+		try: x = seqKey['Vis']['Tracks'][objName]
+		except: foundKey = False
+
+		if guiVisTrackList.itemIndex > -1 and foundKey:
+			
 			self.guiIpoType.enabled = True
 			self.guiIpoChannel.enabled = True
 			self.guiIpoObject.enabled = True
@@ -3715,7 +3743,6 @@ class VisControlsClass:
 	
 	# called when an item is selected in the Vis track list
 	def handleVisTrackListEvent(self, control):
-		guiVisTrackList = self.guiVisTrackList
 		self.refreshIpoControls()
 
 	def handleVisTrackListItemEvent(self, control):
@@ -3727,6 +3754,15 @@ class VisControlsClass:
 		seqName = self.guiSeqList.controls[self.guiSeqList.itemIndex].controls[0].label
 		objName = self.guiVisTrackList.controls[calcIdx].controls[0].label
 		seqPrefs = getSequenceKey(seqName)
+		if control.state:
+			try: x = seqPrefs['Vis']['Tracks'][objName]
+			except:
+				seqPrefs['Vis']['Tracks'][objName] = {}
+				seqPrefs['Vis']['Tracks'][objName]['hasVisTrack'] = True
+				seqPrefs['Vis']['Tracks'][objName]['IPOType'] = 'Object'
+				seqPrefs['Vis']['Tracks'][objName]['IPOChannel'] = None
+				seqPrefs['Vis']['Tracks'][objName]['IPOObject'] = None
+
 		Prefs['Sequences'][seqName]['Vis']['Tracks'][objName]['hasVisTrack'] = control.state	
 		
 	# this method clears the sequence list and then repopulates it.
@@ -3810,8 +3846,15 @@ class VisControlsClass:
 		self.clearVisTrackList()
 		shapeTree = export_tree.find("SHAPE")
 		if shapeTree != None:
+			# find the highest detail level.
+			highest = 0
 			for marker in getChildren(shapeTree.obj):
 				if marker.name[0:6].lower() != "detail": continue
+				numPortion = int(marker.name[6:len(marker.name)])
+				if numPortion > highest: highest = numPortion
+			markerName = "detail" + str(numPortion)
+			for marker in getChildren(shapeTree.obj):
+				if marker.name.lower() != markerName: continue
 				# loop through all objects
 				for obj in getAllChildren(marker):
 					if obj.getType() != "Mesh": continue
@@ -3819,14 +3862,10 @@ class VisControlsClass:
 					# process mesh objects
 					objData = obj.getData()
 					# add an entry in the track list for the mesh object.
-					self.guiVisTrackList.addControl(self.createVisTrackListItem(obj.name))
-					# create an object visibility track for the current object in the sequence prefs if one doesn't exist.
-					try:
-						trackEnabled = Prefs['Sequences'][seqName]['Vis']['Tracks'][obj.name]
-					except: 
-						Prefs['Sequences'][seqName]['Vis']['Tracks'][obj.name]  = {'hasVisTrack': False, 'IPOObject':None, 'IPOType':"Material", 'IPOChannel':"Alpha"} 
+					self.guiVisTrackList.addControl(self.createVisTrackListItem(obj.name))					
 					# set the state of the enabled button
-					self.guiVisTrackList.controls[-1].controls[1].state = Prefs['Sequences'][seqName]['Vis']['Tracks'][obj.name]['hasVisTrack']
+					try: self.guiVisTrackList.controls[-1].controls[1].state = Prefs['Sequences'][seqName]['Vis']['Tracks'][obj.name]['hasVisTrack']
+					except: self.guiVisTrackList.controls[-1].controls[1].state = False
 					
 					
 		
@@ -4611,6 +4650,7 @@ def exit_callback():
 	# todo - clear lists on other panels before cleaning up.	
 	IFLControls.cleanup()
 	ActionControls.cleanup()
+	VisControls.cleanup()
 	MaterialControls.cleanup()
 	ArmatureControls.cleanup()
 	GeneralControls.cleanup()
