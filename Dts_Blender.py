@@ -1900,27 +1900,43 @@ class SeqCommonControlsClass:
 			self.guiSeqOptsContainerTitle.label = "Sequence '%s'" % seqName
 
 			try:
-				action = Blender.Armature.NLA.GetActions()[seqName]
+				#action = Blender.Armature.NLA.GetActions()[seqName]
 				#maxNumFrames = DtsShape_Blender.getNumFrames(action.getAllChannelIpos().values(), False)
 				maxNumFrames = getSeqNumFrames(seqName, seqPrefs)
 			except:
 				maxNumFrames = 0
 
+			
 			# Update gui control states
 			if seqPrefs['Action']['NumGroundFrames'] > maxNumFrames:
 				seqPrefs['Action']['NumGroundFrames'] = maxNumFrames
 			self.guiSeqOptsContainer.enabled = True
 			
 			updateSeqDurationAndFPS(seqName, seqPrefs)
+
+			self.guiSeqFramesLabel.label = "Highest Frame Count:  " + str(maxNumFrames)
 			
-			self.guiSeqDuration.value = float(seqPrefs['Duration'])
-			self.guiSeqDuration.tooltip = "Playback Time: %f Seconds" % float(seqPrefs['Duration'])
-			self.guiSeqFPS.value = float(seqPrefs['FPS'])
-			self.guiSeqFPS.tooltip = "Playback Rate: %f Frames Per Second" % float(seqPrefs['FPS'])
+			if maxNumFrames == 0:
+				self.guiSeqDuration.value = 0.0
+				self.guiSeqDuration.tooltip = "Playback Time: 0.0 Seconds, Sequence has no key frames!"
+				self.guiSeqDuration.enabled = False
+				try: self.guiSeqFPS.value = float(Blender.Scene.GetCurrent().getRenderingContext().framesPerSec())
+				except: self.guiSeqFPS.value = 25.0
+				self.guiSeqDuration.tooltip = "Playback Time: %f Seconds, Sequence has no key frames!" % float(seqPrefs['Duration'])
+				self.guiSeqFPS.enabled = False
+				self.guiPriority.value = 0
+			else:			
+				self.guiSeqDuration.value = float(seqPrefs['Duration'])
+				self.guiSeqDuration.tooltip = "Playback Time: %f Seconds" % float(seqPrefs['Duration'])
+				self.guiSeqDuration.enabled = True
+				self.guiSeqFPS.value = float(seqPrefs['FPS'])
+				self.guiSeqFPS.tooltip = "Playback Rate: %f Frames Per Second" % float(seqPrefs['FPS'])
+				self.guiSeqFPS.enabled = True
+			
 			self.guiSeqDurationLock.state = seqPrefs['DurationLocked']
 			self.guiSeqFPSLock.state = seqPrefs['FPSLocked']
 			self.guiPriority.value = seqPrefs['Priority']
-			self.guiSeqFramesLabel.label = "Highest Frame Count:  " + str(Torque_Util.getSeqNumFrames(seqName, seqPrefs))
+
 
 			# Triggers
 			for t in seqPrefs['Triggers']:
@@ -1929,13 +1945,18 @@ class SeqCommonControlsClass:
 				self.guiTriggerMenu.items.append((self.triggerMenuTemplate % (t[1], t[0])) + stateStr)
 			self.guiTriggerMenu.itemIndex = 0
 
-			self.guiTriggerFrame.max = maxNumFrames
+			if maxNumFrames > 0: self.guiTriggerFrame.max = maxNumFrames
+			else: self.guiTriggerFrame.max = 1
 			self.guiSequenceUpdateTriggers(seqPrefs['Triggers'], 0)
 			self.refreshBarChart(seqName, seqPrefs)
 
 		else:
 			self.guiSeqOptsContainer.enabled = False
 			self.guiSeqOptsContainerTitle.label = "Sequence: None Selected"
+			self.guiSeqDuration.value = 0.0
+			self.guiSeqFPS.value = 0.0
+			self.guiPriority.value = 0
+			self.guiSequenceUpdateTriggers([], 0)
 			self.clearBarChart()
 
 		
@@ -2081,9 +2102,9 @@ class SeqCommonControlsClass:
 
 	def guiSequenceUpdateTriggers(self, triggerList, itemIndex):
 		if (len(triggerList) == 0) or (itemIndex >= len(triggerList)):
-			self.guiTriggerState.value = 0
+			self.guiTriggerState.value = 1
 			self.guiTriggerStateOn.state = False
-			self.guiTriggerFrame.value = 0
+			self.guiTriggerFrame.value = 1
 		else:
 			self.guiTriggerState.value = triggerList[itemIndex][0] # Trigger State			
 			self.guiTriggerStateOn.state = triggerList[itemIndex][2] # On
