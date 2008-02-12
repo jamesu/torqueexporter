@@ -928,16 +928,13 @@ class ListContainer(BasicContainer):
 	
 
 	def scrollToSelectedItem(self):
-		print "*********** scrollToSelectedItem reached *********"
 		maxUsefulChildren = float(len(self.controls)-self.maxVisibleControls())
 		if maxUsefulChildren <= 0: maxUsefulChildren = 0.0001
 		scrollBarHeight = float(self.height - (3 * self.thumbHeight))
 		scrollPos = float(1 + self.itemIndex - self.maxVisibleControls())
 		if scrollPos < 0: scrollPos = 0.0
 		self.scrollPosition = int(scrollPos)
-		print "maxUsefulChildren =",maxUsefulChildren
 		scrollRatio = (scrollPos) / maxUsefulChildren
-		print "scrollRatio = ", scrollRatio
 		rawPixelPos = int(scrollRatio * scrollBarHeight)
 		self.thumbPosition = int(scrollBarHeight - rawPixelPos) + (2 * int(self.thumbHeight))
 
