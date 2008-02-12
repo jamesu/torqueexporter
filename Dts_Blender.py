@@ -139,6 +139,8 @@ def initPrefs():
 	Prefs['TSEMaterial'] = False
 	Prefs['exportBasename'] = basename(Blender.Get("filename"))
 	Prefs['exportBasepath'] = basepath(Blender.Get("filename"))
+	Prefs['LastActivePanel'] = 'Sequences'
+	Prefs['LastActiveSubPanel'] = 'Common'
 	return Prefs
 
 # Loads preferences
@@ -425,6 +427,11 @@ def renameSequence(oldName, newName):
 
 def updateOldPrefs():
 	global Prefs
+
+	try: x = Prefs['LastActivePanel']
+	except: Prefs['LastActivePanel'] = 'Sequences'
+	try: x = Prefs['LastActiveSubPanel']
+	except: Prefs['LastActiveSubPanel'] = 'Common'
 
 	for seqName in Prefs['Sequences'].keys():
 		seq = getSequenceKey(seqName)
@@ -966,8 +973,8 @@ globalEvents = Common_Gui.EventTable(1)
 
 
 # Special callbacks for gui control tabs
-
 def guiBaseCallback(control):
+	global Prefs
 	global guiSequenceTab, guiArmatureTab, guiMaterialsTab, guiGeneralTab, guiAboutTab, guiTabBar
 	global guiSequenceButton, guiMeshButton, guiArmatureButton, guiMaterialsButton, guiAboutButton
 
@@ -976,17 +983,19 @@ def guiBaseCallback(control):
 		return
 
 	# Need to associate the button with it's corresponding tab container.
-	ctrls = [[guiSequenceButton,guiSequenceTab],\
-	[guiMeshButton,guiGeneralTab],\
-	[guiMaterialsButton,guiMaterialsTab],\
-	[guiArmatureButton,guiArmatureTab],\
-	[guiAboutButton,guiAboutTab]]
+	ctrls = [[guiSequenceButton,guiSequenceTab, "Sequences"],\
+	[guiMeshButton,guiGeneralTab, "General"],\
+	[guiMaterialsButton,guiMaterialsTab, "Materials"],\
+	[guiArmatureButton,guiArmatureTab, "Armature"],\
+	[guiAboutButton,guiAboutTab, "About"]]
 	for ctrl in ctrls:
 		if control.name == ctrl[0].name:
 			# turn on the tab button, show and enable the tab container
 			control.state = True
 			ctrl[1].visible = True
 			ctrl[1].enabled = True
+			Prefs['LastActivePanel'] = ctrl[2]
+			if ctrl[2] != "Sequences": Prefs['LastActiveSubPanel'] = None
 			continue
 		# disable all other tab containers and set tab button states to false.
 		ctrl[0].state = False
@@ -994,17 +1003,18 @@ def guiBaseCallback(control):
 		ctrl[1].enabled = False
 		
 def guiSequenceTabsCallback(control):
+	global Prefs
 	global guiSeqCommonButton, guiSeqActButton, guiSequenceIFLButton, guiSequenceVisibilityButton, guiSequenceUVButton, guiSequenceMorphButton, guiSequenceTabBar
 	global guiSeqCommonSubtab, guiSeqActSubtab, guiSequenceIFLSubtab, guiSequenceVisibilitySubtab, guiSequenceUVSubtab, guiSequenceMorphSubtab
 	global SeqCommonControls, ActionControls, IFLControls, VisControls
 	
 	# Need to associate the button with it's corresponding tab container and refresh method
-	ctrls = [[guiSeqCommonButton, guiSeqCommonSubtab, SeqCommonControls],\
-		[guiSeqActButton, guiSeqActSubtab, ActionControls],\
-		[guiSequenceIFLButton, guiSequenceIFLSubtab, IFLControls],\
-		[guiSequenceVisibilityButton, guiSequenceVisibilitySubtab, VisControls],\
-		[guiSequenceUVButton, guiSequenceUVSubtab, None],\
-		[guiSequenceMorphButton, guiSequenceMorphSubtab, None]]
+	ctrls = [[guiSeqCommonButton, guiSeqCommonSubtab, SeqCommonControls, "Common"],\
+		[guiSeqActButton, guiSeqActSubtab, ActionControls, "Action"],\
+		[guiSequenceIFLButton, guiSequenceIFLSubtab, IFLControls, "IFL"],\
+		[guiSequenceVisibilityButton, guiSequenceVisibilitySubtab, VisControls, "Visibility"],\
+		[guiSequenceUVButton, guiSequenceUVSubtab, None, "TexUV"],\
+		[guiSequenceMorphButton, guiSequenceMorphSubtab, None, "Morph"]]
 	for ctrl in ctrls:
 		if control.name == ctrl[0].name:
 			# turn on the tab button, show and enable the tab container
@@ -1013,12 +1023,71 @@ def guiSequenceTabsCallback(control):
 			ctrl[1].enabled = True
 			if ctrl[2] != None:
 				ctrl[2].refreshAll()
+			Prefs['LastActiveSubPanel'] = ctrl[3]
 			continue
 		# disable all other tab containers and set tab button states to false.
 		ctrl[0].state = False
 		ctrl[1].visible = False
 		ctrl[1].enabled = False
 
+def restoreLastActivePanel():
+	global Prefs
+	global guiSeqCommonButton, guiSeqActButton, guiSequenceIFLButton, guiSequenceVisibilityButton, guiSequenceUVButton, guiSequenceMorphButton, guiSequenceTabBar
+	global guiSeqCommonSubtab, guiSeqActSubtab, guiSequenceIFLSubtab, guiSequenceVisibilitySubtab, guiSequenceUVSubtab, guiSequenceMorphSubtab
+	global SeqCommonControls, ActionControls, IFLControls, VisControls
+	panels =\
+	[[guiSequenceButton,guiSequenceTab, "Sequences"],\
+	 [guiMeshButton,guiGeneralTab, "General"],\
+	 [guiMaterialsButton,guiMaterialsTab, "Materials"],\
+	 [guiArmatureButton,guiArmatureTab, "Armature"],\
+	 [guiAboutButton,guiAboutTab, "About"]]
+
+	subPanels =\
+	[[guiSeqCommonButton, guiSeqCommonSubtab, SeqCommonControls, "Common"],\
+	 [guiSeqActButton, guiSeqActSubtab, ActionControls, "Action"],\
+	 [guiSequenceIFLButton, guiSequenceIFLSubtab, IFLControls, "IFL"],\
+	 [guiSequenceVisibilityButton, guiSequenceVisibilitySubtab, VisControls, "Visibility"],\
+	 [guiSequenceUVButton, guiSequenceUVSubtab, None, "TexUV"],\
+	 [guiSequenceMorphButton, guiSequenceMorphSubtab, None, "Morph"]]
+	
+	matchFound = False
+	for panel in panels:
+		if panel[2] == Prefs['LastActivePanel']:
+			# turn on the tab button, show and enable the tab container
+			panel[0].state = True
+			panel[1].visible = True
+			panel[1].enabled = True
+			matchFound = True
+			continue
+		# disable all other tab containers and set tab button states to false.
+		panel[0].state = False
+		panel[1].visible = False
+		panel[1].enabled = False
+	if not matchFound:
+		guiSequenceButton.state = True
+		guiSequenceTab.visible = True
+		guiSequenceTab.enabled = True
+	
+	matchFound = False
+	for subPanel in subPanels:
+		if subPanel[3] == Prefs['LastActiveSubPanel']:
+			# turn on the tab button, show and enable the tab container
+			subPanel[0].state = True
+			subPanel[1].visible = True
+			subPanel[1].enabled = True
+			if subPanel[2] != None:
+				subPanel[2].refreshAll()
+			matchFound = True
+			continue
+		# disable all other tab containers and set tab button states to false.
+		subPanel[0].state = False
+		subPanel[1].visible = False
+		subPanel[1].enabled = False
+	if not matchFound:
+		guiSeqCommonButton.state = True
+		guiSeqCommonSubtab.visible = True
+		guiSeqCommonSubtab.enabled = True
+		SeqCommonControls.refreshAll()
 
 			
 # Resize callback for all global gui controls
@@ -3459,7 +3528,6 @@ class VisControlsClass:
 			selection = self.guiVisTrackList.controls[self.guiVisTrackList.itemIndex].controls[0].label
 		else:
 			selection = None
-		print "Stored last selection:",selection
 
 		
 		# repopulate the sequence list
@@ -4692,6 +4760,9 @@ def initGui():
 	ArmatureControls = ArmatureControlsClass()
 	GeneralControls = GeneralControlsClass()
 	AboutControls = AboutControlsClass()
+	
+	# Restore last tab selection
+	restoreLastActivePanel()
 
 # Called when gui exits
 def exit_callback():
