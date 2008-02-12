@@ -1765,7 +1765,7 @@ class BlenderShape(DtsShape):
 		# Now we can dump each frame
 		for seqName in self.preferences['Sequences'].keys():
 			seqKey = self.preferences['Sequences'][seqName]
-			if seqKey['IFL']['Enabled'] and not seqKey['NoExport']:
+			if seqKey['IFL']['Enabled'] and (not seqKey['NoExport']) and seqKey['IFL']['WriteIFLFile']:
 				Torque_Util.dump_writeln("   Writing IFL script %s%s%s.ifl" % (self.preferences['exportBasepath'], pathSep, seqKey['IFL']['Material']))
 				IFLScript = open("%s%s%s.ifl" % (self.preferences['exportBasepath'], pathSep, seqKey['IFL']['Material']), "w")
 				for frame in seqKey['IFL']['IFLFrames']:
