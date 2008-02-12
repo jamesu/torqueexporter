@@ -1316,7 +1316,7 @@ class GeneralControlsClass:
 		self.guiCustomFilename = Common_Gui.TextBox("guiCustomFilename", "Filename: ", "Filename to write to", 20, self.handleEvent, self.resize)
 		self.guiCustomFilenameSelect = Common_Gui.BasicButton("guiCustomFilenameSelect", "Select...", "Select a filename and destination for export", 21, self.handleEvent, self.resize)
 		self.guiCustomFilenameDefaults = Common_Gui.BasicButton("guiCustomFilenameDefaults", "Default", "Reset filename and destination to defaults", 22, self.handleEvent, self.resize)
-		self.guiTSEMaterial = Common_Gui.ToggleButton("guiTSEMaterial", "Write TSE Materials", "Write materials and scripts geared for TSE", 24, self.handleEvent, self.resize)
+		self.guiTSEMaterial = Common_Gui.ToggleButton("guiTSEMaterial", "Write TGEA Materials", "Write materials and scripts geared for TSE", 24, self.handleEvent, self.resize)
 		self.guiLogToOutputFolder = Common_Gui.ToggleButton("guiLogToOutputFolder", "Log to Output Folder", "Write Log file to .DTS output folder", 25, self.handleEvent, self.resize)
 
 		
@@ -1548,17 +1548,17 @@ class GeneralControlsClass:
 		elif control.name == "guiBillboardSize":
 			control.x, control.y, control.width = 164,newheight-130-control.height, 200
 		elif control.name == "guiShapeScriptButton":
-			control.x, control.y, control.width = 356,newheight-260-control.height, 122
+			control.x, control.y, control.width = 346,newheight-260-control.height, 132
 		elif control.name == "guiCustomFilename":
 			control.x, control.y, control.width = 10,newheight-260-control.height, 220
 		elif control.name == "guiCustomFilenameSelect":
-			control.x, control.y, control.width = 232,newheight-260-control.height, 50
+			control.x, control.y, control.width = 232,newheight-260-control.height, 55
 		elif control.name == "guiCustomFilenameDefaults":
-			control.x, control.y, control.width = 284,newheight-260-control.height, 70
+			control.x, control.y, control.width = 289,newheight-260-control.height, 55
 		elif control.name == "guiTSEMaterial":
-			control.x, control.y, control.width = 356,newheight-282-control.height, 122
+			control.x, control.y, control.width = 346,newheight-282-control.height, 132
 		elif control.name == "guiLogToOutputFolder":
-			control.x, control.y, control.width = 356,newheight-304-control.height, 122
+			control.x, control.y, control.width = 346,newheight-304-control.height, 132
 
 	
 	def guiGeneralSelectorCallback(self, filename):
