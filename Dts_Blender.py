@@ -1316,7 +1316,7 @@ class GeneralControlsClass:
 		self.guiCustomFilename = Common_Gui.TextBox("guiCustomFilename", "Filename: ", "Filename to write to", 20, self.handleEvent, self.resize)
 		self.guiCustomFilenameSelect = Common_Gui.BasicButton("guiCustomFilenameSelect", "Select...", "Select a filename and destination for export", 21, self.handleEvent, self.resize)
 		self.guiCustomFilenameDefaults = Common_Gui.BasicButton("guiCustomFilenameDefaults", "Default", "Reset filename and destination to defaults", 22, self.handleEvent, self.resize)
-		self.guiTSEMaterial = Common_Gui.ToggleButton("guiTSEMaterial", "Write TGEA Materials", "Write materials and scripts geared for TSE", 24, self.handleEvent, self.resize)
+		self.guiTGEAMaterial = Common_Gui.ToggleButton("guiTGEAMaterial", "Write TGEA Materials", "Write materials and scripts geared for TSE", 24, self.handleEvent, self.resize)
 		self.guiLogToOutputFolder = Common_Gui.ToggleButton("guiLogToOutputFolder", "Log to Output Folder", "Write Log file to .DTS output folder", 25, self.handleEvent, self.resize)
 
 		
@@ -1352,7 +1352,7 @@ class GeneralControlsClass:
 		else:
 			pathSep = "/"
 		self.guiCustomFilename.value = Prefs['exportBasepath'] + pathSep + Prefs['exportBasename'] + ".dts"
-		self.guiTSEMaterial.state = Prefs['TSEMaterial']		
+		self.guiTGEAMaterial.state = Prefs['TSEMaterial']		
 		try: self.guiLogToOutputFolder.state = Prefs['LogToOutputFolder']
 		except:
 			Prefs['LogToOutputFolder'] = True
@@ -1386,7 +1386,7 @@ class GeneralControlsClass:
 		guiGeneralSubtab.addControl(self.guiCustomFilename)
 		guiGeneralSubtab.addControl(self.guiCustomFilenameSelect)
 		guiGeneralSubtab.addControl(self.guiCustomFilenameDefaults)
-		guiGeneralSubtab.addControl(self.guiTSEMaterial)
+		guiGeneralSubtab.addControl(self.guiTGEAMaterial)
 		guiGeneralSubtab.addControl(self.guiLogToOutputFolder)
 
 		
@@ -1422,7 +1422,7 @@ class GeneralControlsClass:
 		del self.guiCustomFilename
 		del self.guiCustomFilenameSelect
 		del self.guiCustomFilenameDefaults
-		del self.guiTSEMaterial
+		del self.guiTGEAMaterial
 		del self.guiLogToOutputFolder
 
 	def refreshAll(self):
@@ -1500,7 +1500,7 @@ class GeneralControlsClass:
 			guiGeneralSubtab.controls[18].value = Prefs['exportBasepath'] + pathSep + Prefs['exportBasename']
 			if guiGeneralSubtab.controls[18].value[len(guiGeneralSubtab.controls[18].value)-4:] != ".dts":
 				guiGeneralSubtab.controls[18].value += ".dts"
-		elif control.name == "guiTSEMaterial":
+		elif control.name == "guiTGEAMaterial":
 			Prefs['TSEMaterial'] = control.state
 
 		elif control.name == "guiLogToOutputFolder":
@@ -1555,7 +1555,7 @@ class GeneralControlsClass:
 			control.x, control.y, control.width = 232,newheight-260-control.height, 55
 		elif control.name == "guiCustomFilenameDefaults":
 			control.x, control.y, control.width = 289,newheight-260-control.height, 55
-		elif control.name == "guiTSEMaterial":
+		elif control.name == "guiTGEAMaterial":
 			control.x, control.y, control.width = 346,newheight-282-control.height, 132
 		elif control.name == "guiLogToOutputFolder":
 			control.x, control.y, control.width = 346,newheight-304-control.height, 132
