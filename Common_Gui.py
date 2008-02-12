@@ -49,7 +49,7 @@ dragState = False
 dragError = 10
 
 
-LastComboboxClickTime = Blender.sys.time()
+LastOverlapControlClickTime = Blender.sys.time()
 
 #----------------------------------------------------------------------------
 '''
@@ -480,7 +480,7 @@ class ComboBox(BasicControl):
 		self.itemIndex = self.getItemIndexFromString(string)
 	
 	def onAction(self, evt, mousepos, value):
-		global LastComboboxClickTime
+		global LastOverlapControlClickTime
 		self.itemIndex = int(self.data.val)
 		
 		# Store off the time of the last combobox event.
@@ -488,9 +488,9 @@ class ComboBox(BasicControl):
 		# undesirable click events when the mouse button is
 		# released over these controls.  We'll check the last
 		# combo box event time in the event processing for lists
-		# to see if the events happened to close together, and
+		# to see if the events happened too close together, and
 		# discard the unwanted click if they did.
-		LastComboboxClickTime = Blender.sys.time()
+		LastOverlapControlClickTime = Blender.sys.time()
 
 		if self.callback: self.callback(self)
 		return True
@@ -524,7 +524,16 @@ class NumberPicker(BasicControl):
 		self.max = 255
 	
 	def onAction(self, evt, mousepos, value):
-		self.value = self.data.val
+		global LastOverlapControlClickTime
+		self.value = self.data.val		
+		# Store off the time of the last numberpicker event.
+		# Number clicker drags can overlap list controls, causing
+		# undesirable click events when the mouse button is
+		# released over these controls.  We'll check the last
+		# combo box event time in the event processing for lists
+		# to see if the events happened too close together, and
+		# discard the unwanted click if they did.
+		LastOverlapControlClickTime = Blender.sys.time()
 		if self.callback: self.callback(self)
 		return True
 		
@@ -835,14 +844,14 @@ class ListContainer(BasicContainer):
 	def __del__(self):
 		del self.controls
 	
-	def onAction(self, evt, mousepos, value):
-		global LastComboboxClickTime
+	def onAction(self, evt, mousepos, value):		
+		global LastOverlapControlClickTime
 		#print "SCROLLABLECONTAINER CHECKING FOR evt=" + str(evt)
 		newpos = [mousepos[0]-self.x, mousepos[1]-self.y]
 		
 		dragEvents = [Draw.LEFTMOUSE, Draw.MOUSEX, Draw.MOUSEY]
 		
-		if evt == None:
+		if evt == None:			
 			if self.needYScroll():
 				# We can accept mouse wheel messages universally
 				if value == Draw.WHEELUPMOUSE:
@@ -895,10 +904,10 @@ class ListContainer(BasicContainer):
 				if not (Window.GetMouseButtons() & Window.MButs.L):
 					
 					# Check to see if a combo box event fired within the last
-					# 1/4 second.  If it did, we ignore the click. 
+					# 1/2 second.  If it did, we ignore the click (stray mouseup event).
 					curTime = Blender.sys.time()
-					timeElapsed = curTime - LastComboboxClickTime
-					if timeElapsed < 0.25:
+					timeElapsed = curTime - LastOverlapControlClickTime
+					if timeElapsed < 0.5:
 						return False
 					# calculate the amount of dead space at the bottom if any
 					deadSpace = self.height % self.childHeight
