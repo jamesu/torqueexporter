@@ -1691,15 +1691,15 @@ class BlenderShape(DtsShape):
 		material.name = imageName
 		retVal = self.materials.add(material)
 		if self.preferences['TSEMaterial']:
-			self.addTSEMaterial(imageName)
+			self.addTGEAMaterial(imageName)
 
 		return retVal
 		
 	
 	
 	
-	# Material addition (TSE mode)
-	def addTSEMaterial(self, imageName):
+	# Material addition (TGEA mode)
+	def addTGEAMaterial(self, imageName):
 	
 		mat = self.preferences['Materials'][imageName]
 
@@ -1751,7 +1751,7 @@ class BlenderShape(DtsShape):
 			shapeScript.write("};")
 			shapeScript.close()
 
-		# Write out TSE Material Script
+		# Write out TGEA Material Script
 		if self.preferences['TSEMaterial']:
 			Torque_Util.dump_writeln("   Writing material script %s%smaterials.cs" % (self.preferences['exportBasepath'], pathSep))
 			materialScript = open("%s%smaterials.cs" % (self.preferences['exportBasepath'], pathSep), "w")
