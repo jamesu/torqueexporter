@@ -569,3 +569,5 @@ def recalcDuration(seqName, seqPrefs):
 def recalcFPS(seqName, seqPrefs):
 	validateSeqDurationAndFPS(seqName, seqPrefs)
 	seqPrefs['FPS'] = float(getSeqNumFrames(seqName, seqPrefs)) / float(seqPrefs['Duration'])
+
+
