@@ -3053,9 +3053,12 @@ class IFLControlsClass:
 			seqName = guiSeqList.controls[guiSeqList.itemIndex].controls[0].label
 			newName = self.guiSeqName.value
 			# Move sequence values to new key and delete the old.
+			if guiSeqList.itemIndex < 0:
+				message = "No IFL animation was selected.%t|Cancel"
+				Blender.Draw.PupMenu(message)
+				return
 			if validateSequenceName(self.guiSeqName.value, "IFL"):
 				renameSequence(seqName, self.guiSeqName.value)
-				#guiSeqList.controls[guiSeqList.itemIndex].controls[0].label = self.guiSeqName.value
 				self.populateSequenceList()
 				# restore last sequence selection
 				for itemIndex in range(0, len(self.guiSeqList.controls)):
@@ -3063,8 +3066,6 @@ class IFLControlsClass:
 						self.guiSeqList.selectItem(itemIndex)
 				self.guiSeqList.scrollToSelectedItem()
 				if self.guiSeqList.callback: self.guiSeqList.callback(self.guiSeqList)
-
-
 		elif control.name == "guiSeqAddToExisting":
 			existingSequences = self.guiSeqExistingSequences
 			itemIndex = existingSequences.itemIndex
@@ -3566,7 +3567,7 @@ class VisControlsClass:
 		self.populateVisTrackList(seqName)
 	
 	def handleEvent(self, control):
-
+		global Prefs
 		if control.name == "guiSeqName":
 			pass
 		elif control.name == "guiSeqAdd":
@@ -3575,7 +3576,7 @@ class VisControlsClass:
 				self.guiSeqName.value = ""
 				self.guiSeqList.selectItem(len(self.guiSeqList.controls)-1)
 				self.guiSeqOptsContainer.enabled = True
-		elif control.name == "guiSeqDel":
+		elif control.name == "guiSeqDel":			
 			guiSeqList = self.guiSeqList
 			if guiSeqList.itemIndex > -1 and guiSeqList.itemIndex < len(guiSeqList.controls):
 				seqName = guiSeqList.controls[guiSeqList.itemIndex].controls[0].label
@@ -3585,18 +3586,19 @@ class VisControlsClass:
 				if seqKey['Action']['Enabled'] == True or seqKey['IFL']['Enabled'] == True:
 					self.guiSeqExistingSequences.items.append(seqName)
 				else:
-					Prefs['Sequences'][seqName]['Vis'][Enabled] = False
-					seq['Vis']['StartFrame'] = 1
-					seq['Vis']['EndFrame'] = 1
-					seq['Vis']['Enabled'] = True
-					seq['Vis']['Tracks'] = {}
-					# todo - GC sequences here, if no animations enabled for sequences, delete them.
+					seqKey['Vis']['StartFrame'] = 1
+					seqKey['Vis']['EndFrame'] = 1					
+					seqKey['Vis']['Tracks'] = {}
 				self.populateVisTrackList(seqName)
 			else:
-				self.clearVisTrackList(seqName)
+				self.clearVisTrackList()
 		elif control.name == "guiSeqRename":
 			guiSeqList = self.guiSeqList
 			seqName = guiSeqList.controls[guiSeqList.itemIndex].controls[0].label
+			if guiSeqList.itemIndex < 0:
+				message = "No Visibility animation was selected.%t|Cancel"
+				Blender.Draw.PupMenu(message)
+				return
 			if validateSequenceName(self.guiSeqName.value, "Vis"):
 				renameSequence(seqName, self.guiSeqName.value)
 				guiSeqList.controls[guiSeqList.itemIndex].controls[0].label = self.guiSeqName.value
@@ -3768,7 +3770,7 @@ class VisControlsClass:
 	# this method clears the sequence list and then repopulates it.
 	def populateSequenceList(self):
 		self.curSeqListEvent = 40
-		self.clearVisSeqList()
+		self.clearSequenceList()
 		# loop through all actions in the preferences and check for IFL animations
 		global Prefs
 		keys = Prefs['Sequences'].keys()
@@ -3778,7 +3780,7 @@ class VisControlsClass:
 			if seq['Vis']['Enabled'] == True:
 				self.guiSeqList.addControl(self.createSequenceListItem(seqName))
 
-	def clearVisSeqList(self):
+	def clearSequenceList(self):
 		for i in range(0, len(self.guiSeqList.controls)):
 			del self.guiSeqList.controls[i].controls[:]
 		del self.guiSeqList.controls[:]
