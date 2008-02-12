@@ -1071,7 +1071,7 @@ class BlenderShape(DtsShape):
 	# Adds a generic sequence
 	def addSequence(self, seqName, context, seqPrefs, scene = None, action=None):
 		#print "Adding new sequence:",seqName
-		Torque_Util.recalcSeqDurationAndFPS(seqName, seqPrefs)
+		Torque_Util.updateSeqDurationAndFPS(seqName, seqPrefs)
 
 		numFrames = getSeqNumFrames(seqName, seqPrefs)
 
