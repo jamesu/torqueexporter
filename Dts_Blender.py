@@ -247,7 +247,7 @@ def getSequenceKey(value):
 		# and set everything that needs a default
 		Prefs['Sequences'][value]['Triggers'] = [] # [State, Time, On]
 		Prefs['Sequences'][value]['Action'] = {'Enabled': False,'NumGroundFrames': 0,'BlendRefPoseAction': None,'BlendRefPoseFrame': 8,'FrameSamples': 0,'Blend': False}
-		Prefs['Sequences'][value]['IFL'] = { 'Enabled': False,'Material': None,'NumImages': 0,'TotalFrames': 0,'IFLFrames': []}
+		Prefs['Sequences'][value]['IFL'] = { 'Enabled': False,'Material': None,'NumImages': 0,'TotalFrames': 0,'IFLFrames': [], 'WriteIFLFile': True}
 		Prefs['Sequences'][value]['Vis'] = { 'Enabled': False,'StartFrame': 1,'EndFrame': 1, 'Tracks':{}}
 		Prefs['Sequences'][value]['Action']['enabled'] = True
 
@@ -320,6 +320,7 @@ def copySequenceKey(value):
 	retVal['IFL']['Material'] = Prefs['Sequences'][value]['IFL']['Material']
 	retVal['IFL']['NumImages'] = Prefs['Sequences'][value]['IFL']['NumImages']
 	retVal['IFL']['TotalFrames'] = Prefs['Sequences'][value]['IFL']['TotalFrames']
+	retVal['IFL']['WriteIFLFile'] = Prefs['Sequences'][value]['IFL']['WriteIFLFile']
 	# copy IFL Frames
 	retVal['IFL']['IFLFrames'] = []
 	for entry in Prefs['Sequences'][value]['IFL']['IFLFrames']:
@@ -536,6 +537,7 @@ def updateOldPrefs():
 			seq['IFL']['NumImages'] = 0
 			seq['IFL']['TotalFrames'] = 0
 			seq['IFL']['IFLFrames'] = []
+			seq['IFL']['WriteIFLFile'] = True
 
 
 '''
@@ -2745,6 +2747,7 @@ class IFLControlsClass:
 		self.guiFramesListSelectedTxt = Common_Gui.SimpleText("guiFramesListSelectedTxt", "Selected:", None, self.resize)
 		self.guiNumFrames = Common_Gui.NumberPicker("guiNumFrames", "Frames", "Hold Selected image for n frames", globalEvents.getNewID(), self.handleEvent, self.resize)
 		self.guiApplyToAll = Common_Gui.BasicButton("guiApplyToAll", "Apply to all", "Apply current frame display value to all IFL images", globalEvents.getNewID(), self.handleEvent, self.resize)
+		self.guiWriteIFLFile = Common_Gui.ToggleButton("guiWriteIFLFile", "Write .ifl file", "Write .ifl file for this sequence to disk on export.", globalEvents.getNewID(), self.handleEvent, self.resize)
 
 		# set initial states
 		self.guiSeqOptsContainer.enabled = False
@@ -2757,6 +2760,7 @@ class IFLControlsClass:
 		self.guiNumImages.value = 1
 		self.guiNumFrames.value = 1
 		self.guiNumFrames.max = 65535 # <- reasonable?  I wonder if anyone wants to do day/night cycles with IFL? - Joe G.
+		self.guiWriteIFLFile.state = False
 
 		# add controls to containers
 		guiSequenceIFLSubtab.addControl(self.guiSeqList)
@@ -2779,6 +2783,7 @@ class IFLControlsClass:
 		self.guiSeqOptsContainer.addControl(self.guiFramesListSelectedTxt)
 		self.guiSeqOptsContainer.addControl(self.guiNumFrames)
 		self.guiSeqOptsContainer.addControl(self.guiApplyToAll)
+		self.guiSeqOptsContainer.addControl(self.guiWriteIFLFile)
 		
 		# populate the IFL sequence list
 		self.populateSequenceList()
@@ -2817,6 +2822,7 @@ class IFLControlsClass:
 		del self.guiFramesListSelectedTxt
 		del self.guiNumFrames
 		del self.guiApplyToAll
+		del self.guiWriteIFLFile
 
 
 	# called when we switch to this control page to make sure everything is in sync.
@@ -2888,13 +2894,16 @@ class IFLControlsClass:
 		elif control.name == "guiFramesListTxt":
 			control.x, control.y, control.height, control.width = 10,232, 20,120
 		elif control.name == "guiFramesList":
-			control.x, control.y, control.height, control.width = 20,30, 195,223
+			control.x, control.y, control.height, control.width = 20,52, 173,223
 		elif control.name == "guiFramesListSelectedTxt":
-			control.x, control.y, control.height, control.width = 20,10, 20,120
+			control.x, control.y, control.height, control.width = 20,32, 20,120
 		elif control.name == "guiNumFrames":
-			control.x, control.y, control.height, control.width = 80,5, 20,80
+			control.x, control.y, control.height, control.width = 80,27, 20,80
 		elif control.name == "guiApplyToAll":
-			control.x, control.y, control.height, control.width = 164,5, 20,80
+			control.x, control.y, control.height, control.width = 164,27, 20,80
+		elif control.name == "guiWriteIFLFile":
+			control.x, control.y, control.height, control.width = 20,5, 20,223
+		
 
 	def createSequenceListItem(self, seqName):
 		startEvent = self.curSeqListEvent
@@ -2950,6 +2959,7 @@ class IFLControlsClass:
 		seq['IFL']['NumImages'] = 1
 		seq['IFL']['TotalFrames'] = 1
 		seq['IFL']['IFLFrames'] = []
+		seq['IFL']['WriteIFLFile'] = True
 
 		# add sequence to GUI sequence list		
 		self.guiSeqList.addControl(self.createSequenceListItem(seqName))
@@ -3130,7 +3140,11 @@ class IFLControlsClass:
 				seqPrefs['IFL']['IFLFrames'][i][1] = self.guiNumFrames.value
 				guiFramesList.controls[i].controls[1].label = "fr:" + str(self.guiNumFrames.value)
 			if self.guiFramesList.callback: self.guiFramesList.callback(self.guiFramesList) # Bit of a hack, but works
-
+		elif control.name == "guiWriteIFLFile":
+			if self.guiSeqList.itemIndex > -1:
+				seqName = self.guiSeqList.controls[self.guiSeqList.itemIndex].controls[0].label
+				seqPrefs = getSequenceKey(seqName)
+				seqPrefs['IFL']['WriteIFLFile'] = control.state
 		
 	# called when an item is selected in the sequence list
 	def handleListEvent(self, control):
@@ -3143,6 +3157,7 @@ class IFLControlsClass:
 			self.guiNumFrames.value = 1
 			self.guiSeqOptsContainer.enabled = False
 			self.guiSeqOptsContainerTitle.label = "Sequence: None Selected"
+			self.guiWriteIFLFile.state = False			
 		else:
 			self.guiSeqOptsContainer.enabled = True
 			seqName = control.controls[control.itemIndex].controls[0].label
@@ -3154,6 +3169,8 @@ class IFLControlsClass:
 			except: self.guiNumFrames.value = 1
 			self.populateImageFramesList(seqName)
 			self.guiSeqOptsContainerTitle.label = ("Sequence: %s" % seqName)
+			self.guiWriteIFLFile.state = seqPrefs['IFL']['WriteIFLFile']
+
 	
 	def handleListItemEvent(self, control):
 		# Determine sequence name
@@ -3573,9 +3590,11 @@ class VisControlsClass:
 		elif control.name == "guiSeqAdd":
 			if validateSequenceName(self.guiSeqName.value, "Vis"):
 				self.AddNewVisSeq(self.guiSeqName.value)
-				self.guiSeqName.value = ""
 				self.guiSeqList.selectItem(len(self.guiSeqList.controls)-1)
+				self.guiSeqName.value = ""
 				self.guiSeqOptsContainer.enabled = True
+				self.refreshAll()
+
 		elif control.name == "guiSeqDel":			
 			guiSeqList = self.guiSeqList
 			if guiSeqList.itemIndex > -1 and guiSeqList.itemIndex < len(guiSeqList.controls):
