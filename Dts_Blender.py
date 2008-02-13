@@ -2020,7 +2020,6 @@ class SeqCommonControlsClass:
 
 
 	def handleListEvent(self, control):
-		print "handleListEvent called..."
 		# Clear triggers menu
 		del self.guiTriggerMenu.items[:]
 		if control.itemIndex != -1:
