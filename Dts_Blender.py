@@ -3725,12 +3725,20 @@ class VisControlsClass:
 				seqName = guiSeqList.controls[guiSeqList.itemIndex].controls[0].label
 				seqKey = getSequenceKey(seqName)
 				seqKey['Vis']['StartFrame'] = control.value
+				if self.guiEndFrame.value < seqKey['Vis']['StartFrame']:
+					self.guiEndFrame.value = seqKey['Vis']['StartFrame']
+					seqKey['Vis']['EndFrame'] = seqKey['Vis']['StartFrame']
+				self.guiEndFrame.min = seqKey['Vis']['StartFrame']
 		elif control.name == "guiEndFrame":
 			guiSeqList = self.guiSeqList
 			if guiSeqList.itemIndex > -1 and guiSeqList.itemIndex < len(guiSeqList.controls):
 				seqName = guiSeqList.controls[guiSeqList.itemIndex].controls[0].label
 				seqKey = getSequenceKey(seqName)
 				seqKey['Vis']['EndFrame'] = control.value
+				if self.guiStartFrame.value > seqKey['Vis']['EndFrame']:
+					self.guiStartFrame.value = seqKey['Vis']['EndFrame']
+					seqKey['Vis']['StartFrame'] = seqKey['Vis']['EndFrame']
+				self.guiStartFrame.max = seqKey['Vis']['EndFrame']
 		elif control.name == "guiIpoType":
 			seqName = self.guiSeqList.controls[self.guiSeqList.itemIndex].controls[0].label
 			seqKey = getSequenceKey(seqName)
@@ -3774,7 +3782,9 @@ class VisControlsClass:
 			self.guiSeqName.value = seqName 
 			self.populateVisTrackList(seqName)
 			self.guiStartFrame.value = seqKey['Vis']['StartFrame']
+			self.guiStartFrame.max = seqKey['Vis']['EndFrame']
 			self.guiEndFrame.value = seqKey['Vis']['EndFrame']
+			self.guiEndFrame.min = seqKey['Vis']['StartFrame']			
 			self.guiSeqOptsContainerTitle.label = ("Sequence: %s" % seqName)
 		self.guiVisTrackList.selectItem(0)
 		self.guiVisTrackList.scrollToSelectedItem()
