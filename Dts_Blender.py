@@ -3788,6 +3788,7 @@ class VisControlsClass:
 			self.guiSeqOptsContainerTitle.label = ("Sequence: %s" % seqName)
 		self.guiVisTrackList.selectItem(0)
 		self.guiVisTrackList.scrollToSelectedItem()
+		self.refreshIpoControls()
 
 
 	def handleListItemEvent(self, control):
