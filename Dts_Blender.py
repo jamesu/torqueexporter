@@ -3001,7 +3001,7 @@ class IFLControlsClass:
 		elif control.name == "guiFramesListSelectedTxt":
 			control.x, control.y, control.height, control.width = 20,34, 20,120
 		elif control.name == "guiNumFrames":
-			control.x, control.y, control.height, control.width = 80,29, 20,80
+			control.x, control.y, control.height, control.width = 75,29, 20,85
 		elif control.name == "guiApplyToAll":
 			control.x, control.y, control.height, control.width = 164,29, 20,80
 		elif control.name == "guiWriteIFLFile":
