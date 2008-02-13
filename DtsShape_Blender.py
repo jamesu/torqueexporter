@@ -1115,8 +1115,6 @@ class BlenderShape(DtsShape):
 		
 		sequence.priority = seqPrefs['Priority']
 	
-		print "\n\n********** Sequence =", sequence, " *********\n\n"
-	
 		lastFrameRemoved = False
 		if ActionIsValid:
 			#print "   Adding action data for", seqName
@@ -1129,9 +1127,10 @@ class BlenderShape(DtsShape):
 		if visIsValid:
 			#print "   Adding visibility data for", seqName
 			numVisFrames = int(seqPrefs['Vis']['EndFrame'] - seqPrefs['Vis']['StartFrame'])
-			if lastFrameRemoved and numVisFrames == numFrameSamples + 1:
-				numVisFrames -= 1
-			adjustedVisEndFrame = (numVisFrames + int(seqPrefs['Vis']['StartFrame'])) -1
+			adjustedVisEndFrame = seqPrefs['Vis']['EndFrame']
+			if lastFrameRemoved and numVisFrames > numFrameSamples:
+				numVisFrames = numFrameSamples
+				adjustedVisEndFrame = (numVisFrames + int(seqPrefs['Vis']['StartFrame'])) -1
 			sequence = self.addSequenceVisibility( sequence, numFrameSamples, seqPrefs, int(seqPrefs['Vis']['StartFrame']), adjustedVisEndFrame )
 		if IFLIsValid:
 			#print "   Adding IFL data for", seqName
@@ -1357,7 +1356,6 @@ class BlenderShape(DtsShape):
 						sequence.frames[nodeIndex].append([loc,rot,scale])
 					# if we're past the end, just duplicate the last good frame.
 					else:
-						print "Appending duplicate frame for nodeIndex:", nodeIndex
 						loc, rot, scale = sequence.frames[nodeIndex][-1][0], sequence.frames[nodeIndex][-1][1], sequence.frames[nodeIndex][-1][2]
 						sequence.frames[nodeIndex].append([loc,rot,scale])
 						
@@ -1536,7 +1534,7 @@ class BlenderShape(DtsShape):
 		return sequence
 
 	# Processes a material ipo and incorporates it into the Action
-	def addSequenceVisibility(self, sequence, numFrameSamples, sequenceKey, startFrame, endFrame):
+	def addSequenceVisibility(self, sequence, numOverallFrames, sequenceKey, startFrame, endFrame):
 		'''
 		This adds ObjectState tracks to the sequence.
 		
@@ -1555,7 +1553,7 @@ class BlenderShape(DtsShape):
 		sequence.matters_vis = [False]*len(self.objects)
 
 		# includes last frame
-		numVisFrames = int((sequenceKey['Vis']['EndFrame'] - sequenceKey['Vis']['StartFrame']) + 1)
+		numVisFrames = int((startFrame - endFrame) + 1)
 
 		# Just do it.
 		for i in range(0, len(self.objects)):
@@ -1588,10 +1586,16 @@ class BlenderShape(DtsShape):
 			if sequence.baseObjectState == -1:
 				sequence.baseObjectState = len(self.objectstates)
 			# add the object states, include the last frame
-			for fr in range(sequenceKey['Vis']['StartFrame'], sequenceKey['Vis']['StartFrame'] + sequence.numKeyFrames):
+			for fr in range(startFrame, numOverallFrames + startFrame):
 				#print "#####  Writing IPO for frame:%2i (%f)" % (int(fr), IPOCurve[fr])
-				#print "#####  Writing IPO Value:", IPOCurve[fr]
-				self.objectstates.append(ObjectState(IPOCurve[int(fr)],0,0))
+				#print "#####  Writing IPO Value:", IPOCurve[fr]				
+				# Make sure we're still in the user define frame range.
+				if fr <= endFrame:
+					self.objectstates.append(ObjectState(IPOCurve[int(fr)],0,0))
+				# If we're past the user defined frame range, pad out object states
+				# with copies of the good last frame state.
+				else:
+					self.objectstates.append(ObjectState(IPOCurve[int(endFrame)],0,0))
 							
 		sequence.has_vis = True
 		return sequence						
