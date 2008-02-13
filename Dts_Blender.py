@@ -411,18 +411,33 @@ def renameSequence(oldName, newName):
 	global Prefs
 	seq = Prefs['Sequences'][oldName]
 
-	# copy the key
-	newKey = copySequenceKey(oldName)
-	# insert the copied key into the prefs under the new name
-	Prefs['Sequences'][newName] = newKey
-
-	if Prefs['Sequences'][oldName]['Action']['Enabled']:
-		# disable the IFL and Vis attributes of the old key
-		Prefs['Sequences'][oldName]['IFL']['Enabled'] = False
-		Prefs['Sequences'][oldName]['Vis']['Enabled'] = False
-	# delete old key
-	else:
+	# Are we merging two sequences together?
+	try: 
+		newSeq = Prefs['Sequences'][newName]
+		# above line should throw and excepting if the new sequence name
+		# does not already exist.
+		
+		# Copy IFL and Vis data to the existing (action) sequence, and
+		# delete the old sequence.
+		newSeq['IFL'] = Prefs['Sequences'][oldName]['IFL']
+		newSeq['Vis'] = Prefs['Sequences'][oldName]['Vis']
 		del Prefs['Sequences'][oldName]
+	# Nope.
+	except:
+		# copy the key
+		newKey = copySequenceKey(oldName)
+		# insert the copied key into the prefs under the new name
+		Prefs['Sequences'][newName] = newKey
+		# are we splitting the old sequence name from an action?
+		# if so, the action continues to exist, but the other animations
+		# must go.
+		if Prefs['Sequences'][oldName]['Action']['Enabled']:
+			# disable the IFL and Vis attributes of the old key
+			Prefs['Sequences'][oldName]['IFL']['Enabled'] = False
+			Prefs['Sequences'][oldName]['Vis']['Enabled'] = False
+		# delete old key
+		else:
+			del Prefs['Sequences'][oldName]
 
 
 def updateOldPrefs():
@@ -2005,6 +2020,7 @@ class SeqCommonControlsClass:
 
 
 	def handleListEvent(self, control):
+		print "handleListEvent called..."
 		# Clear triggers menu
 		del self.guiTriggerMenu.items[:]
 		if control.itemIndex != -1:
