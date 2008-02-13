@@ -1164,7 +1164,7 @@ def guiHeaderResize(control, newwidth, newheight):
 # Used to validate a sequence name entered by the user.
 # Sequence names must be unique amongst other sequences
 # having the same type.
-def validateSequenceName(seqName, seqType):
+def validateSequenceName(seqName, seqType, oldName = None):
 	global Prefs
 
 	# check the obvious stuff first.
@@ -1184,6 +1184,25 @@ def validateSequenceName(seqName, seqType):
 			message = ("%s animation sequence named %s already exists." % (seqType, seqName)) + "%t|Cancel"
 			Blender.Draw.PupMenu(message)
 			return False
+		# If a sequence containing visibility and ifl animations is merged with an action sequence that already
+		# contains one or the other animation type, that animation type will be overwritten by the merged in values;
+		# we need to ask the user what they want to do in this case.
+		if oldName != None:
+			oldSeq = seqPrefs[oldName]
+			if seqType == "Vis" and seq['IFL']['Enabled'] and oldSeq['IFL']['Enabled']:
+				message = ("IFL animation in \'%s\' will be overwritten with IFL animation from \'%s\' !" % (seqName, oldName)) + "%t|Merge Sequences and Overwrite IFL animation.|Cancel Merge"
+				if Blender.Draw.PupMenu(message) == 1:
+					return True
+				else:
+					return False
+			if seqType == "IFL" and seq['Vis']['Enabled'] and oldSeq['Vis']['Enabled']:
+				message = ("Vis animation in \'%s\' will be overwritten with Vis animation from \'%s\' !" % (seqName, oldName)) + "%t|Merge Sequences and Overwrite Vis animation.|Cancel Merge"
+				if Blender.Draw.PupMenu(message) == 1:
+					return True
+				else:
+					return False
+
+
 
 	return True
 	pass
@@ -1954,7 +1973,7 @@ class SeqCommonControlsClass:
 				self.guiSeqDurationLock.state = False
 				self.guiSeqFPSLock.state = True
 			if control.name == "guiSeqDuration":
-				if not Torque_Util.validateIFL(seqName, seqPrefs):
+				if not validateIFL(seqName, seqPrefs):
 					seqPrefs['Duration'] = float(control.value)					
 					recalcFPS(seqName, seqPrefs)
 					updateSeqDurationAndFPS(seqName, seqPrefs)
@@ -1964,11 +1983,11 @@ class SeqCommonControlsClass:
 					self.guiSeqFPS.value = float(seqPrefs['FPS'])
 					self.guiSeqFPS.tooltip = "Playback Rate: %f Frames Per Second" % float(seqPrefs['FPS'])
 				else:
-					# todo - pop up a warning here about IFL being enabled
-					print "IFL Sequences are locked at 30 fps.  This value is not settable for this sequence."
+					message = "Sequences w/ IFL animations are locked at 30 fps.%t|Cancel"
+					Blender.Draw.PupMenu(message)
 					control.value = seqPrefs['Duration']
 			elif control.name == "guiSeqFPS":
-				if not Torque_Util.validateIFL(seqName, seqPrefs):
+				if not validateIFL(seqName, seqPrefs):
 					seqPrefs['FPS'] = float(control.value)
 					recalcDuration(seqName, seqPrefs)
 					updateSeqDurationAndFPS(seqName, seqPrefs)
@@ -1978,8 +1997,8 @@ class SeqCommonControlsClass:
 					self.guiSeqFPS.value = float(seqPrefs['FPS'])
 					self.guiSeqFPS.tooltip = "Playback Rate: %f Frames Per Second" % float(seqPrefs['FPS'])
 				else:
-					# todo - pop up a warning here about IFL being enabled
-					print "IFL Sequences are locked at 30 fps.  This value is not settable for this sequence."
+					message = "Sequences w/ IFL animations are locked at 30 fps.%t|Cancel"
+					Blender.Draw.PupMenu(message)
 					control.value = seqPrefs['FPS']
 
 				pass
@@ -3136,8 +3155,8 @@ class IFLControlsClass:
 				message = "No IFL animation was selected.%t|Cancel"
 				Blender.Draw.PupMenu(message)
 				return
-			if validateSequenceName(self.guiSeqName.value, "IFL"):
-				renameSequence(seqName, self.guiSeqName.value)
+			if validateSequenceName(newName, "IFL", seqName):
+				renameSequence(seqName, newName)
 				self.populateSequenceList()
 				# restore last sequence selection
 				for itemIndex in range(0, len(self.guiSeqList.controls)):
@@ -3406,7 +3425,6 @@ class VisControlsClass:
 	def __init__(self):
 		global guiSequenceVisibilitySubtab		
 		global globalEvents
-		self.eatComboClick = False
 		
 		# panel state
 		self.curSeqListEvent = 40
@@ -3702,14 +3720,15 @@ class VisControlsClass:
 		elif control.name == "guiSeqRename":
 			guiSeqList = self.guiSeqList
 			seqName = guiSeqList.controls[guiSeqList.itemIndex].controls[0].label
+			newName = self.guiSeqName.value
 			if guiSeqList.itemIndex < 0:
 				message = "No Visibility animation was selected.%t|Cancel"
 				Blender.Draw.PupMenu(message)
 				return
-			if validateSequenceName(self.guiSeqName.value, "Vis"):
-				renameSequence(seqName, self.guiSeqName.value)
-				guiSeqList.controls[guiSeqList.itemIndex].controls[0].label = self.guiSeqName.value
-				self.populateVisTrackList(self.guiSeqName.value)
+			if validateSequenceName(newName, "Vis", seqName):
+				renameSequence(seqName, newName)
+				guiSeqList.controls[guiSeqList.itemIndex].controls[0].label = newName
+				self.populateVisTrackList(newName)
 		elif control.name == "guiSeqAddToExisting":
 			existingSequences = self.guiSeqExistingSequences
 			itemIndex = existingSequences.itemIndex
