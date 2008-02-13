@@ -75,7 +75,7 @@ def getCMapSupports(curveMap):
 	
 # Tells us the maximum frame count in a set of ipo's
 def getNumFrames(ipos, useKey = False):
-	numFrames = 0
+	numFrameSamples = 0
 	if not useKey:
 		for i in ipos:
 			if i != 0:
@@ -85,9 +85,9 @@ def getNumFrames(ipos, useKey = False):
 				# ** Blender is returning a pointer into nowhere land and there's nothing we can do to 
 				# ** detect it until it's too late to avoid crashing the whole app >:( - Joe G.
 				try:
-					if i.getCurveBeztriple(0, i.getNBezPoints(0)-1)[3] > numFrames:
-						#numframes = int(i.getRctf()[1])
-						numFrames = int(i.getCurveBeztriple(0, i.getNBezPoints(0)-1)[3])
+					if i.getCurveBeztriple(0, i.getNBezPoints(0)-1)[3] > numFrameSamples:
+						#numFrameSamples = int(i.getRctf()[1])
+						numFrameSamples = int(i.getCurveBeztriple(0, i.getNBezPoints(0)-1)[3])
 				except:
 					# no IPO curve...
 					continue
@@ -95,9 +95,9 @@ def getNumFrames(ipos, useKey = False):
 		for i in ipos:
 			if i != 0:
 				# This simply counts the keyframes assigned by users
-				if i.getNBezPoints(0) > numFrames:
-					numFrames = i.getNBezPoints(0)
-	return numFrames
+				if i.getNBezPoints(0) > numFrameSamples:
+					numFrameSamples = i.getNBezPoints(0)
+	return numFrameSamples
 
 
 '''
@@ -1073,7 +1073,7 @@ class BlenderShape(DtsShape):
 		#print "Adding new sequence:",seqName
 		Torque_Util.updateSeqDurationAndFPS(seqName, seqPrefs)
 
-		numFrames = getSeqNumFrames(seqName, seqPrefs)
+		numFrameSamples = getSeqNumFrames(seqName, seqPrefs)
 
 		visIsValid = validateVisibility(seqName, seqPrefs)
 		IFLIsValid = validateIFL(seqName, seqPrefs)
@@ -1105,20 +1105,34 @@ class BlenderShape(DtsShape):
 			sequence.matters_scale.append(False)
 			sequence.frames.append(0)
 		
+		# apply common sequence settings
 		sequence.fps = seqPrefs['FPS']
 		if seqPrefs['Cyclic']: 
 			sequence.flags |= sequence.Cyclic
 
+
 		sequence.duration = seqPrefs['Duration']
+		
+		sequence.priority = seqPrefs['Priority']
 	
 		print "\n\n********** Sequence =", sequence, " *********\n\n"
 	
+		lastFrameRemoved = False
 		if ActionIsValid:
 			#print "   Adding action data for", seqName
-			sequence = self.addAction(sequence, action, numFrames, scene, context, seqPrefs)
+			sequence, lastFrameRemoved = self.addAction(sequence, action, numFrameSamples, scene, context, seqPrefs)
+			# if we had to remove the last frame from a cyclic action, and the original action
+			# frame samples was the same as the overall number of frames for the sequence, adjust
+			# the overall sequence length.
+			if lastFrameRemoved:
+				numFrameSamples -= 1
 		if visIsValid:
 			#print "   Adding visibility data for", seqName
-			sequence = self.addSequenceVisibility( sequence, numFrames, seqPrefs, int(seqPrefs['Vis']['StartFrame']), int(seqPrefs['Vis']['EndFrame']) )
+			numVisFrames = int(seqPrefs['Vis']['EndFrame'] - seqPrefs['Vis']['StartFrame'])
+			if lastFrameRemoved and numVisFrames == numFrameSamples + 1:
+				numVisFrames -= 1
+			adjustedVisEndFrame = (numVisFrames + int(seqPrefs['Vis']['StartFrame'])) -1
+			sequence = self.addSequenceVisibility( sequence, numFrameSamples, seqPrefs, int(seqPrefs['Vis']['StartFrame']), adjustedVisEndFrame )
 		if IFLIsValid:
 			#print "   Adding IFL data for", seqName
 			sequence = self.addSequenceIFL(sequence, getNumIFLFrames(seqName, seqPrefs), seqPrefs)
@@ -1128,7 +1142,7 @@ class BlenderShape(DtsShape):
 		return sequence
 	
 	# Import an action
-	def addAction(self, sequence, action, numOverallFrames, scene, context, sequencePrefs):
+	def addAction(self, sequence, action, numOverallFrames, scene, context, seqPrefs):
 		'''
 		This adds an action to a shape as a sequence.
 		
@@ -1211,58 +1225,50 @@ class BlenderShape(DtsShape):
 
 			
 
-		# Add additional flags, e.g. cyclic
-		if sequencePrefs['Cyclic']: 
-			isCyclic = True
-			#sequence.flags |= sequence.Cyclic
-		else: isCyclic = False
-		if sequencePrefs['Action']['Blend']:
+		# Add action specific flags
+		if seqPrefs['Action']['Blend']:
 			isBlend = True
 			sequence.flags |= sequence.Blend
 		else: isBlend = False
-		if sequencePrefs['Action']['NumGroundFrames'] != 0:
+		if seqPrefs['Action']['NumGroundFrames'] != 0:
 			sequence.has_ground = True
-			sequence.ground_target = sequencePrefs['Action']['NumGroundFrames']
+			sequence.ground_target = seqPrefs['Action']['NumGroundFrames']
 			sequence.flags |= sequence.MakePath
 		else: sequence.has_ground = False
-		#sequence.fps = context.framesPerSec()
-
-		# hack, there must be a more elegant way to handle this.
-		try:
-			sequence.priority = sequencePrefs['Priority']
-		except KeyError:
-			sequencePrefs['Priority'] = 0
-			sequence.priority = sequencePrefs['Priority']
-
 
 		# Determine the number of key frames. Takes into account channels for bones that are
 		# not being exported, as they may still effect the animation through IK or other constraints.
-		sequence.numKeyFrames = getNumFrames(action.getAllChannelIpos().values(), False)
+		#sequence.numKeyFrames = getNumFrames(action.getAllChannelIpos().values(), False)
+		sequence.numKeyFrames = numOverallFrames
+		
+		# Calculate the raw number of action frames, from start frame to end frame, inclusive.
+		rawActFrames = (seqPrefs['Action']['EndFrame'] - seqPrefs['Action']['StartFrame']) + 1
 
 		# calc the interpolation increment
-		interpolateInc = float(sequence.numKeyFrames) / float(sequencePrefs['Action']['FrameSamples'])
+		interpolateInc = float(rawActFrames) / float(seqPrefs['Action']['FrameSamples'])
+		
 		# make sure it's not less than 1
 		if interpolateInc < 1.0: interpolateInc = 1.0
 
-		# Print different messages depending if we used interpolate or not
-		Torque_Util.dump_writeln("      Frames: %d " % sequencePrefs['Action']['FrameSamples'])
+		Torque_Util.dump_writeln("      Frames: %d " % seqPrefs['Action']['FrameSamples'])
 		
 		# Depending on what we have, set the bases accordingly
 		if sequence.has_ground: sequence.firstGroundFrame = len(self.groundTranslations)
 		else: sequence.firstGroundFrame = -1
 		
-		# this is the number of frames we are exporting.
-		numFrames = sequencePrefs['Action']['FrameSamples']+1
+		# this is the number of real action frames we are exporting.
+		#numFrameSamples = seqPrefs['Action']['FrameSamples']+1
+		numFrameSamples = seqPrefs['Action']['FrameSamples']
 		
-		remove_last = False
+		removeLast = False
 		baseTransforms = []
 		useAction = None
 		useFrame = None
 		if isBlend:
 			# Need to build a list of node transforms to use as the
 			# base transforms for nodes in our blend animation.
- 			useAction = sequencePrefs['Action']['BlendRefPoseAction']
-			useFrame = sequencePrefs['Action']['BlendRefPoseFrame']
+ 			useAction = seqPrefs['Action']['BlendRefPoseAction']
+			useFrame = seqPrefs['Action']['BlendRefPoseFrame']
 			baseTransforms = self.buildBaseTransforms(sequence, action, useAction, useFrame, scene, context)
 			if baseTransforms == None:
 				Torque_Util.dump_writeln("Error getting base Transforms!!!!!")
@@ -1289,7 +1295,6 @@ class BlenderShape(DtsShape):
 				arm = self.addedArmatures[i][0]
 				refPoseAct.setActive(arm)
 			# Set the current frame in blender
-			#context.currentFrame(useFrame)
 			Blender.Set('curframe', useFrame)
 
 		# For normal animations, loop through each node and reset it's transforms.
@@ -1315,18 +1320,20 @@ class BlenderShape(DtsShape):
 		
 		# loop through all of the armatures and set the current action as active for all
 		# of them.  Sadly, there is no way to tell which action belongs with which armature
-		# using the API in Blender 2.41, so this is a bit messy.
+		# using the Python API in Blender, so this is a bit messy.
 		act = Blender.Armature.NLA.GetActions()[sequence.name]
 		for i in range(0, len(self.addedArmatures)):
 			arm = self.addedArmatures[i][0]			
 			act.setActive(arm)
 			
-		# loop through all of the frames
-		if numOverallFrames > numFrames: numFrames = numOverallFrames
-		for frame in range(1, numFrames):
+		# loop through all of the exisitng action frames
+		#if numOverallFrames > numFrameSamples: numFrameSamples = numOverallFrames
+		#for frame in range(seqPrefs['Action']['StartFrame'], seqPrefs['Action']['EndFrame']+1):
+		#for frame in range(0, numFrameSamples):
+		for frame in range(0, numOverallFrames):
 			# Set the current frame in blender
 			#context.currentFrame(int(frame*interpolateInc))
-			Blender.Set('curframe', int(frame*interpolateInc))
+			Blender.Set('curframe', int(frame*interpolateInc) + seqPrefs['Action']['StartFrame'])
 			# add ground frames
 			self.addGroundFrame(sequence,(frame*interpolateInc), boundsStartMat)
 			# loop through each armature
@@ -1342,10 +1349,20 @@ class BlenderShape(DtsShape):
 						baseTransform = baseTransforms[nodeIndex]
 					else:
 						baseTransform = None
-					# let's pretend that everything matters, we'll remove the cruft later
-					# this prevents us from having to do a second pass through the frames.
-					loc, rot, scale = self.getPoseTransform(sequence, nodeIndex, (frame*interpolateInc), pose, baseTransform)
-					sequence.frames[nodeIndex].append([loc,rot,scale])
+					# make sure we're not past the end of our action
+					if frame < numFrameSamples:
+						# let's pretend that everything matters, we'll remove the cruft later
+						# this prevents us from having to do a second pass through the frames.
+						loc, rot, scale = self.getPoseTransform(sequence, nodeIndex, (frame*interpolateInc), pose, baseTransform)
+						sequence.frames[nodeIndex].append([loc,rot,scale])
+					# if we're past the end, just duplicate the last good frame.
+					else:
+						print "Appending duplicate frame for nodeIndex:", nodeIndex
+						loc, rot, scale = sequence.frames[nodeIndex][-1][0], sequence.frames[nodeIndex][-1][1], sequence.frames[nodeIndex][-1][2]
+						sequence.frames[nodeIndex].append([loc,rot,scale])
+						
+		
+		
 		
 		# if nothing was actually animated abandon exporting the action.
 		if not (sequence.has_loc or sequence.has_rot or sequence.has_scale):
@@ -1353,6 +1370,7 @@ class BlenderShape(DtsShape):
 			#del sequence.frames
 			#del sequence
 			#return None
+			return sequence, False
 
 		# set the aligned scale flag if we have scale.
 		if sequence.has_scale: sequence.flags |= Sequence.AlignedScale
@@ -1365,17 +1383,17 @@ class BlenderShape(DtsShape):
 		# two passes through the blender frames to determine what's animated and what's not.
 		for nodeIndex in range(1, len(self.nodes)):
 			if not sequence.matters_translation[nodeIndex]:
-				for frame in range(0, numFrames-1):					
+				for frame in range(0, numFrameSamples-1):					
 					sequence.frames[nodeIndex][frame][0] = None
 			if not sequence.matters_rotation[nodeIndex]:
-				for frame in range(0, numFrames-1):
+				for frame in range(0, numFrameSamples-1):
 					sequence.frames[nodeIndex][frame][1] = None				
 			if not sequence.matters_scale[nodeIndex]:
-				for frame in range(0, numFrames-1):
+				for frame in range(0, numFrameSamples-1):
 					sequence.frames[nodeIndex][frame][2] = None
 		
 		remove_translation, remove_rotation, remove_scale = True, True, True
-		if isCyclic:			
+		if seqPrefs['Cyclic']:
 			for nodeIndex in range(1, len(self.nodes)):
 				# If we added any new translations, and the first frame is equal to the last,
 				# allow the next pass of nodes to happen, to remove the last frame.
@@ -1390,7 +1408,7 @@ class BlenderShape(DtsShape):
 
 			# Determine if the change has affected all that we animate
 			if (remove_translation) and (remove_rotation) and (remove_scale):
-				remove_last = True
+				removeLast = True
 			
 
 		Torque_Util.dump_write("      Animates:")
@@ -1401,10 +1419,12 @@ class BlenderShape(DtsShape):
 		Torque_Util.dump_writeln("")
 
 		# We can now reveal the true number of keyframes
-		sequence.numKeyFrames = numFrames-1
+		#sequence.numKeyFrames = numFrameSamples-1
 
 		# Do a second pass on the nodes to remove the last frame for cyclic anims
-		if remove_last:
+		# but don't remove the last frame if the action is shorter than the overall sequence length :-)
+		removeLast = removeLast and numFrameSamples == numOverallFrames
+		if removeLast:
 			# Go through list of frames for nodes animated in sequence and delete the last frame from all of them
 			for nodeIndex in range(len(self.nodes)):
 				#ipo = sequence.ipo[nodeIndex]
@@ -1454,7 +1474,7 @@ class BlenderShape(DtsShape):
 		
 		gc.collect()
 		
-		return sequence		
+		return sequence, removeLast
 
 
 
@@ -1499,7 +1519,7 @@ class BlenderShape(DtsShape):
 
 
 	# Add sequence matters for IFL animation.
-	def addSequenceIFL(self, sequence, numFrames, sequenceKey):
+	def addSequenceIFL(self, sequence, numFrameSamples, sequenceKey):
 		sequence.matters_ifl = [False]*len(self.materials.materials)
 		if sequence.baseObjectState == -1:
 			sequence.baseObjectState = len(self.objectstates)
@@ -1509,16 +1529,14 @@ class BlenderShape(DtsShape):
 					mat = self.iflmaterials[i]
 					IFLMatName = self.sTable.get(mat.name)
 					if sequenceKey['IFL']['Material'] == IFLMatName[0:len(IFLMatName)-4]:
-						#print "Setting matters to true for IFL material", i
 						sequence.matters_ifl[i] = True
 					else:
-						#print "Not setting matters to true for IFL material",self.sTable.get(mat.name)
 						pass
 		sequence.has_ifl = True
 		return sequence
 
 	# Processes a material ipo and incorporates it into the Action
-	def addSequenceVisibility(self, sequence, numFrames, sequenceKey, startFrame, endFrame):
+	def addSequenceVisibility(self, sequence, numFrameSamples, sequenceKey, startFrame, endFrame):
 		'''
 		This adds ObjectState tracks to the sequence.
 		
@@ -1536,16 +1554,8 @@ class BlenderShape(DtsShape):
 		context = Blender.Scene.GetCurrent().getRenderingContext()
 		sequence.matters_vis = [False]*len(self.objects)
 
-		if sequence.numKeyFrames > 0:
-			# todo - fix this, interpolateInc should be calculated in addSequence.and passed in to subsequence creation methods.
-			interpolateInc = numFrames / sequence.numKeyFrames
-		else:
-			interpolateInc = 1
-		print "interpolateInc =", interpolateInc
-
 		# includes last frame
-		numVisFrames = int(((sequenceKey['Vis']['EndFrame'] - sequenceKey['Vis']['StartFrame']) + 1) / interpolateInc)
-		if numVisFrames > sequence.numKeyFrames: sequence.numKeyFrames = numVisFrames
+		numVisFrames = int((sequenceKey['Vis']['EndFrame'] - sequenceKey['Vis']['StartFrame']) + 1)
 
 		# Just do it.
 		for i in range(0, len(self.objects)):
@@ -1578,8 +1588,7 @@ class BlenderShape(DtsShape):
 			if sequence.baseObjectState == -1:
 				sequence.baseObjectState = len(self.objectstates)
 			# add the object states, include the last frame
-			#print "###### Interpolation Increment is:", interpolateInc
-			for fr in range(sequenceKey['Vis']['StartFrame'], sequenceKey['Vis']['StartFrame'] + sequence.numKeyFrames, interpolateInc):
+			for fr in range(sequenceKey['Vis']['StartFrame'], sequenceKey['Vis']['StartFrame'] + sequence.numKeyFrames):
 				#print "#####  Writing IPO for frame:%2i (%f)" % (int(fr), IPOCurve[fr])
 				#print "#####  Writing IPO Value:", IPOCurve[fr]
 				self.objectstates.append(ObjectState(IPOCurve[int(fr)],0,0))
