@@ -3744,6 +3744,7 @@ class VisControlsClass:
 				renameSequence(seqName, newName)
 				guiSeqList.controls[guiSeqList.itemIndex].controls[0].label = newName
 				self.populateVisTrackList(newName)
+				self.refreshAll()
 		elif control.name == "guiSeqAddToExisting":
 			existingSequences = self.guiSeqExistingSequences
 			itemIndex = existingSequences.itemIndex
