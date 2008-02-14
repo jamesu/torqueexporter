@@ -668,7 +668,7 @@ def refreshActionData():
 		# update affected preferences
 		if seqPrefs['Action']['AutoFrames']:
 			seqPrefs['Action']['StartFrame'] = 1
-			seqPrefs['Action']['EndFrame'] = maxFrames + 1
+			seqPrefs['Action']['EndFrame'] = maxFrames
 		if seqPrefs['Action']['FrameSamples'] > maxFrames: seqPrefs['Action']['FrameSamples'] = maxFrames
 		if seqPrefs['Action']['AutoSamples']:
 			seqPrefs['Action']['FrameSamples'] = seqPrefs['Action']['EndFrame'] - seqPrefs['Action']['StartFrame'] + 1
@@ -2322,8 +2322,6 @@ class SeqCommonControlsClass:
 			self.guiSeqOptsContainerTitle.label = "Sequence '%s'" % seqName
 
 			try:
-				#action = Blender.Armature.NLA.GetActions()[seqName]
-				#maxNumFrames = DtsShape_Blender.getNumFrames(action.getAllChannelIpos().values(), False)
 				maxNumFrames = getSeqNumFrames(seqName, seqPrefs)
 			except:
 				maxNumFrames = 0
@@ -2770,21 +2768,14 @@ class ActionControlsClass:
 			
 	# This method validates the current control states, adjusts preference values, and generally keeps everything consistent
 	def updateSequenceControls(self, seqName, seqPrefs):
-		# update affected preferences
+		
+		# update affected preferences for manual start and end frame changes.
 		if not seqPrefs['Action']['AutoFrames']:
 			seqPrefs['Action']['EndFrame'] = self.guiEndFrame.value
 			seqPrefs['Action']['StartFrame'] = self.guiStartFrame.value
-		else:
-			seqPrefs['Action']['StartFrame'] = 1
-			action = Blender.Armature.NLA.GetActions()[seqName]
-			seqPrefs['Action']['EndFrame'] = DtsShape_Blender.getNumFrames(action.getAllChannelIpos().values(), False)
-		try:
-			action = Blender.Armature.NLA.GetActions()[seqName]
-			maxFrames = (seqPrefs['Action']['EndFrame'] - seqPrefs['Action']['StartFrame']) + 1
-		except:
-			maxFrames = 0
-		if seqPrefs['Action']['FrameSamples'] > maxFrames or seqPrefs['Action']['AutoSamples']: seqPrefs['Action']['FrameSamples'] = maxFrames
-		if seqPrefs['Action']['NumGroundFrames'] > maxFrames: seqPrefs['Action']['NumGroundFrames'] = maxFrames
+
+		refreshActionData() # <- update the prefs to reflect the current state of the blender actions
+		maxFrames = seqPrefs['Action']['EndFrame'] - seqPrefs['Action']['StartFrame'] + 1
 
 		# refresh control states
 		self.guiFrameSamples.max = maxFrames
