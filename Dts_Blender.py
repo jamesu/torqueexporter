@@ -2462,9 +2462,9 @@ class ActionControlsClass:
 		self.guiRefPoseFrame.visible = False
 		self.guiRefPoseFrame.min = 1
 		self.guiStartFrame.min = 1
-		self.guiStartFrame.max = 65535
+		self.guiStartFrame.max = 4095
 		self.guiEndFrame.min = 1
-		self.guiEndFrame.max = 65535
+		self.guiEndFrame.max = 4095
 		self.guiFrameSamples.min = 1
 		
 		# add controls to containers
@@ -3548,6 +3548,8 @@ class VisControlsClass:
 		self.guiVisTrackList.enabled = True
 		self.guiStartFrame.min = 1
 		self.guiEndFrame.min = 1
+		self.guiStartFrame.max = 4095
+		self.guiEndFrame.max = 4095
 		self.guiStartFrame.value = 1
 		self.guiEndFrame.value = 1
 
