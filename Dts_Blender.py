@@ -631,6 +631,53 @@ def updateOldPrefs():
 			seq['IFL']['WriteIFLFile'] = True
 
 
+# Call this function when the number of frames in the sequence has changed, or may have changed.
+#  updates either duration or FPS for the sequence, depending on which is locked.
+def updateSeqDurationAndFPS(seqName, seqPrefs):
+	numFrames = getSeqNumFrames(seqName, seqPrefs)
+	# validate to avoid zero division
+	validateSeqDurationAndFPS(seqName, seqPrefs)
+	if validateIFL(seqName, seqPrefs):
+		# set FPS to 30 and calc duration
+		seqPrefs['FPS'] = 30.0
+		seqPrefs['Duration'] = float(numFrames) / 30.0
+	# just an extra check here to make sure that we don't end up with both
+	# duration and fps locked at the same time
+	if seqPrefs['DurationLocked'] and seqPrefs['FPSLocked']:
+		seqPrefs['DurationLocked'] = False
+	# do we need to recalculate FPS, or Duration?
+	if seqPrefs['DurationLocked']:
+		# recalc FPS
+		seqPrefs['FPS'] = float(numFrames) / seqPrefs['Duration']
+	elif seqPrefs['FPSLocked']:
+		# recalc duration
+		seqPrefs['Duration'] = float(numFrames) / seqPrefs['FPS']
+	# validate resulting values
+	validateSeqDurationAndFPS(seqName, seqPrefs)
+
+
+# refreshes action data that is read from blender and updates the related preferences
+def refreshActionData():
+	for seqName in Blender.Armature.NLA.GetActions().keys():
+		seqPrefs = getSequenceKey(seqName)
+		maxFrames = 1
+		try:
+			a = Blender.Armature.NLA.GetActions()[seqName]
+			maxFrames = DtsShape_Blender.getNumFrames(a.getAllChannelIpos().values(), False)
+		except: pass # this seqName no longer exists(!?)
+
+		# update affected preferences
+		if seqPrefs['Action']['AutoFrames']:
+			seqPrefs['Action']['StartFrame'] = 1
+			seqPrefs['Action']['EndFrame'] = maxFrames + 1
+		if seqPrefs['Action']['FrameSamples'] > maxFrames: seqPrefs['Action']['FrameSamples'] = maxFrames
+		if seqPrefs['Action']['AutoSamples']:
+			seqPrefs['Action']['FrameSamples'] = seqPrefs['Action']['EndFrame'] - seqPrefs['Action']['StartFrame'] + 1
+		if seqPrefs['Action']['NumGroundFrames'] > maxFrames: seqPrefs['Action']['NumGroundFrames'] = maxFrames
+		updateSeqDurationAndFPS(seqName, seqPrefs)
+
+
+
 '''
 	Class to handle the 'World' branch
 '''
@@ -1003,6 +1050,7 @@ def handleScene():
 def export():
 	Torque_Util.dump_writeln("Exporting...")
 	print "Exporting..."
+	refreshActionData()
 	savePrefs()
 	
 	cur_progress = Common_Gui.Progress()
@@ -1290,6 +1338,9 @@ def validateSequenceName(seqName, seqType, oldName = None):
 
 	return True
 	pass
+
+
+
 
 
 '''
