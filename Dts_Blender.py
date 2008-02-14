@@ -2237,6 +2237,7 @@ class SeqCommonControlsClass:
 		# repopulate the sequence list
 		cleanKeys()
 		createActionKeys()
+		refreshActionData()
 		self.populateSequenceList()
 		
 		# restore last sequence selection
@@ -2752,6 +2753,7 @@ class ActionControlsClass:
 		# repopulate the sequence list
 		cleanKeys()
 		createActionKeys()
+		refreshActionData()
 		self.populateSequenceList()
 		
 		# restore last sequence selection
@@ -3227,6 +3229,7 @@ class IFLControlsClass:
 		# repopulate the sequence list
 		cleanKeys()
 		createActionKeys()
+		refreshActionData()
 		self.populateSequenceList()
 		self.populateExistingSeqPulldown()
 
@@ -3855,6 +3858,7 @@ class VisControlsClass:
 		# repopulate the sequence list
 		cleanKeys()
 		createActionKeys()
+		refreshActionData()
 		self.populateSequenceList()
 		self.populateExistingSeqPulldown()
 
