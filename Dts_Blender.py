@@ -442,6 +442,78 @@ def renameSequence(oldName, newName):
 			del Prefs['Sequences'][oldName]
 
 
+# Converts an old style visibility sequence to the new prefs format
+def importOldVisAnim(seqName, seqPrefs):
+		try: x = seqPrefs['Vis']
+		except: seqPrefs['Vis'] = {}
+		try: x = seqPrefs['Vis']['Enabled']
+		except:
+			seqPrefs['Vis']['Enabled'] = seqPrefs['AnimateMaterial']
+			del seqPrefs['AnimateMaterial']
+		try: x = seqPrefs['Vis']['StartFrame']
+		except:			
+			seqPrefs['Vis']['StartFrame'] = seqPrefs['MaterialIpoStartFrame']
+			try:
+				action = Blender.Armature.NLA.GetActions()[seqName]
+				seqPrefs['Vis']['EndFrame'] = (seqPrefs['Vis']['StartFrame'] + DtsShape_Blender.getNumFrames(action.getAllChannelIpos().values(), False))-1
+			except:
+				seqPrefs['Vis']['EndFrame'] = seqPrefs['Vis']['StartFrame']
+			del seqPrefs['MaterialIpoStartFrame']
+		try: x = seqPrefs['Vis']['Tracks']
+		except:
+			# todo - set up tracks automatically for old style vis sequences.
+			seqPrefs['Vis']['Tracks'] = {}
+			if not seqPrefs['Vis']['Enabled']: return
+			
+			# make a list of blender materials with alpha IPOs
+			IPOMatList = []
+			for mat in Blender.Material.Get():
+				ipo = mat.getIpo()
+				if ipo == None:	continue
+				alphaFound = False
+				for curve in ipo:
+					print mat.name, ":",curve.name
+					if curve.name != "Alpha": contrinue
+					alphaFound = True
+					IPOMatList.append(mat.name)
+					break
+			print IPOMatList
+
+			# check an arbitrary poly in each mesh (in highest dl) to see if we can find a material in the list
+			shapeTree = export_tree.find("SHAPE")
+			if shapeTree == None: return
+			# find the highest detail level.
+			highest = 0
+			for marker in getChildren(shapeTree.obj):
+				if marker.name[0:6].lower() != "detail": continue
+				numPortion = int(marker.name[6:len(marker.name)])
+				if numPortion > highest: highest = numPortion
+			markerName = "detail" + str(numPortion)
+			for marker in getChildren(shapeTree.obj):
+				if marker.name.lower() != markerName: continue
+				# loop through all objects, and sort into two lists
+				for obj in getAllChildren(marker):
+					if obj.getType() != "Mesh": continue
+					if obj.name == "Bounds": continue
+					# process mesh objects
+					objData = obj.getData()
+					# Does the mesh that use this material?
+					if len(objData.faces) < 1: continue
+					if len(objData.materials) <= objData.faces[0].mat: continue
+					matName = objData.materials[objData.faces[0].mat].name
+					print objData.materials[objData.faces[0].mat].name
+					# if so, create a vis track for the object.
+					if not (matName in IPOMatList): continue
+					# if we made it here, it should be OK to create the track.
+					print "Creating track for",obj.name
+					seqPrefs['Vis']['Tracks'][obj.name] = {}
+					seqPrefs['Vis']['Tracks'][obj.name]['hasVisTrack'] = True
+					seqPrefs['Vis']['Tracks'][obj.name]['IPOType'] = 'Material'
+					seqPrefs['Vis']['Tracks'][obj.name]['IPOChannel'] = 'Alpha'
+					seqPrefs['Vis']['Tracks'][obj.name]['IPOObject'] = matName
+
+
+# Converts all old preferences to the new format.
 def updateOldPrefs():
 	global Prefs
 
@@ -508,25 +580,9 @@ def updateOldPrefs():
 		except:
 			actKey['BlendRefPoseFrame'] = seq['BlendRefPoseFrame']
 			del seq['BlendRefPoseFrame']
-		try: x = seq['Vis']
-		except: seq['Vis'] = {}
-		try: x = seq['Vis']['Enabled']
-		except:
-			seq['Vis']['Enabled'] = seq['AnimateMaterial']
-			del seq['AnimateMaterial']
-		try: x = seq['Vis']['StartFrame']
-		except:			
-			seq['Vis']['StartFrame'] = seq['MaterialIpoStartFrame']
-			try:
-				action = Blender.Armature.NLA.GetActions()[seqName]
-				seq['Vis']['EndFrame'] = seq['Vis']['StartFrame'] + DtsShape_Blender.getNumFrames(action.getAllChannelIpos().values(), False)
-			except:
-				seq['Vis']['EndFrame'] = seq['Vis']['StartFrame']
-			del seq['MaterialIpoStartFrame']
-		try: x = seq['Vis']['Tracks']
-		except:
-			# todo - set up tracks automatically for old style vis sequences.
-			seq['Vis']['Tracks'] = {}
+		
+		importOldVisAnim(seqName, seq)
+		
 		try: x = seq['TotalFrames']
 		except: seq['TotalFrames'] = 0
 
