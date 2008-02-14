@@ -472,12 +472,10 @@ def importOldVisAnim(seqName, seqPrefs):
 				if ipo == None:	continue
 				alphaFound = False
 				for curve in ipo:
-					print mat.name, ":",curve.name
-					if curve.name != "Alpha": contrinue
+					if curve.name != "Alpha": continue
 					alphaFound = True
 					IPOMatList.append(mat.name)
 					break
-			print IPOMatList
 
 			# check an arbitrary poly in each mesh (in highest dl) to see if we can find a material in the list
 			shapeTree = export_tree.find("SHAPE")
@@ -501,11 +499,9 @@ def importOldVisAnim(seqName, seqPrefs):
 					if len(objData.faces) < 1: continue
 					if len(objData.materials) <= objData.faces[0].mat: continue
 					matName = objData.materials[objData.faces[0].mat].name
-					print objData.materials[objData.faces[0].mat].name
 					# if so, create a vis track for the object.
 					if not (matName in IPOMatList): continue
 					# if we made it here, it should be OK to create the track.
-					print "Creating track for",obj.name
 					seqPrefs['Vis']['Tracks'][obj.name] = {}
 					seqPrefs['Vis']['Tracks'][obj.name]['hasVisTrack'] = True
 					seqPrefs['Vis']['Tracks'][obj.name]['IPOType'] = 'Material'
@@ -588,13 +584,11 @@ def updateOldPrefs():
 
 		try: x = seq['FPS']
 		except:
-			print "Sequence FPS not found..."
 			try:
 				seq['FPS'] = float(Blender.Scene.GetCurrent().getRenderingContext().framesPerSec())
 				if seq['FPS'] == 0: seq['FPS'] = 25
 			except:
 				seq['FPS'] = 25
-			print "Sequence FPS was set to:",seq['FPS']
 		try: x = seq['Duration']		
 		except:
 			maxNumFrames = 0
@@ -608,7 +602,6 @@ def updateOldPrefs():
 			#try: seq['Duration'] = float(Torque_Util.getSeqNumFrames(seqName, seq)) / float(seq['FPS'])
 			try: seq['Duration'] = float(maxNumFrames) / float(seq['FPS'])
 			except:
-				print "Could not determine sequence duration!!!"
 				seq['Duration'] = 1.0
 				seq['FPS'] = 1.0
 		try: x = seq['DurationLocked']
@@ -629,6 +622,12 @@ def updateOldPrefs():
 			seq['IFL']['TotalFrames'] = 0
 			seq['IFL']['IFLFrames'] = []
 			seq['IFL']['WriteIFLFile'] = True
+	
+	# loop through materials and add new keys
+	for matName in Prefs['Materials'].keys():
+		mat = Prefs['Materials'][matName]
+		mat['IFLMaterial'] = False
+
 
 
 # Call this function when the number of frames in the sequence has changed, or may have changed.
@@ -676,6 +675,181 @@ def refreshActionData():
 		if seqPrefs['Action']['NumGroundFrames'] > maxFrames: seqPrefs['Action']['NumGroundFrames'] = maxFrames
 		updateSeqDurationAndFPS(seqName, seqPrefs)
 
+
+# refreshes material data read from blender and updates related preferences.
+def importMaterialList():	
+	global Prefs
+
+	try:
+		materials = Prefs['Materials']
+	except:			
+		Prefs['Materials'] = {}
+		materials = Prefs['Materials']
+
+	# loop through all faces of all meshes in the shape tree and compile a list
+	# of unique images that are UV mapped to the faces.
+	imageList = []
+	shapeTree = export_tree.find("SHAPE")
+	if shapeTree != None:
+		for marker in getChildren(shapeTree.obj):		
+			if marker.name[0:6].lower() != "detail": continue
+			for obj in getAllChildren(marker):
+				if obj.getType() != "Mesh": continue
+				objData = obj.getData()
+				for face in objData.faces:					
+					try: x = face.image
+					except IndexError: x = None
+					# If we don't Have an image assigned to the face
+					if x == None:						
+						try: x = objData.materials[face.mat]
+						except IndexError: x = None
+						# is there a material index assigned?
+						if x != None:
+							#  add the material name to the imagelist
+							imageName = stripImageExtension(objData.materials[face.mat].name)
+							if not (imageName in imageList):
+								imageList.append(imageName)
+
+					# Otherwise we do have an image assigned to the face, so add it to the imageList.
+					else:
+						imageName = stripImageExtension(face.image.getName())
+						if not (imageName in imageList):
+							imageList.append(imageName)
+
+
+	# remove unused materials from the prefs
+	for imageName in materials.keys()[:]:
+		if not (imageName in imageList): del materials[imageName]
+
+	if len(imageList)==0: return
+
+	# populate materials list with all blender materials
+	for imageName in imageList:
+		bmat = None
+		# Do we have a blender material that matches the image name?
+		try: bmat = Blender.Material.Get(imageName)
+		except NameError:
+			# No blender material, do we have a prefs key for this material?
+			try: x = Prefs['Materials'][imageName]
+			except KeyError:
+				# no corresponding blender material and no existing texture material, so use reasonable defaults.
+				Prefs['Materials'][imageName] = {}
+				pmi = Prefs['Materials'][imageName]
+				pmi['SWrap'] = True
+				pmi['TWrap'] = True
+				pmi['Translucent'] = False
+				pmi['Additive'] = False
+				pmi['Subtractive'] = False
+				pmi['SelfIlluminating'] = False
+				pmi['NeverEnvMap'] = True
+				pmi['NoMipMap'] = False
+				pmi['MipMapZeroBorder'] = False
+				pmi['IFLMaterial'] = False
+				pmi['DetailMapFlag'] = False
+				pmi['BumpMapFlag'] = False
+				pmi['ReflectanceMapFlag'] = False
+				pmi['BaseTex'] = imageName
+				pmi['DetailTex'] = None
+				pmi['BumpMapTex'] = None
+				pmi['RefMapTex'] = None
+				pmi['reflectance'] = 0.0
+				pmi['detailScale'] = 1.0
+			continue
+
+		# We have a blender material, do we have a prefs key for it?
+		try: x = Prefs['Materials'][bmat.name]			
+		except:
+			# No prefs key, so create one.
+			Prefs['Materials'][bmat.name] = {}
+			pmb = Prefs['Materials'][bmat.name]
+			# init everything to make sure all keys exist with sane values
+			pmb['SWrap'] = True
+			pmb['TWrap'] = True
+			pmb['Translucent'] = False
+			pmb['Additive'] = False
+			pmb['Subtractive'] = False
+			pmb['SelfIlluminating'] = False
+			pmb['NeverEnvMap'] = True
+			pmb['NoMipMap'] = False
+			pmb['MipMapZeroBorder'] = False
+			pmb['IFLMaterial'] = False
+			pmb['DetailMapFlag'] = False
+			pmb['BumpMapFlag'] = False
+			pmb['ReflectanceMapFlag'] = False
+			pmb['BaseTex'] = imageName
+			pmb['DetailTex'] = None
+			pmb['BumpMapTex'] = None
+			pmb['RefMapTex'] = None
+			pmb['reflectance'] = 0.0
+			pmb['detailScale'] = 1.0
+
+			if bmat.getEmit() > 0.0: pmb['SelfIlluminating'] = True
+			else: pmb['SelfIlluminating'] = False
+
+			pmb['RefMapTex'] = None
+			pmb['BumpMapTex'] = None
+			pmb['DetailTex'] = None
+
+			# Look at the texture channels if they exist
+			textures = bmat.getTextures()
+			if len(textures) > 0:
+				if textures[0] != None:
+					if textures[0].tex.image != None:						
+						pmb['BaseTex'] = stripImageExtension(textures[0].tex.image.getName())
+					else:
+						pmb['BaseTex'] = None
+
+					if (textures[0] != None) and (textures[0].tex.type == Texture.Types.IMAGE):
+						# Translucency?
+						if textures[0].mapto & Texture.MapTo.ALPHA:
+							pmb['Translucent'] = True
+							if bmat.getAlpha() < 1.0: pmb['Additive'] = True
+							else: pmb['Additive'] = False
+						else:
+							pmb['Translucent'] = False
+							pmb['Additive'] = False
+						# Disable mipmaps?
+						if not (textures[0].tex.imageFlags & Texture.ImageFlags.MIPMAP):
+							pmb['NoMipMap'] = True
+						else:pmb['NoMipMap'] = False
+
+						if bmat.getRef() > 0 and (textures[0].mapto & Texture.MapTo.REF):
+							pmb['NeverEnvMap'] = False
+
+				pmb['ReflectanceMapFlag'] = False
+				pmb['DetailMapFlag'] = False
+				pmb['BumpMapFlag'] = False
+				for i in range(1, len(textures)):
+					texture_obj = textures[i]					
+					if texture_obj == None: continue
+					# Figure out if we have an Image
+					if texture_obj.tex.type != Texture.Types.IMAGE:
+						continue
+
+					# Determine what this texture is used for
+					# A) We have a reflectance map
+					if (texture_obj.mapto & Texture.MapTo.REF):
+						# We have a reflectance map
+						pmb['ReflectanceMapFlag'] = True
+						pmb['NeverEnvMap'] = False
+						if textures[0].tex.image != None:
+							pmb['RefMapTex'] = stripImageExtension(textures[i].tex.image.getName())
+						else:
+							pmb['RefMapTex'] = None
+					# B) We have a normal map (basically a 3d bump map)
+					elif (texture_obj.mapto & Texture.MapTo.NOR):
+						pmb['BumpMapFlag'] = True
+						if textures[0].tex.image != None:
+							pmb['BumpMapTex'] = stripImageExtension(textures[i].tex.image.getName())
+						else:
+							pmb['BumpMapTex'] = None
+					# C) We have a texture; Lets presume its a detail map (since its laid on top after all)
+					else:
+						pmb['DetailMapFlag'] = True
+						if textures[0].tex.image != None:
+							pmb['DetailTex'] = stripImageExtension(textures[i].tex.image.getName())
+						else:
+							pmb['DetailTex'] = None
 
 
 '''
@@ -940,9 +1114,9 @@ class ShapeTree(SceneTree):
 						# Hey you, DSQ!
 						if seqKey['Dsq']:
 							self.Shape.convertAndDumpSequenceToDSQ(sequence, "%s/%s.dsq" % (Prefs['exportBasepath'], seqName), Stream.DTSVersion)
-							Torque_Util.dump_writeln("Loaded and dumped sequence '%s' to '%s/%s.dsq'." % (seqName, Prefs['exportBasepath'], seqName))
+							Torque_Util.dump_writeln("   Loaded and dumped sequence '%s' to '%s/%s.dsq'." % (seqName, Prefs['exportBasepath'], seqName))
 						else:
-							Torque_Util.dump_writeln("Loaded sequence '%s'." % seqName)
+							Torque_Util.dump_writeln("   Loaded sequence '%s'." % seqName)
 
 						# Clear out matters if we don't need them
 						if not sequence.has_loc: sequence.matters_translation = []
@@ -1050,6 +1224,7 @@ def handleScene():
 def export():
 	Torque_Util.dump_writeln("Exporting...")
 	print "Exporting..."
+	importMaterialList()
 	refreshActionData()
 	savePrefs()
 	
@@ -1320,7 +1495,6 @@ def validateSequenceName(seqName, seqType, oldName = None):
 		# contains one or the other animation type, that animation type will be overwritten by the merged in values;
 		# we need to ask the user what they want to do in this case.
 		if oldName != None:
-			print "checking oldName:", oldName, "against newName:", seqName
 			oldSeq = seqPrefs[oldName]
 			if seqType == "Vis" and seq['IFL']['Enabled'] and oldSeq['IFL']['Enabled']:
 				message = ("IFL animation in \'%s\' will be overwritten with IFL animation from \'%s\' !" % (seqName, oldName)) + "%t|Merge Sequences and Overwrite IFL animation.|Cancel Merge"
@@ -4354,185 +4528,6 @@ class MaterialControlsClass:
 		return guiContainer
 
 
-	def importMaterialList(self):	
-		global Prefs
-		guiMaterialOptions = self.guiMaterialOptions
-		guiMaterialList = self.guiMaterialList
-
-		try:
-			materials = Prefs['Materials']
-		except:			
-			Prefs['Materials'] = {}
-			materials = Prefs['Materials']
-
-		# loop through all faces of all meshes in the shape tree and compile a list
-		# of unique images that are UV mapped to the faces.
-		imageList = []
-		shapeTree = export_tree.find("SHAPE")
-		if shapeTree != None:
-			for marker in getChildren(shapeTree.obj):		
-				if marker.name[0:6].lower() != "detail": continue
-				for obj in getAllChildren(marker):
-					if obj.getType() != "Mesh": continue
-					objData = obj.getData()
-					for face in objData.faces:					
-						try: x = face.image
-						except IndexError: x = None
-						# If we don't Have an image assigned to the face
-						if x == None:						
-							try: x = objData.materials[face.mat]
-							except IndexError: x = None
-							# is there a material index assigned?
-							if x != None:
-								#  add the material name to the imagelist
-								imageName = stripImageExtension(objData.materials[face.mat].name)
-								if not (imageName in imageList):
-									imageList.append(imageName)
-
-						# Otherwise we do have an image assigned to the face, so add it to the imageList.
-						else:
-							imageName = stripImageExtension(face.image.getName())
-							if not (imageName in imageList):
-								imageList.append(imageName)
-
-
-		# remove unused materials from the prefs
-		for imageName in materials.keys()[:]:
-			if not (imageName in imageList): del materials[imageName]
-
-		if len(imageList)==0: return
-
-		# populate materials list with all blender materials
-		for imageName in imageList:
-			bmat = None
-			# Do we have a blender material that matches the image name?
-			try: bmat = Blender.Material.Get(imageName)
-			except NameError:
-				# No blender material, do we have a prefs key for this material?
-				try: x = Prefs['Materials'][imageName]
-				except KeyError:
-					# no corresponding blender material and no existing texture material, so use reasonable defaults.
-					Prefs['Materials'][imageName] = {}
-					pmi = Prefs['Materials'][imageName]
-					pmi['SWrap'] = True
-					pmi['TWrap'] = True
-					pmi['Translucent'] = False
-					pmi['Additive'] = False
-					pmi['Subtractive'] = False
-					pmi['SelfIlluminating'] = False
-					pmi['NeverEnvMap'] = True
-					pmi['NoMipMap'] = False
-					pmi['MipMapZeroBorder'] = False
-					pmi['IFLMaterial'] = False
-					pmi['DetailMapFlag'] = False
-					pmi['BumpMapFlag'] = False
-					pmi['ReflectanceMapFlag'] = False
-					pmi['BaseTex'] = imageName
-					pmi['DetailTex'] = None
-					pmi['BumpMapTex'] = None
-					pmi['RefMapTex'] = None
-					pmi['reflectance'] = 0.0
-					pmi['detailScale'] = 1.0
-				continue
-
-			# We have a blender material, do we have a prefs key for it?
-			try: x = Prefs['Materials'][bmat.name]			
-			except:
-				# No prefs key, so create one.
-				Prefs['Materials'][bmat.name] = {}
-				pmb = Prefs['Materials'][bmat.name]
-				# init everything to make sure all keys exist with sane values
-				pmb['SWrap'] = True
-				pmb['TWrap'] = True
-				pmb['Translucent'] = False
-				pmb['Additive'] = False
-				pmb['Subtractive'] = False
-				pmb['SelfIlluminating'] = False
-				pmb['NeverEnvMap'] = True
-				pmb['NoMipMap'] = False
-				pmb['MipMapZeroBorder'] = False
-				pmb['IFLMaterial'] = False
-				pmb['DetailMapFlag'] = False
-				pmb['BumpMapFlag'] = False
-				pmb['ReflectanceMapFlag'] = False
-				pmb['BaseTex'] = imageName
-				pmb['DetailTex'] = None
-				pmb['BumpMapTex'] = None
-				pmb['RefMapTex'] = None
-				pmb['reflectance'] = 0.0
-				pmb['detailScale'] = 1.0
-
-				if bmat.getEmit() > 0.0: pmb['SelfIlluminating'] = True
-				else: pmb['SelfIlluminating'] = False
-
-				pmb['RefMapTex'] = None
-				pmb['BumpMapTex'] = None
-				pmb['DetailTex'] = None
-
-				# Look at the texture channels if they exist
-				textures = bmat.getTextures()
-				if len(textures) > 0:
-					if textures[0] != None:
-						if textures[0].tex.image != None:						
-							pmb['BaseTex'] = stripImageExtension(textures[0].tex.image.getName())
-						else:
-							pmb['BaseTex'] = None
-
-						if (textures[0] != None) and (textures[0].tex.type == Texture.Types.IMAGE):
-							# Translucency?
-							if textures[0].mapto & Texture.MapTo.ALPHA:
-								pmb['Translucent'] = True
-								if bmat.getAlpha() < 1.0: pmb['Additive'] = True
-								else: pmb['Additive'] = False
-							else:
-								pmb['Translucent'] = False
-								pmb['Additive'] = False
-							# Disable mipmaps?
-							if not (textures[0].tex.imageFlags & Texture.ImageFlags.MIPMAP):
-								pmb['NoMipMap'] = True
-							else:pmb['NoMipMap'] = False
-
-							if bmat.getRef() > 0 and (textures[0].mapto & Texture.MapTo.REF):
-								pmb['NeverEnvMap'] = False
-
-					pmb['ReflectanceMapFlag'] = False
-					pmb['DetailMapFlag'] = False
-					pmb['BumpMapFlag'] = False
-					for i in range(1, len(textures)):
-						texture_obj = textures[i]					
-						if texture_obj == None: continue
-						# Figure out if we have an Image
-						if texture_obj.tex.type != Texture.Types.IMAGE:
-							continue
-
-						# Determine what this texture is used for
-						# A) We have a reflectance map
-						if (texture_obj.mapto & Texture.MapTo.REF):
-							# We have a reflectance map
-							pmb['ReflectanceMapFlag'] = True
-							pmb['NeverEnvMap'] = False
-							if textures[0].tex.image != None:
-								pmb['RefMapTex'] = stripImageExtension(textures[i].tex.image.getName())
-								self.guiMaterialReflectanceMapMenu.selectStringItem(stripImageExtension(textures[i].tex.image.getName()))
-							else:
-								pmb['RefMapTex'] = None
-						# B) We have a normal map (basically a 3d bump map)
-						elif (texture_obj.mapto & Texture.MapTo.NOR):
-							pmb['BumpMapFlag'] = True
-							if textures[0].tex.image != None:
-								pmb['BumpMapTex'] = stripImageExtension(textures[i].tex.image.getName())
-								self.guiMaterialBumpMapMenu.selectStringItem(stripImageExtension(textures[i].tex.image.getName()))
-							else:
-								pmb['BumpMapTex'] = None
-						# C) We have a texture; Lets presume its a detail map (since its laid on top after all)
-						else:
-							pmb['DetailMapFlag'] = True
-							if textures[0].tex.image != None:
-								pmb['DetailTex'] = stripImageExtension(textures[i].tex.image.getName())
-								self.guiMaterialDetailMapMenu.selectStringItem(stripImageExtension(textures[i].tex.image.getName()))
-							else:
-								pmb['DetailTex'] = None
-
 	def handleEvent(self, control):
 		global Prefs, IFLControls
 		guiMaterialList = self.guiMaterialList
@@ -4715,7 +4710,7 @@ class MaterialControlsClass:
 
 
 		# autoimport blender materials
-		self.importMaterialList()
+		importMaterialList()
 		try:
 			materials = Prefs['Materials']
 		except:
