@@ -906,11 +906,12 @@ class BlenderShape(DtsShape):
 		loc, rot, scale = None, None, None
 		arm = self.addedArmatures[self.nodes[nodeIndex].armIdx][0]
 
+		# duration should already be calculated at this point.
 		# Convert time units from Blender's frame (starting at 1) to second
 		# (using sequence FPS)
-		time = float(frame_idx - 1) / sequence.fps
-		if sequence.duration < time:
-			sequence.duration = time
+		#time = float(frame_idx - 1) / sequence.fps
+		#if sequence.duration < time:
+		#	sequence.duration = time
 
 		# some temp variables to make life easier
 		node = self.nodes[nodeIndex]
@@ -1332,9 +1333,10 @@ class BlenderShape(DtsShape):
 		for frame in range(0, numOverallFrames):
 			# Set the current frame in blender
 			#context.currentFrame(int(frame*interpolateInc))
-			Blender.Set('curframe', int(frame*interpolateInc) + seqPrefs['Action']['StartFrame'])
+			curFrame = int(frame*interpolateInc) + seqPrefs['Action']['StartFrame']
+			Blender.Set('curframe', curFrame)
 			# add ground frames
-			self.addGroundFrame(sequence,(frame*interpolateInc), boundsStartMat)
+			self.addGroundFrame(sequence, curFrame, boundsStartMat)
 			# loop through each armature
 			for armIdx in range(0, len(self.addedArmatures)):
 				arm = self.addedArmatures[armIdx][0]
@@ -1352,7 +1354,7 @@ class BlenderShape(DtsShape):
 					if frame < numFrameSamples:
 						# let's pretend that everything matters, we'll remove the cruft later
 						# this prevents us from having to do a second pass through the frames.
-						loc, rot, scale = self.getPoseTransform(sequence, nodeIndex, (frame*interpolateInc), pose, baseTransform)
+						loc, rot, scale = self.getPoseTransform(sequence, nodeIndex, curFrame, pose, baseTransform)
 						sequence.frames[nodeIndex].append([loc,rot,scale])
 					# if we're past the end, just duplicate the last good frame.
 					else:
@@ -1381,15 +1383,15 @@ class BlenderShape(DtsShape):
 		# two passes through the blender frames to determine what's animated and what's not.
 		for nodeIndex in range(1, len(self.nodes)):
 			if not sequence.matters_translation[nodeIndex]:
-				for frame in range(0, numFrameSamples-1):					
+				for frame in range(0, numOverallFrames):					
 					sequence.frames[nodeIndex][frame][0] = None
 			if not sequence.matters_rotation[nodeIndex]:
-				for frame in range(0, numFrameSamples-1):
+				for frame in range(0, numOverallFrames):
 					sequence.frames[nodeIndex][frame][1] = None				
 			if not sequence.matters_scale[nodeIndex]:
-				for frame in range(0, numFrameSamples-1):
+				for frame in range(0, numOverallFrames):
 					sequence.frames[nodeIndex][frame][2] = None
-		
+
 		remove_translation, remove_rotation, remove_scale = True, True, True
 		if seqPrefs['Cyclic']:
 			for nodeIndex in range(1, len(self.nodes)):
