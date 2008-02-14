@@ -588,16 +588,27 @@ def updateOldPrefs():
 
 		try: x = seq['FPS']
 		except:
+			print "Sequence FPS not found..."
 			try:
 				seq['FPS'] = float(Blender.Scene.GetCurrent().getRenderingContext().framesPerSec())
 				if seq['FPS'] == 0: seq['FPS'] = 25
 			except:
 				seq['FPS'] = 25
-			
+			print "Sequence FPS was set to:",seq['FPS']
 		try: x = seq['Duration']		
 		except:
-			try: seq['Duration'] = float(Torque_Util.getSeqNumFrames(seqName, seq)) / float(seq['FPS'])
+			maxNumFrames = 0
+			try:
+				action = Blender.Armature.NLA.GetActions()[seqName]
+				maxNumFrames = DtsShape_Blender.getNumFrames(action.getAllChannelIpos().values(), False)
+			except KeyError:
+				maxNumFrames = 0			
+			#seq['Duration'] = float(Torque_Util.getSeqNumFrames(seqName, seq)) / float(seq['FPS'])
+			#print "You are here..."
+			#try: seq['Duration'] = float(Torque_Util.getSeqNumFrames(seqName, seq)) / float(seq['FPS'])
+			try: seq['Duration'] = float(maxNumFrames) / float(seq['FPS'])
 			except:
+				print "Could not determine sequence duration!!!"
 				seq['Duration'] = 1.0
 				seq['FPS'] = 1.0
 		try: x = seq['DurationLocked']
