@@ -535,29 +535,7 @@ def validateSeqDurationAndFPS(seqName, seqPrefs):
 			seqPrefs['Duration'] = maxDuration # minimum duration = 1/255 of a second
 
 
-# Call this function when the number of frames in the sequence has changed, or may have changed.
-#  updates either duration or FPS for the sequence, depending on which is locked.
-def updateSeqDurationAndFPS(seqName, seqPrefs):
-	numFrames = getSeqNumFrames(seqName, seqPrefs)
-	# validate to avoid zero division
-	validateSeqDurationAndFPS(seqName, seqPrefs)
-	if validateIFL(seqName, seqPrefs):
-		# set FPS to 30 and calc duration
-		seqPrefs['FPS'] = 30.0
-		seqPrefs['Duration'] = float(numFrames) / 30.0
-	# just an extra check here to make sure that we don't end up with both
-	# duration and fps locked at the same time
-	if seqPrefs['DurationLocked'] and seqPrefs['FPSLocked']:
-		seqPrefs['DurationLocked'] = False
-	# do we need to recalculate FPS, or Duration?
-	if seqPrefs['DurationLocked']:
-		# recalc FPS
-		seqPrefs['FPS'] = float(numFrames) / seqPrefs['Duration']
-	elif seqPrefs['FPSLocked']:
-		# recalc duration
-		seqPrefs['Duration'] = float(numFrames) / seqPrefs['FPS']
-	# validate resulting values
-	validateSeqDurationAndFPS(seqName, seqPrefs)
+
 
 
 # Call this function when the Sequence FPS is changed manually to recalculate the duration.
