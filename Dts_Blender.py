@@ -251,7 +251,7 @@ def getSequenceKey(value):
 		Prefs['Sequences'][value]['Action'] = {'Enabled': False,'NumGroundFrames': 0,'BlendRefPoseAction': None,'BlendRefPoseFrame': 8,'FrameSamples': 0,'Blend': False}
 		Prefs['Sequences'][value]['IFL'] = { 'Enabled': False,'Material': None,'NumImages': 0,'TotalFrames': 0,'IFLFrames': [], 'WriteIFLFile': True}
 		Prefs['Sequences'][value]['Vis'] = { 'Enabled': False,'StartFrame': 1,'EndFrame': 1, 'Tracks':{}}
-		Prefs['Sequences'][value]['Action']['enabled'] = True
+		Prefs['Sequences'][value]['Action']['Enabled'] = True
 
 		try:
 			action = Blender.Armature.NLA.GetActions()[value]
@@ -417,10 +417,12 @@ def renameSequence(oldName, newName):
 		# above line should throw and excepting if the new sequence name
 		# does not already exist.
 		
-		# Copy IFL and Vis data to the existing (action) sequence, and
+		# Copy IFL and Vis data to the existing sequence, and
 		# delete the old sequence.
-		newSeq['IFL'] = Prefs['Sequences'][oldName]['IFL']
-		newSeq['Vis'] = Prefs['Sequences'][oldName]['Vis']
+		if (not newSeq['IFL']['Enabled']) and Prefs['Sequences'][oldName]['IFL']['Enabled']:
+			newSeq['IFL'] = Prefs['Sequences'][oldName]['IFL']
+		if (not newSeq['Vis']['Enabled']) and Prefs['Sequences'][oldName]['Vis']['Enabled']:
+			newSeq['Vis'] = Prefs['Sequences'][oldName]['Vis']
 		del Prefs['Sequences'][oldName]
 	# Nope.
 	except:
@@ -1203,6 +1205,7 @@ def validateSequenceName(seqName, seqType, oldName = None):
 		# contains one or the other animation type, that animation type will be overwritten by the merged in values;
 		# we need to ask the user what they want to do in this case.
 		if oldName != None:
+			print "checking oldName:", oldName, "against newName:", seqName
 			oldSeq = seqPrefs[oldName]
 			if seqType == "Vis" and seq['IFL']['Enabled'] and oldSeq['IFL']['Enabled']:
 				message = ("IFL animation in \'%s\' will be overwritten with IFL animation from \'%s\' !" % (seqName, oldName)) + "%t|Merge Sequences and Overwrite IFL animation.|Cancel Merge"
@@ -1216,7 +1219,6 @@ def validateSequenceName(seqName, seqType, oldName = None):
 					return True
 				else:
 					return False
-
 
 
 	return True
