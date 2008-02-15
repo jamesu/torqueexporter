@@ -2116,55 +2116,324 @@ class ArmatureControlsClass:
 
 
 
-'''
-***************************************************************************************************
-*
-* Class that creates and owns the GUI controls on the "Common/All" sub-panel of the Sequences panel.
-*
-***************************************************************************************************
-'''
-class SeqCommonControlsClass:
-	def __init__(self):
-		global guiSeqCommonSubtab
+
+# ***************************************************************************************************
+## @brief Base Class For sequence control classes.
+#
+# This class implements functionality that is common to all sequence sub panels.
+class SeqControlsClassBase:
+	## @brief Initialize the controls and values that are common to all sequence control panels.
+	#  @note Child classes should call this method explicitly at the beginning of their own __init__ methods.
+	#  @param tabContainer The GUI tab container control into which everything should be placed.
+	def __init__(self, tabContainer):
+		self.startEvent = 5
+		# initialize GUI controls
+		self.guiSeqList = Common_Gui.ListContainer("guiSeqList", "sequence.list", self.handleListEvent, self.guiSeqListResize)
+		self.guiSeqListTitle = Common_Gui.SimpleText("guiSeqListTitle", "All Sequences:", None, self.guiSeqListTitleResize)
+		self.guiSeqOptsContainerTitle = Common_Gui.SimpleText("guiSeqOptsContainerTitle", "Sequence: None Selected", None, self.guiSeqOptsContainerTitleResize)
+		self.guiSeqOptsContainer = Common_Gui.BasicContainer("guiSeqOptsContainer", "guiSeqOptsContainer", None, self.guiSeqOptsContainerResize)
+		
+		# set initial states
+		self.guiSeqOptsContainer.enabled = False
+		self.guiSeqOptsContainer.fade_mode = 5
+		self.guiSeqOptsContainer.borderColor = None
+		self.guiSeqList.fade_mode = 0
+		
+
+		# add controls to containers
+		tabContainer.addControl(self.guiSeqList)
+		tabContainer.addControl(self.guiSeqListTitle)
+		tabContainer.addControl(self.guiSeqOptsContainerTitle)
+		tabContainer.addControl(self.guiSeqOptsContainer)
+	
+		# Need to set this explicitly in child classes
+		# valid values are: "All", "Action", "IFL", "Visibility" and eventually "TexUV" and "Morph"
+		self.seqFilter = "All"
+
+
+	## @brief Gets an event ID # for native Blender controls that need one.  We don't actually
+	#     use these, but most native controls must have one.
+	#  @note Most child classes should be able to inherit this method and use it as-is
+	def getNextEvent(self):
+		retVal = self.startEvent
+		self.startEvent += 1
+		return retVal
+
+	## @brief Gets the name of the sequence currently selected in the sequence list
+	#  @note Most child classes should be able to inherit this method and use it as-is
+	def getSelectedSeqNameAndPrefs(self):
+		if self.guiSeqList.itemIndex == -1: return None, None
+		seqName = self.guiSeqList.controls[self.guiSeqList.itemIndex].controls[0].label
+		seqPrefs = getSequenceKey(seqName)
+		return seqName, seqPrefs
+
+
+	## @brief Cleans up Blender GUI objects before the interpreter exits;
+	#     we must destroy any GUI objects that are referenced in a non-global scope
+	#     explicitly before interpreter shutdown to avoid the dreaded
+	#     "error totblock" message when exiting Blender.
+	#  @note The builtin __del__ method is not guaranteed to be called for objects
+	#     that still exist when the interpreter exits.
+	#  @note Child classes should explicitly call this method at the end of their own cleanup method.
+	def cleanup(self):
+		del self.guiSeqList
+		del self.guiSeqListTitle
+		# todo - add any additional cleanup code here
+
+	## @brief Refreshes all controls on the panel w/ fresh data from blender and the prefs.
+	#  @note Most child classes should be able to inherit this method and use it as-is
+	def refreshAll(self):			
+		# refresh action data and repopulate the sequence list
+		cleanKeys()
+		createActionKeys()
+		refreshActionData()
+		self.refreshSequenceList()
+
+	
+	## @brief Refreshes the items in the sequence list, preserving list selection if possible.
+	#  @note Most child classes should be able to inherit this method and use it as-is
+	def refreshSequenceList(self):
+		# store last sequence selection
+		seqName = None
+		seqPrefs = None
+		if self.guiSeqList.itemIndex != -1:
+			seqName = self.guiSeqList.controls[self.guiSeqList.itemIndex].controls[0].label
+			seqPrefs = getSequenceKey(seqName)
+
+		# populateSequenceList automatically clears the sequence list first.
+		self.populateSequenceList()
+
+		# restore last sequence selection
+		for itemIndex in range(0, len(self.guiSeqList.controls)):
+			#print "Checking item",itemIndex
+			#print "self.guiSeqList.controls[itemIndex].controls[0].label =",self.guiSeqList.controls[itemIndex].controls[0].label
+			#print "seqName =",seqName
+			if self.guiSeqList.controls[itemIndex].controls[0].label == seqName:
+				#print "found matching control for",seqName
+				self.guiSeqList.selectItem(itemIndex)
+				self.guiSeqList.scrollToSelectedItem()
+				self.refreshSequenceOptions(seqName, seqPrefs)
+				if self.guiSeqList.callback: self.guiSeqList.callback(self.guiSeqList)
+				return
+		self.guiSeqList.selectItem(0)
+		self.guiSeqList.scrollToSelectedItem()
+		if self.guiSeqList.callback: self.guiSeqList.callback(self.guiSeqList)
+	
+	## @brief Refreshes sequence specific option controls on the right side of the sequences panel.
+	#  @note This method should be called whenever the sequence list is refreshed, or when sequence
+	#     list selection changes.
+	#  @note Must be overridden by child classes.
+	#  @param seqName The name of the currently selected sequence.
+	#  @param seqPrefs The preferences key of the currently selected sequence.
+	def refreshSequenceOptions(self, seqName, seqPrefs):
+		print "Parent refreshSequenceOptions called.  You probably forgot to implement it in your new child class :-)"
+		pass
+
+	## @brief Clears sequence specific option controls on the right side of the sequences panel.
+	#  @note This method should be called when no sequence list item is currently selected.
+	#  @note Must be overridden by child classes.
+	def clearSequenceOptions(self):
+		print "Parent clearSequenceOptions called.  You probably forgot to implement it in your new child class :-)"
+		pass
+
+	## @brief Updates GUI states when the sequence list item selection is changed.
+	#  @note This method should only be called by the sequence list GUI control
+	#     event handler callback mechanism.
+	#  @note Most child classes should be able to inherit this method and use it as-is
+	#  @param control The invoking GUI Control object (should be the sequence list control)
+	def handleListEvent(self, control):
+		if control.itemIndex != -1:
+			seqName = control.controls[control.itemIndex].controls[0].label
+			seqPrefs = getSequenceKey(seqName)
+			self.refreshSequenceOptions(seqName, seqPrefs)
+			self.guiSeqOptsContainerTitle.label = "Sequence '%s'" % seqName
+		else:
+			self.clearSequenceOptions()
+
+
+	
+	## @brief Updates relevant preferences when a sequence list item button state is changed.
+	#  @note This method should only be called by the list item container's event handing mechanism
+	#  @note Most child classes should be able to inherit this method and use it as-is
+	#  @param control The invoking GUI Control object (should be a sequence list item container control)
+	def handleListItemEvent(self, control):
+		global Prefs
+		ShowDSQButton = len(self.guiSeqList.controls[0].controls) == 4
+		if ShowDSQButton: evtOffset = 3
+		else: evtOffset = 2
+		# Determine sequence name
+		if control.evt == 40:
+			calcIdx = 0
+		else:
+			calcIdx = (control.evt - 40) / evtOffset
+
+		seqName = self.guiSeqList.controls[calcIdx].controls[0].label
+		realItem = control.evt - 40 - (calcIdx*2)
+		seqPrefs = getSequenceKey(seqName)
+
+		if ShowDSQButton:
+			if realItem == 0:
+				seqPrefs['NoExport'] = not control.state
+			elif realItem == 1:
+				seqPrefs['Dsq'] = control.state
+			elif realItem == 2:
+				seqPrefs['Cyclic'] = control.state
+		else:
+			if realItem == 0:
+				seqPrefs['NoExport'] = not control.state
+			elif realItem == 1:
+				seqPrefs['Cyclic'] = control.state
+
+	## @brief Place holder resize callback
+	#  @note Child classes should call override this method explicitly
+	#  @param control The invoking GUI control object
+	#  @param newwidth The new width of the GUI control in pixels.
+	#  @param newheight The new height of the GUI control in pixels.
+	def guiSeqListResize(self, control, newwidth, newheight):
+		control.x, control.y, control.height, control.width = 10,28, newheight - 68,230
+	## @brief Place holder resize callback
+	#  @note Child classes should call override this method explicitly
+	#  @param control The invoking GUI control object
+	#  @param newwidth The new width of the GUI control in pixels.
+	#  @param newheight The new height of the GUI control in pixels.
+	def guiSeqListTitleResize(self, control, newwidth, newheight):
+		control.x, control.y, control.height, control.width = 10,310, 20,82
+	## @brief Place holder resize callback
+	#  @note Child classes should call override this method explicitly
+	#  @param control The invoking GUI control object
+	#  @param newwidth The new width of the GUI control in pixels.
+	#  @param newheight The new height of the GUI control in pixels.
+	def guiSeqOptsContainerResize(self, control, newwidth, newheight):
+		control.x, control.y, control.height, control.width = 241,0, 334,249
+	## @brief Place holder resize callback
+	#  @note Child classes should call override this method explicitly
+	#  @param control The invoking GUI control object
+	#  @param newwidth The new width of the GUI control in pixels.
+	#  @param newheight The new height of the GUI control in pixels.
+	def guiSeqOptsContainerTitleResize(self, control, newwidth, newheight):
+		control.x, control.y, control.height, control.width = 250,310, 20,82
+
+
+	## @brief Creates a sequence list item and it's associated GUI controls.
+	#  @note If a child class needs to display a "DSQ" button, it should call 
+	#     the parent version explicitly with the third parameter set to True from
+	#     it's own createSequenceListItem method.
+	#  @note Called by populateSequenceList, and methods of derived classes, as needed.
+	#  @note Most child classes can inherit this method and just use it as-is.
+	#  @param seqName The name of the sequence for which we're creating the list item.
+	#  @param ShowDSQButton If true, a DSQ button is displayed in the list item.  If
+	# false, no DSQ button is displayed.
+	def createSequenceListItem(self, seqName, ShowDSQButton=False):
+		startEvent = self.curSeqListEvent
+		listWidth = self.guiSeqList.width - self.guiSeqList.barWidth
+		buttonWidth = 50
+		numButtons = 2
+		if ShowDSQButton: numButtons = 3
+		buttonPos = []
+		for i in range(1,numButtons+1): buttonPos.append(((listWidth - 5) - (buttonWidth*i + 1)))
+		# Note on positions:
+		# It quicker to assign these here, as there is no realistic chance of scaling being required.
+		guiContainer = Common_Gui.BasicContainer("", None, None)
+		guiName = Common_Gui.SimpleText("", seqName, None, None)
+		guiExport = Common_Gui.ToggleButton("guiExport", "Export", "Export Sequence", startEvent, self.handleListItemEvent, None)
+		guiCyclic = Common_Gui.ToggleButton("guiCyclic", "Cyclic", "Export Sequence as Cyclic", startEvent+1, self.handleListItemEvent, None)
+		if ShowDSQButton:
+			guiDSQ = Common_Gui.ToggleButton("guiDSQ", "Dsq", "Export Sequence as DSQ", startEvent+1, self.handleListItemEvent, None)
+
+		guiContainer.fade_mode = 0  # flat color
+
+		guiName.x, guiName.y = 5, 5
+		guiCyclic.x, guiCyclic.y = buttonPos[0], 5
+		if numButtons == 2:
+			guiExport.x, guiExport.y = buttonPos[1], 5
+		else:
+			guiExport.x, guiExport.y = buttonPos[2], 5
+			guiDSQ.x, guiDSQ.y = buttonPos[1], 5
+
+		guiCyclic.width, guiCyclic.height = 50, 15
+		guiExport.width, guiExport.height = 50, 15
+		if ShowDSQButton: guiDSQ.width, guiDSQ.height = 50, 15
+		# Add everything
+		guiContainer.addControl(guiName)
+		guiContainer.addControl(guiExport)
+		guiContainer.addControl(guiCyclic)
+		if ShowDSQButton: guiContainer.addControl(guiDSQ)
+		
+		guiExport.state = not Prefs['Sequences'][seqName]['NoExport']
+		guiCyclic.state = Prefs['Sequences'][seqName]['Cyclic']
+		if ShowDSQButton: guiDSQ.state = seqPrefs['Dsq']
+		
+		# increment the current event counter
+		if ShowDSQButton: self.curSeqListEvent += 3
+		else: self.curSeqListEvent += 2
+		
+		return guiContainer
+
+	## @brief Populates the sequence list using current pref values.
+	def populateSequenceList(self):
+		self.clearSequenceList()
+		# loop through all actions in the preferences
+		global Prefs
+		keys = Prefs['Sequences'].keys()
+		keys.sort(lambda x, y: cmp(x.lower(),y.lower()))
+		for seqName in keys:
+			seqPrefs = getSequenceKey(seqName)
+			if self.seqFilter == "All":
+				self.guiSeqList.addControl(self.createSequenceListItem(seqName))
+			elif seqPrefs[self.seqFilter]['Enabled']:
+				self.guiSeqList.addControl(self.createSequenceListItem(seqName))
+
+	
+	## @brief Clears the sequence list.
+	def clearSequenceList(self):
+		for i in range(0, len(self.guiSeqList.controls)):
+			del self.guiSeqList.controls[i].controls[:]
+		del self.guiSeqList.controls[:]
+		self.curSeqListEvent = 40
+		self.guiSeqList.itemIndex = -1
+		self.guiSeqList.scrollPosition = 0
+		if self.guiSeqList.callback: self.guiSeqList.callback(self.guiSeqList) # Bit of a hack, but works
+		pass
+
+
+# ***************************************************************************************************
+## @brief Class that creates and owns the GUI controls on the "Common/All" sub-panel of the Sequences panel. 
+class SeqCommonControlsClass(SeqControlsClassBase):
+
+	#######################################
+	#  Init and cleanup methods
+	#######################################
+
+
+	## @brief Initialize the controls and values that are common to all sequence control panels.
+	#  @note Calls parent init method
+	#  @param tabContainer The GUI tab container control into which everything should be placed.
+	def __init__(self, tabContainer):
 		global globalEvents
+		SeqControlsClassBase.__init__(self,tabContainer)
+		
+		# Need to this in all classes derived from SeqControlsClassBase
+		# valid values are: "All", "Action", "IFL", "Visibility" and eventually "TexUV" and "Morph"
+		self.seqFilter = "All"
 		
 		# initialize GUI controls
-		self.guiSeqList = Common_Gui.ListContainer("guiSeqList", "sequence.list", self.handleListEvent, self.resize)
-		self.guiSeqListTitle = Common_Gui.SimpleText("guiSeqListTitle", "All Sequences:", None, self.resize)
-		self.guiToggle = Common_Gui.ToggleButton("guiToggle", "Toggle All", "Toggle export of all sequences", 6, self.handleEvent, self.resize)
-		self.guiRefresh = Common_Gui.BasicButton("guiRefresh", "Refresh", "Refresh list of sequences", 7, self.handleEvent, self.resize)
-		self.guiSeqOptsContainerTitle = Common_Gui.SimpleText("guiSeqOptsContainerTitle", "Sequence: None Selected", None, self.resize)
-		self.guiSeqOptsContainer = Common_Gui.BasicContainer("guiSeqOptsContainer", "guiSeqOptsContainer", None, self.resize)
-		self.guiSeqFramesLabel =  Common_Gui.SimpleText("guiSeqFramesLabel", "Highest Frame Count:  ", None, self.resize)
-		self.guiSeqDuration = Common_Gui.NumberPicker("guiSeqDuration", "Duration (seconds): ", "The animation plays for this number of seconds", 10, self.handleEvent, self.resize)
-		self.guiSeqDurationLock = Common_Gui.ToggleButton("guiSeqDurationLock", "Lock", "Lock Sequence Duration (changes in frame count don't affect playback time)", 24, self.handleEvent, self.resize)
-		self.guiSeqFPS = Common_Gui.NumberPicker("guiSeqFPS", "Sequence FPS: ", "The animation plays back at a rate of this number of keyframes per second", 11, self.handleEvent, self.resize)
-		self.guiSeqFPSLock = Common_Gui.ToggleButton("guiSeqFPSLock", "Lock", "Lock Sequence FPS (changes in frame count affect playback time, but not Frames Per Second)", 25, self.handleEvent, self.resize)		
-		self.guiPriority = Common_Gui.NumberPicker("guiPriority", "Priority", "Sequence playback priority", 23, self.handleEvent, self.resize)
-		self.guiTriggerTitle = Common_Gui.SimpleText("guiTriggerTitle", "Triggers", None, self.resize)
-		self.guiTriggerMenu = Common_Gui.ComboBox("guiTriggerMenu", "Trigger List", "Select a trigger from this list to edit its properties", 14, self.handleTriggersEvent, self.resize)
-		self.guiTriggerState = Common_Gui.NumberPicker("guiTriggerState", "Trigger", "Trigger state to alter", 15, self.handleTriggersEvent, self.resize)
-		self.guiTriggerStateOn = Common_Gui.ToggleButton("guiTriggerStateOn", "On", "Determines if state will be activated or deactivated", 16, self.handleTriggersEvent, self.resize)
-		self.guiTriggerFrame = Common_Gui.NumberPicker("guiTriggerFrame", "Frame", "Frame to activate trigger on", 17, self.handleTriggersEvent, self.resize)
-		self.guiTriggerAdd = Common_Gui.BasicButton("guiTriggerAdd", "Add", "Add new trigger", 18, self.handleTriggersEvent, self.resize)
-		self.guiTriggerDel = Common_Gui.BasicButton("guiTriggerDel", "Del", "Delete currently selected trigger", 19, self.handleTriggersEvent, self.resize)
+		self.guiToggle = Common_Gui.ToggleButton("guiToggle", "Toggle All", "Toggle export of all sequences", self.getNextEvent(), self.handleGuiToggleEvent, self.guiToggleResize)
+		self.guiRefresh = Common_Gui.BasicButton("guiRefresh", "Refresh", "Refresh list of sequences", self.getNextEvent(), self.handleGuiRefreshEvent, self.guiRefreshResize)
+		self.guiSeqFramesLabel =  Common_Gui.SimpleText("guiSeqFramesLabel", "Highest Frame Count:  ", None, self.guiSeqFramesLabelResize)
+		self.guiSeqDuration = Common_Gui.NumberPicker("guiSeqDuration", "Duration (seconds): ", "The animation plays for this number of seconds", self.getNextEvent(), self.handleGuiSeqDurationEvent, self.guiSeqDurationResize)
+		self.guiSeqDurationLock = Common_Gui.ToggleButton("guiSeqDurationLock", "Lock", "Lock Sequence Duration (changes in frame count don't affect playback time)", self.getNextEvent(), self.handleGuiSeqDurationLockEvent, self.guiSeqDurationLockResize)
+		self.guiSeqFPS = Common_Gui.NumberPicker("guiSeqFPS", "Sequence FPS: ", "The animation plays back at a rate of this number of keyframes per second", self.getNextEvent(), self.handleGuiSeqFPSEvent, self.guiSeqFPSResize)
+		self.guiSeqFPSLock = Common_Gui.ToggleButton("guiSeqFPSLock", "Lock", "Lock Sequence FPS (changes in frame count affect playback time, but not Frames Per Second)", self.getNextEvent(), self.handleGuiSeqFPSLockEvent, self.guiSeqFPSLockResize)
+		self.guiPriority = Common_Gui.NumberPicker("guiPriority", "Priority", "Sequence playback priority", self.getNextEvent(), self.handleGuiPriorityEvent, self.guiPriorityResize)
+		self.guiTriggerTitle = Common_Gui.SimpleText("guiTriggerTitle", "Triggers", None, self.guiTriggerTitleResize)
+		self.guiTriggerMenu = Common_Gui.ComboBox("guiTriggerMenu", "Trigger List", "Select a trigger from this list to edit its properties", self.getNextEvent(), self.handleGuiTriggerMenuEvent, self.guiTriggerMenuResize)
 		
-		self.guiSeqGraph = Common_Gui.BarGraph("guiSeqGraph", "", 5, "Graph of animation frames for sequence", 20, self.handleTriggersEvent, self.resize)
-		self.guiSeqGraph.setBarText(4, "Act Frames:")
-		self.guiSeqGraph.setBarText(3, "IFL Frames:")
-		self.guiSeqGraph.setBarText(2, "Vis Frames:")
-		self.guiSeqGraph.setBarText(1, "Tex Frames:")
-		self.guiSeqGraph.setBarText(0, "Mor Frames:")
-		self.guiSeqGraph.setBarValue(4, 0.9)
-		self.guiSeqGraph.setBarValue(3, 0.5)
-		self.guiSeqGraph.setBarValue(2, 0.75)
-		self.guiSeqGraph.setBarValue(1, 0.2)
-		self.guiSeqGraph.setBarValue(0, 0.8)
-		self.guiSeqGraph.setBarColor(4, (0.5, 1.0, 0.5))
-		self.guiSeqGraph.setBarColor(3, (0.5, 1.0, 0.5))
-		self.guiSeqGraph.setBarColor(2, (0.5, 1.0, 0.5))
-		self.guiSeqGraph.setBarColor(1, (0.5, 1.0, 0.5))
-		self.guiSeqGraph.setBarColor(0, (0.5, 1.0, 0.5))
+		self.guiTriggerState = Common_Gui.NumberPicker("guiTriggerState", "Trigger", "Trigger state number to alter", self.getNextEvent(), self.handleGuiTriggerStateEvent, self.guiTriggerStateResize)
+		self.guiTriggerStateOn = Common_Gui.ToggleButton("guiTriggerStateOn", "On", "Determines if state will be activated or deactivated", self.getNextEvent(), self.handleGuiTriggerStateOnEvent, self.guiTriggerStateOnResize)
+		self.guiTriggerFrame = Common_Gui.NumberPicker("guiTriggerFrame", "Frame", "Frame to activate trigger on", self.getNextEvent(), self.handleGuiTriggerFrameEvent, self.guiTriggerFrameResize)
+		self.guiTriggerAdd = Common_Gui.BasicButton("guiTriggerAdd", "Add", "Add new trigger", self.getNextEvent(), self.handleGuiTriggerAddEvent, self.guiTriggerAddResize)
+		self.guiTriggerDel = Common_Gui.BasicButton("guiTriggerDel", "Del", "Delete currently selected trigger", self.getNextEvent(), self.handleGuiTriggerDelEvent, self.guiTriggerDelResize)
+		self.guiSeqGraph = Common_Gui.BarGraph("guiSeqGraph", "", 5, "Graph of animation frames for sequence", self.getNextEvent(), None, self.guiSeqGraphResize)
 
 		# set initial states
 		self.guiToggle.state = False
@@ -2185,12 +2454,8 @@ class SeqCommonControlsClass:
 		
 
 		# add controls to containers
-		guiSeqCommonSubtab.addControl(self.guiSeqList)
-		guiSeqCommonSubtab.addControl(self.guiSeqListTitle)
-		guiSeqCommonSubtab.addControl(self.guiToggle)
-		guiSeqCommonSubtab.addControl(self.guiRefresh)
-		guiSeqCommonSubtab.addControl(self.guiSeqOptsContainerTitle)
-		guiSeqCommonSubtab.addControl(self.guiSeqOptsContainer)
+		tabContainer.addControl(self.guiToggle)
+		tabContainer.addControl(self.guiRefresh)
 		self.guiSeqOptsContainer.addControl(self.guiSeqFramesLabel)
 		self.guiSeqOptsContainer.addControl(self.guiSeqDuration)
 		self.guiSeqOptsContainer.addControl(self.guiSeqDurationLock)
@@ -2214,253 +2479,253 @@ class SeqCommonControlsClass:
 		# populate lists
 		self.populateSequenceList()
 
+	## @brief Cleans up Blender GUI objects before the interpreter exits;
+	#     we must destroy any GUI objects that are referenced in a non-global scope
+	#     explicitly before interpreter shutdown to avoid the dreaded
+	#     "error totblock" message when exiting Blender.
+	#  @note The builtin __del__ method is not guaranteed to be called for objects
+	#     that still exist when the interpreter exits.
+	#  @note Calls base class cleanup method explicitly.
+	def cleanup(self):		
+		SeqControlsClassBase.cleanup(self)
+		del self.guiToggle 
+		del self.guiRefresh 
+		del self.guiSeqFramesLabel 
+		del self.guiSeqDuration 
+		del self.guiSeqDurationLock 
+		del self.guiSeqFPS 
+		del self.guiSeqFPSLock 
+		del self.guiPriority 
+		del self.guiTriggerTitle 
+		del self.guiTriggerMenu 
+		del self.guiTriggerState 
+		del self.guiTriggerStateOn 
+		del self.guiTriggerFrame 
+		del self.guiTriggerAdd 
+		del self.guiTriggerDel 
+		del self.guiSeqGraph
 
-	def cleanup(self):
-
-		# Must destroy any GUI objects that are referenced in a non-global scope
-		# explicitly before interpreter shutdown to avoid the dreaded
-		# "error totblock" message when exiting Blender.
-		# Note: __del__ is not guaranteed to be called for objects that still
-		# exist when the interpreter exits.
 		
-		# todo - cleanup code here
-		pass
-
-	def refreshAll(self):		
-		# store last sequence selection
-		seqName = None
-		seqPrefs = None
-		if self.guiSeqList.itemIndex != -1:
-			seqName = self.guiSeqList.controls[self.guiSeqList.itemIndex].controls[0].label
-			seqPrefs = getSequenceKey(seqName)
-		
-		# repopulate the sequence list
-		cleanKeys()
-		createActionKeys()
-		refreshActionData()
-		self.populateSequenceList()
-		
-		# restore last sequence selection
-		for itemIndex in range(0, len(self.guiSeqList.controls)):
-			#print "Checking item",itemIndex
-			#print "self.guiSeqList.controls[itemIndex].controls[0].label =",self.guiSeqList.controls[itemIndex].controls[0].label
-			#print "seqName =",seqName
-			if self.guiSeqList.controls[itemIndex].controls[0].label == seqName:
-				#print "found matching control for",seqName
-				self.guiSeqList.selectItem(itemIndex)
-				self.guiSeqList.scrollToSelectedItem()
-				if self.guiSeqList.callback: self.guiSeqList.callback(self.guiSeqList)
-				return
-		self.guiSeqList.selectItem(0)
-		self.guiSeqList.scrollToSelectedItem()
-		if self.guiSeqList.callback: self.guiSeqList.callback(self.guiSeqList)
-		
+	#######################################
+	#  Event handler methods
+	#######################################
 
 
-	def handleEvent(self, control):
-		if control.name == "guiToggle":
-			for child in self.guiSeqList.controls:
-				child.controls[1].state = control.state
-				getSequenceKey(child.controls[0].label)['NoExport'] = not control.state
-		elif control.name == "guiRefresh":
-			self.refreshAll()
+	## @brief Handle events generated by the "Toggle All" button (guiToggle).
+	#  @param control The invoking GUI control (guiToggle)
+	def handleGuiToggleEvent(self, control):
+		for child in self.guiSeqList.controls:
+			child.controls[1].state = control.state
+			getSequenceKey(child.controls[0].label)['NoExport'] = not control.state
 
-		elif self.guiSeqList.itemIndex != -1:
-			seqName = self.guiSeqList.controls[self.guiSeqList.itemIndex].controls[0].label
-			seqPrefs = getSequenceKey(seqName)
-			if control.name == "guiSampleFrames":
-				seqPrefs['Action']['FrameSamples'] = control.value
-			elif control.name == "guiPriority":
-				seqPrefs['Priority'] = control.value
-			elif control.name == "guiSeqDurationLock":
-				seqPrefs['DurationLocked'] = control.state
-				seqPrefs['FPSLocked'] = False
-				self.guiSeqDurationLock.state = True
-				self.guiSeqFPSLock.state = False
-			elif control.name == "guiSeqFPSLock":
-				seqPrefs['FPSLocked'] = control.state
-				seqPrefs['DurationLocked'] = False
-				self.guiSeqDurationLock.state = False
-				self.guiSeqFPSLock.state = True
-			if control.name == "guiSeqDuration":
-				if not validateIFL(seqName, seqPrefs):
-					seqPrefs['Duration'] = float(control.value)					
-					recalcFPS(seqName, seqPrefs)
-					updateSeqDurationAndFPS(seqName, seqPrefs)
-					
-					self.guiSeqDuration.value = float(seqPrefs['Duration'])
-					self.guiSeqDuration.tooltip = "Playback Time: %f Seconds" % float(seqPrefs['Duration'])
-					self.guiSeqFPS.value = float(seqPrefs['FPS'])
-					self.guiSeqFPS.tooltip = "Playback Rate: %f Frames Per Second" % float(seqPrefs['FPS'])
-				else:
-					message = "Sequences w/ IFL animations are locked at 30 fps.%t|Cancel"
-					Blender.Draw.PupMenu(message)
-					control.value = seqPrefs['Duration']
-			elif control.name == "guiSeqFPS":
-				if not validateIFL(seqName, seqPrefs):
-					seqPrefs['FPS'] = float(control.value)
-					recalcDuration(seqName, seqPrefs)
-					updateSeqDurationAndFPS(seqName, seqPrefs)
-					
-					self.guiSeqDuration.value = float(seqPrefs['Duration'])
-					self.guiSeqDuration.tooltip = "Playback Time: %f Seconds" % float(seqPrefs['Duration'])
-					self.guiSeqFPS.value = float(seqPrefs['FPS'])
-					self.guiSeqFPS.tooltip = "Playback Rate: %f Frames Per Second" % float(seqPrefs['FPS'])
-				else:
-					message = "Sequences w/ IFL animations are locked at 30 fps.%t|Cancel"
-					Blender.Draw.PupMenu(message)
-					control.value = seqPrefs['FPS']
+	## @brief Handle events generated by the "Refresh" button (guiRefresh)
+	#  @param control The invoking GUI control (guiRefresh)
+	def handleGuiRefreshEvent(self, control):
+		self.refreshAll()
 
-				pass
+	## @brief Handle events generated by the "Priority" number picker (guiPriority)
+	#  @param control The invoking GUI control (guiPriority)
+	def handleGuiPriorityEvent(self, control):
+		if self.guiSeqList.itemIndex == -1: return
+		seqName, seqPrefs = self.getSelectedSeqNameAndPrefs()
+		seqPrefs['Priority'] = control.value
 
+	## @brief Handle events generated by the Duration "Lock" button (guiSeqDurationLock)
+	#  @param control The invoking GUI control (guiSeqDurationLock)
+	def handleGuiSeqDurationLockEvent(self, control):
+		if self.guiSeqList.itemIndex == -1: return
+		seqName, seqPrefs = self.getSelectedSeqNameAndPrefs()
+		seqPrefs['DurationLocked'] = control.state
+		seqPrefs['FPSLocked'] = False
+		self.guiSeqDurationLock.state = True
+		self.guiSeqFPSLock.state = False
 
-	def handleListEvent(self, control):
-		# Clear triggers menu
-		del self.guiTriggerMenu.items[:]
-		if control.itemIndex != -1:
-			seqName = control.controls[control.itemIndex].controls[0].label
-			seqPrefs = getSequenceKey(seqName)
-			self.guiSeqOptsContainerTitle.label = "Sequence '%s'" % seqName
+	## @brief Handle events generated by the FPS "Lock" button (guiSeqFPSLock)
+	#  @param control The invoking GUI control (guiSeqFPSLock)
+	def handleGuiSeqFPSLockEvent(self, control):
+		if self.guiSeqList.itemIndex == -1: return
+		seqName, seqPrefs = self.getSelectedSeqNameAndPrefs()
+		seqPrefs['FPSLocked'] = control.state
+		seqPrefs['DurationLocked'] = False
+		self.guiSeqDurationLock.state = False
+		self.guiSeqFPSLock.state = True
 
-			try:
-				maxNumFrames = getSeqNumFrames(seqName, seqPrefs)
-			except:
-				maxNumFrames = 0
-
-			
-			# Update gui control states
-			if seqPrefs['Action']['NumGroundFrames'] > maxNumFrames:
-				seqPrefs['Action']['NumGroundFrames'] = maxNumFrames
-			self.guiSeqOptsContainer.enabled = True
-			
+	## @brief Handle events generated by the "Duration" number picker (guiSeqDuration)
+	#  @param control The invoking GUI control (guiSeqDuration)
+	def handleGuiSeqDurationEvent(self, control):
+		if self.guiSeqList.itemIndex == -1: return
+		seqName, seqPrefs = self.getSelectedSeqNameAndPrefs()
+		# Make sure the sequence does not contain an IFL animation
+		if not validateIFL(seqName, seqPrefs):
+			seqPrefs['Duration'] = float(control.value)					
+			recalcFPS(seqName, seqPrefs)
 			updateSeqDurationAndFPS(seqName, seqPrefs)
 
-			self.guiSeqFramesLabel.label = "Highest Frame Count:  " + str(maxNumFrames)
-			
-			if maxNumFrames == 0:
-				self.guiSeqDuration.value = 0.0
-				self.guiSeqDuration.tooltip = "Playback Time: 0.0 Seconds, Sequence has no key frames!"
-				self.guiSeqDuration.enabled = False
-				try: self.guiSeqFPS.value = float(Blender.Scene.GetCurrent().getRenderingContext().framesPerSec())
-				except: self.guiSeqFPS.value = 25.0
-				self.guiSeqDuration.tooltip = "Playback Time: %f Seconds, Sequence has no key frames!" % float(seqPrefs['Duration'])
-				self.guiSeqFPS.enabled = False
-				self.guiPriority.value = 0
-			else:			
-				self.guiSeqDuration.value = float(seqPrefs['Duration'])
-				self.guiSeqDuration.tooltip = "Playback Time: %f Seconds" % float(seqPrefs['Duration'])
-				self.guiSeqDuration.enabled = True
-				self.guiSeqFPS.value = float(seqPrefs['FPS'])
-				self.guiSeqFPS.tooltip = "Playback Rate: %f Frames Per Second" % float(seqPrefs['FPS'])
-				self.guiSeqFPS.enabled = True
-			
-			self.guiSeqDurationLock.state = seqPrefs['DurationLocked']
-			self.guiSeqFPSLock.state = seqPrefs['FPSLocked']
-			self.guiPriority.value = seqPrefs['Priority']
-
-
-			# Triggers
-			for t in seqPrefs['Triggers']:
-				if t[2]: stateStr = "(ON)"
-				else: stateStr = "(OFF)"
-				self.guiTriggerMenu.items.append((self.triggerMenuTemplate % (t[1], t[0])) + stateStr)
-			self.guiTriggerMenu.itemIndex = 0
-
-			if maxNumFrames > 0: self.guiTriggerFrame.max = maxNumFrames
-			else: self.guiTriggerFrame.max = 1
-			self.guiSequenceUpdateTriggers(seqPrefs['Triggers'], 0)
-			self.refreshBarChart(seqName, seqPrefs)
-
+			self.guiSeqDuration.value = float(seqPrefs['Duration'])
+			self.guiSeqDuration.tooltip = "Playback Time: %f Seconds" % float(seqPrefs['Duration'])
+			self.guiSeqFPS.value = float(seqPrefs['FPS'])
+			self.guiSeqFPS.tooltip = "Playback Rate: %f Frames Per Second" % float(seqPrefs['FPS'])
 		else:
-			self.guiSeqOptsContainer.enabled = False
-			self.guiSeqOptsContainerTitle.label = "Sequence: None Selected"
-			self.guiSeqDuration.value = 0.0
-			self.guiSeqFPS.value = 0.0
-			self.guiPriority.value = 0
-			self.guiSequenceUpdateTriggers([], 0)
-			self.clearBarChart()
+			message = "Sequences w/ IFL animations are locked at 30 fps.%t|Cancel"
+			Blender.Draw.PupMenu(message)
+			control.value = seqPrefs['Duration']
 
+	## @brief Handle events generated by the "FPS" number picker (guiSeqFPS)
+	#  @param control The invoking GUI control (guiSeqFPS)
+	def handleGuiSeqFPSEvent(self, control):
+		if self.guiSeqList.itemIndex == -1: return
+		seqName, seqPrefs = self.getSelectedSeqNameAndPrefs()
+		# Make sure the sequence does not contain an IFL animation
+		if not validateIFL(seqName, seqPrefs):
+			seqPrefs['FPS'] = float(control.value)
+			recalcDuration(seqName, seqPrefs)
+			updateSeqDurationAndFPS(seqName, seqPrefs)
+
+			self.guiSeqDuration.value = float(seqPrefs['Duration'])
+			self.guiSeqDuration.tooltip = "Playback Time: %f Seconds" % float(seqPrefs['Duration'])
+			self.guiSeqFPS.value = float(seqPrefs['FPS'])
+			self.guiSeqFPS.tooltip = "Playback Rate: %f Frames Per Second" % float(seqPrefs['FPS'])
+		else:
+			message = "Sequences w/ IFL animations are locked at 30 fps.%t|Cancel"
+			Blender.Draw.PupMenu(message)
+			control.value = seqPrefs['FPS']
+
+	## @brief Handle events generated by the Trigger controls
+	#  @param control The invoking GUI control
+	def handleGuiTriggerMenuEvent(self, control):
+		if self.guiSeqList.itemIndex == -1: return
+		self.refreshTriggerControls()
 		
-	def resize(self, control, newwidth, newheight):
-		#self.guiSeqOptsContainerTitle = Common_Gui.SimpleText("guiSeqOptsContainerTitle", "Sequence: None Selected", None, self.resize)
-		if control.name == "guiSeqList":
-			control.x, control.y, control.height, control.width = 10,28, newheight - 68,230
-			#control.x, control.y, control.height, control.width = 10,100, 200,230
-		elif control.name == "guiSeqListTitle":
-			control.x, control.y, control.height, control.width = 10,310, 20,82
-		elif control.name == "guiSeqOptsContainer":
-			control.x, control.y, control.height, control.width = 241,0, 334,249
-		elif control.name == "guiSeqOptsContainerTitle":
-			control.x, control.y, control.height, control.width = 250,310, 20,82
-		# Sequence options
-		elif control.name == "guiSeqFramesLabel":
-			control.x = 5
-			control.y = newheight - 156
-			control.width = newwidth - 10
-		elif control.name == "guiSeqDuration":
-			control.x = 5
-			control.y = newheight - 185
-			control.width = newwidth - 55
-		elif control.name == "guiSeqDurationLock":
-			control.x = newwidth - 48
-			control.y = newheight - 185
-			control.width = 40
-		elif control.name == "guiSeqFPS":
-			control.x = 5
-			control.y = newheight - 207
-			control.width = newwidth - 55
-		elif control.name == "guiSeqFPSLock":
-			control.x = newwidth - 48
-			control.y = newheight - 207
-			control.width = 40
-		elif control.name == "guiPriority":
-			control.x = 5
-			control.y = newheight - 240
-			control.width = newwidth - 10
-		elif control.name == "guiSeqGraph":
-			control.x = 5
-			control.y = 195
-			control.height = 85
-			control.width = newwidth - 10		
-		# Triggers
-		elif control.name == "guiTriggerTitle":
-			control.x = 5
-			control.y = 76
-		elif control.name == "guiTriggerMenu":
-			control.x = 5
-			control.y = 49
-			control.width = newwidth - 10
-		elif control.name == "guiTriggerFrame":
-			control.x = 5
-			control.y = 27
-			control.width = 100
-		elif control.name == "guiTriggerState":
-			control.x = 106
-			control.y = 27
-			control.width = 100
-		elif control.name == "guiTriggerStateOn":
-			control.x = 207
-			control.y = 27
-			control.width = 34
-		elif control.name == "guiTriggerAdd":
-			control.x = 5
-			control.y = 5
-			control.width = (newwidth / 2) - 6
-		elif control.name == "guiTriggerDel":
-			control.x = (newwidth / 2)
-			control.y = 5
-			control.width = (newwidth / 2) - 6
-		# Sequence list buttons
-		elif control.name == "guiToggle":
-			control.x = 10
-			control.y = 5
-			control.width = 100
-		elif control.name == "guiRefresh":
-			control.x = 112
-			control.y = 5
-			control.width = 100
+	def handleGuiTriggerAddEvent(self, control):
+		if self.guiSeqList.itemIndex == -1: return
+		seqName, seqPrefs = self.getSelectedSeqNameAndPrefs()
+		seqPrefs['Triggers'].append([1, 1, True])
+		self.guiTriggerMenu.items.append((self.triggerMenuTemplate % (1, 1)) + "(ON)")
+		self.guiTriggerMenu.itemIndex = len(seqPrefs['Triggers'])-1
+		self.refreshTriggerControls()
 
-	
+	def handleGuiTriggerStateEvent(self, control):
+		if self.guiSeqList.itemIndex == -1: return
+		if (len(self.guiTriggerMenu.items) == 0): return
+		seqName, seqPrefs = self.getSelectedSeqNameAndPrefs()
+		seqPrefs['Triggers'][self.guiTriggerMenu.itemIndex][0] = control.value
+		self.refreshTriggerMenuCaption()
+
+	def handleGuiTriggerStateOnEvent(self, control):
+		if self.guiSeqList.itemIndex == -1: return
+		if (len(self.guiTriggerMenu.items) == 0): return
+		seqName, seqPrefs = self.getSelectedSeqNameAndPrefs()
+		seqPrefs['Triggers'][self.guiTriggerMenu.itemIndex][2] = control.state
+		self.refreshTriggerMenuCaption()
+
+	def handleGuiTriggerFrameEvent(self, control):
+		if self.guiSeqList.itemIndex == -1: return
+		if (len(self.guiTriggerMenu.items) == 0): return
+		seqName, seqPrefs = self.getSelectedSeqNameAndPrefs()
+		seqPrefs['Triggers'][self.guiTriggerMenu.itemIndex][1] = control.value
+		self.refreshTriggerMenuCaption()
+
+	def handleGuiTriggerDelEvent(self, control):
+		if self.guiSeqList.itemIndex == -1: return
+		if (len(self.guiTriggerMenu.items) == 0): return
+		seqName, seqPrefs = self.getSelectedSeqNameAndPrefs()
+		# Remove the trigger
+		del seqPrefs['Triggers'][self.guiTriggerMenu.itemIndex]
+		del self.guiTriggerMenu.items[self.guiTriggerMenu.itemIndex]
+		# Must decrement itemIndex if we are out of bounds
+		if self.guiTriggerMenu.itemIndex <= len(seqPrefs['Triggers']):
+			self.guiTriggerMenu.itemIndex = len(seqPrefs['Triggers'])-1
+		#self.refreshTriggerMenuCaption()
+
+
+
+	#######################################
+	#  Refresh and Clear methods
+	#######################################
+
+
+	## @brief Refreshes sequence specific option controls on the right side of the sequences panel.
+	#  @note This method should be called whenever the sequence list is refreshed, or when sequence
+	#     list selection changes.
+	#  @param seqName The name of the currently selected sequence.
+	#  @param seqPrefs The preferences key of the currently selected sequence.
+	def refreshSequenceOptions(self, seqName, seqPrefs):
+		self.clearSequenceOptions()
+		self.guiSeqOptsContainerTitle.label = "Sequence '%s'" % seqName
+
+		maxNumFrames = getSeqNumFrames(seqName, seqPrefs)
+
+		# Update gui control states
+		if seqPrefs['Action']['NumGroundFrames'] > maxNumFrames:
+			seqPrefs['Action']['NumGroundFrames'] = maxNumFrames
+		self.guiSeqOptsContainer.enabled = True
+
+		updateSeqDurationAndFPS(seqName, seqPrefs)
+
+		self.guiSeqFramesLabel.label = "Highest Frame Count:  " + str(maxNumFrames)
+
+		if maxNumFrames == 0:
+			self.guiSeqDuration.value = 0.0
+			self.guiSeqDuration.tooltip = "Playback Time: 0.0 Seconds, Sequence has no key frames!"
+			self.guiSeqDuration.enabled = False
+			try: self.guiSeqFPS.value = float(Blender.Scene.GetCurrent().getRenderingContext().framesPerSec())
+			except: self.guiSeqFPS.value = 25.0
+			self.guiSeqDuration.tooltip = "Playback Time: %f Seconds, Sequence has no key frames!" % float(seqPrefs['Duration'])
+			self.guiSeqFPS.enabled = False
+			self.guiPriority.value = 0
+		else:			
+			self.guiSeqDuration.value = float(seqPrefs['Duration'])
+			self.guiSeqDuration.tooltip = "Playback Time: %f Seconds" % float(seqPrefs['Duration'])
+			self.guiSeqDuration.enabled = True
+			self.guiSeqFPS.value = float(seqPrefs['FPS'])
+			self.guiSeqFPS.tooltip = "Playback Rate: %f Frames Per Second" % float(seqPrefs['FPS'])
+			self.guiSeqFPS.enabled = True
+
+		self.guiSeqDurationLock.state = seqPrefs['DurationLocked']
+		self.guiSeqFPSLock.state = seqPrefs['FPSLocked']
+		self.guiPriority.value = seqPrefs['Priority']
+
+
+		# Triggers
+		for t in seqPrefs['Triggers']:
+			if t[2]: stateStr = "(ON)"
+			else: stateStr = "(OFF)"
+			self.guiTriggerMenu.items.append((self.triggerMenuTemplate % (t[1], t[0])) + stateStr)
+		self.guiTriggerMenu.itemIndex = 0
+
+		if maxNumFrames > 0: self.guiTriggerFrame.max = maxNumFrames
+		else: self.guiTriggerFrame.max = 1
+		self.refreshTriggerControls()
+		self.refreshBarChart(seqName, seqPrefs)
+		
+		# reset static tooltips
+		self.guiPriority.tooltip = "Sequence playback priority"
+		#self.guiTriggerMenu.tooltip = "Select a trigger from this list to edit its properties"
+		self.guiTriggerState.tooltip = "Trigger state number to alter"
+		self.guiTriggerStateOn.tooltip = "Determines if state will be activated or deactivated"
+		self.guiTriggerFrame.tooltip = "Frame to activate trigger on"
+		self.guiTriggerAdd.tooltip = "Add new trigger"
+		self.guiTriggerDel.tooltip = "Delete currently selected trigger"
+		self.guiSeqGraph.tooltip = "Graph of animation frames for sequence"
+		self.guiSeqFPSLock.tooltip = "Lock Sequence FPS (changes in frame count affect playback time, but not Frames Per Second)"
+		self.guiSeqDurationLock.tooltip = "Lock Sequence Duration (changes in frame count don't affect playback time)"
+
+
+	## @brief Clears sequence specific option controls on the right side of the sequences panel.
+	#  @note This method should be called when no sequence list item is currently selected.
+	def clearSequenceOptions(self):
+		self.guiSeqOptsContainer.enabled = False
+		self.guiSeqOptsContainerTitle.label = "Sequence: None Selected"
+		for control in self.guiSeqOptsContainer.controls:
+			if control.name == "guiTriggerMenu": continue
+			control.tooltip = "No sequence is selected"
+		self.guiSeqDuration.value = 0.0
+		self.guiSeqFPS.value = 0.0
+		self.guiPriority.value = 0
+		self.clearBarChart()
+		del self.guiTriggerMenu.items[:]
+		self.refreshTriggerControls()
+
 	def refreshBarChart(self, seqName, seqPrefs):
 		maxFrames = getSeqNumFrames(seqName, seqPrefs)
 		if maxFrames == 0: maxFrames = 0.0001 # heh.
@@ -2520,127 +2785,138 @@ class SeqCommonControlsClass:
 		self.guiSeqGraph.setBarColor(1, (0.4, 1.0, 0.4))
 		self.guiSeqGraph.setBarColor(0, (0.4, 1.0, 0.4))
 
+	## @brief Updates the values of the Trigger controls based on current
+	#     pref settings when the trigger list selection has changed	
+	def refreshTriggerControls(self):
+		if self.guiSeqList.itemIndex == -1:
+			self.clearTriggerControls()
+			return
+		seqName, seqPrefs = self.getSelectedSeqNameAndPrefs()
+		triggerList = seqPrefs['Triggers']
+		itemIndex = self.guiTriggerMenu.itemIndex
+		if (len(triggerList) == 0) or (itemIndex >= len(triggerList)) or itemIndex == -1:
+			self.clearTriggerControls()
+			return			
+		'''
+		# Update menu caption
+		if seqPrefs['Triggers'][itemIndex][2]: stateStr = "(ON)"
+		else: stateStr = "(OFF)"
+		print "itemIndex=",itemIndex
+		print self.guiTriggerMenu.items
+		if len(self.guiTriggerMenu.items) == 0:
+			self.clearTriggerControls()
+			return
+		self.guiTriggerMenu.items[itemIndex] = (self.triggerMenuTemplate % (seqPrefs['Triggers'][itemIndex][1], seqPrefs['Triggers'][itemIndex][0])) + stateStr
+		'''
 
-	def guiSequenceUpdateTriggers(self, triggerList, itemIndex):
-		if (len(triggerList) == 0) or (itemIndex >= len(triggerList)):
-			self.guiTriggerState.value = 1
-			self.guiTriggerStateOn.state = False
-			self.guiTriggerFrame.value = 1
-		else:
-			self.guiTriggerState.value = triggerList[itemIndex][0] # Trigger State			
-			self.guiTriggerStateOn.state = triggerList[itemIndex][2] # On
-			self.guiTriggerFrame.value = triggerList[itemIndex][1] # Time
+		self.guiTriggerState.value = triggerList[itemIndex][0] # Trigger State
+		self.guiTriggerStateOn.state = triggerList[itemIndex][2] # On
+		self.guiTriggerFrame.value = triggerList[itemIndex][1] # Time
+
+	## @brief Updates the values of the Trigger controls based on current
+	#     pref settings when the trigger list selection has changed	
+	def refreshTriggerMenuCaption(self):
+		seqName, seqPrefs = self.getSelectedSeqNameAndPrefs()
+		itemIndex = self.guiTriggerMenu.itemIndex
+		# Update menu caption		
+		if seqPrefs['Triggers'][itemIndex][2]: stateStr = "(ON)"
+		else: stateStr = "(OFF)"
+		if len(self.guiTriggerMenu.items) == 0:
+			self.clearTriggerControls()
+			return
+		self.guiTriggerMenu.items[itemIndex] = (self.triggerMenuTemplate % (seqPrefs['Triggers'][itemIndex][1], seqPrefs['Triggers'][itemIndex][0])) + stateStr
+	
+
+	def clearTriggerControls(self):
+		self.guiTriggerMenu.itemIndex = -1
+		self.guiTriggerState.value = 1
+		self.guiTriggerStateOn.state = False
+		self.guiTriggerFrame.value = 1
+	
+
+	#########################
+	#  Resize callback methods
+	#########################
+
+	def guiSeqListResize(self, control, newwidth, newheight):
+		control.x, control.y, control.height, control.width = 10,28, newheight - 68,230
+	def guiSeqListTitleResize(self, control, newwidth, newheight):
+		control.x, control.y, control.height, control.width = 10,310, 20,82
+	def guiSeqOptsContainerResize(self, control, newwidth, newheight):
+		control.x, control.y, control.height, control.width = 241,0, 334,249
+	def guiSeqOptsContainerTitleResize(self, control, newwidth, newheight):
+		control.x, control.y, control.height, control.width = 250,310, 20,82
+	# Sequence options
+	def guiSeqFramesLabelResize(self, control, newwidth, newheight):
+		control.x = 5
+		control.y = newheight - 156
+		control.width = newwidth - 10
+	def guiSeqDurationResize(self, control, newwidth, newheight):
+		control.x = 5
+		control.y = newheight - 185
+		control.width = newwidth - 55
+	def guiSeqDurationLockResize(self, control, newwidth, newheight):
+		control.x = newwidth - 48
+		control.y = newheight - 185
+		control.width = 40
+	def guiSeqFPSResize(self, control, newwidth, newheight):
+		control.x = 5
+		control.y = newheight - 207
+		control.width = newwidth - 55
+	def guiSeqFPSLockResize(self, control, newwidth, newheight):
+		control.x = newwidth - 48
+		control.y = newheight - 207
+		control.width = 40
+	def guiPriorityResize(self, control, newwidth, newheight):
+		control.x = 5
+		control.y = newheight - 240
+		control.width = newwidth - 10
+	def guiSeqGraphResize(self, control, newwidth, newheight):
+		control.x = 5
+		control.y = 195
+		control.height = 85
+		control.width = newwidth - 10		
+	# Triggers
+	def guiTriggerTitleResize(self, control, newwidth, newheight):
+		control.x = 5
+		control.y = 76
+	def guiTriggerMenuResize(self, control, newwidth, newheight):
+		control.x = 5
+		control.y = 49
+		control.width = newwidth - 10
+	def guiTriggerFrameResize(self, control, newwidth, newheight):
+		control.x = 5
+		control.y = 27
+		control.width = 100
+	def guiTriggerStateResize(self, control, newwidth, newheight):
+		control.x = 106
+		control.y = 27
+		control.width = 100
+	def guiTriggerStateOnResize(self, control, newwidth, newheight):
+		control.x = 207
+		control.y = 27
+		control.width = 34
+	def guiTriggerAddResize(self, control, newwidth, newheight):
+		control.x = 5
+		control.y = 5
+		control.width = (newwidth / 2) - 6
+	def guiTriggerDelResize(self, control, newwidth, newheight):
+		control.x = (newwidth / 2)
+		control.y = 5
+		control.width = (newwidth / 2) - 6
+	# Sequence list buttons
+	def guiToggleResize(self, control, newwidth, newheight):
+		control.x = 10
+		control.y = 5
+		control.width = 100
+	def guiRefreshResize(self, control, newwidth, newheight):
+		control.x = 112
+		control.y = 5
+		control.width = 100
 
 	
 
-	def handleTriggersEvent(self, control):
-		if self.guiSeqList.itemIndex == -1:
-			return
 
-		seqName = self.guiSeqList.controls[self.guiSeqList.itemIndex].controls[0].label
-		seqPrefs = getSequenceKey(seqName)
-		itemIndex = self.guiTriggerMenu.itemIndex
-
-		if control.name == "guiTriggerMenu":
-			self.guiSequenceUpdateTriggers(seqPrefs['Triggers'], itemIndex)
-		elif control.name == "guiTriggerAdd":
-			# Add
-			seqPrefs['Triggers'].append([1, 1, True])
-			self.guiTriggerMenu.items.append((self.triggerMenuTemplate % (1, 1)) + "(ON)")
-			self.guiTriggerMenu.itemIndex = len(seqPrefs['Triggers'])-1
-			self.guiSequenceUpdateTriggers(seqPrefs['Triggers'], self.guiTriggerMenu.itemIndex)
-		elif (len(self.guiTriggerMenu.items) != 0):
-			if control.name == "guiTriggerState":
-				seqPrefs['Triggers'][itemIndex][0] = control.value
-			elif control.name == "guiTriggerStateOn":
-				seqPrefs['Triggers'][itemIndex][2] = control.state
-			elif control.name == "guiTriggerFrame":
-				seqPrefs['Triggers'][itemIndex][1] = control.value
-			elif control.name == "guiTriggerDel":
-				# Remove the trigger
-				del seqPrefs['Triggers'][itemIndex]
-				del self.guiTriggerMenu.items[itemIndex]
-				# Must decrement itemIndex if we are out of bounds
-				if itemIndex <= len(seqPrefs['Triggers']):
-					self.guiTriggerMenu.itemIndex = len(seqPrefs['Triggers'])-1
-					itemIndex = self.guiTriggerMenu.itemIndex
-				self.guiSequenceUpdateTriggers(seqPrefs['Triggers'], itemIndex)
-
-			# Update menu caption
-			if itemIndex == -1:
-				return
-			if seqPrefs['Triggers'][itemIndex][2]: stateStr = "(ON)"
-			else: stateStr = "(OFF)"
-			self.guiTriggerMenu.items[itemIndex] = (self.triggerMenuTemplate % (seqPrefs['Triggers'][itemIndex][1], seqPrefs['Triggers'][itemIndex][0])) + stateStr
-
-	def handleListItemEvent(self, control):
-		global Prefs
-
-		# Determine sequence name
-		if control.evt == 40:
-			calcIdx = 0
-		else:
-			calcIdx = (control.evt - 40) / 2
-
-		seqName = self.guiSeqList.controls[calcIdx].controls[0].label
-		realItem = control.evt - 40 - (calcIdx*2)
-		seqPrefs = getSequenceKey(seqName)
-
-		if realItem == 0:
-			seqPrefs['NoExport'] = not control.state
-		elif realItem == 1:
-			seqPrefs['Cyclic'] = control.state
-
-	def createSequenceListItem(self, seqName):
-		startEvent = self.curSeqListEvent
-
-		# Note on positions:
-		# It quicker to assign these here, as there is no realistic chance of scaling being required.
-		guiContainer = Common_Gui.BasicContainer("", None, None)
-
-		guiContainer.fade_mode = 0  # flat color
-		guiName = Common_Gui.SimpleText("", seqName, None, None)
-		guiName.x, guiName.y = 5, 5
-		guiExport = Common_Gui.ToggleButton("guiExport", "Export", "Export Sequence", startEvent, self.handleListItemEvent, None)
-		guiExport.x, guiExport.y = 105, 5
-		guiExport.width, guiExport.height = 50, 15
-		guiCyclic = Common_Gui.ToggleButton("guiCyclic", "Cyclic", "Export Sequence as Cyclic", startEvent+1, self.handleListItemEvent, None)
-		guiCyclic.x, guiCyclic.y = 157, 5
-		guiCyclic.width, guiCyclic.height = 50, 15
-
-		# Add everything
-		guiContainer.addControl(guiName)
-		guiContainer.addControl(guiExport)
-		guiContainer.addControl(guiCyclic)
-		
-		guiExport.state = not Prefs['Sequences'][seqName]['NoExport']
-		guiCyclic.state = Prefs['Sequences'][seqName]['Cyclic']
-		
-		# increment the current event counter
-		self.curSeqListEvent += 2
-		
-		return guiContainer
-
-	def populateSequenceList(self):
-		self.clearSequenceList()
-		# loop through all actions in the preferences
-		global Prefs
-		keys = Prefs['Sequences'].keys()
-		keys.sort(lambda x, y: cmp(x.lower(),y.lower()))
-		for seqName in keys:
-			seq = getSequenceKey(seqName)
-			self.guiSeqList.addControl(self.createSequenceListItem(seqName))
-
-	def clearSequenceList(self):
-		for i in range(0, len(self.guiSeqList.controls)):
-			del self.guiSeqList.controls[i].controls[:]
-		del self.guiSeqList.controls[:]
-		self.curSeqListEvent = 40
-		self.guiSeqList.itemIndex = -1
-		self.guiSeqList.scrollPosition = 0
-		if self.guiSeqList.callback: self.guiSeqList.callback(self.guiSeqList) # Bit of a hack, but works
-
-		
 '''
 ***************************************************************************************************
 *
@@ -4912,7 +5188,7 @@ def initGui():
 	
 
 	# Initialize all tab pages
-	SeqCommonControls = SeqCommonControlsClass()
+	SeqCommonControls = SeqCommonControlsClass(guiSeqCommonSubtab)
 	ActionControls = ActionControlsClass()
 	IFLControls = IFLControlsClass()
 	VisControls = VisControlsClass()
