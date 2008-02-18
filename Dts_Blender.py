@@ -942,14 +942,14 @@ class ShapeTree(SceneTree):
 		# Process marker (detail level) nodes
 		tname = obj.getName()
 		if tname[0:6].upper() == "DETAIL":
-			if len(tname) > 6: size = int(tname[6:])
+			if len(tname) > 6: size = int(float(tname[6:]))
 			else: size = -1
 			self.normalDetails.append([size, obj])
 		elif (tname[0:3].upper() == "COL") or (tname[0:9].upper() == "COLLISION"):
 			self.collisionMeshes.append(obj)
 			if tname[0:9].upper() != "COLLISION":
 				Torque_Util.dump_writeln("Warning: 'COL' designation for collision node deprecated, use 'COLLISION' instead.")
-		elif (tname[0:3].upper() == "LOS") or (tname[0:20].upper() == "LOSCOLLISION"):
+		elif (tname[0:3].upper() == "LOS") or (tname[0:12].upper() == "LOSCOLLISION"):
 			self.losCollisionMeshes.append(obj)
 			if tname[0:12].upper() != "LOSCOLLISION":
 				Torque_Util.dump_writeln("Warning: 'LOS' designation for los collision node deprecated, use 'LOSCOLLISION' instead.")
@@ -4590,7 +4590,7 @@ class VisControlsClass(UserCreatedSeqControlsClassBase):
 			highest = 0
 			for marker in getChildren(shapeTree.obj):
 				if marker.name[0:6].lower() != "detail": continue
-				numPortion = int(marker.name[6:len(marker.name)])
+				numPortion = int(float(marker.name[6:len(marker.name)]))
 				if numPortion > highest: highest = numPortion
 			markerName = "detail" + str(numPortion)
 			for marker in getChildren(shapeTree.obj):
