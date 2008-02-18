@@ -876,23 +876,36 @@ class ListContainer(BasicContainer):
 							#print "Scrollbar drag state now " + str(self.dragState) 
 						if self.dragState and (value in dragEvents):
 							# Looks like we're dragging with the mouse down
-							# The trick here is to realize that the top of the marker is where the value
-							# is read, whilst the rest of the marker is just decoration.
-							#
-							# In addition, to avoid going off the list we don't consider any children near the end.
-							
 							if Window.GetMouseButtons() & Window.MButs.L:
 								maxUsefulChildren = len(self.controls)-self.maxVisibleControls()
 								#print "Scrollbar useful children : %d" % maxUsefulChildren
 								#print str(newpos) + " | h:%d th:%d" % (self.height, self.thumbHeight)
+								# Did we click on the Down arrow?
 								if newpos[1] <= self.thumbHeight:
-									#print "YOU CLICKED UNDER THE THUMB HEIGHT"
-									self.scrollPosition = maxUsefulChildren
-									self.thumbPosition = self.thumbHeight
-								else:
-									self.scrollPosition = int(( 1.0-(float(newpos[1]-self.thumbHeight) / (self.height - self.thumbHeight))) * maxUsefulChildren)
-									self.thumbPosition = newpos[1]
-									
+									if self.scrollPosition < (len(self.controls)-self.maxVisibleControls()):
+										self.scrollPosition += 1
+										self.getIdealThumbPosition()
+								# Did we click on the Up arrow?
+								elif newpos[1] >= self.height - self.thumbHeight:
+									if self.scrollPosition != 0:
+										self.scrollPosition -= 1
+										self.getIdealThumbPosition()
+								# Click was somewhere in the scroll area								
+								else: 
+									scrollBottom = float(self.thumbHeight) * 2.0
+									scrollTop = float(self.height - self.thumbHeight)
+									scrollHeight = scrollTop - scrollBottom
+									thumbPosInRange = newpos[1] - scrollBottom
+									scrollRatio =  thumbPosInRange / scrollHeight
+									scrollRatio = 1.0 - scrollRatio
+									if scrollRatio > 1.0: scrollRatio = 1.0
+									self.scrollPosition = int(scrollRatio * maxUsefulChildren)
+									self.thumbPosition = int(newpos[1] + (0.5 * self.thumbHeight))
+									# It's good to set limits :-)
+									if self.thumbPosition < scrollBottom:
+										self.thumbPosition = int(scrollBottom)
+									if self.thumbPosition > scrollTop:
+										self.thumbPosition = int(scrollTop)
 								#print "Scrollbar DRAGGING, Position calculated as : %d" % self.scrollPosition
 							else:
 								self.dragState = False
@@ -969,10 +982,15 @@ class ListContainer(BasicContainer):
 			return self.controls[self.scrollPosition:maxValue]
 			
 	def getIdealThumbPosition(self):
-		if len(self.controls) <= self.maxVisibleControls(): self.thumbPosition = self.thumbHeight
-		#else: self.thumbPosition = self.height - int(( ((self.height - self.thumbHeight) / (len(self.controls) - self.maxVisibleControls()) ) * self.scrollPosition))
-		else: self.thumbPosition = self.height - self.thumbHeight - int(( ((self.height - (self.thumbHeight * 3)) / (len(self.controls) - self.maxVisibleControls()) ) * self.scrollPosition))
-			
+		maxUsefulChildren = float(len(self.controls)-self.maxVisibleControls())
+		if maxUsefulChildren <= 0: maxUsefulChildren = 0.0001
+		scrollBarHeight = float(self.height - (3 * self.thumbHeight))
+		scrollPos = self.scrollPosition
+		if scrollPos < 0: scrollPos = 0.0
+		scrollRatio = (scrollPos) / maxUsefulChildren
+		rawPixelPos = int(scrollRatio * scrollBarHeight)
+		self.thumbPosition = int(scrollBarHeight - rawPixelPos) + (2 * int(self.thumbHeight))
+		
 	def selectItem(self, idx):
 		if len(self.controls) == 0: return
 		if self.itemIndex > len(self.controls): return
