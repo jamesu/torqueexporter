@@ -311,7 +311,12 @@ class BlenderShape(DtsShape):
 			if o.getName() == "Bounds":
 				continue
 			names = o.getName().split("_")
-			detail_name = names[0].split(".")[0]
+			detail_name_dot_index = names[0].rfind(".")
+			if detail_name_dot_index != -1:
+				detail_name = names[0][0:detail_name_dot_index]
+			else:
+				detail_name = names[0].split(".")[0]
+
 			obj = None
 			sorted = False			
 			# Identify corresponding master object
