@@ -626,7 +626,8 @@ def updateOldPrefs():
 	# loop through materials and add new keys
 	for matName in Prefs['Materials'].keys():
 		mat = Prefs['Materials'][matName]
-		mat['IFLMaterial'] = False
+		try: x = mat['IFLMaterial']
+		except KeyError: mat['IFLMaterial'] = False
 
 
 
@@ -5055,7 +5056,6 @@ class MaterialControlsClass:
 			Prefs['Materials'][materialName]['MipMapZeroBorder'] = control.state
 		elif control.name == "guiMaterialIFLMatButton":
 			Prefs['Materials'][materialName]['IFLMaterial'] = control.state
-			IFLControls.clearIFLMatPulldown()
 			IFLControls.refreshIFLMatPulldown()
 		elif control.name == "guiMaterialDetailMapButton":
 			Prefs['Materials'][materialName]['DetailMapFlag'] = control.state
