@@ -2282,7 +2282,12 @@ class SeqControlsClassBase:
 		else:
 			calcIdx = (control.evt - 40) / evtOffset
 
-		seqName, seqPrefs = self.getSelectedSeqNameAndPrefs()
+		# Must use calcIdx here instead of self.getSelectedSeqNameAndPrefs()
+		# because the user can click on a list button even when the list item
+		# isn't selected.
+		seqName = self.guiSeqList.controls[calcIdx].controls[0].label
+		seqPrefs = getSequenceKey(seqName)
+		#seqName, seqPrefs = self.getSelectedSeqNameAndPrefs()
 		realItem = control.evt - 40 - (calcIdx*evtOffset)
 
 		if ShowDSQButton:
