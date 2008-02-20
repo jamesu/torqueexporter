@@ -1571,11 +1571,11 @@ class BlenderShape(DtsShape):
 			# skip this object if the vis track is not enabled
 			if not keyedObj['hasVisTrack']: continue
 			
-			if keyedObj['IPOType'] == "Object":
-				bObj = Blender.Object.Get(keyedObj['IPOObject'])
-			elif keyedObj['IPOType'] == "Material":
-				bObj = Blender.Material.Get(keyedObj['IPOObject'])
 			try:
+				if keyedObj['IPOType'] == "Object":
+					bObj = Blender.Object.Get(keyedObj['IPOObject'])
+				elif keyedObj['IPOType'] == "Material":
+					bObj = Blender.Material.Get(keyedObj['IPOObject'])
 
 				bIpo = bObj.getIpo()
 				IPOCurveName = getBlenderIPOChannelConst(keyedObj['IPOType'], keyedObj['IPOChannel'])
