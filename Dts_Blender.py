@@ -4531,6 +4531,10 @@ class VisControlsClass(UserCreatedSeqControlsClassBase):
 		self.guiIpoType.setTextValue(seqPrefs['Vis']['Tracks'][objName]['IPOType'])
 		self.guiIpoChannel.setTextValue(seqPrefs['Vis']['Tracks'][objName]['IPOChannel'])
 		self.guiIpoObject.setTextValue(seqPrefs['Vis']['Tracks'][objName]['IPOObject'])
+		# enable stuff
+		self.guiIpoType.enabled = True
+		self.guiIpoChannel.enabled = True
+		self.guiIpoObject.enabled = True
 		# update label
 		if type == "Object":
 			self.guiIpoObjectTxt.label = "IPO Object:"
