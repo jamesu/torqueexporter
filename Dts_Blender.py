@@ -1225,6 +1225,7 @@ def handleScene():
 def export():
 	Torque_Util.dump_writeln("Exporting...")
 	print "Exporting..."
+	handleScene()
 	importMaterialList()
 	refreshActionData()
 	savePrefs()
