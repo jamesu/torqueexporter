@@ -337,7 +337,15 @@ class TabButton(BasicButton):
 		self.state = False
 
 	def onAction(self, evt, mousepos, value):	
+		global LastOverlapControlClickTime
 		if value == Draw.LEFTMOUSE:
+			# Check to see if a combo box event fired within the last
+			# 1/2 second.  If it did, we ignore the click (stray mouseup event).
+			curTime = Blender.sys.time()
+			timeElapsed = curTime - LastOverlapControlClickTime
+			if timeElapsed < 0.5:
+				return False
+
 			if not (Window.GetMouseButtons() & Window.MButs.L):
 				if not self.state: self.state = True
 				if self.state: self.color = self.selectedColor
