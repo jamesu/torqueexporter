@@ -4592,7 +4592,7 @@ class VisControlsClass(UserCreatedSeqControlsClassBase):
 				if marker.name[0:6].lower() != "detail": continue
 				numPortion = int(float(marker.name[6:len(marker.name)]))
 				if numPortion > highest: highest = numPortion
-			markerName = "detail" + str(numPortion)
+			markerName = "detail" + str(highest)
 			for marker in getChildren(shapeTree.obj):
 				if marker.name.lower() != markerName: continue
 				# loop through all objects, and sort into two lists
