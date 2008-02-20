@@ -379,7 +379,7 @@ def cleanKeys():
 			if VisFound == False and IFLFound == False:
 				del Prefs['Sequences'][keyName]
 
-# Cleans up unused visibility tracks
+# Cleans up unused and invalid visibility tracks
 def cleanVisTracks():
 	global Prefs
 	for keyName in Prefs['Sequences'].keys():
@@ -389,14 +389,28 @@ def cleanVisTracks():
 		except: VisFound = False
 		if not VisFound: continue
 		visKey = key['Vis']
+		# make a list of mesh objects in the highest detail level.
+		meshList = []
+		highestDL = export_tree.findHighestDL()
+		for obj in getAllChildren(highestDL):
+			if obj.getType() != "Mesh": continue
+			if obj.name == "Bounds": continue
+			meshList.append(obj.name)
 		# check each track in the prefs and see if it's enabled.
-		# if it's not enabled, get rid of the track key.
+		# if it's not enabled, get rid of the track key.  Also,
+		# check to make sure that objects still exist :-)
 		for trackName in visKey['Tracks'].keys():
 			track = visKey['Tracks'][trackName]
 			try: hasTrack = track['hasVisTrack']
 			except: hasTrack = False
 			if not hasTrack:
 				del Prefs['Sequences'][keyName]['Vis']['Tracks'][trackName]
+				continue
+			# does the blender object still exist in the highest DL?
+			if not trackName in meshList:
+				del Prefs['Sequences'][keyName]['Vis']['Tracks'][trackName]
+				continue
+				
 		
 
 
@@ -913,6 +927,17 @@ class SceneTree:
 			ret = c.find(name)
 			if ret: return ret
 		return None
+
+	# find the highest detail level.
+	def findHighestDL(self):
+		highest = 0
+		for marker in getChildren(self.obj):
+			if marker.name[0:6].lower() != "detail": continue
+			numPortion = int(float(marker.name[6:len(marker.name)]))
+			if numPortion > highest: highest = numPortion
+		markerName = "detail" + str(highest)
+		return self.find(markerName)
+		
 
 	# Clears out tree
 	def clear(self):
