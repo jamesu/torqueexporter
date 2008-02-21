@@ -637,6 +637,8 @@ def updateOldPrefs():
 			seq['IFL']['IFLFrames'] = []
 			seq['IFL']['WriteIFLFile'] = True
 	
+	try: x = Prefs['Materials']
+	except: Prefs['Materials'] = {}
 	# loop through materials and add new keys
 	for matName in Prefs['Materials'].keys():
 		mat = Prefs['Materials'][matName]
