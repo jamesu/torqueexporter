@@ -1,0 +1,288 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <meta content="text/html; charset=ISO-8859-1"
+ http-equiv="content-type">
+  <title>Torque Exporter What's new</title>
+</head>
+<body>
+<h1>Torque Exporter Plug in for Blender</h1>
+<br>
+<h2>What's New for version 0.96<br>
+</h2>
+<ul>
+  <li>New: Added support for IFL (Image File List) animations.</li>
+  <li>New: Improved support for mesh visibility animations.&nbsp;
+Visibility animations are no longer tied to materials, and can now be
+set up through the exporter GUI on a per mesh basis.&nbsp; Multiple
+meshes can be included in a single visibility animation, each having
+their own separate visibility track.&nbsp; IPO curves from objects or
+materials can be selected through the exporter GUI to drive each
+visibility track in the animation.<br>
+  </li>
+  <li>New: Users can now set a start and end frame for actions
+(optional).&nbsp; This means that actions can now be set up using
+non-overlapping frame ranges, which allows for the use of objects as
+constraint targets for multiple animations.&nbsp; This feature is
+entierly optional, and must be enabled by turning off the "Auto
+Start/End Frames" button on the actions panel (can be set per-sequence).</li>
+  <li>New: Sequence frames per second OR duration can now be set
+through
+the exporter GUI on a per sequence basis.&nbsp; If the FPS for a
+sequence is
+changed, the duration is automatically adjusted and visa-versa.&nbsp;
+Either
+of these settings can be "locked" such that when frames are added or
+removed from the animation, the locked setting (either duration or FPS)
+remains constant.</li>
+  <li>New: Complete rework of the Sequences tab of the exporter.&nbsp;
+It now contains 4 sub-tabs:</li>
+  <ul>
+    <li>Common/All - Contains settings that are common to all types of
+animations.&nbsp; Also contains a bar graph showing the length of each
+animation contained within a sequence (Actions, IFL, Visibility,
+etc.).&nbsp; The bar graph is designed to show, at a glance, whether
+the lengths of the animations contained in a sequence are the same.</li>
+    <li>Action - The Action panel contains settings that are specific
+to action animations</li>
+    <li>IFL - This panel is used to create Image File List animations.</li>
+    <li>Visibility - This panel is used to create Visibility animations.<br>
+    </li>
+  </ul>
+  <li>Rearranged and relabeled controls on the "Materials" panel.&nbsp;
+The two most problematic settings (Reflectance Map and Bump Map) are
+now hidden behind a "Show Advanced Settings" button.&nbsp; Added a new
+"IFL Material" used to mark a material for use in an IFL animation.<br>
+  </li>
+  <li>Changed all occurances of "TSE" to "TGEA" (I guess this name is
+the one that's going to stick :)</li>
+  <li>Numerous bug fixes, etc.<br>
+  </li>
+</ul>
+<h2>What's New for version 0.95</h2>
+<ul>
+  <li>Blender 2.44 and Python 2.5 compatibility.</li>
+  <li>New GUI tab controls, rewrote GUI event handling code</li>
+  <li>New "Materials" panel, material system rewrite. Features include:</li>
+  <ul>
+    <li>Additive and subtractive texture options</li>
+    <li>Self Illuminating texture options</li>
+    <li>Control of texture wrapping</li>
+    <li>Support for scaling of detail maps</li>
+    <li>Improved support of Environment mapping and reflectivity</li>
+    <li>Reflectance Maps (partially supported in TGE)</li>
+    <li>TGE "Bump" Maps (not supported in TGE)</li>
+    <li>Improved control of mipmaping</li>
+    <li>Users can now UV map multiple textures onto a single mesh
+without assigning material indices</li>
+  </ul>
+  <li>Fixed refresh of output path when selecting a new destination</li>
+  <li>Removed unused DTS version spinner from general panel</li>
+  <li>Added a log error message when no shape marker is found</li>
+  <li>Added a refresh button to the Armatures panel</li>
+  <li>Fixed a bug that would sometimes cause the DTS file stream not to
+close properly</li>
+  <li>Fixed a crash bug when exporting collision meshes with zero
+vertices</li>
+  <li>Fixed exporter crash when exceeding max per-mesh dts triangle
+count.&nbsp; Meshes that exceed the limit are now truncated and a
+message is written to the log.&nbsp; Maximum triangle count is around
+10,900.</li>
+  <li>Reverted buggy optimizations to animation export code introduced
+in version 0.94 that were resulting in mangled export of bones in some
+cases, thanks go out to Scott Coursey for finding the problem.</li>
+  <li>Fixed a problem with autobillboard detail levels that prevented
+them from displaying when a collision or loscollision mesh is present,
+thanks go out to Pho for finding and helping to diagnose the problem</li>
+  <li>Fixed a bug in the ground transform export, thanks go out to
+Duncan Gray for his help in finding and diagnosing the problem</li>
+  <li>Added an option to the General tab to write the export log file
+to the .dts output folder instead of the folder containing the .blend
+file (on by default).<br>
+  </li>
+  <li>Added the ability to have multiple materials that use the same
+base texture.&nbsp; This is accomplished by adding
+".IGNORE*" to the end of the blender image name (ex: "myTex.IGNORE01",
+"myTex.png.IGNORE.001", etc.).&nbsp;
+Just prior to export, the exporter will strip off the "IGNORE" portion
+of the material name and anything after it.&nbsp; This allows for the
+export
+of multiple materials with the same (base texture) name, but different
+properties.&nbsp; When generating a TSE (TGEA) material script for a
+material containing "IGNORE", only the period delmited section starting
+with "IGNORE" is stripped from the script material name.&nbsp; For
+example,
+"myTex.IGNORE.001" would generated a TGEA material called "myTex.001"
+with a base texture of "myTex".</li>
+  <li>Numerous bugfixes.&nbsp; Thanks go out to Duncan Gray, Adam
+Wilson, and Pho.&nbsp; Additional thanks go out to James Urquhart for
+writing the exporter in the first place and for suggestions in the user
+interface thread.&nbsp; Thanks also go out to Todd "zaz" Koeckeritz and
+Scott Coursey for suggestions and discussion in the user interface
+thread.&nbsp; And to anyone else that I missed.<br>
+  </li>
+</ul>
+<h2>What's New for version 0.94</h2>
+<ul>
+  <li>Animation export code updated to work with the Blender 2.43 (is
+still compatible with Blender 2.42 as well).<br>
+  </li>
+  <li>Changed the bone grid control in the Armatures panel of the
+exporter GUI into a scrollable list, and added wildcard matching to
+turn bones on and off.&nbsp; Thanks go out to Todd&nbsp; Koeckeritz for
+providing ideas and feedback for this.<br>
+  </li>
+  <li>Added a new "Geometry Type" section to the general tab to replace
+the old "triangle strip" section.&nbsp; New buttons allow the user to
+choose between exporting single triangles, triangle lists, and triangle
+strips.&nbsp; Defaults to single triangles.<br>
+  </li>
+  <li>Better scrollbars in the exporter GUI, adjustments to the size of
+the sequences list, changed coloring of sequence list items, and
+general visual improvements all courtesy of Todd Koeckeritz.</li>
+  <li>Fixed a problem with skinned meshes that caused a crash when
+using a blender-exported dts in TGE as a static shape.&nbsp; Thanks go
+out to Jari for finding and helping to diagnose the problem.<br>
+  </li>
+  <li>Fixed erroneous collision mesh name console warning (must start
+with "col") due to incorrect null mesh padding on visible detail level
+objects.&nbsp; Thanks go out to Jari for finding the problem.<br>
+  </li>
+</ul>
+<h2>What's New for version 0.93</h2>
+<ul>
+  <li>Added a Built-in triangle stripper&nbsp; "QADTriStripper" (Quick
+and Dirty Triangle Stripper)</li>
+  <li>VTK Triangle stripping is also tested and working now.</li>
+  <li>New Changed mesh export code to allow multiple triangles all
+belonging to the same material group to be stored inside a single
+"Triangles" (triangle list) primitive. Previously the exporter was
+storing each tri in a separate primitive, resulting in tons of unneeded
+gl calls.</li>
+  <li>Added Vincent BILLET's storeCheck fix that allows larger shapes
+to be exported.</li>
+  <li>Changed the way collision meshes are exported.&nbsp; They are now
+packed into the first subshape along with everything else.<br>
+  </li>
+  <li>Added the ability to animate collision meshes.&nbsp; This is
+accomplished by setting a "Copy Location" constraint on the mesh, with
+an armature bone as a target.&nbsp; Make sure you are exporting the
+constraint target bone or it won't work.&nbsp; Don't be surprised if
+this doesn't work the way you want it to in Torque.&nbsp; The player
+can collide with an animated mesh, but an animated mesh will not
+collide with or push the player around.&nbsp; Play around with it
+in-game before getting too fancy with it; you'll see what I mean.&nbsp;
+Also, projectile collision with a mesh while it is animating is
+unreliable.&nbsp; It seems to work OK once the mesh has stopped moving
+though.&nbsp; Your millage may vary.</li>
+  <li>Changed the way mesh normals are calculated, as per Alberto
+Ganesh Barbati's suggestion.</li>
+  <li>Fixed an exporter crash when exporting a mesh object with no
+vertices.<br>
+  </li>
+  <li>Fixed a bug that would under some conditions cause duplicate
+objects to be exported.<br>
+  </li>
+  <li>Fixed a bug in appendVertex that was causing incorrect geometry
+to be exported.</li>
+  <li>Fixed a bug that caused animated rigid meshes to have incorrect
+offsets from their parent bones</li>
+  <li>Fixed a small bug when writing exception tracebacks to the log
+that manifests when a full version of python is not available</li>
+  <li>Other small fixes</li>
+</ul>
+<h2>What's New for version 0.92</h2>
+<ul>
+  <li>Fixed broken animation export in Blender 2.42</li>
+  <li>Added an updated version of Alberto Ganesh Barbati's set
+smooth/set solid fix based on discussion in this thread:
+http://www.garagegames.com/mg/forums/result.thread.php?qt=52384</li>
+  <li>Bug fixes for ground frames</li>
+  <li>The bounds mesh can now be animated by parenting it directly to a
+bone.&nbsp; This allows much easier export of shapes with multiple
+animations that must use ground frames.</li>
+  <li>Added code to allow rigid mesh attachment to a node by parenting
+a mesh directly to a blender bone.&nbsp; This performs better in TGE
+and opengl in general if you don't need mesh deformations (for things
+like machines, doors, vehicles, etc.)</li>
+  <li>Fixed a bug that caused the exporter to crash under blender 2.42
+when exporting an animation with a constraint influence channel.</li>
+  <li>Added code that causes the exporter to dump the traceback to the
+export log if an exception is thrown (courtesy of Alberto Ganesh
+Barbati)</li>
+  <li>Optimized hotspots in the exporter code for speed, export should
+be somewhat faster now for a wide range of models.</li>
+  <li>Fixed a crash bug when exporting a mesh with an empty material
+slot.<br>
+  </li>
+  <li>Other small fixes and enhancements<br>
+  </li>
+</ul>
+<h2>What's New for version 0.91<br>
+</h2>
+<ul>
+  <li>Animation code rewritten.&nbsp; You can now create animations
+using Inverse Kinematics (and other constraints) and export them
+directly without needing to bake the actions first.&nbsp; It is highly
+recommended that you use bones as your constraint targets rather than
+empties.&nbsp; The constraint targets do not need to be exported.<br>
+  </li>
+  <li>Bug fixes for detail maps and material properties.<br>
+  </li>
+  <li>Fixed exporter crash when the action containing the reference
+pose for a blend animation is deleted.<br>
+  </li>
+  <li>The validity of the output path is now checked prior to
+export.&nbsp; If the path is invalid (usually is for files that you
+download from someone else), it is reset to the default path (the
+folder containing your blend file).<br>
+  </li>
+  <li>Fixed a bug that caused duplicate entries to be added to the
+blend ref pose action pulldown when the sequence list was refreshed.<br>
+  </li>
+  <li>Re-enabled GUI refresh while dragging, now you can see where you
+are dragging the GUI to in real time.<br>
+  </li>
+  <li>Fixed a bug that was causing newly added detail levels and
+collision meshes not to show up in the export until Blender was
+restarted.<br>
+  </li>
+  <li>Collision meshes now ignore the double sided mesh flag, are
+always single sided.<br>
+  </li>
+  <li>Fixed an exporter crash that occured when the last Trigger for a
+sequence was deleted.</li>
+  <li>Fixed a bug that was causing trigger state values for exported
+sequences to be incorrect.<br>
+  </li>
+  <li>Other small fixes and enhancements.</li>
+</ul>
+<h2>What's New for version 0.90<br>
+</h2>
+<ul>
+  <li>Blender 2.40 Compatibility, courtesy of Joseph Greenawalt, with
+preliminary work done by Todd Koeckeritz.</li>
+  <li>Level of Detail system rewrite, courtesy of James Urquhart.&nbsp;
+Exported LODs work in the stock Torque Game Engine now without code
+changes.</li>
+  <li>Installer Scripts for Windows, Mac OSX, and Linux, courtesy of
+James Urquhart.</li>
+  <li>Preliminary TSE material script support courtesy of&nbsp; James
+Urquhart.</li>
+  <li>Added the ability to choose output folder and file name for the
+exported dts, courtesy of&nbsp; James Urquhart.</li>
+  <li>Revamped GUI Courtesy of James Urquhart and Xen Amado, with
+additional bug fixes by Joseph Greenawalt.</li>
+  <li>Improved support for Blend animations by Joseph Greenawalt.</li>
+  <li>Fixed armature transforms.&nbsp; Armatures can now be rotated,
+scaled and translated in object mode without causing problems with the
+exported dts. It is no longer necessary to apply size/rotation to your
+armatures.&nbsp; Courtesy of Joseph Greenawalt.</li>
+  <li>Fixed transforms on unparented bones.&nbsp; Animations of
+unparented bones now work correctly without using the "dummy bone"
+trick, courtesy of Joseph Greenawalt.</li>
+  <li>Numerous other small fixes and enhancements.<br>
+  </li>
+</ul>
+</body>
+</html>
