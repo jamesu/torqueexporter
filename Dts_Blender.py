@@ -58,7 +58,7 @@ except:
   Blender Dts Classes for Python
 '''
 
-Version = "0.952 (IFL Branch)"
+Version = "0.96 Beta 1"
 Prefs = None
 Prefs_keyname = ""
 export_tree = None
@@ -1492,7 +1492,7 @@ def guiHeaderResize(control, newwidth, newheight):
 		control.x = 5
 		control.y = 5
 	elif control.name == "guiVersionText":
-		control.x = newwidth-80
+		control.x = newwidth-120
 		control.y = 5
 
 
