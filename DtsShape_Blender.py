@@ -1083,6 +1083,7 @@ class BlenderShape(DtsShape):
 		IFLIsValid = validateIFL(seqName, seqPrefs)
 		ActionIsValid = validateAction(seqName, seqPrefs)
 
+		if getNumActFrames(seqName, seqPrefs) < 1: ActionIsValid = False
 		# Did we have any valid animations at all for the sequence?
 		if not (visIsValid or IFLIsValid or ActionIsValid):
 			Torque_Util.dump_writeln("   Skipping sequence %s, no animation types were valid for the sequence. " % seqName)
