@@ -200,7 +200,7 @@ class BlenderShape(DtsShape):
 				
 			# Kill the clones
 			if (self.subshapes[0].numObjects != 0) and (len(obj.tempMeshes) > self.numBaseDetails):
-				Torque_Util.dump_writeln("Warning: Too many clone's of mesh found in detail level, object '%s' skipped!" % o.getName())
+				Torque_Util.dump_writeln("Warning: Too many clones of mesh found in detail level, object '%s' skipped!" % o.getName())
 				continue
 			
 			
