@@ -3074,7 +3074,7 @@ class ActionControlsClass(SeqControlsClassBase):
 		self.guiRefPoseFrame = Common_Gui.NumberPicker("guiRefPoseFrame", "Frame", "Frame to use for reference pose", self.getNextEvent(), self.handleGuiRefPoseFrameEvent, self.guiRefPoseFrameResize)
 		
 		# set initial states
-		self.guiSeqList.label = "Action Sequences :"
+		self.guiSeqListTitle.label = "Action Sequences :"
 		self.guiSeqList.fade_mode = 0
 		self.guiToggle.state = False
 		self.guiBlendSequence.state = False
@@ -3105,6 +3105,8 @@ class ActionControlsClass(SeqControlsClassBase):
 		self.guiSeqOptsContainer.addControl(self.guiRefPoseTitle) # 12
 		self.guiSeqOptsContainer.addControl(self.guiRefPoseMenu) # 13
 		self.guiSeqOptsContainer.addControl(self.guiRefPoseFrame) # 14
+		
+		
 		
 	## @brief Cleans up Blender GUI objects before the interpreter exits;
 	#     we must destroy any GUI objects that are referenced in a non-global scope
