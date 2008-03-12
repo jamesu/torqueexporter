@@ -440,6 +440,7 @@ class BlenderShape(DtsShape):
 				# create an IflMaterial object and append it to the shape
 				iflMat = IflMaterial(si, i, 0, 0, 0)
 				self.iflmaterials.append(iflMat)
+			mat.name = finalizeImageName(mat.name, False)		
 		
 	def finalizeObjects(self):
 		# Go through objects, add meshes, set transforms
