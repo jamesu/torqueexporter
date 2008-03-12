@@ -549,3 +549,15 @@ def recalcFPS(seqName, seqPrefs):
 	seqPrefs['FPS'] = float(getSeqNumFrames(seqName, seqPrefs)) / float(seqPrefs['Duration'])
 
 
+## @brief Returns the text portion of the passed in image name
+#     sans trailing number.
+#  @param matName The material name to be examined
+def getIFLMatTextPortion(matName):
+	i = len(matName)-1
+	while matName[i:len(matName)].isdigit() and i > -1: i -= 1
+	i += 1
+	textPortion = matName[0:i]
+	if len(textPortion) > 0:
+		return textPortion
+	else:
+		return ""
