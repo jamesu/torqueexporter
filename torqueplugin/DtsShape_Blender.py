@@ -433,8 +433,10 @@ class BlenderShape(DtsShape):
 		for i in range(0, len(self.materials.materials)):
 			mat = self.materials.materials[i]		
 			if mat.flags & mat.IFLMaterial != 0:
+				# remove the trailing numbers from the IFL material
+				mntp = getIFLMatTextPortion(mat.name)
 				# add a name for our IflMaterial into the string table
-				si = self.sTable.addString(mat.name + ".ifl")
+				si = self.sTable.addString(mntp + ".ifl")
 				# create an IflMaterial object and append it to the shape
 				iflMat = IflMaterial(si, i, 0, 0, 0)
 				self.iflmaterials.append(iflMat)
@@ -1532,7 +1534,7 @@ class BlenderShape(DtsShape):
 		for i in range(0, len(self.iflmaterials)):
 					mat = self.iflmaterials[i]
 					IFLMatName = self.sTable.get(mat.name)
-					if sequenceKey['IFL']['Material'] == IFLMatName[0:len(IFLMatName)-4]:
+					if getIFLMatTextPortion(sequenceKey['IFL']['Material']) == IFLMatName[0:len(IFLMatName)-4]:
 						sequence.matters_ifl[i] = True
 					else:
 						pass
@@ -1760,7 +1762,6 @@ class BlenderShape(DtsShape):
 			shapeScript.write("{\n")
 			# don't need to write out the full path, in fact, it causes problems to do so.  We'll just assume
 			# that the player is putting their shape script in the same folder as the .dts.
-			#shapeScript.write("   baseShape = \"./%s\";\n" % (self.preferences['exportBasepath'] + self.preferences['exportBasename'] + ".dts"))
 			shapeScript.write("   baseShape = \"./%s\";\n" % (self.preferences['exportBasename'] + ".dts"))
 			count = 0
 			for sequence in self.externalSequences:
@@ -1785,8 +1786,9 @@ class BlenderShape(DtsShape):
 		for seqName in self.preferences['Sequences'].keys():
 			seqKey = self.preferences['Sequences'][seqName]
 			if seqKey['IFL']['Enabled'] and (not seqKey['NoExport']) and seqKey['IFL']['WriteIFLFile']:
-				Torque_Util.dump_writeln("   Writing IFL script %s%s%s.ifl" % (self.preferences['exportBasepath'], pathSep, seqKey['IFL']['Material']))
-				IFLScript = open("%s%s%s.ifl" % (self.preferences['exportBasepath'], pathSep, seqKey['IFL']['Material']), "w")
+				iflName = getIFLMatTextPortion(seqKey['IFL']['Material'])
+				Torque_Util.dump_writeln("   Writing IFL script %s%s%s.ifl" % (self.preferences['exportBasepath'], pathSep, iflName))
+				IFLScript = open("%s%s%s.ifl" % (self.preferences['exportBasepath'], pathSep, iflName), "w")
 				for frame in seqKey['IFL']['IFLFrames']:
 					IFLScript.write("%s %i\n" % (frame[0], frame[1]))
 				IFLScript.close()
