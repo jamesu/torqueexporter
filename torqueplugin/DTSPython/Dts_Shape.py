@@ -315,7 +315,7 @@ class Sequence:
 		self.nameIndex = na			# index of the name in the DTS string table
 		self.flags = fl				# Flags of sequence
 		self.numKeyFrames = nk		# Number of keyframes in sequence
-		self.duration = du			# Duratuion of the sequence in seconds
+		self.duration = du			# Duration of the sequence in seconds
 		self.priority = pri			# Priority of sequence
 		self.firstGroundFrame = fg	# Index of first ground frame
 		self.numGroundFrames = ng	# Number of ground frames
