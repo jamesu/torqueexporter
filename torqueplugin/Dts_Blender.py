@@ -871,6 +871,17 @@ def importMaterialList():
 '''
 #-------------------------------------------------------------------------------------------------
 class SceneTree:
+	def __init__(self,parent=None,obj=None):
+		self.obj = obj
+		self.parent = parent
+		self.children = []
+		if obj != None:
+			self.handleObject()
+		
+	def __del__(self):
+		self.clear()
+		del self.children
+
 	# Creates trees to handle children
 	def handleChild(self,obj):
 		tname = string.split(obj.getName(), ":")[0]
@@ -880,16 +891,6 @@ class SceneTree:
 			return None
 		return handle
 
-	def __init__(self,parent=None,obj=None):
-		self.obj = obj
-		self.parent = parent
-		self.children = []
-		if obj != None:
-			self.handleObject()
-
-	def __del__(self):
-		self.clear()
-		del self.children
 
 	# Performs tasks to handle this object, and its children
 	def handleObject(self):
@@ -905,7 +906,49 @@ class SceneTree:
 			if c == None: continue
 			found = True
 			c.process(progressBar)
-		if not found: Torque_Util.dump_writeln("  Error: No Shape Marker found!  See the readme.html file.")
+		if not found:
+			message = "Would you like the exporter to set up your hierarchy for you?%t" +"|Yes, set up the export hierarchy automatically.|No, Cancel the export."
+			if Blender.Draw.PupMenu(message) == 1:
+				scene = Blender.Scene.GetCurrent()
+				# Create the shape empty, somewhere :-)
+				shapeEmpty = Blender.Object.New("Empty", "Shape")
+				scene.objects.link(shapeEmpty)
+				shapeEmpty.setLocation(0, 10, 0)
+				# Create a default detail empty
+				detailEmpty = Blender.Object.New("Empty", "Detail1")
+				scene.objects.link(detailEmpty)
+				detailEmpty.setLocation(-2, 8, 0)				
+				# Create a default collision empty
+				collisionEmpty = Blender.Object.New("Empty", "Collision-1")
+				scene.objects.link(collisionEmpty)
+				collisionEmpty.setLocation(2, 8, 0)
+				# Create a default LOS-collision empty
+				losCollisionEmpty = Blender.Object.New("Empty", "LosCollision-1")
+				scene.objects.link(losCollisionEmpty)
+				losCollisionEmpty.setLocation(4, 8, 0)
+				# parent markers to shape
+				shapeEmpty.makeParent([detailEmpty, collisionEmpty, losCollisionEmpty], 0, 1)
+				
+				# parent meshes to markers
+				for obj in scene.objects:
+					tname = string.split(obj.getName(), ":")[0].upper()
+					if tname[0:3] == "COL" and obj.type == "Mesh":
+						collisionEmpty.makeParent([obj], 0, 1)
+					elif tname[0:3] == "LOS" and obj.type == "Mesh":
+						losCollisionEmpty.makeParent([obj], 0, 1)
+					elif obj.type == "Mesh" or obj.type == "Armature":
+						detailEmpty.makeParent([obj], 0, 1)
+
+				scene.update(1)
+				# do over :-)
+				return False				
+
+
+			else:
+				# Oh well, we tried to help :-)  Write an error message to the log.
+				Torque_Util.dump_writeln("  Error: No Shape Marker found!  See the readme.html file.")
+			
+			return True
 
 	def getChild(self, name):
 		for c in self.children:
@@ -961,6 +1004,7 @@ class ShapeTree(SceneTree):
 		self.losCollisionMeshes = []
 		
 		SceneTree.__init__(self,parent,obj)
+		
 
 	def handleChild(self, obj):
 		# Process marker (detail level) nodes
@@ -1258,7 +1302,14 @@ def export():
 
 	if export_tree != None:
 		cur_progress.pushTask("Done", 1, 1.0)
-		export_tree.process(cur_progress)
+		if not export_tree.process(cur_progress):
+			# try again :-)
+			handleScene()
+			importMaterialList()
+			refreshActionData()
+			savePrefs()
+			export_tree.process(cur_progress)
+			
 		cur_progress.update()
 		cur_progress.popTask()
 		Torque_Util.dump_writeln("Finished.")
