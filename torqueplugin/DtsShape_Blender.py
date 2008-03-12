@@ -1564,6 +1564,7 @@ class BlenderShape(DtsShape):
 			self.triggers.append(Trigger(triggers[i][0], triggers[i][2], realPos, triggerState[i]))
 		del triggerState
 		sequence.numTriggers += len(triggers)
+		sequence.flags |= sequence.MakePath
 
 
 	# Add sequence matters for IFL animation.
