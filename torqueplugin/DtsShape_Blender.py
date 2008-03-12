@@ -207,7 +207,7 @@ class BlenderShape(DtsShape):
 			# Now we can import as normal
 			mesh_data = o.getData();
 			mesh_data.update()
-				
+			
 			# Get Object's Matrix
 			mat = self.collapseBlenderTransform(o)
 			
@@ -349,8 +349,45 @@ class BlenderShape(DtsShape):
 			
 			
 			# Now we can import as normal
-			mesh_data = o.getData();
-			mesh_data.update()
+
+			hasArmatureDeform = False
+			# Check for armature modifier
+			for mod in o.modifiers:
+				# "8" is the Armature type, as determined by trial and error.
+				#  There does not appear to be a constant dict for these values - Joe G.
+				# Docs say: Returns the type of the object in 'Armature', 'Camera', 'Curve', 'Lamp', 'Lattice', 'Mball',
+				#  'Mesh', 'Surf', 'Empty', 'Wave' (deprecated) or 'unknown' in exceptional cases.
+				# Not helpful :-(
+				if mod.type == 8:					
+					hasArmatureDeform = True
+			# Check for an armature parent
+			try:
+				if o.parentType == Blender.Object.ParentTypes['ARMATURE']:
+				#if o.getParent().getType() == 'Armature':
+					hasArmatureDeform = True
+			except: pass
+			# do we even have any modifiers?  If not, we can skip copying the display data.
+			if len(o.modifiers) != 0 or o.getData(False,True).multires:
+				hasModifiers = True
+			else:
+				hasModifiers = False			
+			# Otherwise, get the final display data, as affected by modifers.
+			if (not hasArmatureDeform) and hasModifiers:				
+				try:
+					temp_obj = Blender.Object.Get("DTSExpObj_Tmp")
+				except:
+					temp_obj = Blender.Object.New("Mesh", "DTSExpObj_Tmp")
+				try:
+					mesh_data = Blender.Mesh.Get("DTSExpMshObj_Tmp")
+				except:
+					mesh_data = Blender.Mesh.New("DTSExpMshObj_Tmp")
+				mesh_data.getFromObject(o)
+				temp_obj.link(mesh_data)
+			# if we have armature deformation, or don't have any modifiers, get the mesh data the old fashon way
+			else:
+				mesh_data = o.getData(False,True);
+				temp_obj = None
+
 				
 			# Get Object's Matrix
 			mat = self.collapseBlenderTransform(o)
@@ -370,6 +407,10 @@ class BlenderShape(DtsShape):
 			polyCount += tmsh.getPolyCount()
 			obj.tempMeshes.append(tmsh)
 			numAddedMeshes += 1
+			
+			# clean up temporary objects
+			del mesh_data
+			del temp_obj
 		
 		# Modify base subshape if required
 		if self.numBaseDetails == 0:
