@@ -170,11 +170,10 @@ class MaterialList:
 		# name, flags, refl, bump, det, detsca, reflecion (in seperate arrays)
 		# Names
 		fs.write(struct.pack('<i', len(self.materials))) #S32
-		for mat in self.materials:
-			finalName = finalizeImageName(mat.name, False)
-			fs.write(struct.pack('<b', len(finalName))) # Length of Name
+		for mat in self.materials:			
+			fs.write(struct.pack('<b', len(mat.name))) # Length of Name
 			st = array('c')
-			st.fromstring(finalName)
+			st.fromstring(mat.name)
 			st.tofile(fs)
 		for mat in self.materials:			
 			fs.write(struct.pack('I', mat.flags))			
