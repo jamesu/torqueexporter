@@ -3904,7 +3904,7 @@ class IFLControlsClass(UserCreatedSeqControlsClassBase):
 		matName = guiMat.getSelectedItemString()
 		seqPrefs['IFL']['NumImages'] = control.value			
 		startNum = self.determineIFLMatStartNumber(matName)
-		textPortion = self.getIFLMatTextPortion(matName)
+		textPortion = getIFLMatTextPortion(matName)
 		numPadding = self.determineIFLMatNumberPadding(matName)			
 		fr = seqPrefs['IFL']['IFLFrames']
 		while len(fr) > control.value:				
@@ -3934,7 +3934,7 @@ class IFLControlsClass(UserCreatedSeqControlsClassBase):
 				guiFramesList = self.guiFramesList
 				matName = guiMat.getSelectedItemString()
 				startNum = self.determineIFLMatStartNumber(matName)
-				textPortion = self.getIFLMatTextPortion(matName)
+				textPortion = getIFLMatTextPortion(matName)
 				numPadding = self.determineIFLMatNumberPadding(matName)
 				i = 0
 				while i < self.guiNumImages.value:
@@ -4156,19 +4156,6 @@ class IFLControlsClass(UserCreatedSeqControlsClassBase):
 		retVal = '0' * (padding - len(str(num)))
 		retVal += str(num)
 		return retVal
-
-	## @brief Returns the text portion of the passed in image name
-	#     sans trailing number.
-	#  @param matName The material name to be examined
-	def getIFLMatTextPortion(self, matName):
-		i = len(matName)-1
-		while matName[i:len(matName)].isdigit() and i > -1: i -= 1
-		i += 1
-		textPortion = matName[0:i]
-		if len(textPortion) > 0:
-			return textPortion
-		else:
-			return ""
 
 	## @brief Removes the last item from the frames list box
 	def removeLastItemFromFrameList(self):
