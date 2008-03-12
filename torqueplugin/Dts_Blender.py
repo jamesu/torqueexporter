@@ -611,9 +611,6 @@ def updateOldPrefs():
 				maxNumFrames = DtsShape_Blender.getNumFrames(action.getAllChannelIpos().values(), False)
 			except KeyError:
 				maxNumFrames = 0			
-			#seq['Duration'] = float(Torque_Util.getSeqNumFrames(seqName, seq)) / float(seq['FPS'])
-			#print "You are here..."
-			#try: seq['Duration'] = float(Torque_Util.getSeqNumFrames(seqName, seq)) / float(seq['FPS'])
 			try: seq['Duration'] = float(maxNumFrames) / float(seq['FPS'])
 			except:
 				seq['Duration'] = 1.0
@@ -2247,11 +2244,7 @@ class SeqControlsClassBase:
 
 		# restore last sequence selection
 		for itemIndex in range(0, len(self.guiSeqList.controls)):
-			#print "Checking item",itemIndex
-			#print "self.guiSeqList.controls[itemIndex].controls[0].label =",self.guiSeqList.controls[itemIndex].controls[0].label
-			#print "seqName =",seqName
 			if self.guiSeqList.controls[itemIndex].controls[0].label == seqName:
-				#print "found matching control for",seqName
 				self.guiSeqList.selectItem(itemIndex)
 				self.guiSeqList.scrollToSelectedItem()
 				self.refreshSequenceOptions(seqName, seqPrefs)
@@ -2420,7 +2413,6 @@ class SeqControlsClassBase:
 	## @brief Populates the sequence list using current pref values.
 	def populateSequenceList(self):
 		self.clearSequenceList()
-		print "populateSequenceList called."
 		# Force a sequence list resize event, to make sure our button offsets
 		# are correct.
 		if self.guiSeqList.width == 0: return
@@ -4439,10 +4431,8 @@ class VisControlsClass(UserCreatedSeqControlsClassBase):
 	#  @param control The invoking GUI control (guiVisTrackList)
 	def handleGuiVisTrackListEvent(self, control):
 		curSelection = self.getVisTrackListSelectedItem()
-		print "curSelection =",curSelection
 		if curSelection != "":
 			self.lastVisTrackListSelection = curSelection
-			print "Storing selection:", self.lastVisTrackListSelection
 		if self.guiVisTrackList.itemIndex != -1:
 			seqName, seqPrefs = self.getSelectedSeqNameAndPrefs()
 			self.guiIpoType.enabled = True
@@ -4484,7 +4474,6 @@ class VisControlsClass(UserCreatedSeqControlsClassBase):
 	#  @param seqName The name of the currently selected sequence.
 	#  @param seqPrefs The preferences key of the currently selected sequence.
 	def refreshSequenceOptions(self, seqName, seqPrefs):
-		print "Refresh Sequence options called..."
 		self.guiSeqOptsContainer.enabled = True
 		self.guiSeqName.value = seqName 
 		self.refreshVisTrackList(seqName)
@@ -4498,7 +4487,6 @@ class VisControlsClass(UserCreatedSeqControlsClassBase):
 		for i in range(0,len(self.guiVisTrackList.controls)):
 			listItem = self.guiVisTrackList.controls[i]
 			if listItem.controls[0].label == self.lastVisTrackListSelection:
-				print "Restoring selection:", self.lastVisTrackListSelection
 				self.guiVisTrackList.selectItem(i)				
 				found = True
 				break
@@ -4510,7 +4498,6 @@ class VisControlsClass(UserCreatedSeqControlsClassBase):
 	## @brief Clears sequence specific option controls on the right side of the sequences panel.
 	#  @note Overrides parent class "virtual" method.
 	def clearSequenceOptions(self):
-		print "Clear Sequence options called..."
 		self.guiSeqName.value = ""
 		self.guiSeqOptsContainer.enabled = False
 		self.clearVisTrackList()
@@ -4526,7 +4513,6 @@ class VisControlsClass(UserCreatedSeqControlsClassBase):
 	#     calling this method.
 	#  @param seqPrefs The prefs key of the currently selected sequence
 	def refreshIpoControls(self, seqPrefs):
-		print "refreshIpoControls called"
 		# do we have a valid track key?
 		foundKey = True
 		objName = self.getVisTrackListSelectedItem()
