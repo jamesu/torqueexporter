@@ -41,12 +41,12 @@ from Blender import NMesh
 class BlenderMesh(DtsMesh):
 	def __init__(self, shape, msh,  rootBone, scaleFactor, matrix, isCollision=False, useLists = False):
 		DtsMesh.__init__(self)
-		#self.vertsIndexMap = []		# Map of TexCoord index <> Vertex index map
-		self.bVertList = [] # list of blender mesh vertex indices ordered by value, for fast searching
-		self.dVertList = [] # list containing lists of dts vertex indices, the outer list elements correspond to the bVertList element in the same position.
+		self.bVertList = [] 		# list of blender mesh vertex indices ordered by value, for fast searching
+		self.dVertList = [] 		# list containing lists of dts vertex indices, the outer list elements correspond to the bVertList element in the same position.
 		self.mainMaterial = None	# For determining material ipo track to use for ObjectState visibility animation
-		ignoreDblSided = False # set to true if you want to ignore double sided meshes
+		ignoreDblSided = False
 		self.weightDictionary = self.createWeightDictionary(msh);
+		
 		
 		materialGroups = {}
 		
@@ -108,7 +108,7 @@ class BlenderMesh(DtsMesh):
 			for face in group:
 				if len(face.v) < 3:
 					continue # skip to next face
-					
+
 				# if we've hit the vertex index limit, don't add any more primitives!
 				if len(self.indices) >= 32748:
 					limitExceeded = True
@@ -171,7 +171,7 @@ class BlenderMesh(DtsMesh):
 					if not useLists: self.primitives.append(pr)
 
 					# Duplicate first triangle in reverse order if doublesided
-					if ((msh.mode & NMesh.Modes.TWOSIDED) or (face.mode & NMesh.FaceModes.TWOSIDE)) and not ignoreDblSided:
+					if hasImage and ((msh.mode & NMesh.Modes.TWOSIDED) or (face.mode & NMesh.FaceModes.TWOSIDE)) and not ignoreDblSided:
 						if not useLists:
 							for i in range((pr.firstElement+pr.numElements)-1,pr.firstElement-1,-1):
 								self.indices.append(self.indices[i])
@@ -198,10 +198,7 @@ class BlenderMesh(DtsMesh):
 						
 				# Duplicate triangle in reverse order if doublesided
 				# We can't get the value of the double sided flag if a face is not textured :-(
-				isTextured = True
-				try: x = face.mode
-				except: isTextured = False
-				if isTextured and ((msh.mode & NMesh.Modes.TWOSIDED) or (face.mode & NMesh.FaceModes.TWOSIDE)) and not ignoreDblSided: 
+				if hasImage and ((msh.mode & NMesh.Modes.TWOSIDED) or (face.mode & NMesh.FaceModes.TWOSIDE)) and not ignoreDblSided: 
 					if not useLists:
 						for i in range((pr.firstElement+pr.numElements)-1,pr.firstElement-1,-1):
 							self.indices.append(self.indices[i])
