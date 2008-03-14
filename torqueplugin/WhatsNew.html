@@ -49,6 +49,21 @@ to action animations</li>
     <li>Visibility - This panel is used to create Visibility animations.<br>
     </li>
   </ul>
+  <li>New: The exporter will now prompt the user if no shape marker is
+found. If the user chooses, a shape hierarchy will be automatically
+created and set up with a default detail level (size 1). The exporter
+guesses which meshes are collision meshes and los meshes by examining
+the first three letters of the mesh names (looking for "col" and
+"los"); everything else is placed under Detail1. This should make
+things a little easier for people who are using blender as a stepping
+stone to export purchased content or content imported from another
+modeling app. It might also save experienced users a few seconds
+creating and parenting empties.</li>
+  <li>The effects of mesh modifiers are now applied to meshes in the
+exported dts file. &nbsp; The Blender modifiers themselves are not
+applied to your Blender objects.&nbsp; Unfortunately, due to a
+limitation in Blender's Python API, modifiers will be ignored for
+skinned meshes (you can still apply them by hand, however).</li>
   <li>Rearranged and relabeled controls on the "Materials" panel.&nbsp;
 The two most problematic settings (Reflectance Map and Bump Map) are
 now hidden behind a "Show Advanced Settings" button.&nbsp; Added a new
@@ -58,6 +73,8 @@ animation.<br>
   <li>Changed all <span
  style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;">occurrences </span>of
 "TSE" to "TGEA" (I guess this name is the one that's going to stick :)</li>
+  <li>Fixed triggers not firing when no ground frames were being
+exported for a given sequence.</li>
   <li>Numerous bug fixes, etc.<br>
   </li>
 </ul>
