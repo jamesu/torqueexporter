@@ -1036,6 +1036,10 @@ class ShapeTree(SceneTree):
 			# double check the base path before opening the stream
 			if not os.path.exists(Prefs['exportBasepath']):
 				Prefs['exportBasepath'] = basepath(Blender.Get("filename"))
+			# double check the file name
+			if Prefs['exportBasename'] == "":
+				Prefs['exportBasename'] = basename(Blender.Get("filename"))
+			
 			# make sure our path seperator is correct.
 			getPathSeperator(Prefs['exportBasepath'])
 			Stream = DtsStream("%s%s%s.dts" % (Prefs['exportBasepath'], pathSeperator, Prefs['exportBasename']), False, Prefs['DTSVersion'])
@@ -5411,6 +5415,10 @@ def entryPoint(a):
 	if Debug:
 		Torque_Util.dump_setout("stdout")
 	else:
+		# double check the file name before opening the log
+		if Prefs['exportBasename'] == "":
+			Prefs['exportBasename'] = basename(Blender.Get("filename"))
+		
 		try: x = Prefs['LogToOutputFolder']
 		except KeyError: Prefs['LogToOutputFolder'] = True
 		if Prefs['LogToOutputFolder']:
