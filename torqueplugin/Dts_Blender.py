@@ -1367,18 +1367,20 @@ def guiBaseCallback(control):
 		return
 
 	# Need to associate the button with it's corresponding tab container.
-	ctrls = [[guiSequenceButton,guiSequenceTab, "Sequences"],\
-	[guiMeshButton,guiGeneralTab, "General"],\
-	[guiMaterialsButton,guiMaterialsTab, "Materials"],\
-	[guiArmatureButton,guiArmatureTab, "Armature"],\
-	[guiAboutButton,guiAboutTab, "About"]]
+	ctrls = [[guiSequenceButton,guiSequenceTab, None, "Sequences"],\
+	[guiMeshButton,guiGeneralTab, None, "General"],\
+	[guiMaterialsButton,guiMaterialsTab, MaterialControls, "Materials"],\
+	[guiArmatureButton,guiArmatureTab, None, "Armature"],\
+	[guiAboutButton,guiAboutTab, None, "About"]]
 	for ctrl in ctrls:
 		if control.name == ctrl[0].name:
 			# turn on the tab button, show and enable the tab container
 			control.state = True
 			ctrl[1].visible = True
 			ctrl[1].enabled = True
-			Prefs['LastActivePanel'] = ctrl[2]
+			if ctrl[2] != None:
+				ctrl[2].refreshAll()				
+			Prefs['LastActivePanel'] = ctrl[3]
 			#if ctrl[2] != "Sequences": Prefs['LastActiveSubPanel'] = None
 			continue
 		# disable all other tab containers and set tab button states to false.
@@ -1594,46 +1596,6 @@ def validateSequenceName(seqName, seqType, oldName = None):
 
 
 
-
-'''
-***************************************************************************************************
-*
-* Template for creating new control pages
-*
-***************************************************************************************************
-
-class SomeControlsClass:
-	def __init__(self):
-		global guiSomeSubtab
-		global globalEvents
-		
-		# initialize GUI controls
-		
-		# set initial states
-		
-		# add controls to containers
-		
-		# populate lists
-
-	def cleanup(self):
-
-		# Must destroy any GUI objects that are referenced in a non-global scope
-		# explicitly before interpreter shutdown to avoid the dreaded
-		# "error totblock" message when exiting Blender.
-		# Note: __del__ is not guaranteed to be called for objects that still
-		# exist when the interpreter exits.
-
-		pass
-
-
-	def handleEvent(self, control):
-		pass
-		
-	def resize(self, control, newwidth, newheight):
-		pass
-	
-	# other event callbacks and helper methods go here.
-'''
 
 '''
 ***************************************************************************************************
@@ -4940,6 +4902,12 @@ class MaterialControlsClass:
 		del self.guiMaterialDetailScaleSlider
 		
 
+	def refreshAll(self):
+		print "Material Panel Refresh All called."
+		self.clearMaterialList()		
+		self.populateMaterialList()
+
+	
 	
 	def resize(self, control, newwidth, newheight):
 		# handle control resize events.
