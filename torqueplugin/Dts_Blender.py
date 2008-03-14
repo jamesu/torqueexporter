@@ -4903,7 +4903,6 @@ class MaterialControlsClass:
 		
 
 	def refreshAll(self):
-		print "Material Panel Refresh All called."
 		self.clearMaterialList()		
 		self.populateMaterialList()
 
