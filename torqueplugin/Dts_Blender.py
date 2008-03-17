@@ -936,7 +936,7 @@ class SceneTree:
 						collisionEmpty.makeParent([obj], 0, 1)
 					elif tname[0:3] == "LOS" and obj.type == "Mesh":
 						losCollisionEmpty.makeParent([obj], 0, 1)
-					elif obj.type == "Mesh" or obj.type == "Armature":
+					elif obj.parent == None and (obj.type == "Mesh" or obj.type == "Armature"):
 						detailEmpty.makeParent([obj], 0, 1)
 
 				scene.update(1)
