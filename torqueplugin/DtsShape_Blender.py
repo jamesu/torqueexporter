@@ -871,6 +871,7 @@ class BlenderShape(DtsShape):
 			for bChild in bone.children:
 				self.addBones(bChild, parentId, arm, armData)
 
+	# Used to add a camera object as a node.
 	def addNode(self, object):
 		# Adds generic node with object's name
 		Torque_Util.dump_writeln("     Node[%s]: %s" % (object.getType(), obj.getName()))
@@ -879,7 +880,7 @@ class BlenderShape(DtsShape):
 		matf = collapseBlenderTransform(object)
 		rot = Quaternion().fromMatrix(matf).inverse()
 		pos = Vector(matf.get(3,0),matf.get(3,1),matf.get(3,2))
-
+		
 		parentId = len(self.nodes)
 		b = Node(self.sTable.addString(object.getName()), -1)
 		self.defaultTranslations.append(pos)
