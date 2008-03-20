@@ -624,27 +624,40 @@ class BlenderShape(DtsShape):
 
 	# A utility method that gets the min and max positions of the bones in an armature
 	# within a passed-in ordered list.
-	def getMinMax(self, rootBone, nodeOrder, nodeOrderDict, minPos=99999,maxPos=0):
-		print "Starting from rootBone:",rootBone.name
+	def getMinMax(self, rootBone, nodeOrder, nodeOrderDict):
 		# find the current node in our ordered list
 		pos = nodeOrderDict[rootBone.name]
-		if pos > maxPos: maxPos = pos
-		if pos < minPos: minPos = pos
-		
-		cMin = [99999]
-		cMax = [0]
+		minPos, maxPos = pos, pos
+		#minPos = 99999		
+		#if pos > maxPos: maxPos = pos
+		#if pos < minPos: minPos = pos		
+		cMin = []
+		cMax = []
+		nnames = []
 		for child in rootBone.children:
-			start, end = self.getMinMax(child, nodeOrder, nodeOrderDict, minPos, maxPos)
-			#if end > maxPos: maxPos = end
-			#if start < minPos: minPos = start		
+			nnames.append(child.name)
+			start, end = self.getMinMax(child, nodeOrder, nodeOrderDict)
+			if end > maxPos: maxPos = end
+			if start < minPos: minPos = start
 			cMin.append(start)
 			cMax.append(end)
 		
 		# check all children of the current root bone to make sure their min/max values don't
 		# overlap.
-		#for i in range(0, len(cMin)):
-		#	for j in range(i+1, len(
-		
+		for i in range(0, len(cMin)):
+			for j in range(i+1, len(cMin)):
+				if (cMin[i] <= cMax[j] and cMin[i] >= cMin[j])\
+				or (cMax[i] <= cMax[j] and cMax[i] >= cMin[j])\
+				or (cMin[j] <= cMax[i] and cMin[j] >= cMin[i])\
+				or (cMax[j] <= cMax[i] and cMax[j] >= cMin[i]):
+					Torque_Util.dump_writeln("-\nWarning: Invalid Traversal - Node hierarchy cannot be matched with the")
+					Torque_Util.dump_writeln("  node ordering specified in the NodeOrder text buffer.")
+					Torque_Util.dump_writeln("  Details:")
+					Torque_Util.dump_writeln("    node tree with root node \'%s\'" % nnames[i])
+					Torque_Util.dump_writeln("    overlaps sibling tree with root node \'%s\'" % nnames[j])
+					Torque_Util.dump_writeln("    in the NodeOrder text buffer.")
+					Torque_Util.dump_writeln("    cMin[i], cMax[i] = %i, %i" % (cMin[i], cMax[i]) )
+					Torque_Util.dump_writeln("    cMin[j], cMax[j] = %i, %i\n-" % (cMin[j], cMax[j]) )
 		return minPos, maxPos
 
 	# Adds nodes from all armatures to the shape.
@@ -657,7 +670,7 @@ class BlenderShape(DtsShape):
 		try:
 			noTxt = Blender.Text.Get("NodeOrder")
 			no = noTxt.asLines()
-			Torque_Util.dump_writeln("  nodeOrder text buffer found, attempting to export nodes in the order specified.")
+			Torque_Util.dump_writeln("NodeOrder text buffer found, attempting to export nodes in the order specified.")
 		except: no = None
 		nodeOrderDict = {}
 
@@ -691,33 +704,39 @@ class BlenderShape(DtsShape):
 				for bone in armData.bones.values():
 					if bone.parent != None:
 						if nodeOrderDict[bone.name] < nodeOrderDict[bone.parent.name]:
-							print "Houston, we have a problem."
-							print "    Test 1 failed for bone",bone.name,"(",nodeOrderDict[bone.name],") with parent", bone.parent.name, "(",nodeOrderDict[bone.parent.name],")"
-						else:
-							print "    Test 1 passed for bone",bone.name,"(",nodeOrderDict[bone.name],") with parent", bone.parent.name, "(",nodeOrderDict[bone.parent.name],")"
-
+							Torque_Util.dump_writeln("-\nWarning: Invalid node order, child bone \'%s\' comes before" % bone.name)
+							Torque_Util.dump_writeln("  parent bone \'%s\' in the NodeOrder text buffer\n-" % bone.parent.name)
 			# Test Rule #2
-			print "**********       Testing Rule #2       *************"
-
-			minPos = []
-			maxPos = []			
+			cMin = []
+			cMax = []			
 			for arm in armatures:
 				i = 0
 				armData = arm.getData()
 				for bone in armData.bones.values():				
 					if bone.parent == None:
-						minPos.append(99999) # "99999 nodes should be enough for anyone." - Oscar Wilde
-						maxPos.append(0)
+						cMin.append(99999) # "99999 nodes should be enough for anyone." - Oscar Wilde
+						cMax.append(0)
 						start, end = self.getMinMax(bone, no, nodeOrderDict)
-						if end > maxPos[i]: maxPos[i] = end
-						if start < minPos[i]: minPos[i] = start
-						print "start of",bone.name,"bones is",minPos[i],"with end at", maxPos[i]
+						if end > cMax[i]: cMax[i] = end
+						if start < cMin[i]: cMin[i] = start
+						#print "start of",bone.name,"bones is",cMin[i],"with end at", cMax[i]
 						i += 1
-			print "**********       finished Rule #2       *************"
 
-			
-
-
+			# make sure bone ranges of armatures do not overlap in the NodeOrder text buffer.
+			for i in range(0, len(cMin)):
+				for j in range(i+1, len(cMin)):
+					if (cMin[i] <= cMax[j] and cMin[i] >= cMin[j])\
+					or (cMax[i] <= cMax[j] and cMax[i] >= cMin[j])\
+					or (cMin[j] <= cMax[i] and cMin[j] >= cMin[i])\
+					or (cMax[j] <= cMax[i] and cMax[j] >= cMin[i]):
+						Torque_Util.dump_writeln("-\nWarning: Invalid Traversal - Node hierarchy cannot be matched with the")
+						Torque_Util.dump_writeln("  node ordering specified in the NodeOrder text buffer.")
+						Torque_Util.dump_writeln("  Details:")
+						Torque_Util.dump_writeln("    node tree with root node \'%s\'" % nnames[i])
+						Torque_Util.dump_writeln("    overlaps sibling tree with root node \'%s\'" % nnames[j])
+						Torque_Util.dump_writeln("    in the NodeOrder text buffer.")
+						Torque_Util.dump_writeln("    cMin[i], cMax[i] = %i, %i" % (cMin[i], cMax[i]) )
+						Torque_Util.dump_writeln("    cMin[j], cMax[j] = %i, %i\n-" % (cMin[j], cMax[j]) )
 
 			for arm in armatures:
 				self.addArmature(arm, collapseTransform, nodeOrderDict, no)
@@ -854,9 +873,7 @@ class BlenderShape(DtsShape):
 
 			# add in specified order?
 			if nodeOrderDict != None:
-				print "Adding nodes in order..."
 				# add children
-				#print "nodeOrderDict.keys()=\n", nodeOrderDict.keys()
 				for nname in nodeOrderList:
 					# see if the curent node is one of our children
 					for bChild in bone.children:
@@ -881,7 +898,6 @@ class BlenderShape(DtsShape):
 					self.addBones(armData.bones[nname], parentId, arm, armData, nodeOrderDict, nodeOrderList)
 
 			else:
-				print "NOT Adding nodes in order..."
 				for bChild in bone.children:
 					self.addBones(bChild, parentId, arm, armData)
 			
