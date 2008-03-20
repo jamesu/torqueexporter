@@ -62,7 +62,7 @@ Version = "0.96 Beta 2"
 Prefs = None
 Prefs_keyname = ""
 export_tree = None
-Debug = False
+Debug = True
 Profiling = False
 textDocName = "TorqueExporter_SCONF"
 pathSeperator = "/"
@@ -948,7 +948,7 @@ class SceneTree:
 				# Oh well, we tried to help :-)  Write an error message to the log.
 				Torque_Util.dump_writeln("  Error: No Shape Marker found!  See the readme.html file.")
 			
-			return True
+		return True
 
 	def getChild(self, name):
 		for c in self.children:
@@ -1093,10 +1093,9 @@ class ShapeTree(SceneTree):
 						meshDetails.append(meshList)
 					
 					# Now we can add it in order
-					for arm in armatures:
-						self.Shape.addArmature(arm, Prefs['CollapseRootTransform'])
-						progressBar.update()
-						
+					self.Shape.addAllArmatures(armatures, Prefs['CollapseRootTransform'])
+					progressBar.update()
+
 					for n in nodes:
 						self.Shape.addNode(n)
 						progressBar.update()
