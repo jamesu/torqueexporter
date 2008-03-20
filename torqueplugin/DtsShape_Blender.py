@@ -363,7 +363,6 @@ class BlenderShape(DtsShape):
 			# Check for an armature parent
 			try:
 				if o.parentType == Blender.Object.ParentTypes['ARMATURE']:
-				#if o.getParent().getType() == 'Armature':
 					hasArmatureDeform = True
 			except: pass
 			# do we even have any modifiers?  If not, we can skip copying the display data.
