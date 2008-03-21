@@ -58,7 +58,7 @@ except:
   Blender Dts Classes for Python
 '''
 
-Version = "0.96 Beta 2"
+Version = "0.96 Beta 3"
 Prefs = None
 Prefs_keyname = ""
 export_tree = None
@@ -5332,8 +5332,9 @@ def initGui():
 	guiSequencesTabBar.addControl(guiSeqActButton)
 	guiSequencesTabBar.addControl(guiSequenceIFLButton)
 	guiSequencesTabBar.addControl(guiSequenceVisibilityButton)
-	guiSequencesTabBar.addControl(guiSequenceUVButton)
-	guiSequencesTabBar.addControl(guiSequenceMorphButton)
+	# Joe - uncomment these lines as these features are added.
+	#guiSequencesTabBar.addControl(guiSequenceUVButton)
+	#guiSequencesTabBar.addControl(guiSequenceMorphButton)
 
 
 	guiSeqCommonSubtab.borderColor = [0,0,0,0]
