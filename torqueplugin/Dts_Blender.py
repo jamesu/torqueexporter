@@ -1016,11 +1016,11 @@ class ShapeTree(SceneTree):
 		elif (tname[0:3].upper() == "COL") or (tname[0:9].upper() == "COLLISION"):
 			self.collisionMeshes.append(obj)
 			if tname[0:9].upper() != "COLLISION":
-				Torque_Util.dump_writeln("Warning: 'COL' designation for collision node deprecated, use 'COLLISION' instead.")
+				Torque_Util.dump_writeln("Warning: 'COL' designation for collision marker is deprecated, use 'COLLISION' instead.")
 		elif (tname[0:3].upper() == "LOS") or (tname[0:12].upper() == "LOSCOLLISION"):
 			self.losCollisionMeshes.append(obj)
 			if tname[0:12].upper() != "LOSCOLLISION":
-				Torque_Util.dump_writeln("Warning: 'LOS' designation for los collision node deprecated, use 'LOSCOLLISION' instead.")
+				Torque_Util.dump_writeln("Warning: 'LOS' designation for los collision marker is deprecated, use 'LOSCOLLISION' instead.")
 		else:
 			# Enforce proper organization
 			Torque_Util.dump_writeln("     Warning: Could not accept child %s on shape %s" % (obj.getName(),self.obj.getName()))
@@ -1147,6 +1147,7 @@ class ShapeTree(SceneTree):
 					if (armOb.getType() != 'Armature'): continue
 					if armOb.getData().restPosition:
 						Blender.Draw.PupMenu("Warning%t|One or more of your armatures is locked into rest position. This will cause problems with exported animations.")
+						Torque_Util.dump_writeln("Warning: One or more of your armatures is locked into rest position.\n This will cause problems with exported animations.")
 						break
 
 				# Process sequences
@@ -1169,7 +1170,7 @@ class ShapeTree(SceneTree):
 						except: action = None
 						sequence = self.Shape.addSequence(seqName, context, seqKey, scene, action)
 						if sequence == None:
-							Torque_Util.dump_writeln("Warning : Couldn't add action '%s' to shape!" % seqName)
+							Torque_Util.dump_writeln("Warning : Couldn't add sequence '%s' to shape!" % seqName)
 							progressBar.update()
 							progressBar.update()
 							progressBar.update()
