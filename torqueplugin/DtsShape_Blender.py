@@ -239,6 +239,9 @@ class BlenderShape(DtsShape):
 
 		if self.subshapes[0].numObjects != numAddedMeshes:
 			# The following condition should NEVER happen
+			# Actually, this can happen if the detail number for
+			# the autobillboard LOD is set to a value higher than
+			# the lowest regular detail level. - Joe G.
 			if self.subshapes[0].numObjects < numAddedMeshes:
 				print "PANIC!! PANIC!! RUN!!!"
 				return False
@@ -1447,9 +1450,6 @@ class BlenderShape(DtsShape):
 		# if nothing was actually animated abandon exporting the action.
 		if not (sequence.has_loc or sequence.has_rot or sequence.has_scale):
 			Torque_Util.dump_writeln("Warning: Action has no keyframes, aborting export for this animation.")
-			#del sequence.frames
-			#del sequence
-			#return None
 			return sequence, False
 
 		# set the aligned scale flag if we have scale.
@@ -1662,7 +1662,7 @@ class BlenderShape(DtsShape):
 				IPOCurve = bIpo[IPOCurveConst]
 				if IPOCurve == None: raise TypeError
 			except: 
-				Torque_Util.dump_writeln("Error: Could not get animation curve for visibility sequence: %s " % sequence.name)
+				Torque_Util.dump_writeln("Error: Could not get animation curve for visibility animation: %s " % sequence.name)
 				continue
 
 			sequence.matters_vis[i] = True
