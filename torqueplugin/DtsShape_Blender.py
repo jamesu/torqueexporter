@@ -628,17 +628,17 @@ class BlenderShape(DtsShape):
 	# within a passed-in ordered list.
 	def getMinMax(self, rootBone, nodeOrder, nodeOrderDict):
 		# find the current node in our ordered list
-		pos = nodeOrderDict[rootBone.name]
+		try: pos = nodeOrderDict[rootBone.name]
+		except:
+			return None, None
 		minPos, maxPos = pos, pos
-		#minPos = 99999		
-		#if pos > maxPos: maxPos = pos
-		#if pos < minPos: minPos = pos		
 		cMin = []
 		cMax = []
 		nnames = []
 		for child in rootBone.children:
 			nnames.append(child.name)
 			start, end = self.getMinMax(child, nodeOrder, nodeOrderDict)
+			if start == None and end == None: continue
 			if end > maxPos: maxPos = end
 			if start < minPos: minPos = start
 			cMin.append(start)
@@ -682,8 +682,7 @@ class BlenderShape(DtsShape):
 			i = 0
 			for n in no:
 				nodeOrderDict[n] = i
-				i += 1
-			
+				i += 1			
 
 			boneTree = []
 							
@@ -705,7 +704,7 @@ class BlenderShape(DtsShape):
 				armData = arm.getData()
 				for bone in armData.bones.values():
 					if bone.parent != None:
-						if nodeOrderDict[bone.name] < nodeOrderDict[bone.parent.name]:
+						if bone.name in nodeOrderDict.keys() and nodeOrderDict[bone.name] < nodeOrderDict[bone.parent.name]:
 							Torque_Util.dump_writeln("-\nWarning: Invalid node order, child bone \'%s\' comes before" % bone.name)
 							Torque_Util.dump_writeln("  parent bone \'%s\' in the NodeOrder text buffer\n-" % bone.parent.name)
 			# Test Rule #2
@@ -715,10 +714,11 @@ class BlenderShape(DtsShape):
 				i = 0
 				armData = arm.getData()
 				for bone in armData.bones.values():				
-					if bone.parent == None:
-						cMin.append(99999) # "99999 nodes should be enough for anyone." - Oscar Wilde
-						cMax.append(0)
+					if bone.parent == None and bone.name in nodeOrderDict.keys():
 						start, end = self.getMinMax(bone, no, nodeOrderDict)
+						if start == None and end == None: continue
+						cMin.append(99999) # "99999 nodes should be enough for anyone." - Oscar Wilde
+						cMax.append(0)						
 						if end > cMax[i]: cMax[i] = end
 						if start < cMin[i]: cMin[i] = start
 						#print "start of",bone.name,"bones is",cMin[i],"with end at", cMax[i]
