@@ -232,7 +232,7 @@ class BlenderShape(DtsShape):
 		#detailName = "Detail-%d" % (self.numBaseDetails)
 		if LOS:
 			self.numLOSCollisionDetails += 1
-			detailName = "LOSCollision-%d" % (8+self.numLOSCollisionDetails)
+			detailName = "LOS-%d" % (self.numCollisionDetails+self.numLOSCollisionDetails)
 		else:
 			self.numCollisionDetails += 1
 			detailName = "Collision-%d" % (self.numCollisionDetails)
