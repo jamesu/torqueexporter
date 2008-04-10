@@ -1770,6 +1770,7 @@ class GeneralControlsClass:
 		Note: __del__ is not guaranteed to be called for objects that still
 		exist when the interpreter exits.
 		'''
+		# initialize GUI controls
 		del self.guiStripText
 		del self.guiTriMeshesButton
 		del self.guiTriListsButton
@@ -1796,6 +1797,7 @@ class GeneralControlsClass:
 		del self.guiCustomFilenameDefaults
 		del self.guiTGEAMaterial
 		del self.guiLogToOutputFolder
+
 
 	def refreshAll(self):
 		pass
@@ -1993,15 +1995,14 @@ class ArmatureControlsClass:
 		Note: __del__ is not guaranteed to be called for objects that still
 		exist when the interpreter exits.
 		'''
-		del self.guiBoneText		
+		del self.guiBoneText
+		del self.guiBoneList
 		del self.guiMatchText
 		del self.guiPatternText
 		del self.guiPatternOn
 		del self.guiPatternOff
-		del self.guiRefresh		
-		#for control in self.guiBoneList.controls: del control
-		#del self.guiBoneList.controls
-		del self.guiBoneList
+		del self.guiRefresh
+
 
 	
 	def refreshAll(self):
@@ -2235,7 +2236,9 @@ class SeqControlsClassBase:
 	def cleanup(self):
 		del self.guiSeqList
 		del self.guiSeqListTitle
-		# todo - add any additional cleanup code here
+		del self.guiSeqOptsContainerTitle
+		del self.guiSeqOptsContainer
+
 
 	## @brief Refreshes all controls on the panel w/ fresh data from blender and the prefs.
 	#  @note Most child classes should be able to inherit this method and use it as-is
@@ -2554,22 +2557,23 @@ class SeqCommonControlsClass(SeqControlsClassBase):
 	#  @note Calls base class cleanup method explicitly.
 	def cleanup(self):		
 		SeqControlsClassBase.cleanup(self)
-		del self.guiToggle 
-		del self.guiRefresh 
-		del self.guiSeqFramesLabel 
-		del self.guiSeqDuration 
-		del self.guiSeqDurationLock 
-		del self.guiSeqFPS 
-		del self.guiSeqFPSLock 
-		del self.guiPriority 
-		del self.guiTriggerTitle 
-		del self.guiTriggerMenu 
-		del self.guiTriggerState 
-		del self.guiTriggerStateOn 
-		del self.guiTriggerFrame 
-		del self.guiTriggerAdd 
-		del self.guiTriggerDel 
+		del self.guiToggle
+		del self.guiRefresh
+		del self.guiSeqFramesLabel
+		del self.guiSeqDuration
+		del self.guiSeqDurationLock
+		del self.guiSeqFPS
+		del self.guiSeqFPSLock
+		del self.guiPriority
+		del self.guiTriggerTitle
+		del self.guiTriggerMenu
+		del self.guiTriggerState
+		del self.guiTriggerStateOn
+		del self.guiTriggerFrame
+		del self.guiTriggerAdd
+		del self.guiTriggerDel
 		del self.guiSeqGraph
+
 
 		
 	#######################################
@@ -3126,19 +3130,20 @@ class ActionControlsClass(SeqControlsClassBase):
 	#  @note Calls base class cleanup method explicitly.
 	def cleanup(self):
 		SeqControlsClassBase.cleanup(self)
-		del self.guiToggle 
-		del self.guiRefresh 
-		del self.guiStartFrame 
-		del self.guiEndFrame 
-		del self.guiAutoFrames 
-		del self.guiAutoSamples 
-		del self.guiFrameSamples 
-		del self.guiGroundFrameSamples 
-		del self.guiBlendControlsBox 
-		del self.guiBlendSequence 
-		del self.guiRefPoseTitle 
-		del self.guiRefPoseMenu 
-		del self.guiRefPoseFrame 
+		del self.guiToggle
+		del self.guiRefresh
+		del self.guiStartFrame
+		del self.guiEndFrame
+		del self.guiAutoFrames
+		del self.guiAutoSamples
+		del self.guiFrameSamples
+		del self.guiGroundFrameSamples
+		del self.guiBlendControlsBox
+		del self.guiBlendSequence
+		del self.guiRefPoseTitle
+		del self.guiRefPoseMenu
+		del self.guiRefPoseFrame
+ 
 
 
 	#######################################
@@ -3579,7 +3584,6 @@ class UserCreatedSeqControlsClassBase(SeqControlsClassBase):
 	#  @note Child classes should explicitly call this method at the end of their own cleanup method.
 	def cleanup(self):
 		SeqControlsClassBase.cleanup(self)
-		# todo - add any additional cleanup code here
 		del self.guiSeqName
 		del self.guiSeqAdd
 		del self.guiSeqDel
@@ -3587,6 +3591,7 @@ class UserCreatedSeqControlsClassBase(SeqControlsClassBase):
 		del self.guiSeqAddToExistingTxt
 		del self.guiSeqExistingSequences
 		del self.guiSeqAddToExisting
+
 
 
 	#######################################
@@ -5385,13 +5390,15 @@ def exit_callback():
 	ActionControls.clearSequenceList()
 	ArmatureControls.clearBoneGrid()
 	# todo - clear lists on other panels before cleaning up.	
-	IFLControls.cleanup()
-	ActionControls.cleanup()
-	VisControls.cleanup()
-	MaterialControls.cleanup()
-	ArmatureControls.cleanup()
-	GeneralControls.cleanup()
 	AboutControls.cleanup()
+	GeneralControls.cleanup()
+	ArmatureControls.cleanup()
+	ActionControls.cleanup()
+	IFLControls.cleanup()	
+	VisControls.cleanup()
+	MaterialControls.cleanup()	
+	
+	
 	savePrefs()
 
 '''
