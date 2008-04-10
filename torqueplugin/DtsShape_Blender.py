@@ -76,7 +76,6 @@ def getCMapSupports(curveMap):
 # gets the highest frame in an action
 def getHighestActFrame(act):
 	actFrames = act.getFrameNumbers()
-	print actFrames
 	highest = 0
 	for fr in actFrames:
 		if fr > highest:
