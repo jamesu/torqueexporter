@@ -73,32 +73,15 @@ def getCMapSupports(curveMap):
 	except KeyError: has_scale = False
 	return has_loc,has_rot,has_scale
 	
-# Tells us the maximum frame count in a set of ipo's
-def getNumFrames(ipos, useKey = False):
-	numFrameSamples = 0
-	if not useKey:
-		for i in ipos:
-			if i != 0:
-				# This basically gets the furthest frame in blender this sequence has a keyframe at
-				# *** Blender Bug *** Sometimes Blender crashes under windows when accessing an ipo 
-				# ** with an "Inf" (influence) key associated in 2.41.
-				# ** Blender is returning a pointer into nowhere land and there's nothing we can do to 
-				# ** detect it until it's too late to avoid crashing the whole app >:( - Joe G.
-				try:
-					if i.getCurveBeztriple(0, i.getNBezPoints(0)-1)[3] > numFrameSamples:
-						#numFrameSamples = int(i.getRctf()[1])
-						numFrameSamples = int(i.getCurveBeztriple(0, i.getNBezPoints(0)-1)[3])
-				except:
-					# no IPO curve...
-					continue
-	else:
-		for i in ipos:
-			if i != 0:
-				# This simply counts the keyframes assigned by users
-				if i.getNBezPoints(0) > numFrameSamples:
-					numFrameSamples = i.getNBezPoints(0)
-	return numFrameSamples
-
+# gets the highest frame in an action
+def getHighestActFrame(act):
+	actFrames = act.getFrameNumbers()
+	print actFrames
+	highest = 0
+	for fr in actFrames:
+		if fr > highest:
+			highest = int(fr)
+	return highest
 
 '''
 Shape Class (Blender Export)
