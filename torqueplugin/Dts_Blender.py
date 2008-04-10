@@ -254,8 +254,8 @@ def getSequenceKey(value):
 		Prefs['Sequences'][value]['Action']['Enabled'] = True
 
 		try:
-			action = Blender.Armature.NLA.GetActions()[value]
-			maxNumFrames = DtsShape_Blender.getNumFrames(action.getAllChannelIpos().values(), False)
+			action = Blender.Armature.NLA.GetActions()[value]			
+			maxNumFrames = DtsShape_Blender.getHighestActFrame(action)
 		except KeyError:
 			Prefs['Sequences'][value]['Action']['Enabled'] = False
 			maxNumFrames = 0
@@ -469,7 +469,7 @@ def importOldVisAnim(seqName, seqPrefs):
 			seqPrefs['Vis']['StartFrame'] = seqPrefs['MaterialIpoStartFrame']
 			try:
 				action = Blender.Armature.NLA.GetActions()[seqName]
-				seqPrefs['Vis']['EndFrame'] = (seqPrefs['Vis']['StartFrame'] + DtsShape_Blender.getNumFrames(action.getAllChannelIpos().values(), False))-1
+				seqPrefs['Vis']['EndFrame'] = (seqPrefs['Vis']['StartFrame'] + DtsShape_Blender.getHighestActFrame(action))-1
 			except:
 				seqPrefs['Vis']['EndFrame'] = seqPrefs['Vis']['StartFrame']
 			del seqPrefs['MaterialIpoStartFrame']
@@ -555,8 +555,8 @@ def updateOldPrefs():
 		try: x = actKey['EndFrame']
 		except:
 			try:
-				action = Blender.Armature.NLA.GetActions()[seqName]
-				actKey['EndFrame'] = DtsShape_Blender.getNumFrames(action.getAllChannelIpos().values(), False)
+				action = Blender.Armature.NLA.GetActions()[seqName]				
+				actKey['EndFrame'] = DtsShape_Blender.getHighestActFrame(action)				
 			except:
 				actKey['EndFrame'] = 0
 		try: x = actKey['AutoFrames']
@@ -607,8 +607,8 @@ def updateOldPrefs():
 		except:
 			maxNumFrames = 0
 			try:
-				action = Blender.Armature.NLA.GetActions()[seqName]
-				maxNumFrames = DtsShape_Blender.getNumFrames(action.getAllChannelIpos().values(), False)
+				action = Blender.Armature.NLA.GetActions()[seqName]				
+				maxNumFrames = DtsShape_Blender.getHighestActFrame(action)
 			except KeyError:
 				maxNumFrames = 0			
 			try: seq['Duration'] = float(maxNumFrames) / float(seq['FPS'])
@@ -675,8 +675,8 @@ def refreshActionData():
 		seqPrefs = getSequenceKey(seqName)
 		maxFrames = 1
 		try:
-			a = Blender.Armature.NLA.GetActions()[seqName]
-			maxFrames = DtsShape_Blender.getNumFrames(a.getAllChannelIpos().values(), False)
+			action = Blender.Armature.NLA.GetActions()[seqName]			
+			maxFrames = DtsShape_Blender.getHighestActFrame(action)
 		except: pass # this seqName no longer exists(!?)
 
 		# update affected preferences
@@ -3172,8 +3172,8 @@ class ActionControlsClass(SeqControlsClassBase):
 			self.guiRefPoseFrame.visible = True
 			# reset max to raw number of frames in ref pose action
 			try:
-				action = Blender.Armature.NLA.GetActions()[seqPrefs['Action']['BlendRefPoseAction']]
-				maxNumFrames = DtsShape_Blender.getNumFrames(action.getAllChannelIpos().values(), False)
+				action = Blender.Armature.NLA.GetActions()[seqPrefs['Action']['BlendRefPoseAction']]				
+				maxNumFrames = DtsShape_Blender.getHighestActFrame(action)
 			except: maxNumFrames = 1
 			self.guiRefPoseFrame.max = maxNumFrames
 		else:
@@ -3191,7 +3191,7 @@ class ActionControlsClass(SeqControlsClassBase):
 		# reset max to raw number of frames in ref pose action
 		try:
 			action = Blender.Armature.NLA.GetActions()[seqPrefs['Action']['BlendRefPoseAction']]
-			maxNumFrames = DtsShape_Blender.getNumFrames(action.getAllChannelIpos().values(), False)
+			maxNumFrames = DtsShape_Blender.getHighestActFrame(action)
 		except: maxNumFrames = 1
 		self.guiRefPoseFrame.max = maxNumFrames
 		self.guiRefPoseFrame.value = seqPrefs['Action']['BlendRefPoseFrame']					
@@ -3290,8 +3290,8 @@ class ActionControlsClass(SeqControlsClassBase):
 		self.guiRefPoseFrame.min = 1
 		# reset max to raw number of frames in ref pose action
 		try:
-			action = Blender.Armature.NLA.GetActions()[seqPrefs['Action']['BlendRefPoseAction']]
-			maxNumFrames = DtsShape_Blender.getNumFrames(action.getAllChannelIpos().values(), False)
+			action = Blender.Armature.NLA.GetActions()[seqPrefs['Action']['BlendRefPoseAction']]			
+			maxNumFrames = DtsShape_Blender.getHighestActFrame(action)
 		except: maxNumFrames = 1
 		self.guiRefPoseFrame.max = maxNumFrames
 		self.guiRefPoseFrame.value = seqPrefs['Action']['BlendRefPoseFrame']
