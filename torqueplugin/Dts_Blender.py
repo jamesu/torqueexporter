@@ -475,7 +475,6 @@ def importOldVisAnim(seqName, seqPrefs):
 			del seqPrefs['MaterialIpoStartFrame']
 		try: x = seqPrefs['Vis']['Tracks']
 		except:
-			# todo - set up tracks automatically for old style vis sequences.
 			seqPrefs['Vis']['Tracks'] = {}
 			if not seqPrefs['Vis']['Enabled']: return
 			
@@ -5389,7 +5388,6 @@ def exit_callback():
 	Torque_Util.dump_setout("stdout")
 	ActionControls.clearSequenceList()
 	ArmatureControls.clearBoneGrid()
-	# todo - clear lists on other panels before cleaning up.	
 	AboutControls.cleanup()
 	GeneralControls.cleanup()
 	ArmatureControls.cleanup()
