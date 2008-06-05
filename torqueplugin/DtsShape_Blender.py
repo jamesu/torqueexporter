@@ -113,7 +113,7 @@ class BlenderShape(DtsShape):
 		
 		# this object is the interface through which we interact with the
 		# pose module and the blender armature system.
-		self.poseUtil = DtsPoseUtil.DtsPoseUtilClass()
+		self.poseUtil = DtsPoseUtil.DtsPoseUtilClass(prefs)
 		
 		gc.enable()
 		
@@ -588,13 +588,15 @@ class BlenderShape(DtsShape):
 
 	# Creates a matrix that transforms to shape space
 	def collapseBlenderTransform(self, object):
-		# In blender 2.33 and before, getMatrix() returned the worldspace matrix.
-		# In blender 2.33+, it seems to return the local matrix
-		if Blender.Get('version') > 233:
-			cmat = self.toTorqueUtilMatrix(object.getMatrix("worldspace"))
-		else:
-			cmat = self.toTorqueUtilMatrix(object.getMatrix())
-		return cmat
+		cmat = self.toTorqueUtilMatrix(object.getMatrix("worldspace"))
+
+		# add on scaling factor
+		exportScale = self.preferences['ExportScale']
+		scaleMat = MatrixF([exportScale, 0.0, 0.0, 0.0,
+				    0.0, exportScale, 0.0, 0.0,
+				    0.0, 0.0, exportScale, 0.0,
+				    0.0, 0.0, 0.0, exportScale])
+		return scaleMat * cmat
 		
 	# Creates a cumilative scaling ratio for an object
 	def collapseBlenderScale(self, object):
@@ -605,6 +607,10 @@ class BlenderShape(DtsShape):
 			nsize = parent.getSize()
 			csize[0],csize[1],csize[2] = csize[0]*nsize[0],csize[1]*nsize[1],csize[2]*nsize[2]
 			parent = parent.getParent()
+		exportScale = self.preferences['ExportScale']
+		print "exportScale = ", exportScale
+		# add on export scale factor
+		csize[0], csize[1], csize[2] = csize[0]*exportScale, csize[1]*exportScale, csize[2]*exportScale
 		return csize
 
 
@@ -890,9 +896,11 @@ class BlenderShape(DtsShape):
 
 
 	# Used to add a camera object as a node.
+	# Joe - disabled for now.
 	def addNode(self, object):
+		return
 		# Adds generic node with object's name
-		Torque_Util.dump_writeln("     Node[%s]: %s" % (object.getType(), obj.getName()))
+		Torque_Util.dump_writeln("     Node[%s]: %s" % (object.getType(), object.getName()))
 
 		# Get the camera's pos and rotation
 		matf = collapseBlenderTransform(object)
