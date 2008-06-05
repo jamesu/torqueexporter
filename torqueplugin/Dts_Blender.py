@@ -618,7 +618,7 @@ def updateOldPrefs():
 		except: seq['DurationLocked'] = False
 		try: x = seq['FPSLocked']
 		except: seq['FPSLocked'] = True
-
+		
 
 	# loop through all actions in the preferences and add the 'IFL' key to them with some reasonable default values.
 	for seqName in Prefs['Sequences'].keys():
@@ -641,6 +641,8 @@ def updateOldPrefs():
 		try: x = mat['IFLMaterial']
 		except KeyError: mat['IFLMaterial'] = False
 
+	try: x = Prefs['ExportScale']
+	except: Prefs['ExportScale'] = 1.0
 
 
 # Call this function when the number of frames in the sequence has changed, or may have changed.
@@ -1669,6 +1671,8 @@ class GeneralControlsClass:
 		self.guiStripMeshesButton = Common_Gui.ToggleButton("guiStripMeshesButton", "Triangle Strips", "Generate triangle strips for meshes", 8, self.handleEvent, self.resize)
 		self.guiMaxStripSizeSlider = Common_Gui.NumberSlider("guiMaxStripSizeSlider", "Strip Size ", "Maximum size of generated triangle strips", 9, self.handleEvent, self.resize)
 		# --
+		self.guiScale = Common_Gui.NumberPicker("guiScale", "Export Scale", "Multiply output scale by this number", 26, self.handleEvent, self.resize)
+		
 		self.guiClusterText = Common_Gui.SimpleText("guiClusterText", "Cluster Mesh", None, self.resize)
 		self.guiClusterWriteDepth = Common_Gui.ToggleButton("guiClusterWriteDepth", "Write Depth ", "Always Write the Depth on Cluster meshes", 10, self.handleEvent, self.resize)
 		self.guiClusterDepth = Common_Gui.NumberSlider("guiClusterDepth", "Depth", "Maximum depth Clusters meshes should be calculated to", 11, self.handleEvent, self.resize)
@@ -1702,6 +1706,9 @@ class GeneralControlsClass:
 		else: self.guiStripMeshesButton.state = False
 		self.guiMaxStripSizeSlider.min, self.guiMaxStripSizeSlider.max = 3, 30
 		self.guiMaxStripSizeSlider.value = Prefs['MaxStripSize']
+		self.guiScale.value = Prefs['ExportScale']
+		self.guiScale.min = 0.001
+		self.guiScale.max = 1000000.0
 		self.guiClusterDepth.min, self.guiClusterDepth.max = 3, 30
 		self.guiClusterDepth.value = Prefs['ClusterDepth']
 		self.guiClusterWriteDepth.state = Prefs['AlwaysWriteDepth']
@@ -1741,6 +1748,7 @@ class GeneralControlsClass:
 		guiGeneralSubtab.addControl(self.guiTriListsButton)
 		guiGeneralSubtab.addControl(self.guiStripMeshesButton)	
 		guiGeneralSubtab.addControl(self.guiMaxStripSizeSlider)
+		guiGeneralSubtab.addControl(self.guiScale)
 		guiGeneralSubtab.addControl(self.guiClusterText)
 		guiGeneralSubtab.addControl(self.guiClusterDepth)
 		guiGeneralSubtab.addControl(self.guiClusterWriteDepth)
@@ -1775,6 +1783,7 @@ class GeneralControlsClass:
 		del self.guiTriListsButton
 		del self.guiStripMeshesButton
 		del self.guiMaxStripSizeSlider
+		del self.guiScale
 		# --
 		del self.guiClusterText
 		del self.guiClusterWriteDepth
@@ -1821,6 +1830,8 @@ class GeneralControlsClass:
 			self.guiTriMeshesButton.state = False
 		elif control.name == "guiMaxStripSizeSlider":
 			Prefs['MaxStripSize'] = control.value
+		elif control.name == "guiScale":
+			Prefs['ExportScale'] = control.value
 		elif control.name == "guiClusterWriteDepth":
 			Prefs['AlwaysWriteDepth'] = control.state
 		elif control.name == "guiClusterDepth":
@@ -1902,6 +1913,8 @@ class GeneralControlsClass:
 			control.x, control.y, control.width = 194,newheight-30-control.height, 90
 		elif control.name == "guiMaxStripSizeSlider":
 			control.x, control.y, control.width = 286,newheight-30-control.height, 180
+		elif control.name == "guiScale":
+			control.x, control.y, control.width = 10, newheight-70-control.height, 180
 		elif control.name == "guiClusterWriteDepth":
 			control.x, control.y, control.width = 10,newheight-80-control.height, 80
 		elif control.name == "guiClusterDepth":
