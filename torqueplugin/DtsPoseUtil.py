@@ -73,23 +73,26 @@ class DtsPoseUtilClass:
 	
 	
 	'''
-	def __init__(self):	
+	def __init__(self, prefs):	
 		gc.enable()
 		self.armBones = {}
 		self.armInfo = {}	
-		self.__populateData()
+		self.__populateData(prefs)
 	
-	def __populateData(self):
+	def __populateData(self, prefs):
 		# go through each armature object
 		for armOb in Blender.Object.Get():
 			if (armOb.getType() != 'Armature'): continue
 			# add a dictionary entry for the armature, and store all it's static data in a list
 			armDb = armOb.getData()
-			armMat = bMath.Matrix(armOb.getMatrix())
+			armMat = bMath.Matrix(armOb.getMatrix('worldspace'))
 			armRot = self.toTorqueQuat(armMat.rotationPart().toQuat().normalize())
 			armRotInv = armRot.inverse()
 			armLoc = self.toTorqueVec(armMat.translationPart())
 			armSize = self.toTorqueVec(armOb.getSize('worldspace'))
+			exportScale = prefs['ExportScale']
+			armSize[0], armSize[1], armSize[2] = armSize[0]*exportScale, armSize[1]*exportScale, armSize[2]*exportScale
+			armLoc[0], armLoc[1], armLoc[2] = armLoc[0]*exportScale, armLoc[1]*exportScale, armLoc[2]*exportScale
 			self.armInfo[armOb.name] = [ armOb, armDb, armRot, armRotInv, armLoc, armSize ]
 			self.armBones[armOb.name] = {}			
 
