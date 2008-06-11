@@ -1866,13 +1866,17 @@ class GeneralControlsClass:
 		elif control.name == "guiCustomFilename":
 			Prefs['exportBasename'] = basename(control.value)
 			Prefs['exportBasepath'] = basepath(control.value)
-			if guiGeneralSubtab.controls[18].value[len(guiGeneralSubtab.controls[18].value)-4:] != ".dts":
-				guiGeneralSubtab.controls[18].value += ".dts"
+			if self.guiCustomFilename.value[len(self.guiCustomFilename.value)-4:] != ".dts":
+				self.guiCustomFilename.value += ".dts"
 
 			if Prefs['LogToOutputFolder']:
 				Torque_Util.dump_setout( "%s%s%s.log" % (Prefs['exportBasepath'], pathSeperator, noext(Prefs['exportBasename'])) )
 		elif control.name == "guiCustomFilenameSelect":
-			Blender.Window.FileSelector (self.guiGeneralSelectorCallback, 'Select destination and filename')
+			if "\\" in Prefs['exportBasepath']:
+				pathSep = "\\"
+			else:
+				pathSep = "/"
+			Blender.Window.FileSelector (self.guiGeneralSelectorCallback, 'Select destination and filename', Prefs['exportBasepath'] + pathSep + Prefs['exportBasename'])
 		elif control.name == "guiCustomFilenameDefaults":
 			Prefs['exportBasename'] = basename(Blender.Get("filename"))
 			Prefs['exportBasepath'] = basepath(Blender.Get("filename"))		
@@ -1881,9 +1885,9 @@ class GeneralControlsClass:
 				pathSep = "\\"
 			else:
 				pathSep = "/"
-			guiGeneralSubtab.controls[18].value = Prefs['exportBasepath'] + pathSep + Prefs['exportBasename']
-			if guiGeneralSubtab.controls[18].value[len(guiGeneralSubtab.controls[18].value)-4:] != ".dts":
-				guiGeneralSubtab.controls[18].value += ".dts"
+			self.guiCustomFilename.value = Prefs['exportBasepath'] + pathSep + Prefs['exportBasename']
+			if self.guiCustomFilename.value[len(self.guiCustomFilename.value)-4:] != ".dts":
+				self.guiCustomFilename.value += ".dts"
 		elif control.name == "guiTGEAMaterial":
 			Prefs['TSEMaterial'] = control.state
 
@@ -1956,9 +1960,9 @@ class GeneralControlsClass:
 			pathSep = "/"
 			if "\\" in Prefs['exportBasepath']: pathSep = "\\"
 
-			guiGeneralSubtab.controls[18].value = Prefs['exportBasepath'] + pathSep + Prefs['exportBasename']
-			if guiGeneralSubtab.controls[18].value[len(guiGeneralSubtab.controls[18].value)-4:] != ".dts":
-				guiGeneralSubtab.controls[18].value += ".dts"
+			self.guiCustomFilename.value = Prefs['exportBasepath'] + pathSep + Prefs['exportBasename']
+			if self.guiCustomFilename.value[len(self.guiCustomFilename.value)-4:] != ".dts":
+				self.guiCustomFilename.value += ".dts"
 
 
 
