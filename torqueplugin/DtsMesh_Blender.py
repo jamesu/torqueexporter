@@ -48,9 +48,11 @@ class BlenderMesh(DtsMesh):
 		self.dVertList = [] 		# list containing lists of dts vertex indices, the outer list elements correspond to the bVertList element in the same position.
 		self.mainMaterial = None	# For determining material ipo track to use for ObjectState visibility animation
 		ignoreDblSided = False
-		self.weightDictionary = self.createWeightDictionary(msh);
+		self.weightDictionary, hasWeights = self.createWeightDictionary(msh);
 		
-		
+		# Warn if we've got a skinned mesh with no vertex groups.
+		if isSkinned and not hasWeights:
+			Torque_Util.dump_writeln("Warning: Skinned mesh has no vertex groups. Mesh will not animate!")
 		
 		materialGroups = {}
 		
@@ -323,6 +325,7 @@ class BlenderMesh(DtsMesh):
 	def createWeightDictionary(self, mesh):
 		weightDictionary = {}
 		boneList = []
+		hasWeights = False
 		for arm in Blender.Armature.Get().values():
 			for b in arm.bones.values():
 				boneList.append(b.name)
@@ -337,10 +340,11 @@ class BlenderMesh(DtsMesh):
 				for vert in mesh.getVertsFromGroup(group, 1):
 					index, weight = vert[0], vert[1]
 					weightDictionary[index].append((group, weight))
+					hasWeights = True
 			except AttributeError:
 				continue
 				
-		return weightDictionary
+		return weightDictionary, hasWeights
 		
 	def appendVertex(self, shape, msh, rootBone, matrix, scaleFactor, face, faceIndex, useSticky, isCollision = False):
 		# Use Face coords if requested
