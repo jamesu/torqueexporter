@@ -39,13 +39,16 @@ from Blender import NMesh
 #-------------------------------------------------------------------------------------------------
 
 class BlenderMesh(DtsMesh):
-	def __init__(self, shape, msh,  rootBone, scaleFactor, matrix, isCollision=False, useLists = False):
+	def __init__(self, shape, msh,  rootBone, scaleFactor, matrix, isCollision=False, useLists = False):		
 		DtsMesh.__init__(self)
+		# store off the transpose of the inverse of the object's 3x3 submatrix so we don't have to recalculate it every time we need it.
+		self.tpinvmat = Torque_Math.Matrix3x3(matrix).transpose().inverse()
 		self.bVertList = [] 		# list of blender mesh vertex indices ordered by value, for fast searching
 		self.dVertList = [] 		# list containing lists of dts vertex indices, the outer list elements correspond to the bVertList element in the same position.
 		self.mainMaterial = None	# For determining material ipo track to use for ObjectState visibility animation
 		ignoreDblSided = False
 		self.weightDictionary = self.createWeightDictionary(msh);
+		
 		
 		
 		materialGroups = {}
@@ -356,10 +359,10 @@ class BlenderMesh(DtsMesh):
 		vert = msh.verts[face.v[faceIndex].index]
 		if face.smooth:
 			#normal = matrix.passVector(Vector(vert.no[0], vert.no[1], vert.no[2]))
-			normal = Torque_Math.Matrix3x3(matrix).transpose().inverse().passVector(Vector(vert.no[0], vert.no[1], vert.no[2]))
+			normal = self.tpinvmat.passVector([vert.no[0], vert.no[1], vert.no[2]])
 		else:
 			#normal = matrix.passVector(Vector(face.no[0], face.no[1], face.no[2]))
-			normal = Torque_Math.Matrix3x3(matrix).transpose().inverse().passVector(Vector(face.no[0], face.no[1], face.no[2]))
+			normal = self.tpinvmat.passVector([face.no[0], face.no[1], face.no[2]])
 		normal.normalize()
 		
 		# See if the vertex/texture/normal combo already exists..
@@ -384,7 +387,7 @@ class BlenderMesh(DtsMesh):
 			Texture needs to be flipped to work in torque
 		'''
 		
-		nvert = matrix.passPoint(Vector(vert.co[0], vert.co[1], vert.co[2])) * scaleFactor
+		nvert = matrix.passPoint([vert.co[0], vert.co[1], vert.co[2]]) * scaleFactor
 		vindex = len(self.verts)
 		self.verts.append(nvert)
 		self.tverts.append(texture)		
