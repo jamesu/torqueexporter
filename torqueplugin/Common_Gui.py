@@ -574,6 +574,25 @@ class SimpleText(BasicControl):
 		BGL.glEnd()
 		BGL.glRasterPos2i(offset[0]+self.x, offset[1]+self.y)
 		self.data = Draw.Text(self.label, self.size)
+
+class SizeLimitedText(SimpleText):
+	def __init__(self, name=None, label="", maxChars=255, callback=None, resize_callback=None):
+		global curTheme
+		SimpleText.__init__(self, name, label, callback, resize_callback)
+		self.label = label
+		if len(label) > maxChars:		
+			self.drawlabel = label[0:maxChars-3] + "..."
+		else:
+			self.drawlabel = label
+
+	def onDraw(self, offset):
+		# Evil hack: pretend we are drawing quad's, setting the color there
+		BGL.glBegin(BGL.GL_QUADS)
+		BGL.glColor4f(self.color[0], self.color[1], self.color[2], self.color[3])
+		BGL.glEnd()
+		BGL.glRasterPos2i(offset[0]+self.x, offset[1]+self.y)
+		self.data = Draw.Text(self.drawlabel, self.size)
+
 		
 class MultilineText(SimpleText):
 	def onDraw(self, offset):
