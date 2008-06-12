@@ -39,10 +39,11 @@ from Blender import NMesh
 #-------------------------------------------------------------------------------------------------
 
 class BlenderMesh(DtsMesh):
-	def __init__(self, shape, msh,  rootBone, scaleFactor, matrix, isCollision=False, useLists = False):		
+	def __init__(self, shape, msh,  rootBone, scaleFactor, matrix, isSkinned=False, isCollision=False, useLists = False):		
 		DtsMesh.__init__(self)
 		# store off the transpose of the inverse of the object's 3x3 submatrix so we don't have to recalculate it every time we need it.
 		self.tpinvmat = Torque_Math.Matrix3x3(matrix).transpose().inverse()
+		self.isSkinned = isSkinned
 		self.bVertList = [] 		# list of blender mesh vertex indices ordered by value, for fast searching
 		self.dVertList = [] 		# list containing lists of dts vertex indices, the outer list elements correspond to the bVertList element in the same position.
 		self.mainMaterial = None	# For determining material ipo track to use for ObjectState visibility animation
@@ -222,6 +223,7 @@ class BlenderMesh(DtsMesh):
 
 
 		
+		'''
 		# Determine shape type based on vertex weights
 		if len(self.bindex) <= 1:
 			self.mtype = self.T_Standard
@@ -232,6 +234,10 @@ class BlenderMesh(DtsMesh):
 					if v != self.bindex[0]:
 						self.mtype = self.T_Skin
 						break
+		'''
+		self.mtype = self.T_Standard
+		if isSkinned:
+			self.mtype = self.T_Skin
 
 		# vertsPerFrame is related to the vertex animation code
 		self.vertsPerFrame = len(self.verts) # set verts in a frame
@@ -412,33 +418,42 @@ class BlenderMesh(DtsMesh):
 		self.enormals.append(self.encodeNormal(normal))
 
 		# Add bone weights
-		bone, weight = -1, 1.0
-		influences = []
-		weights = self.weightDictionary[vert.index]
-		for weight in weights:
-			# group name and weight
-			influences.append([weight[0], weight[1]])
+		if self.isSkinned:
+			bone, weight = -1, 1.0
+			influences = []
+			weights = self.weightDictionary[vert.index]
+			for weight in weights:
+				# group name and weight
+				influences.append([weight[0], weight[1]])
 
-		if len(influences) > 0:
-			# Total weights should add up to one, so we need
-			# to normalize the weights assigned in blender.
-			total = 0
-			for inf in influences:
-				total += inf[1]
+			total = 0.0
+			if len(influences) > 0:
+				# Total weights should add up to one, so we need
+				# to normalize the weights assigned in blender.
+				for inf in influences:
+					total += inf[1]
 
-			for inf in influences:
-				# Add the vertex influence. Any number can be added,
-				# but they must be ordered by vertex.
+				for inf in influences:
+					# Add the vertex influence. Any number can be added,
+					# but they must be ordered by vertex.
+					self.vindex.append(vindex)
+					bone, weight = shape.getNodeIndex(inf[0]), inf[1]
+					if bone >= 0:
+						self.bindex.append(self.getVertexBone(bone))
+					else:
+						self.bindex.append(self.getVertexBone(rootBone))
+					# getVertexBone() also adds the nodeTransform(matrixF),
+					# and node Index (if not already on list)
+					if total == 0: self.vweight.append(0.0)
+					else: self.vweight.append(weight / total)
+
+			# prevent unweighted verts from flying off in random directions
+			if len(influences) == 0 or total <= 0.000001:
 				self.vindex.append(vindex)
-				bone, weight = shape.getNodeIndex(inf[0]), inf[1]
-				if bone >= 0:
-					self.bindex.append(self.getVertexBone(bone))
-				else:
-					self.bindex.append(self.getVertexBone(rootBone))
-				# getVertexBone() also adds the nodeTransform(matrixF),
-				# and node Index (if not already on list)
-				if total == 0: self.vweight.append(0.0)
-				else: self.vweight.append(weight / total)
+				self.bindex.append(self.getVertexBone(rootBone))
+				self.vweight.append(1.0)
+			
+		
 		return vindex
 		
 	def setBlenderMeshFlags(self, names):
