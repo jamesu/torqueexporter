@@ -727,7 +727,7 @@ def importMaterialList():
 
 					# Otherwise we do have an image assigned to the face, so add it to the imageList.
 					else:
-						imageName = stripImageExtension(face.image.getName())
+						imageName = stripImageExtension(face.image.getName(), face.image.getFilename())
 						if not (imageName in imageList):
 							imageList.append(imageName)
 
@@ -4992,7 +4992,7 @@ class MaterialControlsClass:
 	def createMaterialListItem(self, matName, startEvent):
 		guiContainer = Common_Gui.BasicContainer("", None, None)
 		guiContainer.fade_mode = 0  # flat color
-		guiName = Common_Gui.SimpleText("", matName, None, None)
+		guiName = Common_Gui.SizeLimitedText("", matName, 21, None, None)
 		guiName.x, guiName.y = 5, 5
 		guiContainer.addControl(guiName)
 		return guiContainer
@@ -5173,9 +5173,9 @@ class MaterialControlsClass:
 		self.guiMaterialReflectanceMapMenu.items = []
 		# populate the texture pulldowns
 		for img in Blender.Image.Get():
-			self.guiMaterialDetailMapMenu.items.append(stripImageExtension(img.getName()))
-			self.guiMaterialBumpMapMenu.items.append(stripImageExtension(img.getName()))
-			self.guiMaterialReflectanceMapMenu.items.append(stripImageExtension(img.getName()))
+			self.guiMaterialDetailMapMenu.items.append(stripImageExtension(img.getName(), img.getFilename()))
+			self.guiMaterialBumpMapMenu.items.append(stripImageExtension(img.getName(), img.getFilename()))
+			self.guiMaterialReflectanceMapMenu.items.append(stripImageExtension(img.getName(), img.getFilename()))
 
 
 		# autoimport blender materials
