@@ -69,7 +69,7 @@ class BlenderMesh(DtsMesh):
 				continue # skip to next face
 			#print "DBG: face idx=%d" % face.materialIndex
 			imageName = None
-			try: imageName = stripImageExtension(face.image.getName())
+			try: imageName = stripImageExtension(face.image.getName(), face.image.getFilename())
 			#except AttributeError:
 			except (ValueError, AttributeError):
 				# there isn't an image assigned to the face...
@@ -135,7 +135,7 @@ class BlenderMesh(DtsMesh):
 				try: x = face.image
 				except: hasImage = False
 				if hasImage and face.image != None:
-					imageName = stripImageExtension(face.image.getName())
+					imageName = stripImageExtension(face.image.getName(), face.image.getFilename())
 					matIndex = shape.materials.findMaterial(imageName)
 					if matIndex == None: matIndex = shape.addMaterial(imageName)
 					if matIndex == None: matIndex = pr.NoMaterial
