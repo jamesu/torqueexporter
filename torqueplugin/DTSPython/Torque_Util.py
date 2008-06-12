@@ -289,8 +289,17 @@ def overlapSet(arr1, arr2):
 			arr1[i] = True
 	return arr1
 	
+
+# strips the path portion of a file name
+def stripPath(filepath):
+	if "\\" in filepath:
+		words = string.split(filepath, "\\")
+	else:
+		words = string.split(filepath, "/")
+	return words[-1]
+
 # Strip image names of trailing extension
-def stripImageExtension(filename):
+def stripImageExtension(imagename, filename=""):
 	imageExts = ['jpg', 'jpeg', 'gif', 'png', 
 		     'tif', 'tiff', 'mpg', 'mpeg',
 		     'tga', 'pcx', 'xcf', 'pix',
@@ -298,7 +307,12 @@ def stripImageExtension(filename):
 		     'ico', 'pgm', 'psd', 'ps',
 		     'ppm', 'bmp', 'pcc', 'xbm',
 		     'xpm', 'xwd', 'bitmap']
-	temp = string.split(filename,".")	
+	temp = ""
+	if filename != "": filename = stripPath(filename)
+	if len(imagename) < len(filename) and imagename == filename[0:len(imagename)]:
+		temp = string.split(filename,".")
+	else:
+		temp = string.split(imagename,".")
 	if len(temp)==1: return temp[0]
 	retVal = ""
 	for i in range(0, len(temp)):
