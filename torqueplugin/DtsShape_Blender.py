@@ -194,7 +194,7 @@ class BlenderShape(DtsShape):
 			mat = self.collapseBlenderTransform(o)
 			
 			# Import Mesh, process flags
-			tmsh = BlenderMesh(self, mesh_data, 0, 1.0, mat, True)
+			tmsh = BlenderMesh(self, mesh_data, 0, 1.0, mat, False, True)
 			
 			# Increment polycount metric
 			polyCount += tmsh.getPolyCount()
@@ -378,10 +378,21 @@ class BlenderShape(DtsShape):
 			# Get Object's Matrix
 			mat = self.collapseBlenderTransform(o)
 			
+			# Do we have a skinned mesh?
+			isSkinned = False
+			if o.parentType == Blender.Object.ParentTypes.ARMATURE:
+				isSkinned = True
+			else:
+				for mod in o.modifiers:
+					if mod.type == Blender.Modifier.Types.ARMATURE:
+						isSkinned = True
+						break
+					
+			
 			# Import Mesh, process flags
 			try: x = self.preferences['PrimType']
 			except KeyError: self.preferences['PrimType'] = "Tris"
-			tmsh = BlenderMesh( self, mesh_data, 0, 1.0, mat, False, (self.preferences['PrimType'] == "TriLists" or self.preferences['PrimType'] == "TriStrips") )
+			tmsh = BlenderMesh( self, mesh_data, 0, 1.0, mat, isSkinned, False, (self.preferences['PrimType'] == "TriLists" or self.preferences['PrimType'] == "TriStrips") )
 			if len(names) > 1: tmsh.setBlenderMeshFlags(names[1:])
 			
 			# If we ended up being a Sorted Mesh, sort the faces
