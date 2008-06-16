@@ -171,9 +171,10 @@ class MaterialList:
 		# Names
 		fs.write(struct.pack('<i', len(self.materials))) #S32
 		for mat in self.materials:			
-			fs.write(struct.pack('<b', len(mat.name))) # Length of Name
-			st = array('c')
-			st.fromstring(mat.name)
+			mn = mat.name.decode("mbcs").encode("utf_8")
+			fs.write(struct.pack('<b', len(mn))) # Length of Name
+			st = array('B')
+			st.fromstring(mn)
 			st.tofile(fs)
 		for mat in self.materials:			
 			fs.write(struct.pack('I', mat.flags))			
