@@ -163,7 +163,7 @@ class MaterialList:
 			for mat in self.materials:
 				mat.reflection = struct.unpack('<f', fs.read(calcsize('<f')))[0] # F32
 		else:
-			Torque_Util.dump_writeln("Error! Version mismatch (%d, should be %d)" % (ver, self.version))
+			Torque_Util.dump_writeErr("Error! Version mismatch (%d, should be %d)" % (ver, self.version))
 	
 	def write(self, fs):
 		fs.write(struct.pack('<b', self.version)) # Version
@@ -277,7 +277,7 @@ class Trigger:
 		self.pos = ps
 		
 		if (st <= 0) or (st > 32):
-			Torque_Util.dump_writeln("Warning : Invalid Trigger state (%d)" % st)
+			Torque_Util.dump_writeWarning("Warning : Invalid Trigger state (%d)" % st)
 		
 		#st -= 1 # 0..31
 		#self.state = 1 << st
@@ -852,7 +852,7 @@ class DtsShape:
 		#	numMorphs = dstream.reads32()
 		#	numDefMorphs = dstream.reads32()
 		#	if numMorphs != numDefMorphs:
-		#		Torque_Util.dump_writeln("Error: Morph number mismatch (%d morphs for %d defaults)" % (numMorphs, numDefMorphs))
+		#		Torque_Util.dump_writeErr("Error: Morph number mismatch (%d morphs for %d defaults)" % (numMorphs, numDefMorphs))
 		#		return
 		#		
 		#	numMorphSettings = dstream.reads32()
@@ -1008,7 +1008,7 @@ class DtsShape:
 				Torque_Util.dump_writeln("Reading...")
 				val = mesh.read(dstream, self)
 				if (val != 1) and (mesh.mtype != 4):
-					Torque_Util.dump_writeln("Error Reading Mesh!")
+					Torque_Util.dump_writeErr("Error Reading Mesh!")
 					return None
 				self.meshes.append(mesh)
 
@@ -1363,7 +1363,7 @@ class DtsShape:
 		
 		if len(nodes_used) != sequence.countNodes():
 			# This should never happen
-			Torque_Util.dump_writeln("Warning : node list size mismatch! Expecting %d nodes, but got %d. Sequence may not load." % (sequence.countNodes(),len(nodes_used)))
+			Torque_Util.dump_writeWarning("Warning : node list size mismatch! Expecting %d nodes, but got %d. Sequence may not load." % (sequence.countNodes(),len(nodes_used)))
 		
 		sequence.matters_rotation = new_rot_matters
 		sequence.matters_translation = new_loc_matters
