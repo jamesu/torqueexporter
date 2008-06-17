@@ -215,8 +215,8 @@ class BlenderShape(DtsShape):
 		if LOS:
 			self.numLOSCollisionDetails += 1
 			# MaxCollisionShapes still has a value of 8 in TGE/TGEA, so we need to offset
-			# by 8.  This should still work, even as the numbers begin to overlap.
-			detailName = "LOS-%d" % (8+self.numLOSCollisionDetails)
+			# by 9 (calculated as i + 1 + MaxCollisionShapes).  This should still work, even as the numbers begin to overlap.
+			detailName = "LOS-%d" % (9+self.numLOSCollisionDetails)
 		else:
 			self.numCollisionDetails += 1
 			detailName = "Collision-%d" % (self.numCollisionDetails)
