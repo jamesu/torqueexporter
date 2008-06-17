@@ -165,6 +165,16 @@ class BlenderMesh(DtsMesh):
 				
 				pr.matindex |= matIndex
 
+				isTwoSided = False
+				if not ignoreDblSided:
+					if (msh.mode & NMesh.Modes.TWOSIDED):
+						isTwoSided = True
+					else:
+						x = 0
+						try: x = (face.mode & NMesh.FaceModes.TWOSIDE)
+						except: pass
+						if x != 0: isTwoSided = True
+
 				# we've got a quad
 				if (len(face.v) > 3):
 					# convert the quad into two triangles
@@ -177,7 +187,7 @@ class BlenderMesh(DtsMesh):
 					if not useLists: self.primitives.append(pr)
 
 					# Duplicate first triangle in reverse order if doublesided
-					if hasImage and ((msh.mode & NMesh.Modes.TWOSIDED) or (face.mode & NMesh.FaceModes.TWOSIDE)) and not ignoreDblSided:
+					if isTwoSided:
 						if not useLists:
 							for i in range((pr.firstElement+pr.numElements)-1,pr.firstElement-1,-1):
 								self.indices.append(self.indices[i])
@@ -186,7 +196,6 @@ class BlenderMesh(DtsMesh):
 						else:
 							for i in range((len(self.indices)-1),(len(self.indices)-4),-1):
 								self.indices.append(self.indices[i])
-					
 					if not useLists: pr = Primitive(len(self.indices), 3, pr.matindex)							
 
 					# second triangle
@@ -204,7 +213,7 @@ class BlenderMesh(DtsMesh):
 						
 				# Duplicate triangle in reverse order if doublesided
 				# We can't get the value of the double sided flag if a face is not textured :-(
-				if hasImage and ((msh.mode & NMesh.Modes.TWOSIDED) or (face.mode & NMesh.FaceModes.TWOSIDE)) and not ignoreDblSided: 
+				if isTwoSided:
 					if not useLists:
 						for i in range((pr.firstElement+pr.numElements)-1,pr.firstElement-1,-1):
 							self.indices.append(self.indices[i])
