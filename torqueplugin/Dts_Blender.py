@@ -530,7 +530,8 @@ def updateOldPrefs():
 	except: Prefs['LastActivePanel'] = 'Sequences'
 	try: x = Prefs['LastActiveSubPanel']
 	except: Prefs['LastActiveSubPanel'] = 'Common'
-
+	try: x = Prefs["ShowWarningErrorPopup"]
+	except: Prefs["ShowWarningErrorPopup"] = True
 	for seqName in Prefs['Sequences'].keys():
 		seq = getSequenceKey(seqName)
 
@@ -947,7 +948,7 @@ class SceneTree:
 
 			else:
 				# Oh well, we tried to help :-)  Write an error message to the log.
-				Torque_Util.dump_writeln("  Error: No Shape Marker found!  See the readme.html file.")
+				Torque_Util.dump_writeErr("  Error: No Shape Marker found!  See the readme.html file.")
 			
 		return True
 
@@ -1016,15 +1017,17 @@ class ShapeTree(SceneTree):
 			self.normalDetails.append([size, obj])
 		elif (tname[0:3].upper() == "COL") or (tname[0:9].upper() == "COLLISION"):
 			self.collisionMeshes.append(obj)
-			if tname[0:9].upper() != "COLLISION":
-				Torque_Util.dump_writeln("Warning: 'COL' designation for collision marker is deprecated, use 'COLLISION' instead.")
+			# Un-depricated for now, too many people are using it.
+			#if tname[0:9].upper() != "COLLISION":
+			#	Torque_Util.dump_writeWarning("Warning: 'COL' designation for collision marker is deprecated, use 'COLLISION' instead.")
 		elif (tname[0:3].upper() == "LOS") or (tname[0:12].upper() == "LOSCOLLISION"):
 			self.losCollisionMeshes.append(obj)
-			if tname[0:12].upper() != "LOSCOLLISION":
-				Torque_Util.dump_writeln("Warning: 'LOS' designation for los collision marker is deprecated, use 'LOSCOLLISION' instead.")
+			# Un-depricated for now, too many people are using it.
+			#if tname[0:12].upper() != "LOSCOLLISION":
+			#	Torque_Util.dump_writeln("Warning: 'LOS' designation for los collision marker is deprecated, use 'LOSCOLLISION' instead.")
 		else:
 			# Enforce proper organization
-			Torque_Util.dump_writeln("     Warning: Could not accept child %s on shape %s" % (obj.getName(),self.obj.getName()))
+			Torque_Util.dump_writeWarning("     Warning: Could not accept child %s on shape %s" % (obj.getName(),self.obj.getName()))
 			return None
 		return obj
 
@@ -1087,7 +1090,7 @@ class ShapeTree(SceneTree):
 								progressBar.update()
 								continue
 							else:
-								Torque_Util.dump_writeln("Warning: Unhandled object '%s'" % child.getType())
+								Torque_Util.dump_writeWarning("Warning: Unhandled object '%s'" % child.getType())
 								progressBar.update()
 								continue
 								
@@ -1147,8 +1150,9 @@ class ShapeTree(SceneTree):
 				for armOb in Blender.Object.Get():
 					if (armOb.getType() != 'Armature'): continue
 					if armOb.getData().restPosition:
-						Blender.Draw.PupMenu("Warning%t|One or more of your armatures is locked into rest position. This will cause problems with exported animations.")
-						Torque_Util.dump_writeln("Warning: One or more of your armatures is locked into rest position.\n This will cause problems with exported animations.")
+						# this popup was too long and annoying, let the standard warning/error popup handle it.
+						#Blender.Draw.PupMenu("Warning%t|One or more of your armatures is locked into rest position. This will cause problems with exported animations.")
+						Torque_Util.dump_writeWarning("Warning: One or more of your armatures is locked into rest position.\n This will cause problems with exported animations.")
 						break
 
 				# Process sequences
@@ -1171,7 +1175,7 @@ class ShapeTree(SceneTree):
 						except: action = None
 						sequence = self.Shape.addSequence(seqName, context, seqKey, scene, action)
 						if sequence == None:
-							Torque_Util.dump_writeln("Warning : Couldn't add sequence '%s' to shape!" % seqName)
+							Torque_Util.dump_writeWarning("Warning : Couldn't add sequence '%s' to shape!" % seqName)
 							progressBar.update()
 							progressBar.update()
 							progressBar.update()
@@ -1218,12 +1222,12 @@ class ShapeTree(SceneTree):
 				del Stream
 				del self.Shape
 			else:
-				Torque_Util.dump_writeln("Error: failed to open shape stream!")
+				Torque_Util.dump_writeErr("Error: failed to open shape stream! (try restarting Blender)")
 				del self.Shape
 				progressBar.popTask()
 				return None
 		except Exception, msg:
-			Torque_Util.dump_writeln("Error: Exception encountered, bailing out.")
+			Torque_Util.dump_writeErr("Error: Exception encountered, bailing out.")
 			Torque_Util.dump_writeln(Exception)
 			if tracebackImported:
 				print "Dumping traceback to log..."
@@ -1319,11 +1323,28 @@ def export():
 		cur_progress.popTask()
 		Torque_Util.dump_writeln("Finished.")
 	else:
-		Torque_Util.dump_writeln("Error. Not processed scene yet!")
+		Torque_Util.dump_writeErr("Error. Not processed scene yet!")
 		
-	del cur_progress
-	print "Finished.  See generated log file for details."
+	del cur_progress	
 	Torque_Util.dump_finish()
+	
+	if Torque_Util.numErrors > 0 or Torque_Util.numWarnings > 0:
+		message = ("Export finished with %i error(s) and %s warning(s). Read the log file for more information." % (Torque_Util.numErrors, Torque_Util.numWarnings))
+		print message
+		if Prefs["ShowWarningErrorPopup"]:
+			message +=  "%t|Continue|Do not show this message again"
+			opt = Blender.Draw.PupMenu(message)
+			if opt == 2:
+				Prefs["ShowWarningErrorPopup"] = False
+				# refresh the state of the button on the general panel
+				GeneralControls.refreshAll()
+		Torque_Util.numWarnings = 0
+		Torque_Util.numErrors = 0
+	else:
+		print "Finished.  See generated log file for details."
+		
+		
+		
 	# Reselect any objects that are currently selected.
 	# this prevents a strange bug where objects are selected after
 	# export, but behave as if they are not.
@@ -1686,6 +1707,8 @@ class GeneralControlsClass:
 		self.guiBillboardPoles = Common_Gui.ToggleButton("guiBillboardPoles", "Poles", "Take images at the poles", 17, self.handleEvent, self.resize)
 		self.guiBillboardSize = Common_Gui.NumberSlider("guiBillboardSize", "Size", "Size of billboard's detail level", 18, self.handleEvent, self.resize)
 		# --
+		self.guiShowWarnErrPopup = Common_Gui.ToggleButton("guiShowWarnErrPopup", "Show Error/Warning popup", "Shows a popup when errors or warnings occur during export.", 27, self.handleEvent, self.resize)
+		# --
 		self.guiOutputText = Common_Gui.SimpleText("guiOutputText", "Output:", None, self.resize)
 		self.guiShapeScriptButton =  Common_Gui.ToggleButton("guiShapeScriptButton", "Write Shape Script", "Write .cs script that details the .dts and all .dsq sequences", 19, self.handleEvent, self.resize)
 		self.guiCustomFilename = Common_Gui.TextBox("guiCustomFilename", "Filename: ", "Filename to write to", 20, self.handleEvent, self.resize)
@@ -1724,6 +1747,7 @@ class GeneralControlsClass:
 		self.guiBillboardPoles.state = Prefs['Billboard']['IncludePoles']		
 		self.guiBillboardSize.min, self.guiBillboardSize.max = 0.0, 128.0
 		self.guiBillboardSize.value = Prefs['Billboard']['Size']
+		self.guiShowWarnErrPopup.state = Prefs["ShowWarningErrorPopup"]
 		self.guiCustomFilename.length = 255
 		if "\\" in Prefs['exportBasepath']:
 			pathSep = "\\"
@@ -1760,6 +1784,7 @@ class GeneralControlsClass:
 		guiGeneralSubtab.addControl(self.guiBillboardDim)
 		guiGeneralSubtab.addControl(self.guiBillboardPoles)
 		guiGeneralSubtab.addControl(self.guiBillboardSize)
+		guiGeneralSubtab.addControl(self.guiShowWarnErrPopup)
 		guiGeneralSubtab.addControl(self.guiOutputText)
 		guiGeneralSubtab.addControl(self.guiShapeScriptButton)
 		guiGeneralSubtab.addControl(self.guiCustomFilename)
@@ -1798,6 +1823,8 @@ class GeneralControlsClass:
 		del self.guiBillboardPoles
 		del self.guiBillboardSize
 		# --
+		del self.guiShowWarnErrPopup
+		# --
 		del self.guiOutputText
 		del self.guiShapeScriptButton
 		del self.guiCustomFilename
@@ -1808,7 +1835,7 @@ class GeneralControlsClass:
 
 
 	def refreshAll(self):
-		pass
+		self.guiShowWarnErrPopup.state = Prefs["ShowWarningErrorPopup"]
 
 	def handleEvent(self, control):
 		global Prefs
@@ -1863,6 +1890,8 @@ class GeneralControlsClass:
 			Prefs['Billboard']['Size'] = control.value
 		elif control.name == "guiShapeScriptButton":
 			Prefs['WriteShapeScript'] = control.state
+		elif control.name == "guiShowWarnErrPopup":
+			Prefs["ShowWarningErrorPopup"] = control.state
 		elif control.name == "guiCustomFilename":
 			Prefs['exportBasename'] = basename(control.value)
 			Prefs['exportBasepath'] = basepath(control.value)
@@ -1937,6 +1966,8 @@ class GeneralControlsClass:
 			control.x, control.y, control.width = 366,newheight-152-control.height, 100
 		elif control.name == "guiBillboardSize":
 			control.x, control.y, control.width = 164,newheight-130-control.height, 200
+		elif control.name == "guiShowWarnErrPopup":
+			control.x, control.y, control.width = 10,newheight-180-control.height, 220
 		elif control.name == "guiShapeScriptButton":
 			control.x, control.y, control.width = 346,newheight-260-control.height, 132
 		elif control.name == "guiCustomFilename":
