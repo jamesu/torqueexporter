@@ -372,12 +372,11 @@ class BlenderShape(DtsShape):
 			# Import Mesh, process flags
 			try: x = self.preferences['PrimType']
 			except KeyError: self.preferences['PrimType'] = "Tris"
-			tmsh = BlenderMesh( self, o.name, mesh_data, 0, 1.0, mat, hasArmatureDeform, False, (self.preferences['PrimType'] == "TriLists" or self.preferences['PrimType'] == "TriStrips") )
+			tmsh = BlenderMesh( self, o.name, mesh_data, -1, 1.0, mat, hasArmatureDeform, False, (self.preferences['PrimType'] == "TriLists" or self.preferences['PrimType'] == "TriStrips") )
 			if len(names) > 1: tmsh.setBlenderMeshFlags(names[1:])
 			
 			# If we ended up being a Sorted Mesh, sort the faces
 			if tmsh.mtype == tmsh.T_Sorted:
-				#tmsh.sortMesh(Prefs['AlwaysWriteDepth'], Prefs['ClusterDepth'])
 				tmsh.sortMesh(self.preferences['AlwaysWriteDepth'], self.preferences['ClusterDepth'])
 				
 			# Increment polycount metric
