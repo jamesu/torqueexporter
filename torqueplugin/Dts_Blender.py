@@ -1304,6 +1304,8 @@ def handleScene():
 def export():
 	Torque_Util.dump_writeln("Exporting...")
 	print "Exporting..."
+	# switch out of edit mode if we are in edit mode
+	Window.EditMode(0)
 	handleScene()
 	importMaterialList()
 	refreshActionData()
