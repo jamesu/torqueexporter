@@ -251,9 +251,8 @@ def dump_setout(filename="stdout"):
 def dump_finish():
 	if dump_file != None:
 		dump_file.flush()
-	#dump_file.close()
+		#dump_file.close()
 	
-
 def dump_write(string):
 	if dump_file != None:
 		dump_file.write("%s " % string)
@@ -262,6 +261,21 @@ def dump_write(string):
 
 def dump_writeln(string):
 	dump_write("%s\n" % string)
+	
+# Error and warning dump print functions
+numErrors = 0
+numWarnings = 0
+
+def dump_writeErr(string):
+	global numErrors
+	numErrors += 1
+	dump_write("%s\n" % string)
+
+def dump_writeWarning(string):
+	global numWarnings
+	numWarnings += 1
+	dump_write("%s\n" % string)
+
 
 # Function to ensure all delete operations are called on objects in a list
 def clearArray(array):
