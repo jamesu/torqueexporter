@@ -1971,7 +1971,7 @@ class GeneralControlsClass:
 		elif control.name == "guiBillboardSize":
 			control.x, control.y, control.width = 164,newheight-130-control.height, 200
 		elif control.name == "guiShowWarnErrPopup":
-			control.x, control.y, control.width = 10,newheight-180-control.height, 220
+			control.x, control.y, control.width = 10,newheight-195-control.height, 220
 		elif control.name == "guiShapeScriptButton":
 			control.x, control.y, control.width = 346,newheight-260-control.height, 132
 		elif control.name == "guiCustomFilename":
