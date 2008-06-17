@@ -690,6 +690,8 @@ def refreshActionData():
 			seqPrefs['Action']['FrameSamples'] = seqPrefs['Action']['EndFrame'] - seqPrefs['Action']['StartFrame'] + 1
 		if seqPrefs['Action']['NumGroundFrames'] > maxFrames: seqPrefs['Action']['NumGroundFrames'] = maxFrames
 		updateSeqDurationAndFPS(seqName, seqPrefs)
+		# actions are always enabled, if they exist.
+		seqPrefs["Action"]['Enabled'] = True
 
 
 # refreshes material data read from blender and updates related preferences.
