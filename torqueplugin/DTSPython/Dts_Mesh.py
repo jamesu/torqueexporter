@@ -528,7 +528,7 @@ class DtsMesh:
 		else:
 			# Null or Standard or Unknown Mesh
 			if self.mtype != self.T_Standard:
-				Torque_Util.dump_writeln("Error : Cannot read mesh type %d" % (self.mtype))
+				Torque_Util.dump_writeErr("Error : Cannot read mesh type %d" % (self.mtype))
 		return True # We are ok
 
 	# Write!!
