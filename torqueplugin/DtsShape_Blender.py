@@ -1157,6 +1157,7 @@ class BlenderShape(DtsShape):
 		sequence.name = seqName
 		sequence.numTriggers = 0
 		sequence.firstTrigger = -1
+		sequence.numKeyFrames = 0
 
 		sequence.has_vis = False
 		sequence.has_ifl = False
@@ -1199,6 +1200,7 @@ class BlenderShape(DtsShape):
 				numVisFrames = numFrameSamples
 				adjustedVisEndFrame = (numVisFrames + int(seqPrefs['Vis']['StartFrame'])) -1
 			sequence = self.addSequenceVisibility( sequence, numFrameSamples, seqPrefs, int(seqPrefs['Vis']['StartFrame']), adjustedVisEndFrame )
+			if sequence.numKeyFrames <  numVisFrames: sequence.numKeyFrames = numVisFrames
 		if IFLIsValid:
 			#print "   Adding IFL data for", seqName
 			sequence = self.addSequenceIFL(sequence, getNumIFLFrames(seqName, seqPrefs), seqPrefs)
@@ -1654,7 +1656,7 @@ class BlenderShape(DtsShape):
 					self.objectstates.append(ObjectState(val,0,0))
 							
 		sequence.has_vis = True
-		return sequence						
+		return sequence
 
 
 
