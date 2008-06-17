@@ -46,15 +46,6 @@ def BuildCurveMap(ipo):
 	ipocurves = ipo.getCurves()
 	for i in range(ipo.getNcurves()):
 		curvemap[ipocurves[i].getName()] = i
-
-	if Blender.Get('version') == 234:
-		# HACKHACK! 2.34 doesn't give us the correct quat values
-		try:
-			# X=Y, Y=Z, Z=W, W=X
-			curvemap['QuatX'],curvemap['QuatY'],curvemap['QuatZ'],curvemap['QuatW'] = curvemap['QuatY'],curvemap['QuatZ'],curvemap['QuatW'],curvemap['QuatX']
-		except:
-			pass
-
 	return curvemap
 
 # Function to determine what animation is present in a curveMap
@@ -1530,22 +1521,6 @@ class BlenderShape(DtsShape):
 		# Clean out temporary junk
 		del sequence.frames
 
-		# UGLY WORKAROUND HACK
-		# This is a workaround for a bug in blender 2.41 that causes the reference count of the last
-		# action that Action.setActive() is called on from a script to be corrupted.  The only way
-		# around this nasty bug is to create a fake action and make sure that we always set it active
-		# as last action.
-		if Blender.Get('version') < 242:
-			try:
-				# if fake action already exists reuse it.
-				act = Blender.Armature.NLA.GetActions()["DTSEXPFAKEACT"]
-			except:
-				# if it doesn't exist, create it.
-				act = Blender.Armature.NLA.NewAction("DTSEXPFAKEACT")
-			act.setActive(arm)
-		
-		gc.collect()
-		
 		return sequence, removeLast
 
 
