@@ -182,7 +182,7 @@ class BlenderShape(DtsShape):
 				
 			# Kill the clones
 			if (self.subshapes[0].numObjects != 0) and (len(obj.tempMeshes) > self.numBaseDetails):
-				Torque_Util.dump_writeln("Warning: Too many clones of mesh found in detail level, object '%s' skipped!" % o.getName())
+				Torque_Util.dump_writeWarning("Warning: Too many clones of mesh found in detail level, object '%s' skipped!" % o.getName())
 				continue
 			
 			
@@ -314,7 +314,7 @@ class BlenderShape(DtsShape):
 						obj = dObj
 						break
 				if obj == None:
-					Torque_Util.dump_writeln("Warning: No object found, make sure an object with prefix '%s' exists in the base detail." % detail_name)
+					Torque_Util.dump_writeWarning("Warning: No object found, make sure an object with prefix '%s' exists in the base detail." % detail_name)
 					continue
 			else:
 				# Must be unique
@@ -331,7 +331,7 @@ class BlenderShape(DtsShape):
 				
 			# Kill the clones
 			if (self.subshapes[0].numObjects != 0) and (len(obj.tempMeshes) > self.numBaseDetails):
-				Torque_Util.dump_writeln("Warning: Too many clone's of mesh found in detail level, object '%s' skipped!" % o.getName())
+				Torque_Util.dump_writeWarning("Warning: Too many clone's of mesh found in detail level, object '%s' skipped!" % o.getName())
 				continue
 			
 			
@@ -492,7 +492,7 @@ class BlenderShape(DtsShape):
 			
 			# Get node from first mesh
 			if len(o.tempMeshes) == 0:
-				Torque_Util.dump("Warning: Object '%s' has no meshes!" % self.sTable.get(o.name));
+				Torque_Util.dump_writeWarning("Warning: Object '%s' has no meshes!" % self.sTable.get(o.name));
 				continue
 			
 			isSkinned = False
@@ -528,7 +528,7 @@ class BlenderShape(DtsShape):
 					
 					if tmsh.mtype == tmsh.T_Skin:
 						tmsh.mtype = tmsh.T_Standard
-						Torque_Util.dump_writeln("Warning: Invalid skinned mesh in rigid object '%s'!" % (self.sTable.get(o.name)))
+						Torque_Util.dump_writeWarning("Warning: Invalid skinned mesh in rigid object '%s'!" % (self.sTable.get(o.name)))
 					
 				else:
 					
@@ -550,7 +550,7 @@ class BlenderShape(DtsShape):
 			else: count += 1
 		# Calculate bounds and sizes
 		if len(self.detaillevels) == 0:
-			Torque_Util.dump_writeln("      Warning : Shape contains no detail levels!")
+			Torque_Util.dump_writeWarning("      Warning : Shape contains no detail levels!")
 			
 		self.calcSmallestSize() # Get smallest size where shape is visible
 				
@@ -653,14 +653,14 @@ class BlenderShape(DtsShape):
 				or (cMax[i] <= cMax[j] and cMax[i] >= cMin[j])\
 				or (cMin[j] <= cMax[i] and cMin[j] >= cMin[i])\
 				or (cMax[j] <= cMax[i] and cMax[j] >= cMin[i]):
-					Torque_Util.dump_writeln("-\nWarning: Invalid Traversal - Node hierarchy cannot be matched with the")
-					Torque_Util.dump_writeln("  node ordering specified in the NodeOrder text buffer.")
-					Torque_Util.dump_writeln("  Details:")
-					Torque_Util.dump_writeln("    node tree with root node \'%s\'" % nnames[i])
-					Torque_Util.dump_writeln("    overlaps sibling tree with root node \'%s\'" % nnames[j])
-					Torque_Util.dump_writeln("    in the NodeOrder text buffer.")
-					Torque_Util.dump_writeln("    cMin[i], cMax[i] = %i, %i" % (cMin[i], cMax[i]) )
-					Torque_Util.dump_writeln("    cMin[j], cMax[j] = %i, %i\n-" % (cMin[j], cMax[j]) )
+					Torque_Util.dump_writeWarning("-\nWarning: Invalid Traversal - Node hierarchy cannot be matched with the")
+					Torque_Util.dump_writeln(     "  node ordering specified in the NodeOrder text buffer.")
+					Torque_Util.dump_writeln(     "  Details:")
+					Torque_Util.dump_writeln(     "    node tree with root node \'%s\'" % nnames[i])
+					Torque_Util.dump_writeln(     "    overlaps sibling tree with root node \'%s\'" % nnames[j])
+					Torque_Util.dump_writeln(     "    in the NodeOrder text buffer.")
+					Torque_Util.dump_writeln(     "    cMin[i], cMax[i] = %i, %i" % (cMin[i], cMax[i]) )
+					Torque_Util.dump_writeln(     "    cMin[j], cMax[j] = %i, %i\n-" % (cMin[j], cMax[j]) )
 		return minPos, maxPos
 
 	# Adds nodes from all armatures to the shape.
@@ -706,7 +706,7 @@ class BlenderShape(DtsShape):
 				for bone in armData.bones.values():
 					if bone.parent != None:
 						if bone.name in nodeOrderDict.keys() and nodeOrderDict[bone.name] < nodeOrderDict[bone.parent.name]:
-							Torque_Util.dump_writeln("-\nWarning: Invalid node order, child bone \'%s\' comes before" % bone.name)
+							Torque_Util.dump_writeWarning("-\nWarning: Invalid node order, child bone \'%s\' comes before" % bone.name)
 							Torque_Util.dump_writeln("  parent bone \'%s\' in the NodeOrder text buffer\n-" % bone.parent.name)
 			# Test Rule #2
 			cMin = []
@@ -732,7 +732,7 @@ class BlenderShape(DtsShape):
 					or (cMax[i] <= cMax[j] and cMax[i] >= cMin[j])\
 					or (cMin[j] <= cMax[i] and cMin[j] >= cMin[i])\
 					or (cMax[j] <= cMax[i] and cMax[j] >= cMin[i]):
-						Torque_Util.dump_writeln("-\nWarning: Invalid Traversal - Node hierarchy cannot be matched with the")
+						Torque_Util.dump_writeWarning("-\nWarning: Invalid Traversal - Node hierarchy cannot be matched with the")
 						Torque_Util.dump_writeln("  node ordering specified in the NodeOrder text buffer.")
 						Torque_Util.dump_writeln("  Details:")
 						Torque_Util.dump_writeln("    node tree with root node \'%s\'" % nnames[i])
@@ -982,7 +982,7 @@ class BlenderShape(DtsShape):
 						# record the error state so we don't repeat ourselves.
 						self.GroundFrameError = True
 						sequence.has_ground = False # <- nope, no ground frames.
-						Torque_Util.dump_writeln("Warning: Error getting ground frame %d" % sequence.numGroundFrames)
+						Torque_Util.dump_writeErr("Error: Could not get ground frames %d" % sequence.numGroundFrames)
 						Torque_Util.dump_writeln("  You must have an object named Bounds in your scene to export ground frames.")
 
 
@@ -1452,7 +1452,7 @@ class BlenderShape(DtsShape):
 		
 		# if nothing was actually animated abandon exporting the action.
 		if not (sequence.has_loc or sequence.has_rot or sequence.has_scale):
-			Torque_Util.dump_writeln("Warning: Action has no keyframes, aborting export for this animation.")
+			Torque_Util.dump_writeWarning("Warning: Action has no keyframes, aborting export for this animation.")
 			return sequence, False
 
 		# set the aligned scale flag if we have scale.
@@ -1665,7 +1665,7 @@ class BlenderShape(DtsShape):
 				IPOCurve = bIpo[IPOCurveConst]
 				if IPOCurve == None: raise TypeError
 			except: 
-				Torque_Util.dump_writeln("Error: Could not get animation curve for visibility animation: %s " % sequence.name)
+				Torque_Util.dump_writeErr("Error: Could not get animation curve for visibility animation: %s " % sequence.name)
 				continue
 
 			sequence.matters_vis[i] = True
@@ -1765,7 +1765,7 @@ class BlenderShape(DtsShape):
 				detail_map = dMaterial(mat['DetailTex'], dmFlags,-1,-1,-1,1.0,0.0)
 				material.detail = self.materials.add(detail_map)
 				if mat['NeverEnvMap'] == False:
-					Torque_Util.dump_writeln("    Warning: Material (%s) is using environment mapping with a detail map, strange things may happen!" % imageName)
+					Torque_Util.dump_writeWarning("    Warning: Material (%s) is using environment mapping with a detail map, strange things may happen!" % imageName)
 
 			if mat['BumpMapFlag'] == True and mat['BumpMapTex'] != None:
 				bmFlags = 0x00000000
@@ -1784,7 +1784,7 @@ class BlenderShape(DtsShape):
 				material.reflectance = self.materials.add(refl_map)
 			
 		except KeyError:
-			Torque_Util.dump_writeln("    Warning: Texture Image (%s) is used on a mesh but could not be found in the material list!" % imageName)
+			Torque_Util.dump_writeWarning("    Warning: Texture Image (%s) is used on a mesh but could not be found in the material list!" % imageName)
 			return None
 
 		material.name = imageName
