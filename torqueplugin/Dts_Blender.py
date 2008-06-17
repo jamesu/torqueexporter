@@ -1287,7 +1287,7 @@ class ShapeTree(SceneTree):
 #-------------------------------------------------------------------------------------------------
 def handleScene():
 	global export_tree
-	Torque_Util.dump_writeln("Processing Scene...")
+	#Torque_Util.dump_writeln("Processing Scene...")
 	# What we do here is clear any existing export tree, then create a brand new one.
 	# This is useful if things have changed.
 	if export_tree != None: export_tree.clear()
@@ -1295,7 +1295,7 @@ def handleScene():
 	scn.update(1)
 	export_tree = SceneTree(None,Blender.Scene.GetCurrent())
 	updateOldPrefs()
-	Torque_Util.dump_writeln("Cleaning Preference Keys")
+	#Torque_Util.dump_writeln("Cleaning Preference Keys")
 	cleanKeys()
 	createActionKeys()
 
