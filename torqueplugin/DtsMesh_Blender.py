@@ -39,7 +39,7 @@ from Blender import NMesh
 #-------------------------------------------------------------------------------------------------
 
 class BlenderMesh(DtsMesh):
-	def __init__(self, shape, msh,  rootBone, scaleFactor, matrix, isSkinned=False, isCollision=False, useLists = False):		
+	def __init__(self, shape, meshName, msh,  rootBone, scaleFactor, matrix, isSkinned=False, isCollision=False, useLists = False):		
 		DtsMesh.__init__(self)
 		# store off the transpose of the inverse of the object's 3x3 submatrix so we don't have to recalculate it every time we need it.
 		self.tpinvmat = Torque_Math.Matrix3x3(matrix).transpose().inverse()
@@ -52,7 +52,7 @@ class BlenderMesh(DtsMesh):
 		
 		# Warn if we've got a skinned mesh with no vertex groups.
 		if isSkinned and not hasWeights:
-			Torque_Util.dump_writeWarning("Warning: Skinned mesh has no vertex groups. Mesh will not animate!")
+			Torque_Util.dump_writeWarning("Warning: Skinned mesh %s has no vertex groups. Mesh will not animate!" % meshName)
 		
 		materialGroups = {}
 		
@@ -219,7 +219,7 @@ class BlenderMesh(DtsMesh):
 				self.primitives.append(pr)
 			
 			if limitExceeded:
-				Torque_Util.dump_writeErr("Error: Mesh vertex index limit exceeded, truncating mesh!")
+				Torque_Util.dump_writeErr("Error: Vertex index limit exceeded for mesh %s, truncating mesh!" % meshName)
 
 			
 
