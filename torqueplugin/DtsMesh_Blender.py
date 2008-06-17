@@ -52,7 +52,7 @@ class BlenderMesh(DtsMesh):
 		
 		# Warn if we've got a skinned mesh with no vertex groups.
 		if isSkinned and not hasWeights:
-			Torque_Util.dump_writeln("Warning: Skinned mesh has no vertex groups. Mesh will not animate!")
+			Torque_Util.dump_writeWarning("Warning: Skinned mesh has no vertex groups. Mesh will not animate!")
 		
 		materialGroups = {}
 		
@@ -219,7 +219,7 @@ class BlenderMesh(DtsMesh):
 				self.primitives.append(pr)
 			
 			if limitExceeded:
-				Torque_Util.dump_writeln("Error: Mesh vertex index limit exceeded, truncating mesh!")
+				Torque_Util.dump_writeErr("Error: Mesh vertex index limit exceeded, truncating mesh!")
 
 			
 
