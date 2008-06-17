@@ -1675,13 +1675,19 @@ class BlenderShape(DtsShape):
 			for fr in range(startFrame, numOverallFrames + startFrame):
 				#print "#####  Writing IPO for frame:%2i (%f)" % (int(fr), IPOCurve[fr])
 				#print "#####  Writing IPO Value:", IPOCurve[fr]				
+				val = IPOCurve[int(fr)]
+				if val > 1.0: val = 1.0
+				elif val < 0.0: val = 0.0
 				# Make sure we're still in the user define frame range.
 				if fr <= endFrame:
-					self.objectstates.append(ObjectState(IPOCurve[int(fr)],0,0))
+					self.objectstates.append(ObjectState(val,0,0))
 				# If we're past the user defined frame range, pad out object states
 				# with copies of the good last frame state.
 				else:
-					self.objectstates.append(ObjectState(IPOCurve[int(endFrame)],0,0))
+					val = IPOCurve[int(endFrame)]
+					if val > 1.0: val = 1.0
+					elif val < 0.0: val = 0.0
+					self.objectstates.append(ObjectState(val,0,0))
 							
 		sequence.has_vis = True
 		return sequence						
