@@ -171,7 +171,8 @@ class MaterialList:
 		# Names
 		fs.write(struct.pack('<i', len(self.materials))) #S32
 		for mat in self.materials:			
-			mn = mat.name.decode("mbcs").encode("utf_8")
+			try: mn = mat.name.decode("mbcs").encode("utf_8")
+			except LookupError: mn = mat.name
 			fs.write(struct.pack('<b', len(mn))) # Length of Name
 			st = array('B')
 			st.fromstring(mn)
