@@ -1312,7 +1312,7 @@ class BlenderShape(DtsShape):
 		rawActFrames = (seqPrefs['Action']['EndFrame'] - seqPrefs['Action']['StartFrame']) + 1
 
 		# calc the interpolation increment
-		interpolateInc = float(rawActFrames) / float(seqPrefs['Action']['FrameSamples'])
+		interpolateInc = float(rawActFrames-1.0) / float(seqPrefs['Action']['FrameSamples']-1.0)
 		
 		# make sure it's not less than 1
 		if interpolateInc < 1.0: interpolateInc = 1.0
@@ -1365,7 +1365,7 @@ class BlenderShape(DtsShape):
 			Blender.Set('curframe', useFrame)
 
 		# For normal animations, loop through each node and reset it's transforms.
-		# This avoids transforms carrying over from other animations.
+		# This avoids transforms carrying over from other action animations.
 		else:			
 			# need to cycle through ALL bones and reset the transforms.
 			for armOb in Blender.Object.Get():
@@ -1394,13 +1394,10 @@ class BlenderShape(DtsShape):
 			act.setActive(arm)
 			
 		# loop through all of the exisitng action frames
-		#if numOverallFrames > numFrameSamples: numFrameSamples = numOverallFrames
-		#for frame in range(seqPrefs['Action']['StartFrame'], seqPrefs['Action']['EndFrame']+1):
-		#for frame in range(0, numFrameSamples):
 		for frame in range(0, numOverallFrames):
 			# Set the current frame in blender
 			#context.currentFrame(int(frame*interpolateInc))
-			curFrame = int(frame*interpolateInc) + seqPrefs['Action']['StartFrame']
+			curFrame = int(round(float(frame)*interpolateInc,0)) + seqPrefs['Action']['StartFrame']
 			Blender.Set('curframe', curFrame)
 			# add ground frames
 			self.addGroundFrame(sequence, curFrame, boundsStartMat)
