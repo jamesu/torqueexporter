@@ -58,7 +58,7 @@ except:
   Blender Dts Classes for Python
 '''
 
-Version = "0.963"
+Version = "0.97 (NLA DEV)"
 Prefs = None
 Prefs_keyname = ""
 export_tree = None
