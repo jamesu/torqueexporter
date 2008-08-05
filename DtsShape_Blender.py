@@ -831,8 +831,8 @@ class BlenderShape(DtsShape):
 
 		bonename = bone.name
 		
-		# Do not add bones on the "BannedBones" list
-		if bonename.upper() in self.preferences['BannedBones']:
+		# Do not add bones on the "BannedNodes" list
+		if bonename.upper() in self.preferences['BannedNodes']:
 			return False
 
 		# Add a DTS bone to the shape
