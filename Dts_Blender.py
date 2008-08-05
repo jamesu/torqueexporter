@@ -1046,13 +1046,17 @@ class ShapeTree(SceneTree):
 		return obj
 
 
-	def processObjects(self, obj, parentIndex, parentType=None):
+	def processObjects(self, obj, parentIndex, parentType=None, lastGoodParentIndex=-1):
 		global Prefs
 		# add a node for the current object with correct parent node set
-		self.Shape.addNode(obj, parentIndex, parentType)
-		# new parent ID is the just-added node
-		parentID = len(self.Shape.nodes)-1
-		parentType = "object"
+		if self.Shape.addNode(obj, parentIndex, parentType):
+			# new parent ID for the next node is the just-added node
+			parentID = len(self.Shape.nodes)-1
+			parentType = "object"
+			lastGoodParentIndex = parentID
+		else:
+			parentID = lastGoodParentIndex
+			parentType = "object"
 			
 		# add armature bones if we've got an armature
 		if obj.getType() == "Armature":
