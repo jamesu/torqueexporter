@@ -910,6 +910,8 @@ class BlenderShape(DtsShape):
 
 	# Adds a node with the tranform and name of an object.
 	def addNode(self, object, parentNodeIndex, parentType="Node"):
+		if object.name in self.preferences['BannedNodes']: return
+		print "Contents of BannedNodes:", self.preferences['BannedNodes']
 		# Adds generic node with object's name
 		Torque_Util.dump_writeln("     Node[%s]: %s" % (object.getType(), object.getName()))
 		parentObj = object.getParent()
@@ -918,35 +920,9 @@ class BlenderShape(DtsShape):
 			mat = object.getMatrix('worldspace')
 			rot = self.poseUtil.toTorqueQuat(mat.rotationPart().toQuat())
 			pos = self.poseUtil.toTorqueVec(mat.translationPart())
-			#print "(1) Got worldspace transform for object",object.name,":\n", pos,rot
 		else:
 			pos = self.poseUtil.nodes[object.name].defPosPS
 			rot = self.poseUtil.nodes[object.name].defRotPS
-			#print "(2) Got worldspace transform for object",object.name,":\n", pos,rot
-		'''		
-		elif parentType == "object":
-			mat = object.getMatrix('localspace')
-			rot = self.poseUtil.toTorqueQuat(mat.rotationPart().toQuat())
-			pos = self.poseUtil.toTorqueVec(mat.translationPart())		
-		elif parentType == "bone":
-			mat = object.getMatrix('worldspace')
-			rot = self.poseUtil.toTorqueQuat(mat.rotationPart().toQuat())
-			pos = self.poseUtil.toTorqueVec(mat.translationPart())
-			#parentPos = self.poseUtil.armBones[parentObj.name][self.sTable.get(self.nodes[parentNodeIndex].name)][DtsPoseUtil.NODERESTPOSWS]			
-			#parentRot = self.poseUtil.armBones[parentObj.name][self.sTable.get(self.nodes[parentNodeIndex].name)][DtsPoseUtil.NODERESTROTWS]
-			parentPos = self.poseUtil.nodes[parentObj.name].restPosWS
-			parentRot = self.poseUtil.nodes[parentObj.name].restRotWS
-
-
-			offset = pos - parentPos
-			
-			pos = parentRot.inverse().apply(offset)
-			rot = rot * parentRot.inverse()
-			#print "Got localspace matrix for object",object.name,":\n", mat
-
-		pos = self.poseUtil.nodes[parentObj.name].defRotPS
-		rot = self.poseUtil.nodes[parentObj.name].defRotPS
-		'''
 		
 		parentId = len(self.nodes)
 		b = Node(self.sTable.addString(object.getName()), parentNodeIndex)
