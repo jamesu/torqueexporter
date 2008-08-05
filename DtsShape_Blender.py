@@ -909,9 +909,9 @@ class BlenderShape(DtsShape):
 
 
 	# Adds a node with the tranform and name of an object.
-	def addNode(self, object, parentNodeIndex, parentType="Node"):
-		if object.name in self.preferences['BannedNodes']: return
-		print "Contents of BannedNodes:", self.preferences['BannedNodes']
+	def addNode(self, object, parentNodeIndex, parentType=None):
+		if object.name.upper() in self.preferences['BannedNodes']:
+			return False
 		# Adds generic node with object's name
 		Torque_Util.dump_writeln("     Node[%s]: %s" % (object.getType(), object.getName()))
 		parentObj = object.getParent()
@@ -929,11 +929,11 @@ class BlenderShape(DtsShape):
 		b.armIdx = -1
 		b.obj = object
 		self.defaultTranslations.append(pos)
-		#print "pos = ", pos
 		self.defaultRotations.append(rot)
 		self.nodes.append(b)
 		
 		self.subshapes[0].numNodes += 1
+		return True
 
 		
 	# These three helper methods are used by getPoseTransform. They should probably be moved elsewhere.
@@ -1000,7 +1000,8 @@ class BlenderShape(DtsShape):
 	def getPoseTransform(self, sequence, nodeIndex, frame_idx, pose, baseTransform=None, getRawValues=False):
 
 		loc, rot, scale = None, None, None
-		arm = self.addedArmatures[self.nodes[nodeIndex].armIdx][0]
+		try: armName = self.addedArmatures[self.nodes[nodeIndex].armIdx][0].name
+		except: armName = None
 
 		# duration should already be calculated at this point.
 		# Convert time units from Blender's frame (starting at 1) to second
@@ -1018,7 +1019,7 @@ class BlenderShape(DtsShape):
 
 		
 		# Get our values from the poseUtil interface		
-		transVec, quatRot = self.poseUtil.getBoneLocRotLS(arm.name, bonename, pose)
+		transVec, quatRot = self.poseUtil.getNodeLocRotLS(armName, bonename, pose)
 		# - determine the scale of the bone.
 		#scaleVec = pose.bones[bonename].size
 		scaleVec = self.poseUtil.toTorqueVec([1,1,1])
@@ -1295,25 +1296,6 @@ class BlenderShape(DtsShape):
 			nodeIndex = self.getNodeIndex(channel_name)
 			# Determine if this node is in the shape
 			if nodeIndex == None: continue
-			# determine channel type and force matters for all channels that are explicitly keyed.
-			# I'm still not sure if I really want to do this :)
-			'''
-			try:
-				if (channels[channel_name].getCurve('LocX') != None) or (channels[channel_name].getCurve('LocY') != None) or (channels[channel_name].getCurve('LocZ') != None):
-					sequence.matters_translation[nodeIndex] = True
-					sequence.has_loc = True
-				if (channels[channel_name].getCurve('QuatX') != None) or (channels[channel_name].getCurve('QuatY') != None) or (channels[channel_name].getCurve('QuatZ') != None):
-					sequence.matters_rotation[nodeIndex] = True
-					sequence.has_rot = True
-				if (channels[channel_name].getCurve('SizeX') != None) or (channels[channel_name].getCurve('SizeY') != None) or (channels[channel_name].getCurve('SizeZ') != None):
-					sequence.matters_scale[nodeIndex] = True
-					sequence.has_scale = True
-			except ValueError:
-				# not an Action IPO...
-				pass
-			'''
-			# TODO: how do we determine RVK channels?
-
 			# Print informative sequence name if we found a node in the shape (first time only)
 			if not nodeFound:
 				Torque_Util.dump_writeln("   Action %s used, dumping..." % action.getName())
@@ -1427,87 +1409,80 @@ class BlenderShape(DtsShape):
 		for i in range(0, len(self.addedArmatures)):
 			arm = self.addedArmatures[i][0]			
 			act.setActive(arm)
-			
+		print "!!!!!! you are here(1)"	
 		# loop through all of the exisitng action frames
 		for frame in range(0, numOverallFrames):
+			print "!!!!!! you are here(2)"	
 			# Set the current frame in blender
 			#context.currentFrame(int(frame*interpolateInc))
 			curFrame = int(round(float(frame)*interpolateInc,0)) + seqPrefs['Action']['StartFrame']
 			Blender.Set('curframe', curFrame)
 			# add ground frames
 			self.addGroundFrame(sequence, curFrame, boundsStartMat)
-			# loop through each armature
+			
+			# add object node frames
+			for nodeIndex in range(1, len(self.nodes)):
+				# see if we're dealing with an object node
+				if self.nodes[nodeIndex].armIdx != -1: continue
+
+				if isBlend:
+					baseTransform = baseTransforms[nodeIndex]
+				else:
+					baseTransform = None
+				# make sure we're not past the end of our action
+				if frame < numFrameSamples:
+					# let's pretend that everything matters, we'll remove the cruft later
+					# this prevents us from having to do a second pass through the frames.
+					loc, rot, scale = self.getPoseTransform(sequence, nodeIndex, curFrame, None, baseTransform)
+					sequence.frames[nodeIndex].append([loc,rot,scale])
+				# if we're past the end, just duplicate the last good frame.
+				else:
+					loc, rot, scale = sequence.frames[nodeIndex][-1][0], sequence.frames[nodeIndex][-1][1], sequence.frames[nodeIndex][-1][2]
+					sequence.frames[nodeIndex].append([loc,rot,scale])
+			
+			# add bone node frames
+			# loop through each armature, we only want to call getPose once for each armature in the scene.			
 			for armIdx in range(0, len(self.addedArmatures)):
 				arm = self.addedArmatures[armIdx][0]
 				pose = arm.getPose()
+				print self.nodes
 				# loop through each node for the current frame.
 				for nodeIndex in range(1, len(self.nodes)):
 					# since Armature.getPose() leaks memory in Blender 2.41, skip nodes not
 					# belonging to the current armature to avoid having to call it unnecessarily.
 
-					'''
+
 					# see if we're dealing with an object node
-					if self.nodes[nodeIndex].armIdx == -1:
-						print "Adding transforms for object node..."
-						# no parent
-						if self.nodes[nodeIndex].parent == -1:
-							# get node transform in world space
-							mat = self.nodes[nodeIndex].obj.getMatrix('worldspace')
-							rot = self.poseUtil.toTorqueQuat(mat.rotationPart().toQuat())
-							loc = self.poseUtil.toTorqueVec(mat.translationPart())
-							scale = self.poseUtil.toTorqueVec(mat.scalePart())
-						# check to see if current object node is a child of an armature bone
-						elif self.nodes[self.nodes[nodeIndex].parent].armIdx != -1:
-							# get node transform in parent bone's space
-							mat = self.nodes[nodeIndex].obj.getMatrix('worldspace')
-							rot = self.poseUtil.toTorqueQuat(mat.rotationPart().toQuat())
-							pos = self.poseUtil.toTorqueVec(mat.translationPart())
-							parentPos = self.poseUtil.armBones[parentObj.name][self.sTable.get(self.nodes[parentNodeIndex].name)][DtsPoseUtil.NODERESTPOSWS]
-							parentRot = self.poseUtil.armBones[parentObj.name][self.sTable.get(self.nodes[parentNodeIndex].name)][DtsPoseUtil.NODERESTROTWS]
-							offset = pos - parentPos
-							loc = parentRot.inverse().apply(offset)
-							rot = rot * parentRot.inverse()
-							# need to remove parent scale?
-							scale = self.poseUtil.toTorqueVec(mat.scalePart())
+					if self.nodes[nodeIndex].armIdx == -1: continue
 
-						# otherwise the parent is another object
-						else:
-							# get node tranform in parent object's space
-							mat = self.nodes[nodeIndex].obj.getMatrix('localspace')
-							rot = self.poseUtil.toTorqueQuat(mat.rotationPart().toQuat())
-							loc = self.poseUtil.toTorqueVec(mat.translationPart())
-							scale = self.poseUtil.toTorqueVec(mat.scalePart())
+					if self.nodes[nodeIndex].armIdx != armIdx and self.nodes[nodeIndex].armIdx != -1: continue
 
-						# make sure we're not past the end of our action
-						if frame < numFrameSamples:
-							# let's pretend that everything matters, we'll remove the cruft later
-							# this prevents us from having to do a second pass through the frames.
-							sequence.frames[nodeIndex].append([loc,rot,scale])
 
+					if isBlend:
+						baseTransform = baseTransforms[nodeIndex]
 					else:
-					'''
-					if True:
-						#if self.nodes[nodeIndex].armIdx != armIdx: continue
-						if isBlend:
-							baseTransform = baseTransforms[nodeIndex]
-						else:
-							baseTransform = None
-						# make sure we're not past the end of our action
-						if frame < numFrameSamples:
-							# let's pretend that everything matters, we'll remove the cruft later
-							# this prevents us from having to do a second pass through the frames.
-							#print "Sequence=",sequence
-							#print "nodeIndex=",nodeIndex
-							#print "curFrame=",curFrame
-							#print "pose=",pose
-							#print "baseTransform=",baseTransform
-							#print "parent node idx=",self.nodes[nodeIndex].parent
-							loc, rot, scale = self.getPoseTransform(sequence, nodeIndex, curFrame, pose, baseTransform)
-							sequence.frames[nodeIndex].append([loc,rot,scale])
-						# if we're past the end, just duplicate the last good frame.
-						else:
-							loc, rot, scale = sequence.frames[nodeIndex][-1][0], sequence.frames[nodeIndex][-1][1], sequence.frames[nodeIndex][-1][2]
-							sequence.frames[nodeIndex].append([loc,rot,scale])
+						baseTransform = None
+					# make sure we're not past the end of our action
+					print "frame=",frame
+					print "numFrameSamples=",numFrameSamples
+					if frame < numFrameSamples:
+						# let's pretend that everything matters, we'll remove the cruft later
+						# this prevents us from having to do a second pass through the frames.
+						print "Sequence=",sequence
+						print "nodeIndex=",nodeIndex
+						print "curFrame=",curFrame
+						print "pose=",pose
+						print "baseTransform=",baseTransform
+						print "parent node idx=",self.nodes[nodeIndex].parent
+						loc, rot, scale = self.getPoseTransform(sequence, nodeIndex, curFrame, pose, baseTransform)
+						print "loc=",loc
+						print "rot=",rot
+						print "scale=",scale
+						sequence.frames[nodeIndex].append([loc,rot,scale])
+					# if we're past the end, just duplicate the last good frame.
+					else:
+						loc, rot, scale = sequence.frames[nodeIndex][-1][0], sequence.frames[nodeIndex][-1][1], sequence.frames[nodeIndex][-1][2]
+						sequence.frames[nodeIndex].append([loc,rot,scale])
 						
 		
 		
