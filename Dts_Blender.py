@@ -533,7 +533,7 @@ def updateOldPrefs():
 	except: Prefs['LastActiveSubPanel'] = 'Common'
 	try: x = Prefs["ShowWarningErrorPopup"]
 	except: Prefs["ShowWarningErrorPopup"] = True
-	try: x = Prefs['BannedNodes'] = []
+	try: x = Prefs['BannedNodes']
 	except: Prefs['BannedNodes'] = []
 	try:
 		x = Prefs['BannedBones']
@@ -1047,11 +1047,13 @@ class ShapeTree(SceneTree):
 
 
 	def processObjects(self, obj, parentIndex, parentType=None):
+		global Prefs
 		# add a node for the current object with correct parent node set
 		self.Shape.addNode(obj, parentIndex, parentType)
 		# new parent ID is the just-added node
 		parentID = len(self.Shape.nodes)-1
 		parentType = "object"
+			
 		# add armature bones if we've got an armature
 		if obj.getType() == "Armature":
 			self.Shape.addArmature(obj, parentID)
@@ -2161,7 +2163,7 @@ class NodeControlsClass:
 
 	def guiNodeListItemCallback(self, control):
 		global Prefs, guiSeqActList
-
+		print "guiNodeListItemCallback called..."
 		# Determine id of clicked button
 		if control.evt == 40:
 			calcIdx = 0
@@ -2175,6 +2177,7 @@ class NodeControlsClass:
 					del Prefs['BannedNodes'][i]
 					break
 		else:
+			print "Adding",real_name,"to banned bones list..."
 			Prefs['BannedNodes'].append(real_name)
 
 	def createBoneListitem(self, bone1, bone2, bone3, bone4, bone5, startEvent):
