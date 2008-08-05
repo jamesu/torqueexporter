@@ -1082,8 +1082,8 @@ class ShapeTree(SceneTree):
 	def process(self, progressBar):
 		global Debug
 		global Prefs
-		# Set scene frame to 1 in case we have any problems
-		Scene.GetCurrent().getRenderingContext().currentFrame(1)
+		#Scene.GetCurrent().getRenderingContext().currentFrame(Prefs['RestFrame'])
+		Blender.Set('curframe', Prefs['RestFrame'])
 		try:
 			# double check the base path before opening the stream
 			if not os.path.exists(Prefs['exportBasepath']):
@@ -1233,7 +1233,7 @@ class ShapeTree(SceneTree):
 						# try to add the sequence
 						try: action = actions[seqName]
 						except: action = None
-						sequence = self.Shape.addSequence(seqName, context, seqKey, scene, action)
+						sequence = self.Shape.addSequence(seqName, seqKey, scene, action)
 						if sequence == None:
 							Torque_Util.dump_writeWarning("Warning : Couldn't add sequence '%s' to shape!" % seqName)
 							progressBar.update()
