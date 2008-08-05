@@ -134,7 +134,7 @@ def initPrefs():
 	Prefs['ClusterDepth'] = 1
 	Prefs['AlwaysWriteDepth'] = False
 	Prefs['Billboard'] = {'Enabled' : False,'Equator' : 10,'Polar' : 10,'PolarAngle' : 25,'Dim' : 64,'IncludePoles' : True, 'Size' : 20.0}
-	Prefs['BannedBones'] = []
+	Prefs['BannedNodes'] = []
 	Prefs['CollapseRootTransform'] = True
 	Prefs['TSEMaterial'] = False
 	Prefs['exportBasename'] = basename(Blender.Get("filename"))
@@ -532,6 +532,15 @@ def updateOldPrefs():
 	except: Prefs['LastActiveSubPanel'] = 'Common'
 	try: x = Prefs["ShowWarningErrorPopup"]
 	except: Prefs["ShowWarningErrorPopup"] = True
+	try: x = Prefs['BannedNodes'] = []
+	except: Prefs['BannedNodes'] = []
+	try:
+		x = Prefs['BannedBones']
+		Prefs['BannedNodes'] = Prefs['BannedBones']
+		del Prefs['BannedBones']
+	except:
+		pass
+	
 	for seqName in Prefs['Sequences'].keys():
 		seq = getSequenceKey(seqName)
 
@@ -1406,7 +1415,7 @@ def export():
 '''
 
 # Controls referenced in functions
-guiSequenceTab, guiGeneralTab, guiArmatureTab, guiAboutTab, guiTabBar, guiHeaderTab = None, None, None, None, None, None
+guiSequenceTab, guiGeneralTab, guiNodesTab, guiAboutTab, guiTabBar, guiHeaderTab = None, None, None, None, None, None
 
 SeqCommonControls = None
 IFLControls = None
@@ -1420,7 +1429,7 @@ AboutControls = None
 
 guiSeqActOpts = None
 guiSeqActList = None
-guiBoneList = None
+guiNodeList = None
 
 # Global control event table.  Containers have their own event tables for child controls
 globalEvents = Common_Gui.EventTable(1)
@@ -1429,8 +1438,8 @@ globalEvents = Common_Gui.EventTable(1)
 # Special callbacks for gui control tabs
 def guiBaseCallback(control):
 	global Prefs
-	global guiSequenceTab, guiArmatureTab, guiMaterialsTab, guiGeneralTab, guiAboutTab, guiTabBar
-	global guiSequenceButton, guiMeshButton, guiArmatureButton, guiMaterialsButton, guiAboutButton
+	global guiSequenceTab, guiNodesTab, guiMaterialsTab, guiGeneralTab, guiAboutTab, guiTabBar
+	global guiSequenceButton, guiMeshButton, guiNodesButton, guiMaterialsButton, guiAboutButton
 
 	if control.name == "guiExportButton":
 		export()
@@ -1440,7 +1449,7 @@ def guiBaseCallback(control):
 	ctrls = [[guiSequenceButton,guiSequenceTab, None, "Sequences"],\
 	[guiMeshButton,guiGeneralTab, None, "General"],\
 	[guiMaterialsButton,guiMaterialsTab, MaterialControls, "Materials"],\
-	[guiArmatureButton,guiArmatureTab, None, "Armature"],\
+	[guiNodesButton,guiNodesTab, None, "Armature"],\
 	[guiAboutButton,guiAboutTab, None, "About"]]
 	for ctrl in ctrls:
 		if control.name == ctrl[0].name:
@@ -1495,7 +1504,7 @@ def restoreLastActivePanel():
 	[[guiSequenceButton,guiSequenceTab, "Sequences"],\
 	 [guiMeshButton,guiGeneralTab, "General"],\
 	 [guiMaterialsButton,guiMaterialsTab, "Materials"],\
-	 [guiArmatureButton,guiArmatureTab, "Armature"],\
+	 [guiNodesButton,guiNodesTab, "Nodes"],\
 	 [guiAboutButton,guiAboutTab, "About"]]
 
 	seqSubPanels =\
@@ -1549,8 +1558,8 @@ def restoreLastActivePanel():
 			
 # Resize callback for all global gui controls
 def guiBaseResize(control, newwidth, newheight):
-	tabContainers = ["guiSequenceTab", "guiGeneralTab", "guiArmatureTab", "guiAboutTab", "guiMaterialsTab"]
-	tabSubContainers = ["guiSeqCommonSubtab", "guiSeqActSubtab", "guiSequenceIFLSubtab", "guiSequenceVisibilitySubtab","guiSequenceUVSubtab","guiSequenceMorphSubtab", "guiSequenceNLASubtab", "guiMaterialsSubtab", "guiGeneralSubtab", "guiArmatureSubtab", "guiAboutSubtab"]
+	tabContainers = ["guiSequenceTab", "guiGeneralTab", "guiNodesTab", "guiAboutTab", "guiMaterialsTab"]
+	tabSubContainers = ["guiSeqCommonSubtab", "guiSeqActSubtab", "guiSequenceIFLSubtab", "guiSequenceVisibilitySubtab","guiSequenceUVSubtab","guiSequenceMorphSubtab", "guiSequenceNLASubtab", "guiMaterialsSubtab", "guiGeneralSubtab", "guiNodeListSubtab", "guiAboutSubtab"]
 	
 	if control.name == "guiTabBar":
 		control.x, control.y = 0, 378
@@ -1570,7 +1579,7 @@ def guiBaseResize(control, newwidth, newheight):
 	elif control.name == "guiSequenceButton":
 		control.x, control.y = 10, 0
 		control.width, control.height = 70, 25
-	elif control.name == "guiArmatureButton":
+	elif control.name == "guiNodesButton":
 		control.x, control.y = 82, 0
 		control.width, control.height = 65, 25
 	elif control.name == "guiMaterialsButton":
@@ -2049,14 +2058,14 @@ class GeneralControlsClass:
 *
 ***************************************************************************************************
 '''
-class ArmatureControlsClass:
+class NodeControlsClass:
 	def __init__(self):
-		global guiArmatureSubtab
+		global guiNodeListSubtab
 		global globalEvents
 
 		# initialize GUI controls
-		self.guiBoneText = Common_Gui.SimpleText("guiBoneText", "Bones that should be exported :", None, self.resize)
-		self.guiBoneList = Common_Gui.BoneListContainer("guiBoneList", None, None, self.resize)
+		self.guiNodeText = Common_Gui.SimpleText("guiNodeText", "Nodes that should be exported :", None, self.resize)
+		self.guiNodeList = Common_Gui.BoneListContainer("guiNodeList", None, None, self.resize)
 		self.guiMatchText =  Common_Gui.SimpleText("guiMatchText", "Match pattern", None, self.resize)
 		self.guiPatternText = Common_Gui.TextBox("guiPatternText", "", "pattern to match bone names, asterix is wildcard", 6, self.handleEvent, self.resize)
 		self.guiPatternOn = Common_Gui.BasicButton("guiPatternOn", "On", "Turn on export of bones matching pattern", 7, self.handleEvent, self.resize)
@@ -2067,16 +2076,16 @@ class ArmatureControlsClass:
 		self.guiPatternText.value = "*"
 		
 		# add controls to containers
-		guiArmatureSubtab.addControl(self.guiBoneText)
-		guiArmatureSubtab.addControl(self.guiBoneList)
-		guiArmatureSubtab.addControl(self.guiMatchText)
-		guiArmatureSubtab.addControl(self.guiPatternText)
-		guiArmatureSubtab.addControl(self.guiPatternOn)
-		guiArmatureSubtab.addControl(self.guiPatternOff)
-		guiArmatureSubtab.addControl(self.guiRefresh)
+		guiNodeListSubtab.addControl(self.guiNodeText)
+		guiNodeListSubtab.addControl(self.guiNodeList)
+		guiNodeListSubtab.addControl(self.guiMatchText)
+		guiNodeListSubtab.addControl(self.guiPatternText)
+		guiNodeListSubtab.addControl(self.guiPatternOn)
+		guiNodeListSubtab.addControl(self.guiPatternOff)
+		guiNodeListSubtab.addControl(self.guiRefresh)
 		
 		# populate bone grid
-		self.populateBoneGrid()
+		self.populateNodeGrid()
 		
 	def cleanup(self):
 		'''
@@ -2086,8 +2095,8 @@ class ArmatureControlsClass:
 		Note: __del__ is not guaranteed to be called for objects that still
 		exist when the interpreter exits.
 		'''
-		del self.guiBoneText
-		del self.guiBoneList
+		del self.guiNodeText
+		del self.guiNodeList
 		del self.guiMatchText
 		del self.guiPatternText
 		del self.guiPatternOn
@@ -2100,7 +2109,7 @@ class ArmatureControlsClass:
 		pass
 
 	def handleEvent(self, control):
-		global Prefs, export_tree, guiBoneList, guiPatternText
+		global Prefs, export_tree, guiNodeList, guiPatternText
 		if control.name == "guiPatternOn" or control.name == "guiPatternOff":
 			userPattern = self.guiPatternText.value
 			# convert to uppercase
@@ -2114,22 +2123,22 @@ class ArmatureControlsClass:
 				name = name.upper()
 				if re.match(newPat, name) != None:				
 						if control.name == "guiPatternOn":
-							for i in range(len(Prefs['BannedBones'])-1, -1, -1):
-								boneName = Prefs['BannedBones'][i].upper()
+							for i in range(len(Prefs['BannedNodes'])-1, -1, -1):
+								boneName = Prefs['BannedNodes'][i].upper()
 								if name == boneName:
-									del Prefs['BannedBones'][i]
+									del Prefs['BannedNodes'][i]
 						elif control.name == "guiPatternOff":
-							Prefs['BannedBones'].append(name)
+							Prefs['BannedNodes'].append(name)
 			self.clearBoneGrid()
-			self.populateBoneGrid()
+			self.populateNodeGrid()
 		elif control.name == "guiRefresh":
 			self.clearBoneGrid()
-			self.populateBoneGrid()
+			self.populateNodeGrid()
 
 	def resize(self, control, newwidth, newheight):
-		if control.name == "guiBoneText":
+		if control.name == "guiNodeText":
 			control.x, control.y = 10,newheight-15
-		elif control.name == "guiBoneList":
+		elif control.name == "guiNodeList":
 			control.x, control.y, control.width, control.height = 10,70, 470,242
 		elif control.name == "guiMatchText":
 			control.x, control.y = 10,newheight-285
@@ -2142,7 +2151,7 @@ class ArmatureControlsClass:
 		elif control.name == "guiRefresh":
 			control.x, control.y, control.width = 400,newheight-315, 75
 
-	def guiBoneListItemCallback(self, control):
+	def guiNodeListItemCallback(self, control):
 		global Prefs, guiSeqActList
 
 		# Determine id of clicked button
@@ -2152,13 +2161,13 @@ class ArmatureControlsClass:
 			calcIdx = (control.evt - 40) #/ 4
 		real_name = control.text.upper()
 		if control.state:
-			# Remove entry from BannedBones
-			for i in range(0, len(Prefs['BannedBones'])):
-				if Prefs['BannedBones'][i] == real_name:
-					del Prefs['BannedBones'][i]
+			# Remove entry from BannedNodes
+			for i in range(0, len(Prefs['BannedNodes'])):
+				if Prefs['BannedNodes'][i] == real_name:
+					del Prefs['BannedNodes'][i]
 					break
 		else:
-			Prefs['BannedBones'].append(real_name)
+			Prefs['BannedNodes'].append(real_name)
 
 	def createBoneListitem(self, bone1, bone2, bone3, bone4, bone5, startEvent):
 		#seqPrefs = getSequenceKey(seq_name)
@@ -2168,39 +2177,39 @@ class ArmatureControlsClass:
 		guiContainer.fade_mode = 0
 		guiContainer.borderColor = None
 		if bone1 != None:
-			guiBone1 = Common_Gui.ToggleButton("guiBone_" + bone1, bone1, "Toggle Status of " + bone1, startEvent, self.guiBoneListItemCallback, None)
+			guiBone1 = Common_Gui.ToggleButton("guiBone_" + bone1, bone1, "Toggle Status of " + bone1, startEvent, self.guiNodeListItemCallback, None)
 			guiBone1.x, guiBone1.y = 1, 0
 			guiBone1.width, guiBone1.height = 90, 19
 			guiBone1.state = True
 			guiContainer.addControl(guiBone1)
 		if bone2 != None:
-			guiBone2 = Common_Gui.ToggleButton("guiBone_" + bone2, bone2, "Toggle Status of " + bone2, startEvent+1, self.guiBoneListItemCallback, None)
+			guiBone2 = Common_Gui.ToggleButton("guiBone_" + bone2, bone2, "Toggle Status of " + bone2, startEvent+1, self.guiNodeListItemCallback, None)
 			guiBone2.x, guiBone2.y = 92, 0
 			guiBone2.width, guiBone2.height = 90, 19
 			guiBone2.state = True
 			guiContainer.addControl(guiBone2)
 		if bone3 != None:
-			guiBone3 = Common_Gui.ToggleButton("guiBone_" + bone3, bone3, "Toggle Status of " + bone3, startEvent+3, self.guiBoneListItemCallback, None)
+			guiBone3 = Common_Gui.ToggleButton("guiBone_" + bone3, bone3, "Toggle Status of " + bone3, startEvent+3, self.guiNodeListItemCallback, None)
 			guiBone3.x, guiBone3.y = 183, 0
 			guiBone3.width, guiBone3.height = 90, 19
 			guiBone3.state = True
 			guiContainer.addControl(guiBone3)
 		if bone4 != None:
-			guiBone4 = Common_Gui.ToggleButton("guiBone_" + bone4, bone4, "Toggle Status of " + bone4, startEvent+4, self.guiBoneListItemCallback, None)
+			guiBone4 = Common_Gui.ToggleButton("guiBone_" + bone4, bone4, "Toggle Status of " + bone4, startEvent+4, self.guiNodeListItemCallback, None)
 			guiBone4.x, guiBone4.y = 274, 0
 			guiBone4.width, guiBone4.height = 89, 19
 			guiBone4.state = True
 			guiContainer.addControl(guiBone4)	
 		if bone5 != None:
-			guiBone5 = Common_Gui.ToggleButton("guiBone_" + bone5, bone5, "Toggle Status of " + bone5, startEvent+5, self.guiBoneListItemCallback, None)
+			guiBone5 = Common_Gui.ToggleButton("guiBone_" + bone5, bone5, "Toggle Status of " + bone5, startEvent+5, self.guiNodeListItemCallback, None)
 			guiBone5.x, guiBone5.y = 364, 0
 			guiBone5.width, guiBone5.height = 89, 19
 			guiBone5.state = True
 			guiContainer.addControl(guiBone5)
 		return guiContainer
 
-	def populateBoneGrid(self):
-		global Prefs, export_tree, guiBoneList
+	def populateNodeGrid(self):
+		global Prefs, export_tree, guiNodeList
 		shapeTree = export_tree.find("SHAPE")
 		if shapeTree == None: return
 		evtNo = 40
@@ -2209,12 +2218,12 @@ class ArmatureControlsClass:
 		for name in shapeTree.getShapeBoneNames():
 			names.append(name)
 			if len(names) == 5:
-				self.guiBoneList.addControl(self.createBoneListitem(names[0],names[1],names[2],names[3],names[4], evtNo))
-				self.guiBoneList.controls[count].controls[0].state = not (self.guiBoneList.controls[count].controls[0].text.upper() in Prefs['BannedBones'])
-				self.guiBoneList.controls[count].controls[1].state = not (self.guiBoneList.controls[count].controls[1].text.upper() in Prefs['BannedBones'])
-				self.guiBoneList.controls[count].controls[2].state = not (self.guiBoneList.controls[count].controls[2].text.upper() in Prefs['BannedBones'])
-				self.guiBoneList.controls[count].controls[3].state = not (self.guiBoneList.controls[count].controls[3].text.upper() in Prefs['BannedBones'])
-				self.guiBoneList.controls[count].controls[4].state = not (self.guiBoneList.controls[count].controls[4].text.upper() in Prefs['BannedBones'])
+				self.guiNodeList.addControl(self.createBoneListitem(names[0],names[1],names[2],names[3],names[4], evtNo))
+				self.guiNodeList.controls[count].controls[0].state = not (self.guiNodeList.controls[count].controls[0].text.upper() in Prefs['BannedNodes'])
+				self.guiNodeList.controls[count].controls[1].state = not (self.guiNodeList.controls[count].controls[1].text.upper() in Prefs['BannedNodes'])
+				self.guiNodeList.controls[count].controls[2].state = not (self.guiNodeList.controls[count].controls[2].text.upper() in Prefs['BannedNodes'])
+				self.guiNodeList.controls[count].controls[3].state = not (self.guiNodeList.controls[count].controls[3].text.upper() in Prefs['BannedNodes'])
+				self.guiNodeList.controls[count].controls[4].state = not (self.guiNodeList.controls[count].controls[4].text.upper() in Prefs['BannedNodes'])
 
 				evtNo += 6
 				count += 1
@@ -2223,18 +2232,18 @@ class ArmatureControlsClass:
 		if len(names) > 0:
 			for i in range(len(names)-1, 5):
 				names.append(None)
-			self.guiBoneList.addControl(self.createBoneListitem(names[0],names[1],names[2],names[3], names[4], evtNo))
-			if names[0] != None: self.guiBoneList.controls[count].controls[0].state = not (self.guiBoneList.controls[count].controls[0].text.upper() in Prefs['BannedBones'])
-			if names[1] != None: self.guiBoneList.controls[count].controls[1].state = not (self.guiBoneList.controls[count].controls[1].text.upper() in Prefs['BannedBones'])
-			if names[2] != None: self.guiBoneList.controls[count].controls[2].state = not (self.guiBoneList.controls[count].controls[2].text.upper() in Prefs['BannedBones'])
-			if names[3] != None: self.guiBoneList.controls[count].controls[3].state = not (self.guiBoneList.controls[count].controls[3].text.upper() in Prefs['BannedBones'])
-			if names[4] != None: self.guiBoneList.controls[count].controls[4].state = not (self.guiBoneList.controls[count].controls[4].text.upper() in Prefs['BannedBones'])
+			self.guiNodeList.addControl(self.createBoneListitem(names[0],names[1],names[2],names[3], names[4], evtNo))
+			if names[0] != None: self.guiNodeList.controls[count].controls[0].state = not (self.guiNodeList.controls[count].controls[0].text.upper() in Prefs['BannedNodes'])
+			if names[1] != None: self.guiNodeList.controls[count].controls[1].state = not (self.guiNodeList.controls[count].controls[1].text.upper() in Prefs['BannedNodes'])
+			if names[2] != None: self.guiNodeList.controls[count].controls[2].state = not (self.guiNodeList.controls[count].controls[2].text.upper() in Prefs['BannedNodes'])
+			if names[3] != None: self.guiNodeList.controls[count].controls[3].state = not (self.guiNodeList.controls[count].controls[3].text.upper() in Prefs['BannedNodes'])
+			if names[4] != None: self.guiNodeList.controls[count].controls[4].state = not (self.guiNodeList.controls[count].controls[4].text.upper() in Prefs['BannedNodes'])
 
 
 	def clearBoneGrid(self):
-		global guiBoneList
-		del self.guiBoneList.controls[:]
-		#for control in self.guiBoneList.controls:
+		global guiNodeList
+		del self.guiNodeList.controls[:]
+		#for control in self.guiNodeList.controls:
 		#	del control
 		
 
@@ -2242,13 +2251,13 @@ class ArmatureControlsClass:
 		global Prefs
 		real_name = control.name.upper()
 		if control.state:
-			# Remove entry from BannedBones
-			for i in range(0, len(Prefs['BannedBones'])):
-				if Prefs['BannedBones'][i] == real_name:
-					del Prefs['BannedBones'][i]
+			# Remove entry from BannedNodes
+			for i in range(0, len(Prefs['BannedNodes'])):
+				if Prefs['BannedNodes'][i] == real_name:
+					del Prefs['BannedNodes'][i]
 					break
 		else:
-			Prefs['BannedBones'].append(real_name)
+			Prefs['BannedNodes'].append(real_name)
 
 
 
@@ -5293,10 +5302,10 @@ def initGui():
 	'''
 
 	global Version, Prefs
-	global guiSequenceTab, guiArmatureTab, guiMaterialsTab, guiGeneralTab, guiAboutTab, guiHeaderTab
-	global guiSequenceSubtab, guiArmatureSubtab, guiGeneralSubtab, guiAboutSubtab, guiMaterialsSubtab
-	global guiSequenceButton, guiMeshButton, guiArmatureButton, guiMaterialsButton, guiAboutButton
-	global guiSeqActList, guiSeqActOpts, guiBoneList, guiMaterialList, guiMaterialOptions
+	global guiSequenceTab, guiNodesTab, guiMaterialsTab, guiGeneralTab, guiAboutTab, guiHeaderTab
+	global guiSequenceSubtab, guiNodeListSubtab, guiGeneralSubtab, guiAboutSubtab, guiMaterialsSubtab
+	global guiSequenceButton, guiMeshButton, guiNodesButton, guiMaterialsButton, guiAboutButton
+	global guiSeqActList, guiSeqActOpts, guiNodeList, guiMaterialList, guiMaterialOptions
 	global guiTriListsButton, guiStripMeshesButton, guiTriMeshesButton
 	global guiBonePatternText
 	global GlobalEvents
@@ -5313,7 +5322,7 @@ def initGui():
 	# Main tab button controls
 	guiSequenceButton = Common_Gui.TabButton("guiSequenceButton", "Sequences", "Sequence options", None, guiBaseCallback, guiBaseResize)
 	guiSequenceButton.state = True
-	guiArmatureButton = Common_Gui.TabButton("guiArmatureButton", "Armatures", "Armature options", None, guiBaseCallback, guiBaseResize)
+	guiNodesButton = Common_Gui.TabButton("guiNodesButton", "Nodes", "Node options", None, guiBaseCallback, guiBaseResize)
 	guiMaterialsButton = Common_Gui.TabButton("guiMaterialsButton", "Materials", "Material options", None, guiBaseCallback, guiBaseResize)
 	guiMeshButton = Common_Gui.TabButton("guiMeshButton", "General", "Mesh and other options", None, guiBaseCallback, guiBaseResize)
 	guiAboutButton = Common_Gui.TabButton("guiAboutButton", "About", "About", None, guiBaseCallback, guiBaseResize)
@@ -5352,9 +5361,9 @@ def initGui():
 	guiSequencesTabBar.fade_mode = 0
 	guiSequencesTabBar.color = None
 	guiSequencesTabBar.borderColor = None
-	guiArmatureTab = Common_Gui.TabContainer("guiArmatureTab", "content.armature", guiArmatureButton, None, guiBaseResize)
-	guiArmatureTab.fade_mode = 1
-	guiArmatureTab.enabled, guiArmatureTab.visible = False, False
+	guiNodesTab = Common_Gui.TabContainer("guiNodesTab", "content.armature", guiNodesButton, None, guiBaseResize)
+	guiNodesTab.fade_mode = 1
+	guiNodesTab.enabled, guiNodesTab.visible = False, False
 	guiMaterialsTab = Common_Gui.TabContainer("guiMaterialsTab", "content.materials", guiMaterialsButton, None, guiBaseResize)
 	guiMaterialsTab.fade_mode = 1
 	guiMaterialsTab.enabled, guiMaterialsTab.visible = False, False
@@ -5392,8 +5401,8 @@ def initGui():
 	
 	guiGeneralSubtab = Common_Gui.BasicContainer("guiGeneralSubtab", None, None, guiBaseResize)
 	guiGeneralSubtab.fade_mode = 1
-	guiArmatureSubtab = Common_Gui.BasicContainer("guiArmatureSubtab", None, None, guiBaseResize)
-	guiArmatureSubtab.fade_mode = 1
+	guiNodeListSubtab = Common_Gui.BasicContainer("guiNodeListSubtab", None, None, guiBaseResize)
+	guiNodeListSubtab.fade_mode = 1
 	guiAboutSubtab = Common_Gui.BasicContainer("guiAboutSubtab", None, None, guiBaseResize)
 	guiAboutSubtab.fade_mode = 1
 	
@@ -5405,7 +5414,7 @@ def initGui():
 	Common_Gui.addGuiControl(guiTabBar)
 	guiTabBar.addControl(guiHeaderBar)
 	guiTabBar.addControl(guiSequenceButton)
-	guiTabBar.addControl(guiArmatureButton)
+	guiTabBar.addControl(guiNodesButton)
 	guiTabBar.addControl(guiMaterialsButton)
 	guiTabBar.addControl(guiMeshButton)
 	
@@ -5442,10 +5451,10 @@ def initGui():
 	guiSequenceMorphSubtab.borderColor = [0,0,0,0]
 
 	
-	Common_Gui.addGuiControl(guiArmatureTab)
-	guiArmatureTab.borderColor = [0,0,0,0]
-	guiArmatureTab.addControl(guiArmatureSubtab)
-	guiArmatureSubtab.borderColor = [0,0,0,0]
+	Common_Gui.addGuiControl(guiNodesTab)
+	guiNodesTab.borderColor = [0,0,0,0]
+	guiNodesTab.addControl(guiNodeListSubtab)
+	guiNodeListSubtab.borderColor = [0,0,0,0]
 	
 	
 	Common_Gui.addGuiControl(guiMaterialsTab)
@@ -5467,7 +5476,7 @@ def initGui():
 	IFLControls = IFLControlsClass(guiSequenceIFLSubtab)
 	VisControls = VisControlsClass(guiSequenceVisibilitySubtab)
 	MaterialControls = MaterialControlsClass()
-	ArmatureControls = ArmatureControlsClass()
+	ArmatureControls = NodeControlsClass()
 	GeneralControls = GeneralControlsClass()
 	AboutControls = AboutControlsClass()
 	
