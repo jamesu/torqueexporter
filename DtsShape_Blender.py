@@ -102,8 +102,10 @@ class BlenderShape(DtsShape):
 		self.externalSequences = []
 		self.scriptMaterials = []
 		
+		# set rest frame before initializing poseUtil
+		Blender.Set('curframe', prefs['RestFrame'])
 		# this object is the interface through which we interact with the
-		# pose module and the blender armature system.
+		# pose module and the blender armature system.		
 		self.poseUtil = DtsPoseUtil.DtsPoseUtilClass(prefs)
 		
 		gc.enable()
@@ -1098,7 +1100,7 @@ class BlenderShape(DtsShape):
 
 	# Builds a base transform for blend animations using the
 	# designated action and frame #. 
-	def buildBaseTransforms(self, blendSequence, blendAction, useActionName, useFrame, scene, context):
+	def buildBaseTransforms(self, blendSequence, blendAction, useActionName, useFrame, scene):
 		useAction = Blender.Armature.NLA.GetActions()[useActionName]
 		
 		# Need to create a temporary sequence and build a list
@@ -1147,7 +1149,6 @@ class BlenderShape(DtsShape):
 			useAction.setActive(arm)
 
 		# Set the current frame in blender
-		#context.currentFrame(useFrame)
 		Blender.Set('curframe', useFrame)
 		
 		for armIdx in range(0, len(self.addedArmatures)):
@@ -1168,7 +1169,7 @@ class BlenderShape(DtsShape):
 		return baseTransforms
 		
 	# Adds a generic sequence
-	def addSequence(self, seqName, context, seqPrefs, scene = None, action=None):
+	def addSequence(self, seqName, seqPrefs, scene = None, action=None):
 
 		numFrameSamples = getSeqNumFrames(seqName, seqPrefs)
 
@@ -1217,7 +1218,7 @@ class BlenderShape(DtsShape):
 		lastFrameRemoved = False
 		if ActionIsValid:
 			#print "   Adding action data for", seqName
-			sequence, lastFrameRemoved = self.addAction(sequence, action, numFrameSamples, scene, context, seqPrefs)
+			sequence, lastFrameRemoved = self.addAction(sequence, action, numFrameSamples, scene, seqPrefs)
 			# if we had to remove the last frame from a cyclic action, and the original action
 			# frame samples was the same as the overall number of frames for the sequence, adjust
 			# the overall sequence length.
@@ -1241,7 +1242,7 @@ class BlenderShape(DtsShape):
 		return sequence
 	
 	# Import an action
-	def addAction(self, sequence, action, numOverallFrames, scene, context, seqPrefs):
+	def addAction(self, sequence, action, numOverallFrames, scene, seqPrefs):
 		'''
 		This adds an action to a shape as a sequence.
 		
@@ -1350,7 +1351,7 @@ class BlenderShape(DtsShape):
 			# base transforms for nodes in our blend animation.
  			useAction = seqPrefs['Action']['BlendRefPoseAction']
 			useFrame = seqPrefs['Action']['BlendRefPoseFrame']
-			baseTransforms = self.buildBaseTransforms(sequence, action, useAction, useFrame, scene, context)
+			baseTransforms = self.buildBaseTransforms(sequence, action, useAction, useFrame, scene)
 			if baseTransforms == None:
 				Torque_Util.dump_writeln("Error getting base Transforms!!!!!")
 
@@ -1405,25 +1406,38 @@ class BlenderShape(DtsShape):
 		# loop through all of the armatures and set the current action as active for all
 		# of them.  Sadly, there is no way to tell which action belongs with which armature
 		# using the Python API in Blender, so this is a bit messy.
-		act = Blender.Armature.NLA.GetActions()[sequence.name]
-		for i in range(0, len(self.addedArmatures)):
-			arm = self.addedArmatures[i][0]			
-			act.setActive(arm)
+		#act = Blender.Armature.NLA.GetActions()[sequence.name]
+		#for i in range(0, len(self.addedArmatures)):
+		#	arm = self.addedArmatures[i][0]			
+		#	act.setActive(arm)
 		print "!!!!!! you are here(1)"	
 		# loop through all of the exisitng action frames
 		for frame in range(0, numOverallFrames):
 			print "!!!!!! you are here(2)"	
 			# Set the current frame in blender
-			#context.currentFrame(int(frame*interpolateInc))
 			curFrame = int(round(float(frame)*interpolateInc,0)) + seqPrefs['Action']['StartFrame']
 			Blender.Set('curframe', curFrame)
 			# add ground frames
 			self.addGroundFrame(sequence, curFrame, boundsStartMat)
 			
+			# get poses for all armatures in the scene
+			armPoses = []
+			for armIdx in range(0, len(self.addedArmatures)):
+				arm = self.addedArmatures[armIdx][0]
+				armPoses.append(arm.getPose())
+			
 			# add object node frames
 			for nodeIndex in range(1, len(self.nodes)):
 				# see if we're dealing with an object node
-				if self.nodes[nodeIndex].armIdx != -1: continue
+				#if self.nodes[nodeIndex].armIdx != -1: continue
+				
+				gotPose = False
+				try:
+					pose = armPoses[self.nodes[nodeIndex].armIdx]
+					gotPose = True
+				except: pass
+				if not gotPose:
+					pose = armPoses[self.nodes[self.nodes[nodeIndex].parentIndex].armIdx]
 
 				if isBlend:
 					baseTransform = baseTransforms[nodeIndex]
@@ -1433,13 +1447,14 @@ class BlenderShape(DtsShape):
 				if frame < numFrameSamples:
 					# let's pretend that everything matters, we'll remove the cruft later
 					# this prevents us from having to do a second pass through the frames.
-					loc, rot, scale = self.getPoseTransform(sequence, nodeIndex, curFrame, None, baseTransform)
+					loc, rot, scale = self.getPoseTransform(sequence, nodeIndex, curFrame, pose, baseTransform)
 					sequence.frames[nodeIndex].append([loc,rot,scale])
 				# if we're past the end, just duplicate the last good frame.
 				else:
 					loc, rot, scale = sequence.frames[nodeIndex][-1][0], sequence.frames[nodeIndex][-1][1], sequence.frames[nodeIndex][-1][2]
 					sequence.frames[nodeIndex].append([loc,rot,scale])
 			
+			'''
 			# add bone node frames
 			# loop through each armature, we only want to call getPose once for each armature in the scene.			
 			for armIdx in range(0, len(self.addedArmatures)):
@@ -1484,7 +1499,7 @@ class BlenderShape(DtsShape):
 						loc, rot, scale = sequence.frames[nodeIndex][-1][0], sequence.frames[nodeIndex][-1][1], sequence.frames[nodeIndex][-1][2]
 						sequence.frames[nodeIndex].append([loc,rot,scale])
 						
-		
+			'''
 		
 		
 		# if nothing was actually animated abandon exporting the action.
@@ -1656,7 +1671,6 @@ class BlenderShape(DtsShape):
 		'''
 
 		scene = Blender.Scene.GetCurrent()
-		context = Blender.Scene.GetCurrent().getRenderingContext()
 		sequence.matters_vis = [False]*len(self.objects)
 
 		# includes last frame
