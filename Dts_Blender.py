@@ -141,6 +141,7 @@ def initPrefs():
 	Prefs['exportBasepath'] = basepath(Blender.Get("filename"))
 	Prefs['LastActivePanel'] = 'Sequences'
 	Prefs['LastActiveSubPanel'] = 'Common'
+	Prefs['RestFrame'] = 1
 	return Prefs
 
 # Loads preferences
@@ -540,6 +541,8 @@ def updateOldPrefs():
 		del Prefs['BannedBones']
 	except:
 		pass
+	try: x = Prefs['RestFrame']
+	except:Prefs['RestFrame'] = 1
 	
 	for seqName in Prefs['Sequences'].keys():
 		seq = getSequenceKey(seqName)
@@ -1310,12 +1313,14 @@ class ShapeTree(SceneTree):
 	def getName(self):
 		return "SHAPE"
 		
-	def getShapeBoneNames(self):
-		boneList = []
+	def getShapeNodeNames(self):
+		nodeList = []
 		armBoneList = [] # temp list for bone sorting
-		# We need a list of bones for our gui, so find them
+		obNodeList = []
+		# We need a list of nodes for our gui, so find them
 		for obj in self.normalDetails:
 			for c in getAllChildren(obj[1]):
+				obNodeList.append(c.name)
 				if c.getType() == "Armature":
 					armBoneList = []
 					for bone in c.getData().bones.values():
@@ -1324,8 +1329,11 @@ class ShapeTree(SceneTree):
 					# appending it to the main list.
 					armBoneList.sort(lambda x, y: cmp(x.lower(),y.lower()))
 					for bone in armBoneList:
-						boneList.append(bone)
-		return boneList
+						nodeList.append(bone)
+			obNodeList.sort(lambda x, y: cmp(x.lower(),y.lower()))
+		for node in obNodeList:
+			nodeList.append(node)
+		return nodeList
 		
 	def find(self, name):
 		# Not supported
@@ -2119,7 +2127,7 @@ class NodeControlsClass:
 				newPat += '$'
 			shapeTree = export_tree.find("SHAPE")
 			if shapeTree == None: return
-			for name in shapeTree.getShapeBoneNames():
+			for name in shapeTree.getShapeNodeNames():
 				name = name.upper()
 				if re.match(newPat, name) != None:				
 						if control.name == "guiPatternOn":
@@ -2215,7 +2223,7 @@ class NodeControlsClass:
 		evtNo = 40
 		count = 0
 		names = []
-		for name in shapeTree.getShapeBoneNames():
+		for name in shapeTree.getShapeNodeNames():
 			names.append(name)
 			if len(names) == 5:
 				self.guiNodeList.addControl(self.createBoneListitem(names[0],names[1],names[2],names[3],names[4], evtNo))
