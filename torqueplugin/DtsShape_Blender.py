@@ -1312,7 +1312,8 @@ class BlenderShape(DtsShape):
 		rawActFrames = (seqPrefs['Action']['EndFrame'] - seqPrefs['Action']['StartFrame']) + 1
 
 		# calc the interpolation increment
-		interpolateInc = float(rawActFrames-1.0) / float(seqPrefs['Action']['FrameSamples']-1.0)
+		try: interpolateInc = float(rawActFrames-1.0) / float(seqPrefs['Action']['FrameSamples']-1.0)
+		except: interpolateInc = 1.0
 		
 		# make sure it's not less than 1
 		if interpolateInc < 1.0: interpolateInc = 1.0
