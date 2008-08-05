@@ -1111,7 +1111,7 @@ class ShapeTree(SceneTree):
 						progressBar.update()
 					curSize = -1
 					for marker in self.collisionMeshes:
-						meshes = getAllChildren(marker)
+						meshes = filter(lambda x: x.getType()=='Mesh', getAllChildren(marker))
 						self.Shape.addCollisionDetailLevel(meshes, False, curSize)
 						curSize -= 1
 						progressBar.update()					
