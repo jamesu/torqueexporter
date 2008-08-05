@@ -260,10 +260,11 @@ class DtsPoseUtilClass:
 			nnu = nodeName.upper()
 			if nnu[0:5] != "SHAPE" and nnu[0:6] != "DETAIL" and nnu[0:3] != "LOS":
 			
+				if (obj.getType() == 'Armature'):
+					ai = nodeInfoClass(nodeName, blenderType, blenderObj, parentNI, None)
+					self.armatures[nodeName] = ai
+
 				if nodeName.upper() in prefs['BannedNodes']:
-					if (obj.getType() == 'Armature'):
-						ni = nodeInfoClass(nodeName, blenderType, blenderObj, parentNI, None)
-						self.armatures[nodeName] = ni
 					n = parentNI
 				else:
 					# add it to the nodes dict
@@ -281,7 +282,7 @@ class DtsPoseUtilClass:
 
 					# loop through the armature's bones
 					for bone in filter(lambda x: x.parent==None, armDb.bones.values()):					
-						self.__addBoneTree(obj, n, bone, armDb, n, pose, prefs)
+						self.__addBoneTree(obj, n, bone, armDb, ai, pose, prefs)
 			else:
 				print "(1) skipping node", nnu
 				n = None
@@ -308,7 +309,7 @@ class DtsPoseUtilClass:
 
 		# add child trees
 		for bone in filter(lambda x: x.parent==boneOb, armDb.bones.values()):					
-			self.__addBoneTree(obj, n, bone, armDb, armParentNI, initPose)
+			self.__addBoneTree(obj, n, bone, armDb, armParentNI, initPose, prefs)
 
 	# for debugging
 	def __printTree(self, ni, indent=0):
@@ -341,6 +342,7 @@ class DtsPoseUtilClass:
 	# *****
 	# This is our only exposed public method.
 	def getNodeLocRotLS(self, armName, bName, pose):
+		print "getNodeLocRotLS called for node:", bName
 		loc = None
 		rot = None
 		if self.nodes[bName].parentNI == None:
