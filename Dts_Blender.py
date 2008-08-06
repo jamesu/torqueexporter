@@ -142,6 +142,7 @@ def initPrefs():
 	Prefs['LastActivePanel'] = 'Sequences'
 	Prefs['LastActiveSubPanel'] = 'Common'
 	Prefs['RestFrame'] = 1
+	Prefs['DetailLevels'] = {'Detail1':[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]}
 	return Prefs
 
 # Loads preferences
@@ -656,6 +657,9 @@ def updateOldPrefs():
 
 	try: x = Prefs['ExportScale']
 	except: Prefs['ExportScale'] = 1.0
+	
+	try: x = Prefs['DetailLevels']
+	except: Prefs['DetailLevels'] = {'Detail1':[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]}
 
 
 # Call this function when the number of frames in the sequence has changed, or may have changed.
@@ -882,6 +886,372 @@ def importMaterialList():
 							pmb['DetailTex'] = None
 
 
+
+
+
+
+
+
+#-------------------------------------------------------------------------------------------------
+
+class nodeInfoClass:
+	'''
+	NodeInfoClass
+	
+	This class stores static node information for a node and provides a standard interface
+	for getting dynamic node transform data from Blender whether the node was created from a
+	Blender object or Blender bone.
+	'''
+	def __init__(self, nodeName, blenderType, blenderObj, parentNI):
+		global Prefs
+		self.nodeName = nodeName
+		self.blenderType = blenderType
+		self.blenderObj = blenderObj # either a blender bone or blender object depending on blenderType
+		self.parentNodeInfo = parentNI
+		
+		# some of this info we can get from Blender
+		self.isBannedNode = nodeName in Prefs['BannedNodes']
+		self.layers = blenderObj.layers
+		
+		if parentNI != None: self.parentName = parentNI.nodeName
+		else: self.parentName = None
+		if parentNI != None: self.parentBlenderType = parentNI.blenderType
+		else: self.parentBlenderType = None
+		
+		self.parentNI = parentNI
+		
+		if blenderType == "object":
+			pass
+		elif blenderType == "bone":
+			pass
+
+	# find a non-excluded node to use as a parent for another node/object
+	# don't call this until the tree is completely built.
+	def getGoodParentNI(self):
+		global Prefs
+		pNI = self
+		while (pNI != None) and (pNI.nodeName.upper() in Prefs['BannedNodes']):
+			pNI = pNI.parentNI
+		print "* getGoodParentNI called for node",self.nodeName
+		if pNI != None:
+			print "  getGoodParentNI returning", pNI.nodeName
+		else:
+			print "  getGoodParentNI returning none"
+		return pNI
+
+			
+'''
+	Replacement for SceneTree class, stores metadata and parent child relationships for all scene
+	objects for easy access	
+'''
+#-------------------------------------------------------------------------------------------------
+class SceneInfoClass:
+	def __init__(self):	
+		gc.enable()
+		self.nodes = {}
+		self.armatures = {}
+		self.meshes = {}
+		self.detailLevels = {}
+		self.DTSObjects = {}
+		self.__populateData()
+		print "detailLevels=",self.detailLevels
+	
+
+	# recursive, for internal use only
+	def __addTree(self, obj, parentNI):
+			global Prefs
+			#   "obj" is a blender object of any type
+			#   "parentNI" is the parent object (NodeInfo object) of obj
+			
+			nodeName = obj.name
+			blenderType = "object"
+			blenderObj = obj
+
+
+			# create a new nodeInfo object for the Blender object
+			n = nodeInfoClass(nodeName, blenderType, blenderObj, parentNI)
+
+			# the new node to the nodes dictionary
+			self.nodes[nodeName] = n
+
+			# add the node to other dictionaries as needed
+			bObjType = obj.getType()
+			if (bObjType == 'Armature'):
+				self.armatures[nodeName] = n		
+			
+			# don't object add to detail levels if it has no visible geometry
+			elif not (bObjType in ['Empty', 'Curve', 'Camera', 'Lamp', 'Lattice']):
+				print obj.getType()
+				self.meshes[nodeName] = n			
+				# add mesh node info to detail levels
+				for dlName in Prefs['DetailLevels'].keys():
+					dl = Prefs['DetailLevels'][dlName]
+					for layer in obj.layers:
+						if layer in dl:
+							self.detailLevels[dlName].append(n)
+
+			# add armature bones if needed
+			if (bObjType == 'Armature'):
+				# get blender armature datablock
+				armDb = obj.getData()
+				for bone in filter(lambda x: x.parent==None, armDb.bones.values()):					
+					self.__addBoneTree(obj, n, bone, armDb)
+
+					
+			# add child trees
+			for child in filter(lambda x: x.parent==obj, Blender.Object.Get()):
+				parentBoneName = child.getParentBoneName()
+				if (obj.getType() == 'Armature') and (parentBoneName != None):					
+					parentNode = self.nodes[parentBoneName]					
+					self.__addTree(child, parentNode)
+				else:
+					self.__addTree(child, n)
+		
+
+	
+	# adds a bone tree recursively, for internal use only
+	def __addBoneTree(self, obj, parentNI, boneOb, armDb):
+		global Prefs
+		nodeName = boneOb.name
+		blenderType = "bone"
+		blenderObj = obj
+
+		# add it to the nodes dict
+		n = nodeInfoClass(nodeName, blenderType, blenderObj, parentNI)
+		self.nodes[nodeName] = n
+
+		# add child trees
+		for bone in filter(lambda x: x.parent==boneOb, armDb.bones.values()):					
+			self.__addBoneTree(obj, n, bone, armDb)
+
+	# for debugging
+	def __printTree(self, ni, indent=0):
+		pad = ""
+		for i in range(0, indent):
+			pad += " "
+		print pad+"|"
+		print pad+"Node:", ni.nodeName
+		try:
+			nn = ni.parentNI.nodeName
+			print pad+"Parent:", nn
+		except: print pad+"No Parent."
+		indent += 3
+		for nic in filter(lambda x: x.parentNI==ni, self.nodes.values()):			
+			self.__printTree(nic, indent)
+			
+
+	def __populateData(self):
+		global Prefs
+		
+		# create empty detail levels based on prefs
+		for dlName in Prefs['DetailLevels'].keys():
+			self.detailLevels[dlName] = []
+		
+		# go through each object and bone and add subtrees		
+		for obj in filter(lambda x: x.parent==None, Blender.Object.Get()):
+			if obj.parent == None:
+				self.__addTree(obj, None)
+		print "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		for ni in filter(lambda x: x.parentNI==None, self.nodes.values()):
+			self.__printTree(ni)
+		print "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+	
+
+
+		
+
+def doExport(progressBar):
+	global Debug
+	global Prefs
+	global SceneInfo
+	Shape = BlenderShape(Prefs)
+	print "****************************** doExport called!"
+	#Scene.GetCurrent().getRenderingContext().currentFrame(Prefs['RestFrame'])
+	Blender.Set('curframe', Prefs['RestFrame'])
+	#try:
+	# double check the base path before opening the stream
+	if not os.path.exists(Prefs['exportBasepath']):
+		Prefs['exportBasepath'] = basepath(Blender.Get("filename"))
+	# double check the file name
+	if Prefs['exportBasename'] == "":
+		Prefs['exportBasename'] = basename(Blender.Get("filename"))
+
+	# make sure our path seperator is correct.
+	getPathSeperator(Prefs['exportBasepath'])
+	Stream = DtsStream("%s%s%s.dts" % (Prefs['exportBasepath'], pathSeperator, Prefs['exportBasename']), False, Prefs['DTSVersion'])
+	Torque_Util.dump_writeln("Writing shape to  '%s'." % ("%s\\%s.dts" % (Prefs['exportBasepath'], Prefs['exportBasename'])))
+	# Now, start the shape export process if the Stream loaded
+	if Stream.fs:
+		Torque_Util.dump_writeln("Processing...")
+
+		# Import objects
+
+		'''
+		This part of the routine is split up into 4 sections:
+
+		1) Get armatures and add them.
+		2) Add every single thing from the base details that isn't an armature or special object.
+		3) Add the autobillboard detail, if required.
+		4) Add every single collision mesh we can find.
+		'''
+		#progressBar.pushTask("Importing Objects...", len(self.children), 0.4)
+		progressBar.pushTask("Importing Objects...", 1, 0.4)
+
+		# set the rest frame, this should be user-selectable in the future.
+		Blender.Set('curframe', Prefs['RestFrame'])
+
+
+		# add all nodes
+		Shape.addAllNodes()
+
+		# add detail levels
+		for dlName in SceneInfo.detailLevels.keys():
+			if dlName[0:6].upper() != 'DETAIL': continue
+			dlSize = int(dlName[6:len(dlName)])
+			meshDetails = SceneInfo.detailLevels[dlName]			
+			Shape.addDetailLevel(meshDetails, dlSize)
+		
+		#add collision and loscollision detail levels
+		'''
+		curSize = -1		
+		for marker in self.collisionMeshes:
+			meshes = getAllChildren(marker)
+			Shape.addCollisionDetailLevel(meshes, False, curSize)
+			curSize -= 1
+			progressBar.update()					
+		curSize = -1
+		for marker in self.losCollisionMeshes:
+			meshes = getAllChildren(marker)
+			Shape.addCollisionDetailLevel(meshes, True, curSize)
+			curSize -= 1
+			progressBar.update()
+		'''
+		
+		# We have finished adding the regular detail levels. Now add the billboard if required.
+		if Prefs['Billboard']['Enabled']:
+			Shape.addBillboardDetailLevel(0,
+				Prefs['Billboard']['Equator'],
+				Prefs['Billboard']['Polar'],
+				Prefs['Billboard']['PolarAngle'],
+				Prefs['Billboard']['Dim'],
+				Prefs['Billboard']['IncludePoles'],
+				Prefs['Billboard']['Size'])
+
+
+		progressBar.update()
+
+		progressBar.popTask()
+
+		progressBar.pushTask("Finalizing Geometry..." , 2, 0.6)
+		# Finalize static meshes, do triangle strips
+		Shape.finalizeObjects()
+		Shape.finalizeMaterials()
+		progressBar.update()
+		if Prefs['PrimType'] == "TriStrips":
+			Shape.stripMeshes(Prefs['MaxStripSize'])
+		progressBar.update()
+
+		# Add all actions (will ignore ones not belonging to shape)
+		scene = Blender.Scene.GetCurrent()
+		context = scene.getRenderingContext()
+		actions = Armature.NLA.GetActions()
+
+		# check the armatures to see if any are locked in rest position
+		for armOb in Blender.Object.Get():
+			if (armOb.getType() != 'Armature'): continue
+			if armOb.getData().restPosition:
+				# this popup was too long and annoying, let the standard warning/error popup handle it.
+				#Blender.Draw.PupMenu("Warning%t|One or more of your armatures is locked into rest position. This will cause problems with exported animations.")
+				Torque_Util.dump_writeWarning("Warning: One or more of your armatures is locked into rest position.\n This will cause problems with exported animations.")
+				break
+
+		# Process sequences
+		seqKeys = Prefs['Sequences'].keys()
+		if len(seqKeys) > 0:
+			progressBar.pushTask("Adding Sequences..." , len(seqKeys*4), 0.8)
+			for seqName in seqKeys:
+				seqKey = getSequenceKey(seqName)
+
+				# does the sequence have anything to export?
+				if (seqKey['NoExport']) or not (seqKey['Action']['Enabled'] or seqKey['IFL']['Enabled'] or seqKey['Vis']['Enabled']):
+					progressBar.update()
+					progressBar.update()
+					progressBar.update()
+					progressBar.update()
+					continue
+
+				# try to add the sequence
+				try: action = actions[seqName]
+				except: action = None
+				sequence = Shape.addSequence(seqName, seqKey, scene, action)
+				if sequence == None:
+					Torque_Util.dump_writeWarning("Warning : Couldn't add sequence '%s' to shape!" % seqName)
+					progressBar.update()
+					progressBar.update()
+					progressBar.update()
+					progressBar.update()
+					continue
+				progressBar.update()
+
+				# Pull the triggers
+				if len(seqKey['Triggers']) != 0:
+					Shape.addSequenceTriggers(sequence, seqKey['Triggers'], getSeqNumFrames(seqName, seqKey))
+				progressBar.update()
+				progressBar.update()						
+
+				# Hey you, DSQ!
+				if seqKey['Dsq']:
+					Shape.convertAndDumpSequenceToDSQ(sequence, "%s/%s.dsq" % (Prefs['exportBasepath'], seqName), Stream.DTSVersion)
+					Torque_Util.dump_writeln("   Loaded and dumped sequence '%s' to '%s/%s.dsq'." % (seqName, Prefs['exportBasepath'], seqName))
+				else:
+					Torque_Util.dump_writeln("   Loaded sequence '%s'." % seqName)
+
+				# Clear out matters if we don't need them
+				if not sequence.has_loc: sequence.matters_translation = []
+				if not sequence.has_rot: sequence.matters_rotation = []
+				if not sequence.has_scale: sequence.matters_scale = []
+				progressBar.update()
+
+			progressBar.popTask()
+
+		Torque_Util.dump_writeln("> Shape Details")
+		Shape.dumpShapeInfo()
+		progressBar.update()
+		progressBar.popTask()
+
+		# Now we've finished, we can save shape and burn it.
+		progressBar.pushTask("Writing out DTS...", 1, 0.9)
+		Torque_Util.dump_writeln("Writing out DTS...")
+		Shape.finalize(Prefs['WriteShapeScript'])
+		Shape.write(Stream)
+		Torque_Util.dump_writeln("Done.")
+		progressBar.update()
+		progressBar.popTask()
+
+		Stream.closeStream()
+		del Stream
+		del Shape
+	else:
+		Torque_Util.dump_writeErr("Error: failed to open shape stream! (try restarting Blender)")
+		del Shape
+		progressBar.popTask()
+		return None
+	'''
+	except Exception, msg:
+		Torque_Util.dump_writeErr("Error: Exception encountered, bailing out.")
+		Torque_Util.dump_writeln(Exception)
+		if tracebackImported:
+			print "Dumping traceback to log..."
+			Torque_Util.dump_writeln(traceback.format_exc())
+		Torque_Util.dump_setout("stdout")
+		if self.Shape: del self.Shape
+		progressBar.popTask()
+		raise
+	'''
+
+
+
+
 '''
 	Class to handle the 'World' branch
 '''
@@ -1046,6 +1416,7 @@ class ShapeTree(SceneTree):
 		return obj
 
 
+	'''
 	def processObjects(self, obj, parentIndex, parentType=None, lastGoodParentIndex=-1):
 		global Prefs
 		# add a node for the current object with correct parent node set
@@ -1076,7 +1447,7 @@ class ShapeTree(SceneTree):
 				
 			# Add child objects - recursive
 			self.processObjects(child, parentID, parentType)
-
+	'''
 
 
 	def process(self, progressBar):
@@ -1114,7 +1485,7 @@ class ShapeTree(SceneTree):
 					progressBar.pushTask("Importing Objects...", len(self.children), 0.4)
 					
 					# set the rest frame, this should be user-selectable in the future.
-					Blender.Set('curframe', 0)
+					Blender.Set('curframe', Prefs['RestFrame'])
 					
 					# Collect everything into bins...
 					meshDetails = []
@@ -1155,10 +1526,13 @@ class ShapeTree(SceneTree):
 					progressBar.update()
 
 					
+					# add all nodes
+					self.Shape.addAllNodes()
+					
 					# Iterate through all objects in the highest detail level and add a node for each one.
-					for detail in self.normalDetails:
-						for child in getChildren(detail[1]):
-							self.processObjects(child, -1)
+					#for detail in self.normalDetails:
+					#	for child in getChildren(detail[1]):
+					#		self.processObjects(child, -1)
 					
 					#for n in nodes:
 					#	self.Shape.addNode(n)
@@ -1352,6 +1726,11 @@ class ShapeTree(SceneTree):
 #-------------------------------------------------------------------------------------------------
 def handleScene():
 	global export_tree
+	global SceneInfo
+
+	#if SceneInfo != None: SceneInfo.clear()
+
+
 	#Torque_Util.dump_writeln("Processing Scene...")
 	# What we do here is clear any existing export tree, then create a brand new one.
 	# This is useful if things have changed.
@@ -1363,6 +1742,7 @@ def handleScene():
 	#Torque_Util.dump_writeln("Cleaning Preference Keys")
 	cleanKeys()
 	createActionKeys()
+	SceneInfo = SceneInfoClass()
 
 def export():
 	Torque_Util.dump_writeln("Exporting...")
@@ -1378,14 +1758,20 @@ def export():
 
 	if export_tree != None:
 		cur_progress.pushTask("Done", 1, 1.0)
-		if not export_tree.process(cur_progress):
+		print "******************************************"
+		print "Calling doExport..."
+		doExport(cur_progress)
+		print "doExport returned."
+		print "******************************************"
+		'''
+		#if not export_tree.process(cur_progress):
 			# try again :-)
 			handleScene()
 			importMaterialList()
 			refreshActionData()
 			savePrefs()
-			export_tree.process(cur_progress)
-			
+			#export_tree.process(cur_progress)
+		'''		
 		cur_progress.update()
 		cur_progress.popTask()
 		Torque_Util.dump_writeln("Finished.")
