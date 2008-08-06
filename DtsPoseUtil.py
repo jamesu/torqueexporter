@@ -82,45 +82,44 @@ class nodeInfoClass:
 	# ***********************
 	# these next four functions should not be called by any other functions, only in init
 
-	# Determine a bone's default position for the current pose in the parent bone's space.
-	# This is where the bone should be if it has not been explicitly moved or
+	# Determine a node's default position for the current pose in the parent node's space.
+	# This is where the node should be if it has not been explicitly moved or
 	# effected by a constraint.
 	# 
 	# todo - what happens if parent armature node is collapsed?
-	def __calcNodeDefPosPS(self, bName):
+	def __calcNodeDefPosPS(self, nodeName):
 		# early out if we've got no parent
 		if self.parentNI == None:
-			boneLocWS = self.restPosWS
-			return boneLocWS			
-		# get the bone's default position in worldspace
-		boneLocWS = self.restPosWS
-		# get the parent bone's default position in worldspace
-		parentBoneLocWS = self.parentNI.restPosWS
-		# subtract out the parent bone's position, this gives us the offset of the child in worldspace
-		offsetWS = boneLocWS - parentBoneLocWS
+			nodeLocWS = self.restPosWS
+			return nodeLocWS			
+		# get the node's default position in worldspace
+		nodeLocWS = self.restPosWS
+		# get the parent node's default position in worldspace
+		parentnodeLocWS = self.parentNI.restPosWS
+		# subtract out the parent node's position, this gives us the offset of the child in worldspace
+		offsetWS = nodeLocWS - parentnodeLocWS
 		# scale the offset by armature's scale
 		# todo - this wasn't doing anything?
-		#armSize = self.armInfo[armName][ARMSIZE]
-		# rotate the offset into the parent bone's default local space		
+		# rotate the offset into the parent node's default local space		
 		offsetPS = self.parentNI.restRotWS.inverse().apply(offsetWS)
 		return offsetPS
 
-	# determine a bone's default rotation in parent space
-	# This is what the bone's rotation should be, relative to the parent bone,
+	# determine a node's default rotation in parent space
+	# This is what the node's rotation should be, relative to the parent node,
 	# if it has not been directly rotated or affected by a constraint.
 	# 
 	# todo - what happens if parent armature node is collapsed?
-	def __calcNodeDefRotPS(self, bName):
+	def __calcNodeDefRotPS(self, nodeName):
 		# early out if we've got no parent
 		if self.parentNI == None:
-			boneRotWS = self.restRotWS
-			return boneRotWS			
-		# get the bone's default rotation in worldspace
-		boneRotWS = self.restRotWS
-		# get the parent bone's default rotation in worldspace
-		parentBoneRotWS = self.parentNI.restRotWS
+			nodeRotWS = self.restRotWS
+			return nodeRotWS			
+		# get the node's default rotation in worldspace
+		nodeRotWS = self.restRotWS
+		# get the parent node's default rotation in worldspace
+		parentNodeRotWS = self.parentNI.restRotWS
 		# get the difference
-		bDefRotPS = boneRotWS * parentBoneRotWS.inverse()
+		bDefRotPS = nodeRotWS * parentNodeRotWS.inverse()
 		return bDefRotPS
 
 			
@@ -160,9 +159,9 @@ class nodeInfoClass:
 	# ***********************
 	# determine the position of any bone in worldspace
 	# TESTED
-	def __getBoneLocWS(self, armName, pose):
+	def __getBoneLocWS(self, pose):
 		# get the armature's rotation
-		armRot = self.armParentNI.getNodeRotWS(armName, pose)
+		armRot = self.armParentNI.getNodeRotWS(pose)
 		# and it's inverse
 		# get the pose location
 		bTrans = armRot.apply(toTorqueVec(pose.bones[self.nodeName].poseMatrix.translationPart()))
@@ -170,40 +169,43 @@ class nodeInfoClass:
 		armSize = toTorqueVec([1,1,1])
 		bTrans = Vector(bTrans.members[0] * armSize.members[0], bTrans.members[1] * armSize.members[1], bTrans.members[2]  * armSize.members[2])
 		# add on armature pivot to translate into worldspace
-		bTrans = bTrans + self.armParentNI.getNodeLocWS(armName, pose)
+		bTrans = bTrans + self.armParentNI.getNodeLocWS(pose)
 		return bTrans
 
 	# determine the rotation of any bone in worldspace
 	# TESTED
-	def __getBoneRotWS(self, armName, pose):
+	def __getBoneRotWS(self, pose):
 		# get the armature's rotation
-		armRot = self.armParentNI.getNodeRotWS(armName, pose)
+		armRot = self.armParentNI.getNodeRotWS(pose)
 		# get the pose rotation and rotate into worldspace
 		bRot = ( toTorqueQuat(pose.bones[self.nodeName].poseMatrix.rotationPart().toQuat().inverse()) * armRot)
 		return bRot
 
 
-
+	# determine the location of an object node in worldspace
+	# TESTED
 	def __getObjectLocWS(self):
 		bLoc = toTorqueVec(Blender.Object.Get(self.nodeName).getMatrix('worldspace').translationPart())
 		return bLoc
 	
+	# determine the rotation of an object node in worldspace
+	# TESTED
 	def __getObjectRotWS(self):
 		bRot = toTorqueQuat(Blender.Object.Get(self.nodeName).getMatrix('worldspace').rotationPart().toQuat()).inverse()
 		return bRot
 		
-	def getNodeLocWS(self, armName, pose):
+	def getNodeLocWS(self, pose):
 		if self.blenderType == "object":
 			retVal = self.__getObjectLocWS()
 		elif self.blenderType == "bone":
-			retVal = self.__getBoneLocWS(armName, pose)
+			retVal = self.__getBoneLocWS(pose)
 		return retVal
 		
-	def getNodeRotWS(self, armName, pose):
+	def getNodeRotWS(self, pose):
 		if self.blenderType == "object":
 			retVal = self.__getObjectRotWS()
 		elif self.blenderType == "bone":
-			retVal = self.__getBoneRotWS(armName, pose)
+			retVal = self.__getBoneRotWS(pose)
 		return retVal
 
 
@@ -257,40 +259,48 @@ class DtsPoseUtilClass:
 			# create a new nodeInfo object for the Blender object
 			
 
+			armDb = None
 			nnu = nodeName.upper()
-			if nnu[0:5] != "SHAPE" and nnu[0:6] != "DETAIL" and nnu[0:3] != "LOS":
-			
-				if (obj.getType() == 'Armature'):
-					ai = nodeInfoClass(nodeName, blenderType, blenderObj, parentNI, None)
-					self.armatures[nodeName] = ai
+			if (obj.getType() == 'Armature'):
+				# Armature transforms are needed even if the node for the armature object is
+				# collapsed to compute bone transforms in worldspace, so we keep these in a separate list
+				ai = nodeInfoClass(nodeName, blenderType, blenderObj, parentNI, None)
+				self.armatures[nodeName] = ai
 
-				if nodeName.upper() in prefs['BannedNodes']:
-					n = parentNI
-				else:
-					# add it to the nodes dict
-					ni = nodeInfoClass(nodeName, blenderType, blenderObj, parentNI, None)
-					self.nodes[nodeName] = ni
-					n = ni
-
-				if (obj.getType() == 'Armature'):
-					# Armature transforms are needed even if the node for the armature object is
-					# collapsed to compute bone transforms in worldspace, so we keep these in a separate list
-					#self.armatures[nodeName] = n
-					# get blender armature datablock
-					armDb = obj.getData()
-					pose = obj.getPose()
-
-					# loop through the armature's bones
-					for bone in filter(lambda x: x.parent==None, armDb.bones.values()):					
-						self.__addBoneTree(obj, n, bone, armDb, ai, pose, prefs)
+			if nodeName.upper() in prefs['BannedNodes']:
+				n = parentNI
 			else:
-				print "(1) skipping node", nnu
-				n = None
+				# add it to the nodes dict
+				ni = nodeInfoClass(nodeName, blenderType, blenderObj, parentNI, None)
+				self.nodes[nodeName] = ni
+				n = ni
+
+			if (obj.getType() == 'Armature'):
+				# get blender armature datablock
+				armDb = obj.getData()
+				pose = obj.getPose()
+
+				# loop through the armature's bones
+				for bone in filter(lambda x: x.parent==None, armDb.bones.values()):					
+					self.__addBoneTree(obj, n, bone, armDb, ai, pose, prefs)
 					
 			# add child trees
 			for child in filter(lambda x: x.parent==obj, Blender.Object.Get()):
-				if (obj.getType() == 'Armature') and (child.getParentBoneName() != None):
-					self.__addTree(child, self.nodes[child.getParentBoneName()], prefs)
+				parentBoneName = child.getParentBoneName()
+				if (obj.getType() == 'Armature') and (parentBoneName != None):					
+					# find a good parent bone if possible
+					while parentBoneName.upper() in prefs['BannedNodes']:
+						if armDb.bones[parentBoneName].parent != None:
+							parentBoneName = armDb.bones[parentBoneName].parent.name
+						else:
+							parentBoneName = obj.name
+							if parentBoneName.upper() in prefs['BannedNodes']:
+								parentBoneName = parentNI
+						if parentBoneName == None: break
+					if parentBoneName == None: parentNode = None
+					else: parentNode = self.nodes[parentBoneName]
+					
+					self.__addTree(child, parentNode, prefs)
 				else:
 					self.__addTree(child, n, prefs)
 		
@@ -303,9 +313,12 @@ class DtsPoseUtilClass:
 		blenderObj = obj
 
 		# create a new nodeInfo object for the Blender bone
-		n = nodeInfoClass(nodeName, blenderType, blenderObj, parentNI, armParentNI, initPose)
-		# add it to the nodes dict
-		self.nodes[nodeName] = n
+		if nodeName.upper() in prefs['BannedNodes']:
+			n = parentNI
+		else:
+			n = nodeInfoClass(nodeName, blenderType, blenderObj, parentNI, armParentNI, initPose)
+			# add it to the nodes dict
+			self.nodes[nodeName] = n
 
 		# add child trees
 		for bone in filter(lambda x: x.parent==boneOb, armDb.bones.values()):					
@@ -327,6 +340,9 @@ class DtsPoseUtilClass:
 			self.__printTree(nic, indent)
 			
 
+	# Build the node tree.
+	# Nodes in this tree are representative of actual exported nodes; The tree
+	# does not include banned nodes.
 	def __populateData(self, prefs):
 		# go through each object		
 		for obj in filter(lambda x: x.parent==None, Blender.Object.Get()):
@@ -341,43 +357,41 @@ class DtsPoseUtilClass:
 
 	# *****
 	# This is our only exposed public method.
-	def getNodeLocRotLS(self, armName, bName, pose):
-		print "getNodeLocRotLS called for node:", bName
+	def getNodeLocRotLS(self, nodeName, pose):
 		loc = None
 		rot = None
-		if self.nodes[bName].parentNI == None:
-			loc = self.getOrphanNodeLocLS(armName, bName, pose)
-			rot = self.getOrphanNodeRotLS(armName, bName, pose)
+		if self.nodes[nodeName].parentNI == None:
+			loc = self.getOrphanNodeLocLS(nodeName, pose)
+			rot = self.getOrphanNodeRotLS(nodeName, pose)
 		else:
-			loc = self.getNodeLocLS(armName, bName, pose)
-			rot = self.getNodeRotLS(armName, bName, pose)
+			loc = self.getNodeLocLS(nodeName, pose)
+			rot = self.getNodeRotLS(nodeName, pose)
 		return loc, rot
 	# *****
 	
 	# -----  everything below this point is private (pretend it is, anyway)
 	
 	# TESTED
-	def getNodeLocLS(self, armName, bName, pose):
-		node = self.nodes[bName]
+	def getNodeLocLS(self, nodeName, pose):
+		node = self.nodes[nodeName]
 		parent = node.parentNI
 		if parent == None: raise ValueError
 		# get the bone's location in parent space
-		whereIsBonePS = self.getNodePosPS(armName, bName, pose)
+		whereIsBonePS = self.getNodePosPS(nodeName, pose)
 		# get the bone's default location in parent space
 		# ( This is where the bone should be if it has not been explicitly moved or
 		# effected by a constraint.)
-		#whereShouldBoneBePS = self.armBones[armName][bName][BONEDEFPOSPS]
-		whereShouldBoneBePS = node.defPosPS
+		whereShouldNodeBePS = node.defPosPS
 		# subtract out the position that the bone will end up in due to FK transforms
 		# from the parent bone, as these are already taken care of due to the nodes being
 		# in the parent's local space.
-		whereIsBonePS = whereIsBonePS - whereShouldBoneBePS
+		whereIsBonePS = whereIsBonePS - whereShouldNodeBePS
 		return whereIsBonePS
 
 	# Get the rotation from rest of a connected bone in the bone's local space.
 	# TESTED
-	def getNodeRotLS(self, armName, bName, pose):
-		node = self.nodes[bName]
+	def getNodeRotLS(self, nodeName, pose):
+		node = self.nodes[nodeName]
 		parent = node.parentNI
 		if parent == None: raise ValueError
 		# get the default rotation of the bone in parent space, this
@@ -385,7 +399,7 @@ class DtsPoseUtilClass:
 		# explicitly rotated or affected by a constraint.
 		bDefRotPS = node.defRotPS.inverse()
 		# get the current rotation of the bone in parent space.
-		bCurRotPS = self.getNodeRotPS(armName, bName, pose)
+		bCurRotPS = self.getNodeRotPS(nodeName, pose)
 		bRotLS = bCurRotPS.inverse() * bDefRotPS
 		return bRotLS.inverse()
 
@@ -393,12 +407,12 @@ class DtsPoseUtilClass:
 	# orphan bone translations are defined in worldspace
 	# relative to the default postion of the bone.
 	# TESTED
-	def getOrphanNodeLocLS(self, armName, bName, pose):
-		node = self.nodes[bName]
+	def getOrphanNodeLocLS(self, nodeName, pose):
+		node = self.nodes[nodeName]
 		# get the rest position of the bone
 		bRestPos = node.restPosWS
 		# get the bone's current position
-		bCurPos = node.getNodeLocWS(armName, pose)
+		bCurPos = node.getNodeLocWS(pose)
 		# subtract the rest postion from the current position to get
 		# the bone's local movement
 		bMovement = bCurPos - bRestPos
@@ -408,12 +422,12 @@ class DtsPoseUtilClass:
 	# and it's current rotation; this is the bone's localspace
 	# rotation.
 	# TESTED
-	def getOrphanNodeRotLS(self, armName, bName, pose):
-		node = self.nodes[bName]
+	def getOrphanNodeRotLS(self, nodeName, pose):
+		node = self.nodes[nodeName]
 		# get the bone's rest rotation in worldspace
 		bRestRot = node.restRotWS
 		# get the bone's worldspace rotation
-		bCurRot = node.getNodeRotWS(armName, pose)
+		bCurRot = node.getNodeRotWS(pose)
 		# get the differnce between the two, worldspace factors out
 		bRotDelta = (bRestRot.inverse() * bCurRot).inverse()
 		return bRotDelta
@@ -424,32 +438,32 @@ class DtsPoseUtilClass:
 	# determine the position of the bone in parentSpace
 	# (absolute parent space position, not relative to default position of the bone)
 	# TESTED
-	def getNodePosPS(self, armName, bName, pose):
-		node = self.nodes[bName]
+	def getNodePosPS(self, nodeName, pose):
+		node = self.nodes[nodeName]
 		parent = node.parentNI
 		if parent == None: raise ValueError
 		# find the parent's location in worldspace
-		whereIsParentWS = parent.getNodeLocWS(armName, pose)
+		whereIsParentWS = parent.getNodeLocWS(pose)
 		# find the child's location in worldspace
-		whereIsChildWS = node.getNodeLocWS(armName, pose)
+		whereIsChildWS = node.getNodeLocWS(pose)
 		# subtract out the parent's location
 		whereIsBonePS = whereIsChildWS - whereIsParentWS
 		# determine the transform needed to get to the same point in the parent's space.
-		whereIsBonePS = parent.getNodeRotWS(armName, pose).inverse().apply(whereIsBonePS)
+		whereIsBonePS = parent.getNodeRotWS(pose).inverse().apply(whereIsBonePS)
 		return whereIsBonePS
 
-	# Get a non-orphan bone's rotation in parent space
+	# Get a non-orphan Node's rotation in parent space
 	# TESTED
-	def getNodeRotPS(self, armName, bName, pose):
-		node = self.nodes[bName]
+	def getNodeRotPS(self, nodeName, pose):
+		node = self.nodes[nodeName]
 		parent = node.parentNI
 		if parent == None: raise ValueError
-		# get the bone's rotation in worldspace
-		boneRotWS = node.getNodeRotWS(armName, pose)
-		# get the parent bone's rotation in worldspace
-		parentBoneRotWS = parent.getNodeRotWS(armName, pose)
+		# get the node's rotation in worldspace
+		nodeRotWS = node.getNodeRotWS(pose)
+		# get the parent node's rotation in worldspace
+		parentNodeRotWS = parent.getNodeRotWS(pose)
 		# get the difference
-		bRotPS = boneRotWS * parentBoneRotWS.inverse()
+		bRotPS = nodeRotWS * parentNodeRotWS.inverse()
 		return bRotPS.inverse()
 
 
@@ -538,11 +552,11 @@ if __name__ == "__main__":
 	PoseUtil = DtsPoseUtilClass()
 
 	bName = 'Bone'
-	parentName = PoseUtil.armBones[armName][bName][PARENTNAME]
+	#parentName = PoseUtil.armBones[armName][bName][PARENTNAME]
 
 	
-	setEmptyRot(PoseUtil.getBoneRestRotWS(armName, bName))
-	putEmptyAt(PoseUtil.getBoneRestPosWS(armName, bName))
+	#setEmptyRot(PoseUtil.getBoneRestRotWS(armName, bName))
+	#putEmptyAt(PoseUtil.getBoneRestPosWS(armName, bName))
 
 	
 	print "Done!"
