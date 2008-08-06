@@ -269,6 +269,7 @@ class BlenderShape(DtsShape):
 		This limitation can of course be worked around if you use skinned meshes instead.
 		'''
 		
+		'''
 		# before we do anything else, reset the transforms of all bones.
 		# loop through each node and reset it's transforms.  This avoids transforms carrying over from
 		# other animations. Need to cycle through _ALL_ bones and reset the transforms.
@@ -288,15 +289,17 @@ class BlenderShape(DtsShape):
 			# update the pose.
 			tempPose.update()
 		#Blender.Scene.GetCurrent().makeCurrent()		
+		'''
 		
 		numAddedMeshes = 0
 		polyCount = 0
 		# First, import meshes
-		for o in meshes:
+		for ni in meshes:
+			o = ni.blenderObj
 			# skip bounds mesh
-			if o.getName() == "Bounds":
+			if ni.nodeName == "Bounds": # or o.getType() != "Mesh":
 				continue
-			names = o.getName().split("_")
+			names = ni.nodeName.split("_")
 			detail_name_dot_index = names[0].rfind(".")
 			if detail_name_dot_index != -1:
 				detail_name = names[0][0:detail_name_dot_index]
@@ -316,16 +319,16 @@ class BlenderShape(DtsShape):
 					Torque_Util.dump_writeWarning("Warning: No object found, make sure an object with prefix '%s' exists in the base detail." % detail_name)
 					continue
 			else:
-				# Must be unique
+				# add New master object
+				# Check that the mesh node is not excluded from export
+				pNodeInfo = ni.getGoodParentNI()
 				pNodeIdx = -1
-				
-				# Meshes' node is node matching its name in the string table
-				for node in self.nodes[0:len(self.nodes)]:
-					if self.sTable.get(node.name) == o.name:
-						pNodeIdx = node.name
-						break
+				if pNodeInfo != None:
+					for node in self.nodes[0:len(self.nodes)]:
+						if self.sTable.get(node.name) == pNodeInfo.nodeName:
+							pNodeIdx = node.name
+							break
 
-				
 				'''
 				# Check to see if the mesh is parented to a bone				
 				if o.getParent() != None and o.getParent().getType() == 'Armature' and o.parentbonename != None:
@@ -356,13 +359,22 @@ class BlenderShape(DtsShape):
 				if o.parentType == Blender.Object.ParentTypes['ARMATURE']:
 					hasArmatureDeform = True
 			except: pass
+			# does the object have geometry?
+			
 			# do we even have any modifiers?  If not, we can skip copying the display data.
-			if len(o.modifiers) != 0 or o.getData(False,True).multires:
+			print "Checking object", o.name
+			
+			try: hasMultiRes = o.getData(False,True).multires
+			except AttributeError: hasMultiRes = False
+			
+			if len(o.modifiers) != 0 or hasMultiRes:
 				hasModifiers = True
 			else:
-				hasModifiers = False			
+				hasModifiers = False
+				
 			# Otherwise, get the final display data, as affected by modifers.
-			if (not hasArmatureDeform) and hasModifiers:
+			if ((not hasArmatureDeform) and hasModifiers) or (o.getType() in ['Surf', 'Text', 'MBall']):
+				print "Getting raw data for", o.getName()
 				try:
 					temp_obj = Blender.Object.Get("DTSExpObj_Tmp")
 				except:
@@ -371,10 +383,17 @@ class BlenderShape(DtsShape):
 					mesh_data = Blender.Mesh.Get("DTSExpMshObj_Tmp")
 				except:
 					mesh_data = Blender.Mesh.New("DTSExpMshObj_Tmp")
-				mesh_data.getFromObject(o)
-				temp_obj.link(mesh_data)
+				# try to get the raw display data
+				try:
+					mesh_data.getFromObject(o)
+					temp_obj.link(mesh_data)
+				except: 
+					#todo - warn when we couldn't get mesh data?
+					pass			
+					
 			# if we have armature deformation, or don't have any modifiers, get the mesh data the old fashon way
 			else:
+				print "Getting mesh data for", o.getName()
 				mesh_data = o.getData(False,True);
 				temp_obj = None
 
@@ -654,289 +673,45 @@ class BlenderShape(DtsShape):
 					Torque_Util.dump_writeln(     "    cMin[i], cMax[i] = %i, %i" % (cMin[i], cMax[i]) )
 					Torque_Util.dump_writeln(     "    cMin[j], cMax[j] = %i, %i\n-" % (cMin[j], cMax[j]) )
 		return minPos, maxPos
-
-	# Adds nodes from all armatures to the shape.
-	def addAllArmatures(self, armatures, collapseTransform=True):
-		'''
-			Adds all armature bones to the shape as nodes.
-		'''
-		# read in desired node ordering from a text buffer, if it exists.
-		no = None
-		try:
-			noTxt = Blender.Text.Get("NodeOrder")
-			no = noTxt.asLines()
-			Torque_Util.dump_writeln("NodeOrder text buffer found, attempting to export nodes in the order specified.")
-		except: no = None
-		nodeOrderDict = {}
-
-
-		if no != None:
-			# build a dictionary for fast order compares
-			i = 0
-			for n in no:
-				nodeOrderDict[n] = i
-				i += 1			
-
-			boneTree = []
-							
-
-			# Validate the node ordering against the bone hierarchy in our armatures.
-			#
-			# Validation rules:
-			#
-			# 	1. Child nodes must come after their parents in the node order
-			#	list.
-			#
-			#	2. The min and max positions of all child nodes in a given bone
-			#	tree should not overlap the min/max positions of other bone
-			#	trees on the same level of the overall tree.
-
-
-			# Test Rule #1
-			for arm in armatures:
-				armData = arm.getData()
-				for bone in armData.bones.values():
-					if bone.parent != None:
-						if bone.name in nodeOrderDict.keys() and nodeOrderDict[bone.name] < nodeOrderDict[bone.parent.name]:
-							Torque_Util.dump_writeWarning("-\nWarning: Invalid node order, child bone \'%s\' comes before" % bone.name)
-							Torque_Util.dump_writeln("  parent bone \'%s\' in the NodeOrder text buffer\n-" % bone.parent.name)
-			# Test Rule #2
-			cMin = []
-			cMax = []			
-			for arm in armatures:
-				i = 0
-				armData = arm.getData()
-				for bone in armData.bones.values():				
-					if bone.parent == None and bone.name in nodeOrderDict.keys():
-						start, end = self.getMinMax(bone, no, nodeOrderDict)
-						if start == None and end == None: continue
-						cMin.append(99999) # "99999 nodes should be enough for anyone." - Oscar Wilde
-						cMax.append(0)						
-						if end > cMax[i]: cMax[i] = end
-						if start < cMin[i]: cMin[i] = start
-						#print "start of",bone.name,"bones is",cMin[i],"with end at", cMax[i]
-						i += 1
-
-			# make sure bone ranges of armatures do not overlap in the NodeOrder text buffer.
-			for i in range(0, len(cMin)):
-				for j in range(i+1, len(cMin)):
-					if (cMin[i] <= cMax[j] and cMin[i] >= cMin[j])\
-					or (cMax[i] <= cMax[j] and cMax[i] >= cMin[j])\
-					or (cMin[j] <= cMax[i] and cMin[j] >= cMin[i])\
-					or (cMax[j] <= cMax[i] and cMax[j] >= cMin[i]):
-						Torque_Util.dump_writeWarning("-\nWarning: Invalid Traversal - Node hierarchy cannot be matched with the")
-						Torque_Util.dump_writeln("  node ordering specified in the NodeOrder text buffer.")
-						Torque_Util.dump_writeln("  Details:")
-						Torque_Util.dump_writeln("    node tree with root node \'%s\'" % nnames[i])
-						Torque_Util.dump_writeln("    overlaps sibling tree with root node \'%s\'" % nnames[j])
-						Torque_Util.dump_writeln("    in the NodeOrder text buffer.")
-						Torque_Util.dump_writeln("    cMin[i], cMax[i] = %i, %i" % (cMin[i], cMax[i]) )
-						Torque_Util.dump_writeln("    cMin[j], cMax[j] = %i, %i\n-" % (cMin[j], cMax[j]) )
-
-			for arm in armatures:
-				self.addArmature(arm, collapseTransform, nodeOrderDict, no)
-
-		else:			
-			for arm in armatures:
-				self.addArmature(arm, collapseTransform)
-		
 	
-	# Import an armature, uses depth first traversal.  Node ordering at branch points is indeterminant
-	def addArmature(self, armature, parentNode=-1, nodeOrderDict=None, nodeOrderList=None):
-		'''
-			This adds an armature to the shape.
-			
-			All armatures in a shape must be added first to the shape (before detail levels or collision meshes),
-			and in addition they must all be unique - as in, you can't add "BobsBones" twice. The function takes
-			care of this, however.
-			An obvious question regarding this would be, "How can i animate my character in multiple detail levels?",
-			to which the answer is very simple. Create linked copies of the armature in each detail level - the exporter
-			does not take into consideration the name of the object, only what data (the actual armature) contains.
-			Of course, take care to keep the linked armature object in the same position in all detail levels, otherwise
-			interesting things might start to happen.
-			
-			The core of this function is really in the call to addBones(), which recursively adds the armature's bones,
-			starting fron the root.
-			This function simply creates a base node of which to support the rest of the imported nodes.
-			The base node transform is collapsed by incorporating the transform of the armature object.
-		'''
-		# First, process armature
-		#arm = self.poseUtil.objInfo[armature.name][DtsPoseUtil.ARMDATA]
-		arm = self.poseUtil.armatures[armature.name].blenderObj.getData()
-		
-		# no node ordering is indicated, so add them the normal way
-		
-		# Don't add existing armatures
-		for added in self.addedArmatures:			
-			if self.poseUtil.armatures[added[0].name].nodeName == arm.name:
-				#print "Note : ignoring attempt to process armature data '%s' again." % arm.name
-				return False
-		
-		startNode = len(self.nodes)
-		#parentNode = -1
-
-		if nodeOrderDict != None:
-			#print "you are here... (2)"
-			rootBones = []
-			for bone in arm.bones.values():
-				if bone.parent == None:
-					rootBones.append(bone.name)
-			# sort by Node order
-			rootBones.sort(lambda x, y: cmp(nodeOrderDict[x], nodeOrderDict[y]))
-			for bone in rootBones:
-				self.addBones(arm.bones[bone], parentNode, armature, arm, nodeOrderDict, nodeOrderList)
-		else:
-			#print "you are here... (1)"
-			# Add each bone tree
-			for bone in arm.bones.values():
-				if bone.parent == None:
-					#print "-------++++++------ adding Bone:",bone.name
-					self.addBones(bone, parentNode, armature, arm, nodeOrderDict, nodeOrderList)
-		
-		# Set armature index on all added nodes
-		for node in self.nodes[startNode:len(self.nodes)]:
-			node.armIdx = len(self.addedArmatures)
-
-		self.addedArmatures.append([armature])
-		
-		return True
-
 	
-
+	# adds all object and bone nodes to the shape using the poseUtil tree
+	def addAllNodes(self):
+		# strike a pose
+		#poses = {}
+		for arm in filter(lambda x: x.getType()=='Armature', Blender.Object.Get()):
+			self.addedArmatures.append(arm)
+		print "self.addedArmatures:",self.addedArmatures
+		# get a list of ordered nodes by walking the poseUtil node tree.
+		nodeList = []
+		for nodeInfo in filter(lambda x: x.parentNI == None, self.poseUtil.nodes.values()):
+			self.addNodeTree(nodeInfo)
 	
-	def addBones(self, bone, parentId, arm, armData, nodeOrderDict = None, nodeOrderList = None):
-		'''		
-		This function recursively adds a bone from an armature to the shape as a node.
-		
-		The exporter exports each bone as a node, using the "head" position as where the
-		bone is. For each bone that has a parent in torque, the transform is built up from
-		all the previous transfoms - e.g looking at it simply:
-		
-		Bone1 head[0,0,0]
-		Bone2 head[0,0,1]
-		Bone3 head[0,0,1]
-		
-		Bone3 Position = Bone1 head + Bone2 head + Bone3 head = [0,0,2]
-		Bone2 Position = Bone1 head + Bone2 head = [0,0,1]
-		Bone1 Position = Bone1 head = [0,0,0]
-		
-		Thankfully, blender has a handy getRestMatrix() function incorporated into all
-		recent versions, which will get the location and rotation transforms for us, in
-		the coordinate system of the parent bone (or rather, relative to it).
-		However, whilst we can easily get the rotation using this function, getting the proper translation
-		requires a bit more calculation.
-		
-		One thing that blender does not take into account however is the scale of the root armature - 
-		to solve this, we need to pass down the scaling values for each axis from the addArmature() function.
+	# adds a node tree recursively.
+	# called by addAllNodes, not to be called externally.
+	def addNodeTree(self, nodeInfo, parentNodeIndex =-1):
+		n = Node(self.sTable.addString(nodeInfo.nodeName), parentNodeIndex)
+		if parentNodeIndex == -1:
+			#pos = nodeInfo.getNodeLocWS(pose)
+			#rot = nodeInfo.getNodeRotWS(pose)
+			pos = nodeInfo.defPosPS
+			rot = nodeInfo.defRotPS
 
-		'''
-
-		bonename = bone.name
-		
-		# Do not add bones on the "BannedNodes" list
-		if bonename.upper() in self.preferences['BannedNodes']:
-			return False
-
-		# Add a DTS bone to the shape
-		b = Node(self.sTable.addString(bonename), parentId)
-
-		# get the bone's loc and rot, and set flags.
-		b.isOrphan = False
-		b.unConnected = False
-		loc, rot = None, None
-		if bone.parent == None:
-			b.isOrphan = True
-			#loc = self.poseUtil.armBones[arm.name][bonename][DtsPoseUtil.NODEDEFPOSPS]
-			#rot = self.poseUtil.armBones[arm.name][bonename][DtsPoseUtil.NODEDEFROTPS]
-			loc = self.poseUtil.nodes[bonename].defPosPS
-			rot = self.poseUtil.nodes[bonename].defRotPS
-
-			#loc = self.poseUtil.armBones[arm.name][bonename][DtsPoseUtil.NODERESTPOSWS]
-			#rot = self.poseUtil.armBones[arm.name][bonename][DtsPoseUtil.NODERESTROTWS]
 		else:
-			b.unConnected = True
-			loc = self.poseUtil.nodes[bonename].defPosPS
-			rot = self.poseUtil.nodes[bonename].defRotPS
-
-			#loc = self.poseUtil.armBones[arm.name][bonename][DtsPoseUtil.NODEDEFPOSPS]
-			#rot = self.poseUtil.armBones[arm.name][bonename][DtsPoseUtil.NODEDEFROTPS]
-
-		self.defaultTranslations.append(loc)
-		self.defaultRotations.append(rot)
-		# need to get the bone's armature space transform and store it to use later with the pose stuff
-		b.armSpaceTransform = bone.matrix['ARMATURESPACE']
-		self.nodes.append(b)
-
-
-		# Add any children this bone may have
-		self.subshapes[0].numNodes += 1
-		
-		# Add the rest of the bones
-		parentId = len(self.nodes)-1		
-		if bone.hasChildren():
-			# make a list of children
-			children = []
-			extraChildren = []
-
-			# add in specified order?
-			if nodeOrderDict != None:
-				# add children
-				for nname in nodeOrderList:
-					# see if the curent node is one of our children
-					for bChild in bone.children:
-						# if our bone is not in the list at all...
-						try: x = nodeOrderDict[bChild.name]
-						except:
-							# is this node already in our extras list?
-							if not bChild.name in extraChildren:
-								# not in list, add to extras list
-								extraChildren.append(bChild.name)
-								continue
-						if bChild.name == nname:
-							# add to the child list
-							children.append(bChild.name)
-							break
-
-				# first add the ordered nodes
-				for nname in children:
-					self.addBones(armData.bones[nname], parentId, arm, armData, nodeOrderDict, nodeOrderList)
-				# now add the extra nodes in their natural order
-				for nname in extraChildren:
-					self.addBones(armData.bones[nname], parentId, arm, armData, nodeOrderDict, nodeOrderList)
-
-			else:
-				for bChild in bone.children:
-					self.addBones(bChild, parentId, arm, armData)
+			pos = nodeInfo.defPosPS
+			rot = nodeInfo.defRotPS
 			
-
-
-	# Adds a node with the tranform and name of an object.
-	def addNode(self, object, parentNodeIndex, parentType=None):
-		if object.name.upper() in self.preferences['BannedNodes']:
-			return False
-		# Adds generic node with object's name
-		Torque_Util.dump_writeln("     Node[%s]: %s" % (object.getType(), object.getName()))
-		parentObj = object.getParent()
-		# Get the node's pos and rotation (current frame)
-		if parentType == None or parentNodeIndex == -1:
-			mat = object.getMatrix('worldspace')
-			rot = self.poseUtil.toTorqueQuat(mat.rotationPart().toQuat())
-			pos = self.poseUtil.toTorqueVec(mat.translationPart())
-		else:
-			pos = self.poseUtil.nodes[object.name].defPosPS
-			rot = self.poseUtil.nodes[object.name].defRotPS
-		
-		parentId = len(self.nodes)
-		b = Node(self.sTable.addString(object.getName()), parentNodeIndex)
-		b.armIdx = -1
-		b.obj = object
 		self.defaultTranslations.append(pos)
 		self.defaultRotations.append(rot)
-		self.nodes.append(b)
-		
+		try: n.armName = nodeInfo.armParentNI.nodeName
+		except: n.armName = None
+		n.obj = nodeInfo.blenderObj
+		self.nodes.append(n)		
+		nodeIndex = len(self.nodes)-1
 		self.subshapes[0].numNodes += 1
-		return True
-
+		for nodeInfo in filter(lambda x: x.parentNI == nodeInfo, self.poseUtil.nodes.values()):
+			self.addNodeTree(nodeInfo, nodeIndex)
+		
 		
 	# These three helper methods are used by getPoseTransform. They should probably be moved elsewhere.
 	def isRotated(self, quat):
@@ -1002,8 +777,8 @@ class BlenderShape(DtsShape):
 	def getPoseTransform(self, sequence, nodeIndex, frame_idx, pose, baseTransform=None, getRawValues=False):
 
 		loc, rot, scale = None, None, None
-		try: armName = self.addedArmatures[self.nodes[nodeIndex].armIdx][0].name
-		except: armName = None
+		#try: armName = self.addedArmatures[self.nodes[nodeIndex].armIdx][0].name
+		#except: armName = None
 
 		# duration should already be calculated at this point.
 		# Convert time units from Blender's frame (starting at 1) to second
@@ -1021,7 +796,7 @@ class BlenderShape(DtsShape):
 
 		
 		# Get our values from the poseUtil interface		
-		transVec, quatRot = self.poseUtil.getNodeLocRotLS(armName, bonename, pose)
+		transVec, quatRot = self.poseUtil.getNodeLocRotLS(bonename, pose)
 		# - determine the scale of the bone.
 		#scaleVec = pose.bones[bonename].size
 		scaleVec = self.poseUtil.toTorqueVec([1,1,1])
@@ -1145,14 +920,14 @@ class BlenderShape(DtsShape):
 
 		# now set the active action and move to the desired frame
 		for i in range(0, len(self.addedArmatures)):
-			arm = self.addedArmatures[i][0]	
+			arm = self.addedArmatures[i]
 			useAction.setActive(arm)
 
 		# Set the current frame in blender
 		Blender.Set('curframe', useFrame)
 		
 		for armIdx in range(0, len(self.addedArmatures)):
-			arm = self.addedArmatures[armIdx][0]
+			arm = self.addedArmatures[armIdx]
 			pose = arm.getPose()
 			# build our transform for each node		
 			for nodeIndex in range(1, len(self.nodes)):
@@ -1374,7 +1149,7 @@ class BlenderShape(DtsShape):
 			refPoseAct = Blender.Armature.NLA.GetActions()[useAction]
 			# now set the active action and move to the desired frame
 			for i in range(0, len(self.addedArmatures)):
-				arm = self.addedArmatures[i][0]
+				arm = self.addedArmatures[i]
 				refPoseAct.setActive(arm)
 			# Set the current frame in blender
 			Blender.Set('curframe', useFrame)
@@ -1410,10 +1185,8 @@ class BlenderShape(DtsShape):
 		#for i in range(0, len(self.addedArmatures)):
 		#	arm = self.addedArmatures[i][0]			
 		#	act.setActive(arm)
-		print "!!!!!! you are here(1)"	
 		# loop through all of the exisitng action frames
 		for frame in range(0, numOverallFrames):
-			print "!!!!!! you are here(2)"	
 			# Set the current frame in blender
 			curFrame = int(round(float(frame)*interpolateInc,0)) + seqPrefs['Action']['StartFrame']
 			Blender.Set('curframe', curFrame)
@@ -1421,23 +1194,23 @@ class BlenderShape(DtsShape):
 			self.addGroundFrame(sequence, curFrame, boundsStartMat)
 			
 			# get poses for all armatures in the scene
-			armPoses = []
+			armPoses = {}
 			for armIdx in range(0, len(self.addedArmatures)):
-				arm = self.addedArmatures[armIdx][0]
-				armPoses.append(arm.getPose())
+				arm = self.addedArmatures[armIdx]
+				armPoses[arm.name] = arm.getPose()
 			
+			pose = None
+			lastGoodPose = None
 			# add object node frames
 			for nodeIndex in range(1, len(self.nodes)):
 				# see if we're dealing with an object node
 				#if self.nodes[nodeIndex].armIdx != -1: continue
 				
-				gotPose = False
 				try:
-					pose = armPoses[self.nodes[nodeIndex].armIdx]
-					gotPose = True
-				except: pass
-				if not gotPose:
-					pose = armPoses[self.nodes[self.nodes[nodeIndex].parentIndex].armIdx]
+					pose = armPoses[self.nodes[nodeIndex].armName]
+					lastGoodPose = pose
+				except:
+					pose = lastGoodPose
 
 				if isBlend:
 					baseTransform = baseTransforms[nodeIndex]
