@@ -25,6 +25,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import Blender
 from Blender import Mathutils as bMath
+import math as pMath
 
 import DTSPython
 from DTSPython import *
@@ -90,7 +91,8 @@ class DtsPoseUtilClass:
 			armRotInv = armRot.inverse()
 			armLoc = self.toTorqueVec(armMat.translationPart())
 			armSize = self.toTorqueVec(armOb.getSize('worldspace'))
-			exportScale = prefs['ExportScale']
+			try: exportScale = prefs['ExportScale']
+			except: exportScale = 1.0
 			armSize[0], armSize[1], armSize[2] = armSize[0]*exportScale, armSize[1]*exportScale, armSize[2]*exportScale
 			armLoc[0], armLoc[1], armLoc[2] = armLoc[0]*exportScale, armLoc[1]*exportScale, armLoc[2]*exportScale
 			self.armInfo[armOb.name] = [ armOb, armDb, armRot, armRotInv, armLoc, armSize ]
@@ -148,7 +150,7 @@ class DtsPoseUtilClass:
 		# get the bone's default location in parent space
 		# ( This is where the bone should be if it has not been explicitly moved or
 		# effected by a constraint.)
-		whereShouldBoneBePS = self.armBones[armName][bName][BONEDEFPOSPS]
+		whereShouldBoneBePS = self.armBones[armName][bName][BONEDEFPOSPS]		
 		# subtract out the position that the bone will end up in due to FK transforms
 		# from the parent bone, as these are already taken care of due to the nodes being
 		# in the parent's local space.
@@ -209,9 +211,24 @@ class DtsPoseUtilClass:
 		# find the child's location in worldspace
 		whereIsChildWS = self.getBoneLocWS(armName, bName, pose)
 		# subtract out the parent's location
-		whereIsBonePS = whereIsChildWS - whereIsParentWS
+		offsetFromParent = whereIsChildWS - whereIsParentWS		
+
+		# apply inverse of parent scale (converted to worldspace) to correct child worldspace location
+		# first get the scale of the parent bone
+		scale = self.toTorqueVec(pose.bones[parentName].poseMatrix.scalePart())
+		# and its inverse
+		scaleInv = Vector(1.0/scale[0], 1.0/scale[1], 1.0/scale[2])
+		# center scale on zero before rotation
+		scaleVec = Vector(scaleInv[0]-1.0, scaleInv[1]-1.0, scaleInv[2]-1.0)		
+		# rotate scale by inverse parent rotation
+		scaleIntermediate = self.getBoneRotWS(armName, parentName, pose).inverse().apply(scaleVec)
+		# now re-center scale vector at 1.0
+		scaleWS = Vector(scaleIntermediate[0]+1.0, scaleIntermediate[1]+1.0, scaleIntermediate[2]+1.0)
+		# finally, remove scale from the offset
+		offsetScaleRemoved = Vector(offsetFromParent[0] * scaleWS[0], offsetFromParent[1] * scaleWS[1], offsetFromParent[2] * scaleWS[2])
+		
 		# determine the transform needed to get to the same point in the parent's space.
-		whereIsBonePS = self.getBoneRotWS(armName, parentName, pose).apply(whereIsBonePS)
+		whereIsBonePS = self.getBoneRotWS(armName, parentName, pose).apply(offsetScaleRemoved)		
 		return whereIsBonePS
 
 	# Get a non-orphan bone's rotation in parent space
@@ -322,10 +339,27 @@ class DtsPoseUtilClass:
 		# get the armature's rotation
 		armRot = self.armInfo[armName][ARMROT].inverse()
 		# get the pose rotation and rotate into worldspace
-		bRot = ( armRot * self.toTorqueQuat(pose.bones[bName].poseMatrix.rotationPart().toQuat().inverse()) )
+		bRot = ( armRot * self.bMatToTorqueQuat(pose.bones[bName].poseMatrix).inverse() )
 		return bRot
 
-
+	# Blender's matrix toQuat() method gives incorrect values for matrices containing non-uniform scale.
+	# This method is scale invariant :-)
+	def bMatToTorqueQuat(self, bMat):
+		# get 3x3 submatrix
+		rotMat = bMat.rotationPart()
+		# get the scale components
+		s1 = pMath.sqrt( (rotMat[0][0] * rotMat[0][0]) + (rotMat[1][0] * rotMat[1][0]) + (rotMat[2][0] * rotMat[2][0]) )
+		s2 = pMath.sqrt( (rotMat[0][1] * rotMat[0][1]) + (rotMat[1][1] * rotMat[1][1]) + (rotMat[2][1] * rotMat[2][1]) )
+		s3 = pMath.sqrt( (rotMat[0][2] * rotMat[0][2]) + (rotMat[1][2] * rotMat[1][2]) + (rotMat[2][2] * rotMat[2][2]) )
+		# divide 3x3 matrix columns by each component of scale
+		r1 = [rotMat[0][0]/s1, rotMat[0][1]/s2, rotMat[0][2]/s3]
+		r2 = [rotMat[1][0]/s1, rotMat[1][1]/s2, rotMat[1][2]/s3]
+		r3 = [rotMat[2][0]/s1, rotMat[2][1]/s2, rotMat[2][2]/s3]
+		# construct a new matrix
+		newMat = bMath.Matrix(r1,r2,r3)
+		# convert to torque quat and return.
+		return self.toTorqueQuat(newMat.toQuat())
+	
 		
 	def toTorqueVec(self, v):
 		return Vector(v[0], v[1], v[2])
@@ -396,7 +430,7 @@ def setEmptyRot(rot):
 
 # *** entry point for getBoneLocWS testing ***
 if __name__ == "__main__":
-	arm = Blender.Object.Get('ArmatureObj')
+	arm = Blender.Object.Get('Armature')
 	armName = arm.name
 	scene = Blender.Scene.GetCurrent()
 	scene.getRenderingContext().currentFrame(40)
@@ -404,9 +438,9 @@ if __name__ == "__main__":
 	# get the pose
 	pose = arm.getPose()
 
-	PoseUtil = DtsPoseUtilClass()
+	PoseUtil = DtsPoseUtilClass(None)
 
-	bName = 'Thigh.L'
+	bName = 'Bone.001'
 	#bName = 'Pelvis.L'
 	#bName = 'FollowMe'
 	parentName = PoseUtil.armBones[armName][bName][PARENTNAME]
@@ -417,8 +451,10 @@ if __name__ == "__main__":
 	#setEmptyRot(PoseUtil.armBones[armName][bName][BONERESTROTWS])
 	#putEmptyAt(PoseUtil.armBones[armName][bName][BONERESTPOSWS])
 	
-	setEmptyRot(PoseUtil.getBoneRestRotWS(armName, bName))
-	putEmptyAt(PoseUtil.getBoneRestPosWS(armName, bName))
+	
+	setEmptyRot(PoseUtil.getBoneRotWS(armName, bName, pose))
+	putEmptyAt(PoseUtil.getBoneLocWS(armName, bName, pose))
+	
 
 	#setEmptyRot(PoseUtil.getBoneRotWS(armName, bName, pose))
 	#putEmptyAt(PoseUtil.getBoneLocWS(armName, bName, pose))
