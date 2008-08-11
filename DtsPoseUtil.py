@@ -86,7 +86,6 @@ class nodeInfoClass:
 	# This is where the node should be if it has not been explicitly moved or
 	# effected by a constraint.
 	# 
-	# todo - what happens if parent armature node is collapsed?
 	def __calcNodeDefPosPS(self, nodeName):
 		# early out if we've got no parent
 		if self.parentNI == None:
@@ -108,7 +107,6 @@ class nodeInfoClass:
 	# This is what the node's rotation should be, relative to the parent node,
 	# if it has not been directly rotated or affected by a constraint.
 	# 
-	# todo - what happens if parent armature node is collapsed?
 	def __calcNodeDefRotPS(self, nodeName):
 		# early out if we've got no parent
 		if self.parentNI == None:
