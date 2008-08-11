@@ -65,7 +65,7 @@ export_tree = None
 Debug = False
 Profiling = False
 textDocName = "TorqueExporter_SCONF"
-pathSeperator = "/"
+pathSeparator = "/"
 
 
 
@@ -89,10 +89,10 @@ def basepath(filepath):
 	words = string.split(filepath, sep)
 	return string.join(words[:-1], sep)
 	
-def getPathSeperator(filepath):
-	global pathSeperator
-	if "\\" in filepath: pathSeperator = "\\"
-	else: pathSeperator = "/"
+def getPathSeparator(filepath):
+	global pathSeparator
+	if "\\" in filepath: pathSeparator = "\\"
+	else: pathSeparator = "/"
 
 # Gets the Base Name & path from the File Path
 def noext(filepath):
@@ -1076,10 +1076,10 @@ def doExport(progressBar):
 	if Prefs['exportBasename'] == "":
 		Prefs['exportBasename'] = noext(basename(Blender.Get("filename")))
 
-	# make sure our path seperator is correct.
-	getPathSeperator(Prefs['exportBasepath'])
-	Stream = DtsStream("%s%s%s.dts" % (Prefs['exportBasepath'], pathSeperator, Prefs['exportBasename']), False, Prefs['DTSVersion'])
-	Torque_Util.dump_writeln("Writing shape to  '%s'." % ("%s\\%s.dts" % (Prefs['exportBasepath'], Prefs['exportBasename'])))
+	# make sure our path Separator is correct.
+	getPathSeparator(Prefs['exportBasepath'])
+	Stream = DtsStream("%s%s%s.dts" % (Prefs['exportBasepath'], pathSeparator, Prefs['exportBasename']), False, Prefs['DTSVersion'])
+	Torque_Util.dump_writeln("Writing shape to  '%s'." % ("%s%s%s.dts" % (Prefs['exportBasepath'], pathSeparator, Prefs['exportBasename'])))
 	# Now, start the shape export process if the Stream loaded
 	if Stream.fs:
 		Torque_Util.dump_writeln("Processing...")
@@ -1463,9 +1463,9 @@ class ShapeTree(SceneTree):
 			if Prefs['exportBasename'] == "":
 				Prefs['exportBasename'] = noext(basename(Blender.Get("filename")))
 			
-			# make sure our path seperator is correct.
-			getPathSeperator(Prefs['exportBasepath'])
-			Stream = DtsStream("%s%s%s.dts" % (Prefs['exportBasepath'], pathSeperator, Prefs['exportBasename']), False, Prefs['DTSVersion'])
+			# make sure our path Separator is correct.
+			getPathSeparator(Prefs['exportBasepath'])
+			Stream = DtsStream("%s%s%s.dts" % (Prefs['exportBasepath'], pathSeparator, Prefs['exportBasename']), False, Prefs['DTSVersion'])
 			Torque_Util.dump_writeln("Writing shape to  '%s'." % ("%s\\%s.dts" % (Prefs['exportBasepath'], Prefs['exportBasename'])))
 			# Now, start the shape export process if the Stream loaded
 			if Stream.fs:
@@ -2352,7 +2352,7 @@ class GeneralControlsClass:
 				self.guiCustomFilename.value += ".dts"
 
 			if Prefs['LogToOutputFolder']:
-				Torque_Util.dump_setout( "%s%s%s.log" % (Prefs['exportBasepath'], pathSeperator, noext(Prefs['exportBasename'])) )
+				Torque_Util.dump_setout( "%s%s%s.log" % (Prefs['exportBasepath'], pathSeparator, noext(Prefs['exportBasename'])) )
 		elif control.name == "guiCustomFilenameSelect":
 			if "\\" in Prefs['exportBasepath']:
 				pathSep = "\\"
@@ -2376,7 +2376,7 @@ class GeneralControlsClass:
 		elif control.name == "guiLogToOutputFolder":
 			Prefs['LogToOutputFolder'] = control.state
 			if control.state:
-				Torque_Util.dump_setout( "%s%s%s.log" % (Prefs['exportBasepath'], pathSeperator, noext(Prefs['exportBasename'])) )
+				Torque_Util.dump_setout( "%s%s%s.log" % (Prefs['exportBasepath'], pathSeparator, noext(Prefs['exportBasename'])) )
 			else:
 				Torque_Util.dump_setout("%s.log" % noext(Blender.Get("filename")))
 			Prefs['exportBasename']
@@ -5916,7 +5916,7 @@ if Profiling:
 	
 def entryPoint(a):
 	global Prefs
-	getPathSeperator(Blender.Get("filename"))
+	getPathSeparator(Blender.Get("filename"))
 	
 	loadPrefs()
 	
@@ -5930,8 +5930,8 @@ def entryPoint(a):
 		try: x = Prefs['LogToOutputFolder']
 		except KeyError: Prefs['LogToOutputFolder'] = True
 		if Prefs['LogToOutputFolder']:
-			getPathSeperator(Prefs['exportBasepath'])
-			Torque_Util.dump_setout( "%s%s%s.log" % (Prefs['exportBasepath'], pathSeperator, noext(Prefs['exportBasename'])) )
+			getPathSeparator(Prefs['exportBasepath'])
+			Torque_Util.dump_setout( "%s%s%s.log" % (Prefs['exportBasepath'], pathSeparator, noext(Prefs['exportBasename'])) )
 		else:
 			Torque_Util.dump_setout("%s.log" % noext(Blender.Get("filename")))
 		
