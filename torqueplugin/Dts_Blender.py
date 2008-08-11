@@ -1264,16 +1264,19 @@ class ShapeTree(SceneTree):
 	def getShapeBoneNames(self):
 		boneList = []
 		armBoneList = [] # temp list for bone sorting
+		addedArmatures = [] # list of armature datablocks already added
 		# We need a list of bones for our gui, so find them
 		for obj in self.normalDetails:
 			for c in getAllChildren(obj[1]):
 				if c.getType() == "Armature":
+					if c.getData().name in addedArmatures: continue
+					else: addedArmatures.append(c.getData().name)
 					armBoneList = []
 					for bone in c.getData().bones.values():
 						armBoneList.append(bone.name)
 					# sort each armature's bone list before
 					# appending it to the main list.
-					armBoneList.sort(lambda x, y: cmp(x.lower(),y.lower()))
+					armBoneList.sort()
 					for bone in armBoneList:
 						boneList.append(bone)
 		return boneList
