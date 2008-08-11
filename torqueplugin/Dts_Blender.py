@@ -80,13 +80,14 @@ def basename(filepath):
 	else:
 		words = string.split(filepath, "/")
 	words = string.split(words[-1], ".")
-	return string.join(words[:-1], ".")
+	return string.join(words[0:len(words)], ".")
 
 # Gets base path with trailing /
 def basepath(filepath):
 	if "\\" in filepath: sep = "\\"
 	else: sep = "/"
 	words = string.split(filepath, sep)
+	# join drops last word (file name)
 	return string.join(words[:-1], sep)
 	
 def getPathSeperator(filepath):
@@ -1912,7 +1913,7 @@ class GeneralControlsClass:
 				pathSep = "\\"
 			else:
 				pathSep = "/"
-			Blender.Window.FileSelector (self.guiGeneralSelectorCallback, 'Select destination and filename', Prefs['exportBasepath'] + pathSep + Prefs['exportBasename'])
+			Blender.Window.FileSelector (self.guiGeneralSelectorCallback, 'Select destination and filename', Prefs['exportBasepath'] + pathSep + Prefs['exportBasename'] + ".dts")
 		elif control.name == "guiCustomFilenameDefaults":
 			Prefs['exportBasename'] = basename(Blender.Get("filename"))
 			Prefs['exportBasepath'] = basepath(Blender.Get("filename"))		
@@ -1992,6 +1993,7 @@ class GeneralControlsClass:
 	def guiGeneralSelectorCallback(self, filename):
 		global guiGeneralSubtab
 		if filename != "":
+			print "filename =", filename
 			Prefs['exportBasename'] = basename(filename)
 			Prefs['exportBasepath'] = basepath(filename)
 
@@ -1999,8 +2001,9 @@ class GeneralControlsClass:
 			if "\\" in Prefs['exportBasepath']: pathSep = "\\"
 
 			self.guiCustomFilename.value = Prefs['exportBasepath'] + pathSep + Prefs['exportBasename']
+			print "self.guiCustomFilename.value =",self.guiCustomFilename.value
 			if self.guiCustomFilename.value[len(self.guiCustomFilename.value)-4:] != ".dts":
-				self.guiCustomFilename.value += ".dts"
+				self.guiCustomFilename.value = self.guiCustomFilename.value + ".dts"
 
 
 
