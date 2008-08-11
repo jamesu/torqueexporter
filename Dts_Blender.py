@@ -1358,6 +1358,7 @@ def export():
 # Controls referenced in functions
 guiSequenceTab, guiGeneralTab, guiNodesTab, guiAboutTab, guiTabBar, guiHeaderTab = None, None, None, None, None, None
 
+DetailLevelControls = None
 SeqCommonControls = None
 IFLControls = None
 VisControls = None
@@ -1379,15 +1380,16 @@ globalEvents = Common_Gui.EventTable(1)
 # Special callbacks for gui control tabs
 def guiBaseCallback(control):
 	global Prefs
-	global guiSequenceTab, guiNodesTab, guiMaterialsTab, guiGeneralTab, guiAboutTab, guiTabBar
-	global guiSequenceButton, guiMeshButton, guiNodesButton, guiMaterialsButton, guiAboutButton
+	global guiDetailLevelsTab, guiSequenceTab, guiNodesTab, guiMaterialsTab, guiGeneralTab, guiAboutTab, guiTabBar
+	global guiDetailLevelsButton, guiSequenceButton, guiMeshButton, guiNodesButton, guiMaterialsButton, guiAboutButton
 
 	if control.name == "guiExportButton":
 		export()
 		return
 
 	# Need to associate the button with it's corresponding tab container.
-	ctrls = [[guiSequenceButton,guiSequenceTab, None, "Sequences"],\
+	ctrls = [[guiDetailLevelsButton,guiDetailLevelsTab, None, "DetailLevels"],\
+	[guiSequenceButton,guiSequenceTab, None, "Sequences"],\
 	[guiMeshButton,guiGeneralTab, None, "General"],\
 	[guiMaterialsButton,guiMaterialsTab, MaterialControls, "Materials"],\
 	[guiNodesButton,guiNodesTab, None, "Armature"],\
@@ -1442,7 +1444,8 @@ def restoreLastActivePanel():
 	global guiSeqCommonSubtab, guiSeqActSubtab, guiSequenceIFLSubtab, guiSequenceVisibilitySubtab, guiSequenceUVSubtab, guiSequenceMorphSubtab
 	global SeqCommonControls, ActionControls, IFLControls, VisControls
 	panels =\
-	[[guiSequenceButton,guiSequenceTab, "Sequences"],\
+	[[guiDetailLevelsButton,guiDetailLevelsTab, "DetailLevels"],\
+	 [guiSequenceButton,guiSequenceTab, "Sequences"],\
 	 [guiMeshButton,guiGeneralTab, "General"],\
 	 [guiMaterialsButton,guiMaterialsTab, "Materials"],\
 	 [guiNodesButton,guiNodesTab, "Nodes"],\
@@ -1499,8 +1502,8 @@ def restoreLastActivePanel():
 			
 # Resize callback for all global gui controls
 def guiBaseResize(control, newwidth, newheight):
-	tabContainers = ["guiSequenceTab", "guiGeneralTab", "guiNodesTab", "guiAboutTab", "guiMaterialsTab"]
-	tabSubContainers = ["guiSeqCommonSubtab", "guiSeqActSubtab", "guiSequenceIFLSubtab", "guiSequenceVisibilitySubtab","guiSequenceUVSubtab","guiSequenceMorphSubtab", "guiSequenceNLASubtab", "guiMaterialsSubtab", "guiGeneralSubtab", "guiNodeListSubtab", "guiAboutSubtab"]
+	tabContainers = ["guiDetailLevelsTab", "guiSequenceTab", "guiGeneralTab", "guiNodesTab", "guiAboutTab", "guiMaterialsTab"]
+	tabSubContainers = ["guiDetailLevelsSubTab", "guiSeqCommonSubtab", "guiSeqActSubtab", "guiSequenceIFLSubtab", "guiSequenceVisibilitySubtab","guiSequenceUVSubtab","guiSequenceMorphSubtab", "guiSequenceNLASubtab", "guiMaterialsSubtab", "guiGeneralSubtab", "guiNodeListSubtab", "guiAboutSubtab"]
 	
 	if control.name == "guiTabBar":
 		control.x, control.y = 0, 378
@@ -1517,20 +1520,23 @@ def guiBaseResize(control, newwidth, newheight):
 	elif control.name == "guiHeaderBar":
 		control.x, control.y = 0, newheight - 20
 		control.width, control.height = 506, 20
-	elif control.name == "guiSequenceButton":
+	elif control.name == "guiDetailLevelsButton":
 		control.x, control.y = 10, 0
-		control.width, control.height = 70, 25
+		control.width, control.height = 80, 25
 	elif control.name == "guiNodesButton":
-		control.x, control.y = 82, 0
-		control.width, control.height = 65, 25
+		control.x, control.y = 92, 0
+		control.width, control.height = 50, 25
+	elif control.name == "guiSequenceButton":
+		control.x, control.y = 144, 0
+		control.width, control.height = 70, 25
 	elif control.name == "guiMaterialsButton":
-		control.x, control.y = 149, 0
+		control.x, control.y = 216, 0
 		control.width, control.height = 60, 25
 	elif control.name == "guiMeshButton":
-		control.x, control.y = 211, 0
+		control.x, control.y = 278, 0
 		control.width, control.height = 55, 25
 	elif control.name == "guiAboutButton":
-		control.x, control.y = 268, 0
+		control.x, control.y = 335, 0
 		control.width, control.height = 45, 25
 	elif control.name == "guiExportButton":
 		control.x, control.y = 414, -30
@@ -1615,6 +1621,54 @@ def validateSequenceName(seqName, seqType, oldName = None):
 
 
 
+
+'''
+***************************************************************************************************
+*
+* Class that creates and owns the GUI controls on the Detail Levels control page
+*
+***************************************************************************************************
+'''
+class DetailLevelControlsClass:
+	def __init__(self):
+		global guiDetailLevelsSubtab
+		global globalEvents
+		
+		# initialize GUI controls
+		self.guiAboutText = Common_Gui.MultilineText("guiAboutText", 
+		"Torque Exporter Plugin for Blender\n" +
+		"\n"
+		"Written by James Urquhart, with assistance from Tim Gift, Clark Fagot, Wes Beary,\n" +
+		"Ben Garney, Joshua Ritter, Emanuel Greisen, Todd Koeckeritz,\n" +
+		"Ryan J. Parker, Walter Yoon, and Joseph Greenawalt.\n" +
+		"GUI code written with assistance from Xen and Xavier Amado.\n" +
+		"Additional thanks goes to the testers.\n" +
+		"\n" +
+		"Visit GarageGames at http://www.garagegames.com", None, self.resize)
+		
+		# add controls to containers
+		guiDetailLevelsSubtab.addControl(self.guiAboutText)
+		
+
+	def cleanup(self):
+
+		# Must destroy any GUI objects that are referenced in a non-global scope
+		# explicitly before interpreter shutdown to avoid the dreaded
+		# "error totblock" message when exiting Blender.
+		# Note: __del__ is not guaranteed to be called for objects that still
+		# exist when the interpreter exits.
+		del self.guiAboutText
+
+	def refreshAll(self):
+		pass
+		
+	def resize(self, control, newwidth, newheight):
+		if control.name == "guiAboutText":
+			control.x = 10
+			control.y = 120
+
+	
+	# other event callbacks and helper methods go here.
 
 
 '''
@@ -5244,24 +5298,29 @@ def initGui():
 	'''
 
 	global Version, Prefs
-	global guiSequenceTab, guiNodesTab, guiMaterialsTab, guiGeneralTab, guiAboutTab, guiHeaderTab
-	global guiSequenceSubtab, guiNodeListSubtab, guiGeneralSubtab, guiAboutSubtab, guiMaterialsSubtab
-	global guiSequenceButton, guiMeshButton, guiNodesButton, guiMaterialsButton, guiAboutButton
-	global guiSeqActList, guiSeqActOpts, guiNodeList, guiMaterialList, guiMaterialOptions
-	global guiTriListsButton, guiStripMeshesButton, guiTriMeshesButton
-	global guiBonePatternText
+
+	# tab buttons
+	global guiDetailLevelsButton, guiSequenceButton, guiMeshButton, guiNodesButton, guiMaterialsButton, guiAboutButton
+	# subtab buttons
+	global guiSeqCommonButton, guiSeqActButton, guiSequenceIFLButton, guiSequenceVisibilityButton, guiSequenceUVButton, guiSequenceMorphButton
+	# tab containers
+	global guiDetailLevelsTab, guiSequenceTab, guiNodesTab, guiMaterialsTab, guiGeneralTab, guiAboutTab, guiHeaderTab
+	# subtab containers
+	global guiDetailLevelsSubtab, guiSequenceSubtab, guiNodeListSubtab, guiGeneralSubtab, guiAboutSubtab, guiMaterialsSubtab
+	# object that hands out global event id numbers
 	global GlobalEvents
-	
-	global SeqCommonControls, IFLControls, VisControls, ActionControls, MaterialControls, ArmatureControls, GeneralControls, AboutControls
-	
+	# these objects create and own all of the actual gui controls on a subtab page
+	global DetailLevelControls, SeqCommonControls, IFLControls, VisControls, ActionControls, MaterialControls, ArmatureControls, GeneralControls, AboutControls
+	# tab bar containers so far
 	global guiTabBar, guiSequencesTabBar
 	
-	global guiSeqCommonButton, guiSeqActButton, guiSequenceIFLButton, guiSequenceVisibilityButton, guiSequenceUVButton, guiSequenceMorphButton
+	# subtab containers
 	global guiSeqCommonSubtab, guiSeqActSubtab, guiSequenceIFLSubtab, guiSequenceVisibilitySubtab, guiSequenceUVSubtab, guiSequenceMorphSubtab
 	                                
 	Common_Gui.initGui(exit_callback)
 	
 	# Main tab button controls
+	guiDetailLevelsButton = Common_Gui.TabButton("guiDetailLevelsButton", "Detail Levels", "Detail levels", None, guiBaseCallback, guiBaseResize)
 	guiSequenceButton = Common_Gui.TabButton("guiSequenceButton", "Sequences", "Sequence options", None, guiBaseCallback, guiBaseResize)
 	guiSequenceButton.state = True
 	guiNodesButton = Common_Gui.TabButton("guiNodesButton", "Nodes", "Node options", None, guiBaseCallback, guiBaseResize)
@@ -5296,9 +5355,13 @@ def initGui():
 	guiHeaderBar.fade_mode = 0
 	guiTabBar = Common_Gui.BasicContainer("guiTabBar", "tabs", None, guiBaseResize)
 	guiTabBar.fade_mode = 0
+	
+	guiDetailLevelsTab = Common_Gui.TabContainer("guiDetailLevelsTab", "content.detaillevels", guiDetailLevelsButton, None, guiBaseResize)
+	guiDetailLevelsTab.fade_mode = 1
+	guiDetailLevelsTab.enabled, guiDetailLevelsTab.visible = True, True
 	guiSequenceTab = Common_Gui.TabContainer("guiSequenceTab", "content.sequence", guiSequenceButton, None, guiBaseResize)
 	guiSequenceTab.fade_mode = 1
-	guiSequenceTab.enabled, guiSequenceTab.visible = True, True
+	guiSequenceTab.enabled, guiSequenceTab.visible = False, False
 	guiSequencesTabBar = Common_Gui.BasicContainer("guiSequencesTabBar", "Sequence tabs", None, guiBaseResize)
 	guiSequencesTabBar.fade_mode = 0
 	guiSequencesTabBar.color = None
@@ -5317,6 +5380,10 @@ def initGui():
 	guiAboutTab.enabled, guiAboutTab.visible = False, False
 	
 	# Sub-container Controls
+	guiDetailLevelsSubtab = Common_Gui.TabContainer("guiDetailLevelsSubtab", None, guiDetailLevelsButton, None, guiBaseResize)
+	guiDetailLevelsSubtab.fade_mode = 1
+	guiDetailLevelsSubtab.enabled, guiDetailLevelsSubtab.visible = True, True
+	guiDetailLevelsSubtab.borderColor = [0,0,0,0]
 	guiSeqCommonSubtab = Common_Gui.TabContainer("guiSeqCommonSubtab", None, guiSeqCommonButton, None, guiBaseResize)
 	guiSeqCommonSubtab.fade_mode = 1
 	guiSeqCommonSubtab.enabled, guiSeqCommonSubtab.visible = False, False
@@ -5339,8 +5406,6 @@ def initGui():
 	guiMaterialsSubtab.fade_mode = 1
 	guiMaterialsSubtab.borderColor = [0,0,0,0]
 	guiMaterialsSubtab.enabled, guiMaterialsSubtab.visible = True, True
-
-	
 	guiGeneralSubtab = Common_Gui.BasicContainer("guiGeneralSubtab", None, None, guiBaseResize)
 	guiGeneralSubtab.fade_mode = 1
 	guiNodeListSubtab = Common_Gui.BasicContainer("guiNodeListSubtab", None, None, guiBaseResize)
@@ -5355,6 +5420,7 @@ def initGui():
 	
 	Common_Gui.addGuiControl(guiTabBar)
 	guiTabBar.addControl(guiHeaderBar)
+	guiTabBar.addControl(guiDetailLevelsButton)
 	guiTabBar.addControl(guiSequenceButton)
 	guiTabBar.addControl(guiNodesButton)
 	guiTabBar.addControl(guiMaterialsButton)
@@ -5363,6 +5429,7 @@ def initGui():
 	guiTabBar.addControl(guiAboutButton)
 	guiTabBar.addControl(guiExportButton)
 	
+	guiDetailLevelsTab.addControl(guiDetailLevelsSubtab)
 		
 	Common_Gui.addGuiControl(guiSequenceTab)
 	guiSequenceTab.borderColor = [0,0,0,0]
@@ -5385,13 +5452,15 @@ def initGui():
 	#guiSequencesTabBar.addControl(guiSequenceMorphButton)
 
 
+	guiDetailLevelsSubtab.borderColor = [0,0,0,0]
 	guiSeqCommonSubtab.borderColor = [0,0,0,0]
 	guiSeqActSubtab.borderColor = [0,0,0,0]
 	guiSequenceIFLSubtab.borderColor = [0,0,0,0]
 	guiSequenceVisibilitySubtab.borderColor = [0,0,0,0]
 	guiSequenceUVSubtab.borderColor = [0,0,0,0]
 	guiSequenceMorphSubtab.borderColor = [0,0,0,0]
-
+	
+	Common_Gui.addGuiControl(guiDetailLevelsTab)
 	
 	Common_Gui.addGuiControl(guiNodesTab)
 	guiNodesTab.borderColor = [0,0,0,0]
@@ -5413,6 +5482,7 @@ def initGui():
 	
 
 	# Initialize all tab pages
+	DetailLevelControls = DetailLevelControlsClass()
 	SeqCommonControls = SeqCommonControlsClass(guiSeqCommonSubtab)
 	ActionControls = ActionControlsClass(guiSeqActSubtab)
 	IFLControls = IFLControlsClass(guiSequenceIFLSubtab)
@@ -5427,8 +5497,9 @@ def initGui():
 
 # Called when gui exits
 def exit_callback():
-	global SeqCommonControls, IFLControls, ActionControls, MaterialControls, ArmatureControls, GeneralControls, AboutControls
+	global DetailLevelControls, SeqCommonControls, IFLControls, ActionControls, MaterialControls, ArmatureControls, GeneralControls, AboutControls
 	Torque_Util.dump_setout("stdout")
+	DetailLevelControls.cleanup()
 	ActionControls.clearSequenceList()
 	ArmatureControls.clearBoneGrid()
 	AboutControls.cleanup()
