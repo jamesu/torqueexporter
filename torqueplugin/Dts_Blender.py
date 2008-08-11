@@ -1050,7 +1050,7 @@ class ShapeTree(SceneTree):
 			# make sure our path seperator is correct.
 			getPathSeperator(Prefs['exportBasepath'])
 			Stream = DtsStream("%s%s%s.dts" % (Prefs['exportBasepath'], pathSeperator, Prefs['exportBasename']), False, Prefs['DTSVersion'])
-			Torque_Util.dump_writeln("Writing shape to  '%s'." % ("%s\\%s.dts" % (Prefs['exportBasepath'], Prefs['exportBasename'])))
+			Torque_Util.dump_writeln("Writing shape to  '%s'." % ("%s%s%s.dts" % (Prefs['exportBasepath'], pathSeperator, Prefs['exportBasename'])))
 			# Now, start the shape export process if the Stream loaded
 			if Stream.fs:
 				self.Shape = BlenderShape(Prefs)
