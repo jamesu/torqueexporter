@@ -138,7 +138,7 @@ def initPrefs():
 	Prefs['BannedBones'] = []
 	Prefs['CollapseRootTransform'] = True
 	Prefs['TSEMaterial'] = False
-	Prefs['exportBasename'] = basename(Blender.Get("filename"))
+	Prefs['exportBasename'] = noext(basename(Blender.Get("filename")))
 	Prefs['exportBasepath'] = basepath(Blender.Get("filename"))
 	Prefs['LastActivePanel'] = 'Sequences'
 	Prefs['LastActiveSubPanel'] = 'Common'
@@ -147,7 +147,7 @@ def initPrefs():
 # Loads preferences
 def loadPrefs():
 	global Prefs, Prefs_keyname, textDocName
-	Prefs_keyname = 'TorqueExporterPlugin_%s' % pythonizeFileName(basename(Blender.Get("filename")))
+	Prefs_keyname = 'TorqueExporterPlugin_%s' % pythonizeFileName(noext(basename(Blender.Get("filename"))))
 	Prefs = Registry.GetKey(Prefs_keyname, True)
 	if not Prefs:
 		#Torque_Util.dump_writeln("Registry key '%s' could not be loaded, resorting to text object." % Prefs_keyname)
@@ -1045,7 +1045,7 @@ class ShapeTree(SceneTree):
 				Prefs['exportBasepath'] = basepath(Blender.Get("filename"))
 			# double check the file name
 			if Prefs['exportBasename'] == "":
-				Prefs['exportBasename'] = basename(Blender.Get("filename"))
+				Prefs['exportBasename'] = noext(basename(Blender.Get("filename")))
 			
 			# make sure our path seperator is correct.
 			getPathSeperator(Prefs['exportBasepath'])
@@ -1901,13 +1901,13 @@ class GeneralControlsClass:
 		elif control.name == "guiShowWarnErrPopup":
 			Prefs["ShowWarningErrorPopup"] = control.state
 		elif control.name == "guiCustomFilename":
-			Prefs['exportBasename'] = basename(control.value)
+			Prefs['exportBasename'] = noext(basename(control.value))
 			Prefs['exportBasepath'] = basepath(control.value)
 			if self.guiCustomFilename.value[len(self.guiCustomFilename.value)-4:] != ".dts":
 				self.guiCustomFilename.value += ".dts"
 
 			if Prefs['LogToOutputFolder']:
-				Torque_Util.dump_setout( "%s%s%s.log" % (Prefs['exportBasepath'], pathSeperator, noext(Prefs['exportBasename'])) )
+				Torque_Util.dump_setout( "%s%s%s.log" % (Prefs['exportBasepath'], pathSeperator, Prefs['exportBasename']) )
 		elif control.name == "guiCustomFilenameSelect":
 			if "\\" in Prefs['exportBasepath']:
 				pathSep = "\\"
@@ -1915,7 +1915,7 @@ class GeneralControlsClass:
 				pathSep = "/"
 			Blender.Window.FileSelector (self.guiGeneralSelectorCallback, 'Select destination and filename', Prefs['exportBasepath'] + pathSep + Prefs['exportBasename'] + ".dts")
 		elif control.name == "guiCustomFilenameDefaults":
-			Prefs['exportBasename'] = basename(Blender.Get("filename"))
+			Prefs['exportBasename'] = noext(basename(Blender.Get("filename")))
 			Prefs['exportBasepath'] = basepath(Blender.Get("filename"))		
 			pathSep = "/"
 			if "\\" in Prefs['exportBasepath']:
@@ -1931,10 +1931,9 @@ class GeneralControlsClass:
 		elif control.name == "guiLogToOutputFolder":
 			Prefs['LogToOutputFolder'] = control.state
 			if control.state:
-				Torque_Util.dump_setout( "%s%s%s.log" % (Prefs['exportBasepath'], pathSeperator, noext(Prefs['exportBasename'])) )
+				Torque_Util.dump_setout( "%s%s%s.log" % (Prefs['exportBasepath'], pathSeperator, Prefs['exportBasename']) )
 			else:
 				Torque_Util.dump_setout("%s.log" % noext(Blender.Get("filename")))
-			Prefs['exportBasename']
 
 		
 	def resize(self, control, newwidth, newheight):
@@ -1993,15 +1992,13 @@ class GeneralControlsClass:
 	def guiGeneralSelectorCallback(self, filename):
 		global guiGeneralSubtab
 		if filename != "":
-			print "filename =", filename
-			Prefs['exportBasename'] = basename(filename)
+			Prefs['exportBasename'] = noext(basename(filename))
 			Prefs['exportBasepath'] = basepath(filename)
 
 			pathSep = "/"
 			if "\\" in Prefs['exportBasepath']: pathSep = "\\"
 
 			self.guiCustomFilename.value = Prefs['exportBasepath'] + pathSep + Prefs['exportBasename']
-			print "self.guiCustomFilename.value =",self.guiCustomFilename.value
 			if self.guiCustomFilename.value[len(self.guiCustomFilename.value)-4:] != ".dts":
 				self.guiCustomFilename.value = self.guiCustomFilename.value + ".dts"
 
@@ -5481,13 +5478,13 @@ def entryPoint(a):
 	else:
 		# double check the file name before opening the log
 		if Prefs['exportBasename'] == "":
-			Prefs['exportBasename'] = basename(Blender.Get("filename"))
+			Prefs['exportBasename'] = noext(basename(Blender.Get("filename")))
 		
 		try: x = Prefs['LogToOutputFolder']
 		except KeyError: Prefs['LogToOutputFolder'] = True
 		if Prefs['LogToOutputFolder']:
 			getPathSeperator(Prefs['exportBasepath'])
-			Torque_Util.dump_setout( "%s%s%s.log" % (Prefs['exportBasepath'], pathSeperator, noext(Prefs['exportBasename'])) )
+			Torque_Util.dump_setout( "%s%s%s.log" % (Prefs['exportBasepath'], pathSeperator, Prefs['exportBasename']) )
 		else:
 			Torque_Util.dump_setout("%s.log" % noext(Blender.Get("filename")))
 		
