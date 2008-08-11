@@ -212,24 +212,66 @@ class DtsPoseUtilClass:
 		whereIsChildWS = self.getBoneLocWS(armName, bName, pose)
 		# subtract out the parent's location
 		offsetFromParent = whereIsChildWS - whereIsParentWS		
+		# remove scale from the offset, as best we can.
+		offsetScaleRemoved = self.correctScaledOffset(offsetFromParent, armName, bName, pose)
+		# Rotate the offset into the parent's space
+		offsetFromParent = self.getBoneRotWS(armName, parentName, pose).apply(offsetScaleRemoved)		
+		return offsetFromParent
 
-		# apply inverse of parent scale (converted to worldspace) to correct child worldspace location
-		# first get the scale of the parent bone
-		scale = self.toTorqueVec(pose.bones[parentName].poseMatrix.scalePart())
-		# and its inverse
-		scaleInv = Vector(1.0/scale[0], 1.0/scale[1], 1.0/scale[2])
-		# center scale on zero before rotation
-		scaleVec = Vector(scaleInv[0]-1.0, scaleInv[1]-1.0, scaleInv[2]-1.0)		
-		# rotate scale by inverse parent rotation
-		scaleIntermediate = self.getBoneRotWS(armName, parentName, pose).inverse().apply(scaleVec)
-		# now re-center scale vector at 1.0
-		scaleWS = Vector(scaleIntermediate[0]+1.0, scaleIntermediate[1]+1.0, scaleIntermediate[2]+1.0)
-		# finally, remove scale from the offset
-		offsetScaleRemoved = Vector(offsetFromParent[0] * scaleWS[0], offsetFromParent[1] * scaleWS[1], offsetFromParent[2] * scaleWS[2])
+	# walk back up the node tree and build a list of scales and transforms for each bone
+	# that has it's scale explicitly set to a non (1,1,1) value.  We then rotate the passed in
+	# offset into each space and apply the corresponding inverted scale.  The end result is
+	# an offset that has all scale and most importantly, worldspace skew effects removed.
+	def correctScaledOffset(self, offsetIn, armName, bName, pose):
+		# inverse scales
+		scaleListLS = []
+		# rotations (not inverse)
+		rotListWS = []
+
+		# set initial parent
+		parentName = self.armBones[armName][bName][PARENTNAME]
+		# go backwards through the hierarchy and build a list of scale and rotation operations (both inverse)
+		while parentName != None:
+			rot = self.getBoneRotWS(armName, parentName, pose)
+			scaleRaw = self.toTorqueVec(pose.bones[parentName].size)
+			scaleInv = Vector(1.0/scaleRaw[0], 1.0/scaleRaw[1], 1.0/scaleRaw[2])
+			# check to see if all members are within delta of one, if so, don't
+			# even bother adding them to the list since it'll only throw off accuracy
+			if scaleRaw.eqDelta( Vector(1.0,1.0,1.0), 0.008 ):
+				try: parentName = self.armBones[armName][parentName][PARENTNAME]
+				except: parentName = None
+				continue
+			scaleListLS.append(scaleInv)
+			rotListWS.append(rot)
+			try: parentName = self.armBones[armName][parentName][PARENTNAME]
+			except: parentName = None
+
+
+			
+		# reverse both lists so inverse scales are applied in correct order
+		# note - this *does* matter since scales are applied in parent space
+		scaleListLS.reverse()
+		rotListWS.reverse()
 		
-		# determine the transform needed to get to the same point in the parent's space.
-		whereIsBonePS = self.getBoneRotWS(armName, parentName, pose).apply(offsetScaleRemoved)		
-		return whereIsBonePS
+		# apply the inverse scales in the correct space
+		offsetAccum = offsetIn		
+		for i in range(0, len(scaleListLS)):
+			scaleInv = scaleListLS[i]
+			rot = rotListWS[i]
+			rotInv = rot.inverse()
+			# rotate the offset into parent bone's space 
+			offsetAccum = rot.apply(offsetAccum)
+			# remove the parent bone's scale from the offset.
+			offsetAccum = Vector(offsetAccum[0] * scaleInv[0], offsetAccum[1] * scaleInv[1], offsetAccum[2] * scaleInv[2])
+			# rotate back into worldspace for next iteration :-)
+			offsetAccum = rotInv.apply(offsetAccum)
+
+		# return the calculated offset		
+		offsetOut = offsetAccum
+		return offsetOut
+
+
+
 
 	# Get a non-orphan bone's rotation in parent space
 	# TESTED
@@ -334,7 +376,7 @@ class DtsPoseUtilClass:
 		return bTrans
 
 	# determine the rotation of any bone in worldspace
-	# TESTED
+	# TESTED - but is fairly innacurate when anisotropic scale is persent on parent bones.
 	def getBoneRotWS(self, armName, bName, pose):
 		# get the armature's rotation
 		armRot = self.armInfo[armName][ARMROT].inverse()
@@ -343,8 +385,9 @@ class DtsPoseUtilClass:
 		return bRot
 
 	# Blender's matrix toQuat() method gives incorrect values for matrices containing non-uniform scale.
-	# This method is scale invariant :-)
+	# This method is (mostly) scale invariant.. hrmmm... not sure if this helps or hinders, really.
 	def bMatToTorqueQuat(self, bMat):
+		#return self.toTorqueQuat(bMat.rotationPart().toQuat())
 		# get 3x3 submatrix
 		rotMat = bMat.rotationPart()
 		# get the scale components
@@ -358,7 +401,10 @@ class DtsPoseUtilClass:
 		# construct a new matrix
 		newMat = bMath.Matrix(r1,r2,r3)
 		# convert to torque quat and return.
-		return self.toTorqueQuat(newMat.toQuat())
+		retVal = self.toTorqueQuat(newMat.toQuat())
+		return retVal  # <- closest match so far
+		#return self.toTorqueQuat(bMat.rotationPart().toQuat()) # <- not very close
+		#return self.toTorqueQuat(bMat.toQuat()) # <- same as above, not very close
 	
 		
 	def toTorqueVec(self, v):
