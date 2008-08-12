@@ -139,8 +139,8 @@ def initPrefs():
 	Prefs['TSEMaterial'] = False
 	Prefs['exportBasename'] = noext(basename(Blender.Get("filename")))
 	Prefs['exportBasepath'] = basepath(Blender.Get("filename"))
-	Prefs['LastActivePanel'] = 'Sequences'
-	Prefs['LastActiveSubPanel'] = 'Common'
+	Prefs['LastActivePanel'] = 'Shape'
+	Prefs['LastActiveSubPanel'] = 'DetailLevels'
 	Prefs['RestFrame'] = 1
 	Prefs['DetailLevels'] = {'Detail1':[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]}
 	return Prefs
@@ -529,9 +529,9 @@ def updateOldPrefs():
 	global Prefs
 
 	try: x = Prefs['LastActivePanel']
-	except: Prefs['LastActivePanel'] = 'Sequences'
+	except: Prefs['LastActivePanel'] = 'Shape'
 	try: x = Prefs['LastActiveSubPanel']
-	except: Prefs['LastActiveSubPanel'] = 'Common'
+	except: Prefs['LastActiveSubPanel'] = 'DetailLevels'
 	try: x = Prefs["ShowWarningErrorPopup"]
 	except: Prefs["ShowWarningErrorPopup"] = True
 	try: x = Prefs['BannedNodes']
@@ -1358,37 +1358,178 @@ def export():
 # Controls referenced in functions
 guiSequenceTab, guiGeneralTab, guiNodesTab, guiAboutTab, guiTabBar, guiHeaderTab = None, None, None, None, None, None
 
-DetailLevelControls = None
-SeqCommonControls = None
-IFLControls = None
-VisControls = None
-MaterialControls = None
-ActionControls = None
-ArmatureControls = None
-GeneralControls = None
-AboutControls = None
+#DetailLevelControls = None
+#SeqCommonControls = None
+#IFLControls = None
+#VisControls = None
+#MaterialControls = None
+#ActionControls = None
+#ArmatureControls = None
+#GeneralControls = None
+#AboutControls = None
 
 
-guiSeqActOpts = None
-guiSeqActList = None
-guiNodeList = None
+#guiSeqActOpts = None
+#guiSeqActList = None
+#guiNodeList = None
 
 # Global control event table.  Containers have their own event tables for child controls
 globalEvents = Common_Gui.EventTable(1)
 
 
+
+# Class that implements a gui tab button and control container
+class TabSheetControl:
+	def __init__(self, buttonText, tabName, tooltip, eventId, tabBar, container, callback, controlPage):
+		self.tabName = tabName
+		self.tabButton = Common_Gui.TabButton(tabName, buttonText, tooltip, None, callback, self.resize)
+		self.tabButton.state = False
+		self.tabContainer = Common_Gui.TabContainer(tabName, None, self.tabButton, None, self.resize)
+		self.tabContainer.fade_mode = 8
+		self.tabContainer.borderColor = [0,0,0,1]
+		self.tabContainer.color = [.67,.67,.67,1]
+		self.tabContainer.enabled = False
+		self.tabContainer.visible = False
+
+		self.controlPage = controlPage
+		if container != None:			
+			container.addControl(self.tabContainer)
+		else:
+			Common_Gui.addGuiControl(self.tabContainer)
+		tabBar.addControl(self.tabButton)
+		
+		
+	def resize(self, control, newwidth, newheight):
+		if control == self.tabButton:
+			control.y = 1
+			#control.y = newheight - 52
+			#control.width, control.height = 100, 25
+		if control == self.tabContainer:
+			control.x, control.y = 4, 4
+			control.width, control.height = newwidth-8, newheight - 35
+
+
+# class that implements a gui tab book control
+# owns and initializes tab sheet controls
+class TabBookControl:
+	def __init__(self, container, parentTabName=None):
+		global globalEvents
+		self.tabBar = Common_Gui.BasicContainer("tabBar", "tabs", None, self.resize)
+		self.tabBar.fade_mode = 0
+		self.tabBar.color = None
+		self.tabs = []
+		self.container = container
+		self.parentTabName = parentTabName
+		if container != None:
+			container.addControl(self.tabBar)
+		else:
+			Common_Gui.addGuiControl(self.tabBar)
+	
+	def resize(self, control, newwidth, newheight):
+		if control.name == "tabBar":
+			control.x, control.y = 0, newheight - 34
+			control.width, control.height = newwidth - 8, 35
+
+	def addTab(self, buttonText, tabName, controlPage=None):
+		newTab = TabSheetControl(buttonText, tabName, None, globalEvents.getNewID(), self.tabBar, self.container, self.onTabClick, controlPage)
+		# calculate x location for new tab button
+		newPos = 15 # <- initial offset from left edge of container
+		for tab in self.tabs:
+			newPos += tab.tabButton.width + 2
+		newTab.tabButton.x = newPos
+		self.tabs.append(newTab)
+	
+	def onTabClick(self, control):
+		global Prefs
+		for tab in self.tabs:
+			if control == tab.tabButton:
+				# turn on the tab button, show and enable the tab container
+				control.state = True
+				tab.tabContainer.visible = True
+				tab.tabContainer.enabled = True
+				# call the refresh all method if it exists
+				if tab.controlPage != None:
+					tab.controlPage.refreshAll()				
+				# store the last active tabs in prefs
+				if self.parentTabName == None:
+					Prefs['LastActivePanel'] = tab.tabName
+					Prefs['LastActiveSubPanel'] = "DetailLevels"
+				else:
+					Prefs['LastActivePanel'] = self.parentTabName
+					Prefs['LastActiveSubPanel'] = tab.tabName
+				continue
+			# disable all other tab containers and set tab button states to false.
+			tab.tabButton.state = False
+			tab.tabContainer.visible = False
+			tab.tabContainer.enabled = False
+
+	def getTabSheetContainer(self, tabName):
+		for tab in self.tabs:
+			if tab.tabName == tabName:
+				return tab.tabContainer
+
+	def restoreLastActivePanel(self):
+		global Prefs
+		found = False
+		for tab in self.tabs:
+			# we're at the root level of tabs
+			if self.parentTabName == None:
+				if Prefs['LastActivePanel'] == tab.tabName:
+					print "(1) Enabling panel:", tab.tabName
+					# turn on the tab button, show and enable the tab container
+					tab.tabButton.state = True
+					tab.tabContainer.visible = True
+					tab.tabContainer.enabled = True
+					matchFound = True
+				else:
+					print "(1) Disabling panel:", tab.tabName
+					# turn off the tab button, hide and disable the tab container
+					tab.tabButton.state = False
+					tab.tabContainer.visible = False
+					tab.tabContainer.enabled = False
+					matchFound = False
+
+			# on 2nd level of tabs and our parent tab the last active panel
+			elif self.parentTabName == Prefs['LastActivePanel']:
+				# did we find the last active subpanel?
+				if Prefs['LastActiveSubPanel'] == tab.tabName:
+					print "(2) Enabling panel:", tab.tabName
+					# turn on the tab button, show and enable the tab container
+					tab.tabButton.state = True
+					tab.tabContainer.visible = True
+					tab.tabContainer.enabled = True
+					matchFound = True
+				else:
+					print "(2) Disabling panel:", tab.tabName
+					# turn off the tab button, hide and disable the tab container
+					tab.tabButton.state = False
+					tab.tabContainer.visible = False
+					tab.tabContainer.enabled = False
+					matchFound = False
+					
+			else:
+				print "(3) Disabling panel:", tab.tabName
+				# turn off the tab button, hide and disable the tab container
+				tab.tabButton.state = False
+				tab.tabContainer.visible = False
+				tab.tabContainer.enabled = False
+				matchFound = False
+				
+		
+	
+
 # Special callbacks for gui control tabs
 def guiBaseCallback(control):
 	global Prefs
-	global guiDetailLevelsTab, guiSequenceTab, guiNodesTab, guiMaterialsTab, guiGeneralTab, guiAboutTab, guiTabBar
-	global guiDetailLevelsButton, guiSequenceButton, guiGeneralButton, guiNodesButton, guiMaterialsButton, guiAboutButton
+	global guiShapeTab, guiSequenceTab, guiNodesTab, guiMaterialsTab, guiGeneralTab, guiAboutTab, guiTabBar
+	global guiShapeButton, guiSequenceButton, guiGeneralButton, guiNodesButton, guiMaterialsButton, guiAboutButton
 
 	if control.name == "guiExportButton":
 		export()
 		return
 
 	# Need to associate the button with it's corresponding tab container.
-	ctrls = [[guiDetailLevelsButton,guiDetailLevelsTab, None, "DetailLevels"],\
+	ctrls = [[guiShapeButton,guiShapeTab, None, "Shape"],\
 	[guiSequenceButton,guiSequenceTab, None, "Sequences"],\
 	[guiGeneralButton,guiGeneralTab, None, "General"],\
 	[guiMaterialsButton,guiMaterialsTab, MaterialControls, "Materials"],\
@@ -1444,7 +1585,7 @@ def restoreLastActivePanel():
 	global guiSeqCommonSubtab, guiSeqActSubtab, guiSequenceIFLSubtab, guiSequenceVisibilitySubtab, guiSequenceUVSubtab, guiSequenceMorphSubtab
 	global SeqCommonControls, ActionControls, IFLControls, VisControls
 	panels =\
-	[[guiDetailLevelsButton,guiDetailLevelsTab, "DetailLevels"],\
+	[[guiShapeButton,guiShapeTab, "Shape"],\
 	 [guiSequenceButton,guiSequenceTab, "Sequences"],\
 	 [guiGeneralButton,guiGeneralTab, "General"],\
 	 [guiMaterialsButton,guiMaterialsTab, "Materials"],\
@@ -1502,46 +1643,50 @@ def restoreLastActivePanel():
 			
 # Resize callback for all global gui controls
 def guiBaseResize(control, newwidth, newheight):
-	tabContainers = ["guiDetailLevelsTab", "guiSequenceTab", "guiGeneralTab", "guiNodesTab", "guiAboutTab", "guiMaterialsTab"]
+	tabContainers = ["guiShapeTab", "guiSequenceTab", "guiGeneralTab", "guiNodesTab", "guiAboutTab", "guiMaterialsTab"]
 	tabSubContainers = ["guiDetailLevelsSubTab", "guiSeqCommonSubtab", "guiSeqActSubtab", "guiSequenceIFLSubtab", "guiSequenceVisibilitySubtab","guiSequenceUVSubtab","guiSequenceMorphSubtab", "guiSequenceNLASubtab", "guiMaterialsSubtab", "guiGeneralSubtab", "guiNodeListSubtab", "guiAboutSubtab"]
 	
-	if control.name == "guiTabBar":
-		control.x, control.y = 0, 378
-		control.width, control.height = 506, 55
-	elif control.name == "guiSequencesTabBar":
-		control.x, control.y = 8, 343
-		control.width, control.height = 490, 30
-	elif control.name in tabContainers:
-		control.x, control.y = 0, 0
-		control.width, control.height = 506, 378
-	elif control.name in tabSubContainers:
-		control.x, control.y = 8, 8
-		control.width, control.height = 490, 335
+	#if control.name == "guiTabBar":
+	#	control.x, control.y = 0, 378
+	#	control.width, control.height = 506, 55
+	if control.name == "guiMainContainer":
+		control.x, control.y = (newwidth/2)-253, (newheight/2) -235
+		control.width, control.height = 506, 456
 	elif control.name == "guiHeaderBar":
-		control.x, control.y = 0, newheight - 20
+		control.x, control.y = (newwidth/2)-253, (newheight/2) +221
 		control.width, control.height = 506, 20
-	elif control.name == "guiDetailLevelsButton":
-		control.x, control.y = 10, 0
-		control.width, control.height = 85, 25
-	elif control.name == "guiNodesButton":
-		control.x, control.y = 97, 0
-		control.width, control.height = 50, 25
-	elif control.name == "guiSequenceButton":
-		control.x, control.y = 149, 0
-		control.width, control.height = 70, 25
-	elif control.name == "guiMaterialsButton":
-		control.x, control.y = 221, 0
-		control.width, control.height = 60, 25
-	elif control.name == "guiGeneralButton":
-		control.x, control.y = 283, 0
-		control.width, control.height = 55, 25
-	elif control.name == "guiAboutButton":
-		control.x, control.y = 340, 0
-		control.width, control.height = 45, 25
 	elif control.name == "guiExportButton":
-		control.x, control.y = 414, -30
-		control.width, control.height = 70, 25
-	
+		control.x, control.y = newwidth-73, newheight - 47
+		control.width, control.height = 70, 23
+		
+	#elif control.name == "guiSequencesTabBar":
+	#	control.x, control.y = 8, 343
+	#	control.width, control.height = 490, 30
+	#elif control.name in tabContainers:
+	#	control.x, control.y = 0, 0
+	#	control.width, control.height = 506, 378
+	#elif control.name in tabSubContainers:
+	#	control.x, control.y = 8, 8
+	#	control.width, control.height = 490, 335
+	#elif control.name == "guiDetailLevelsButton":
+	#	control.x, control.y = 10, 0
+	#	control.width, control.height = 85, 25
+	#elif control.name == "guiNodesButton":
+	#	control.x, control.y = 97, 0
+	#	control.width, control.height = 50, 25
+	#elif control.name == "guiSequenceButton":
+	#	control.x, control.y = 149, 0
+	#	control.width, control.height = 70, 25
+	#elif control.name == "guiMaterialsButton":
+	#	control.x, control.y = 221, 0
+	#	control.width, control.height = 60, 25
+	#elif control.name == "guiGeneralButton":
+	#	control.x, control.y = 283, 0
+	#	control.width, control.height = 55, 25
+	#elif control.name == "guiAboutButton":
+	#	control.x, control.y = 340, 0
+	#	control.width, control.height = 45, 25
+	'''
 	# Sequences sub-tab buttons
 	elif control.name == "guiSeqCommonButton":
 		control.x, control.y = 10, 0
@@ -1561,7 +1706,7 @@ def guiBaseResize(control, newwidth, newheight):
 	elif control.name == "guiSequenceMorphButton":
 		control.x, control.y = 305, 0
 		control.width, control.height = 50, 25
-
+	'''
 
 
 # Resize callback for gui header	
@@ -1630,8 +1775,7 @@ def validateSequenceName(seqName, seqType, oldName = None):
 ***************************************************************************************************
 '''
 class DetailLevelControlsClass:
-	def __init__(self):
-		global guiDetailLevelsSubtab
+	def __init__(self, guiDetailLevelsSubtab):
 		global globalEvents
 		
 		# initialize GUI controls
@@ -1679,8 +1823,7 @@ class DetailLevelControlsClass:
 ***************************************************************************************************
 '''
 class AboutControlsClass:
-	def __init__(self):
-		global guiAboutSubtab
+	def __init__(self, guiAboutSubtab):
 		global globalEvents
 		
 		# initialize GUI controls
@@ -1729,8 +1872,7 @@ class AboutControlsClass:
 ***************************************************************************************************
 '''
 class GeneralControlsClass:
-	def __init__(self):
-		global guiGeneralSubtab
+	def __init__(self, guiGeneralSubtab):
 		global globalEvents
 		
 		# initialize GUI controls
@@ -2054,8 +2196,7 @@ class GeneralControlsClass:
 ***************************************************************************************************
 '''
 class NodeControlsClass:
-	def __init__(self):
-		global guiNodeListSubtab
+	def __init__(self, guiNodeListSubtab):
 		global globalEvents
 
 		# initialize GUI controls
@@ -3160,7 +3301,7 @@ class ActionControlsClass(SeqControlsClassBase):
 	#  @note Calls parent init method
 	#  @param tabContainer The GUI tab container control into which everything should be placed.
 	def __init__(self, tabContainer):
-		global guiSeqActSubtab
+		#global guiSeqActSubtab
 		SeqControlsClassBase.__init__(self,tabContainer)
 
 		## @brief Need to set this in all classes derived from SeqControlsClassBase
@@ -4888,8 +5029,7 @@ class VisControlsClass(UserCreatedSeqControlsClassBase):
 ***************************************************************************************************
 '''
 class MaterialControlsClass:
-	def __init__(self):
-		global guiMaterialsSubtab
+	def __init__(self, guiMaterialsSubtab):
 		global globalEvents
 		# panel state
 		self.curSeqListEvent = 40
@@ -4936,7 +5076,7 @@ class MaterialControlsClass:
 		self.guiMaterialBumpMapMenu.visible = False
 		self.guiMaterialReflectanceMapMenu.visible = False
 		self.guiMaterialOptions.enabled = False
-		guiMaterialsTab.borderColor = [0,0,0,0]
+		#guiMaterialsTab.borderColor = [0,0,0,0]
 		
 		
 		# add controls to their respective containers
@@ -5298,6 +5438,8 @@ def initGui():
 	'''
 
 	global Version, Prefs
+	pass
+
 
 	# tab buttons
 	global guiDetailLevelsButton, guiSequenceButton, guiGeneralButton, guiNodesButton, guiMaterialsButton, guiAboutButton
@@ -5314,11 +5456,107 @@ def initGui():
 	# tab bar containers so far
 	global guiTabBar, guiSequencesTabBar
 	
+	global guiMainContainer
+	
 	# subtab containers
 	global guiSeqCommonSubtab, guiSeqActSubtab, guiSequenceIFLSubtab, guiSequenceVisibilitySubtab, guiSequenceUVSubtab, guiSequenceMorphSubtab
 	                                
 	Common_Gui.initGui(exit_callback)
+
+
+	# -------------------------------
+	# Create global controls
+
+	# export button
+	guiExportButton = Common_Gui.BasicButton("guiExportButton", "Export", "Export .dts shape", globalEvents.getNewID("Export"), guiBaseCallback, guiBaseResize)
+	# Header controls
+	guiHeaderText = Common_Gui.SimpleText("guiHeaderText", "Torque Exporter Plugin", None, guiHeaderResize)
+	headerTextColor = headerColor = Common_Gui.curTheme.get('buts').text_hi
+	guiHeaderText.color = [headerTextColor[0]/255.0, headerTextColor[1]/255.0, headerTextColor[2]/255.0, headerTextColor[3]/255.0]
+	guiVersionText = Common_Gui.SimpleText("guiVersionText", "Version %s" % Version, None, guiHeaderResize)
+	# Container Controls
+	guiMainContainer = Common_Gui.BasicContainer("guiMainContainer", "container", None, guiBaseResize)
+	guiMainContainer.borderColor = [0, 0, 0, 1]
+	guiMainContainer.fade_mode = 0
+	guiHeaderBar = Common_Gui.BasicContainer("guiHeaderBar", "header", None, guiBaseResize)
+	guiHeaderBar.borderColor = [0,0,0,1]
+	headerColor = Common_Gui.curTheme.get('buts').header
+	guiHeaderBar.color = [headerColor[0]/255.0, headerColor[1]/255.0, headerColor[2]/255.0, headerColor[3]/255.0]
+	guiHeaderBar.fade_mode = 0
+	# Add all controls to respective containers
+	guiHeaderBar.addControl(guiHeaderText)
+	guiHeaderBar.addControl(guiVersionText)
+	guiMainContainer.addControl(guiExportButton)
+	Common_Gui.addGuiControl(guiHeaderBar)
+	Common_Gui.addGuiControl(guiMainContainer)
 	
+	# -------------------------------
+	# Create tab books and tabs
+	
+	mainTabBook = TabBookControl(guiMainContainer)
+	mainTabBook.addTab("Shape", "Shape")
+	mainTabBook.addTab("Sequences", "Sequences")
+	mainTabBook.addTab("General", "General")
+	mainTabBook.addTab("About", "About")
+	
+	shapeTabBook = TabBookControl(mainTabBook.getTabSheetContainer("Shape"), "Shape")
+	
+	shapeTabBook.addTab("Detail Levels", "DetailLevels")
+	shapeTabBook.addTab("Nodes", "Nodes")
+	shapeTabBook.addTab("Materials", "Materials")
+	shapeTabBook.addTab("Meshes", "Meshes")
+
+
+	sequencesTabBook = TabBookControl(mainTabBook.getTabSheetContainer("Sequences"), "Sequences")
+	
+	sequencesTabBook.addTab("Common/All", "CommonAll")
+	sequencesTabBook.addTab("IFL", "IFL")
+	sequencesTabBook.addTab("Visibility", "Visibility")
+
+
+	# ----------------------------
+	# Initialize all tab pages	
+	
+	
+	DetailLevelControls = DetailLevelControlsClass(shapeTabBook.getTabSheetContainer("DetailLevels"))
+	NodeControls = NodeControlsClass(shapeTabBook.getTabSheetContainer("Nodes"))
+	MaterialControls = MaterialControlsClass(shapeTabBook.getTabSheetContainer("Materials"))
+	# todo - "Meshes" panel to control drawing order.
+	#MeshControls = MeshControlsClass(shapeTabBook.getTabSheetContainer("Meshes"))
+
+	SeqCommonControls = SeqCommonControlsClass(sequencesTabBook.getTabSheetContainer("CommonAll"))
+	# no more action controls, we're timeline based now.
+	#ActionControls = ActionControlsClass(guiSeqActSubtab)
+	IFLControls = IFLControlsClass(sequencesTabBook.getTabSheetContainer("IFL"))
+	VisControls = VisControlsClass(sequencesTabBook.getTabSheetContainer("Visibility"))
+	
+	
+	mainTabBook.restoreLastActivePanel()
+	shapeTabBook.restoreLastActivePanel()
+	sequencesTabBook.restoreLastActivePanel()
+	
+	#DetailLevelControls = DetailLevelControlsClass()
+	#SeqCommonControls = SeqCommonControlsClass(guiSeqCommonSubtab)
+	#ActionControls = ActionControlsClass(guiSeqActSubtab)
+	#IFLControls = IFLControlsClass(guiSequenceIFLSubtab)
+	#VisControls = VisControlsClass(guiSequenceVisibilitySubtab)
+	#MaterialControls = MaterialControlsClass()
+	#ArmatureControls = NodeControlsClass()
+	#GeneralControls = GeneralControlsClass()
+	#AboutControls = AboutControlsClass()
+
+
+
+	'''
+	shapeTabBook.addTab("Sequences")
+	shapeTabBook.addTab("General")
+	shapeTabBook.addTab("About")
+	'''
+	
+	
+	
+
+	'''	
 	# Main tab button controls
 	guiDetailLevelsButton = Common_Gui.TabButton("guiDetailLevelsButton", "Detail Levels", "Detail levels", None, guiBaseCallback, guiBaseResize)
 	guiSequenceButton = Common_Gui.TabButton("guiSequenceButton", "Sequences", "Sequence options", None, guiBaseCallback, guiBaseResize)
@@ -5494,21 +5732,22 @@ def initGui():
 	
 	# Restore last tab selection
 	restoreLastActivePanel()
+	'''
 
 # Called when gui exits
 def exit_callback():
 	global DetailLevelControls, SeqCommonControls, IFLControls, ActionControls, MaterialControls, ArmatureControls, GeneralControls, AboutControls
 	Torque_Util.dump_setout("stdout")
-	DetailLevelControls.cleanup()
-	ActionControls.clearSequenceList()
-	ArmatureControls.clearBoneGrid()
-	AboutControls.cleanup()
-	GeneralControls.cleanup()
-	ArmatureControls.cleanup()
-	ActionControls.cleanup()
-	IFLControls.cleanup()	
-	VisControls.cleanup()
-	MaterialControls.cleanup()	
+	#DetailLevelControls.cleanup()
+	#ActionControls.clearSequenceList()
+	#ArmatureControls.clearBoneGrid()
+	#AboutControls.cleanup()
+	#GeneralControls.cleanup()
+	#ArmatureControls.cleanup()
+	#ActionControls.cleanup()
+	#IFLControls.cleanup()	
+	#VisControls.cleanup()
+	#MaterialControls.cleanup()	
 	
 	
 	savePrefs()
