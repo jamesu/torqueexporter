@@ -1381,7 +1381,7 @@ globalEvents = Common_Gui.EventTable(1)
 def guiBaseCallback(control):
 	global Prefs
 	global guiDetailLevelsTab, guiSequenceTab, guiNodesTab, guiMaterialsTab, guiGeneralTab, guiAboutTab, guiTabBar
-	global guiDetailLevelsButton, guiSequenceButton, guiMeshButton, guiNodesButton, guiMaterialsButton, guiAboutButton
+	global guiDetailLevelsButton, guiSequenceButton, guiGeneralButton, guiNodesButton, guiMaterialsButton, guiAboutButton
 
 	if control.name == "guiExportButton":
 		export()
@@ -1390,7 +1390,7 @@ def guiBaseCallback(control):
 	# Need to associate the button with it's corresponding tab container.
 	ctrls = [[guiDetailLevelsButton,guiDetailLevelsTab, None, "DetailLevels"],\
 	[guiSequenceButton,guiSequenceTab, None, "Sequences"],\
-	[guiMeshButton,guiGeneralTab, None, "General"],\
+	[guiGeneralButton,guiGeneralTab, None, "General"],\
 	[guiMaterialsButton,guiMaterialsTab, MaterialControls, "Materials"],\
 	[guiNodesButton,guiNodesTab, None, "Armature"],\
 	[guiAboutButton,guiAboutTab, None, "About"]]
@@ -1446,7 +1446,7 @@ def restoreLastActivePanel():
 	panels =\
 	[[guiDetailLevelsButton,guiDetailLevelsTab, "DetailLevels"],\
 	 [guiSequenceButton,guiSequenceTab, "Sequences"],\
-	 [guiMeshButton,guiGeneralTab, "General"],\
+	 [guiGeneralButton,guiGeneralTab, "General"],\
 	 [guiMaterialsButton,guiMaterialsTab, "Materials"],\
 	 [guiNodesButton,guiNodesTab, "Nodes"],\
 	 [guiAboutButton,guiAboutTab, "About"]]
@@ -1522,21 +1522,21 @@ def guiBaseResize(control, newwidth, newheight):
 		control.width, control.height = 506, 20
 	elif control.name == "guiDetailLevelsButton":
 		control.x, control.y = 10, 0
-		control.width, control.height = 80, 25
+		control.width, control.height = 85, 25
 	elif control.name == "guiNodesButton":
-		control.x, control.y = 92, 0
+		control.x, control.y = 97, 0
 		control.width, control.height = 50, 25
 	elif control.name == "guiSequenceButton":
-		control.x, control.y = 144, 0
+		control.x, control.y = 149, 0
 		control.width, control.height = 70, 25
 	elif control.name == "guiMaterialsButton":
-		control.x, control.y = 216, 0
+		control.x, control.y = 221, 0
 		control.width, control.height = 60, 25
-	elif control.name == "guiMeshButton":
-		control.x, control.y = 278, 0
+	elif control.name == "guiGeneralButton":
+		control.x, control.y = 283, 0
 		control.width, control.height = 55, 25
 	elif control.name == "guiAboutButton":
-		control.x, control.y = 335, 0
+		control.x, control.y = 340, 0
 		control.width, control.height = 45, 25
 	elif control.name == "guiExportButton":
 		control.x, control.y = 414, -30
@@ -5300,7 +5300,7 @@ def initGui():
 	global Version, Prefs
 
 	# tab buttons
-	global guiDetailLevelsButton, guiSequenceButton, guiMeshButton, guiNodesButton, guiMaterialsButton, guiAboutButton
+	global guiDetailLevelsButton, guiSequenceButton, guiGeneralButton, guiNodesButton, guiMaterialsButton, guiAboutButton
 	# subtab buttons
 	global guiSeqCommonButton, guiSeqActButton, guiSequenceIFLButton, guiSequenceVisibilityButton, guiSequenceUVButton, guiSequenceMorphButton
 	# tab containers
@@ -5325,7 +5325,7 @@ def initGui():
 	guiSequenceButton.state = True
 	guiNodesButton = Common_Gui.TabButton("guiNodesButton", "Nodes", "Node options", None, guiBaseCallback, guiBaseResize)
 	guiMaterialsButton = Common_Gui.TabButton("guiMaterialsButton", "Materials", "Material options", None, guiBaseCallback, guiBaseResize)
-	guiMeshButton = Common_Gui.TabButton("guiMeshButton", "General", "Mesh and other options", None, guiBaseCallback, guiBaseResize)
+	guiGeneralButton = Common_Gui.TabButton("guiGeneralButton", "General", "Mesh and other options", None, guiBaseCallback, guiBaseResize)
 	guiAboutButton = Common_Gui.TabButton("guiAboutButton", "About", "About", None, guiBaseCallback, guiBaseResize)
 	
 	# export button
@@ -5372,7 +5372,7 @@ def initGui():
 	guiMaterialsTab = Common_Gui.TabContainer("guiMaterialsTab", "content.materials", guiMaterialsButton, None, guiBaseResize)
 	guiMaterialsTab.fade_mode = 1
 	guiMaterialsTab.enabled, guiMaterialsTab.visible = False, False
-	guiGeneralTab = Common_Gui.TabContainer("guiGeneralTab", "content.general", guiMeshButton, None, guiBaseResize)
+	guiGeneralTab = Common_Gui.TabContainer("guiGeneralTab", "content.general", guiGeneralButton, None, guiBaseResize)
 	guiGeneralTab.fade_mode = 1
 	guiGeneralTab.enabled, guiGeneralTab.visible = False, False
 	guiAboutTab = Common_Gui.TabContainer("guiAboutTab", "content.about", guiAboutButton, None, guiBaseResize)
@@ -5424,7 +5424,7 @@ def initGui():
 	guiTabBar.addControl(guiSequenceButton)
 	guiTabBar.addControl(guiNodesButton)
 	guiTabBar.addControl(guiMaterialsButton)
-	guiTabBar.addControl(guiMeshButton)
+	guiTabBar.addControl(guiGeneralButton)
 	
 	guiTabBar.addControl(guiAboutButton)
 	guiTabBar.addControl(guiExportButton)
