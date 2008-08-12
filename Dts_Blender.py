@@ -1815,6 +1815,11 @@ class DetailLevelControlsClass:
 		self.guiDetailLevelsList = Common_Gui.ListContainer("guiDetailLevelsList", "dl.list", self.handleEvent, self.resize)		
 		#self.guiDetailLevelsOptions = Common_Gui.BasicContainer("guiDetailLevelsOptions", "", None, self.resize)
 		#self.guiDetailLevelsOptionsTitle = Common_Gui.SimpleText("guiDetailLevelsOptionsTitle", "Detail Level: None Selected", None, self.resize)
+		self.guiDetailLevelsAddButton = Common_Gui.BasicButton("guiDetailLevelsAddButton", "Add:", "Add a new detail level of the indicated type", 1, self.handleEvent, self.resize)
+		self.guiDetailLevelsTypeMenu = Common_Gui.ComboBox("guiDetailLevelsTypeMenu", "Type", "Select the type of detail level to add", 2, self.handleEvent, self.resize)
+		self.guiDetailLevelsDelButton = Common_Gui.BasicButton("guiDetailLevelsDelButton", "Delete Selected Detail Lvl", "Import Blender materials and settings", 3, self.handleEvent, self.resize)		
+		self.guiDetailLevelsSortButton = Common_Gui.BasicButton("guiDetailLevelsSortButton", "Sort List", "Sort the detail levels list", 4, self.handleEvent, self.resize)
+		
 		
 		#
 		self.guiDetailLevelsList.childHeight = 30
@@ -1847,6 +1852,10 @@ class DetailLevelControlsClass:
 		# add controls to containers
 		guiDetailLevelsSubtab.addControl(self.guiDetailLevelsListTitle)
 		guiDetailLevelsSubtab.addControl(self.guiDetailLevelsList)
+		guiDetailLevelsSubtab.addControl(self.guiDetailLevelsAddButton)
+		guiDetailLevelsSubtab.addControl(self.guiDetailLevelsTypeMenu)
+		guiDetailLevelsSubtab.addControl(self.guiDetailLevelsDelButton)
+		guiDetailLevelsSubtab.addControl(self.guiDetailLevelsSortButton)
 		#guiDetailLevelsSubtab.addControl(self.guiDetailLevelsOptions)
 		#self.guiDetailLevelsOptions.addControl(self.guiDetailLevelsOptionsTitle)
 		#guiDetailLevelsSubtab.addControl()
@@ -1925,7 +1934,18 @@ class DetailLevelControlsClass:
 		if control.name == "guiDetailLevelsListTitle":
 			control.x, control.y, control.height, control.width = 10,310, 20,150
 		elif control.name == "guiDetailLevelsList":
-			control.x, control.y, control.height, control.width = 10,30, newheight - 70, newwidth - 20
+			control.x, control.y, control.height, control.width = 10,50, newheight - 90, newwidth - 20
+		
+		elif control.name == "guiDetailLevelsAddButton":
+			control.x, control.y, control.height, control.width = 10,15, 20,50
+		elif control.name == "guiDetailLevelsTypeMenu":
+			control.x, control.y, control.height, control.width = 62,15, 20,150
+		elif control.name == "guiDetailLevelsDelButton":
+			control.x, control.y, control.height, control.width = 228,15, 20,160
+		elif control.name == "guiDetailLevelsSortButton":
+			control.x, control.y, control.height, control.width = newwidth - 85,15, 20,75
+
+
 
 	## @brief Creates a detail level list item and its associated GUI controls.
 	#  @note Called by populateDLList
