@@ -1358,15 +1358,15 @@ def export():
 # Controls referenced in functions
 guiSequenceTab, guiGeneralTab, guiNodesTab, guiAboutTab, guiTabBar, guiHeaderTab = None, None, None, None, None, None
 
-#DetailLevelControls = None
-#SeqCommonControls = None
-#IFLControls = None
-#VisControls = None
-#MaterialControls = None
-#ActionControls = None
-#ArmatureControls = None
-#GeneralControls = None
-#AboutControls = None
+DetailLevelControls = None
+SeqCommonControls = None
+IFLControls = None
+VisControls = None
+MaterialControls = None
+ActionControls = None
+ArmatureControls = None
+GeneralControls = None
+AboutControls = None
 
 
 #guiSeqActOpts = None
@@ -1417,6 +1417,7 @@ class TabBookControl:
 		self.tabBar = Common_Gui.BasicContainer("tabBar", "tabs", None, self.resize)
 		self.tabBar.fade_mode = 0
 		self.tabBar.color = None
+		self.tabBar.borderColor = None
 		self.tabs = []
 		self.container = container
 		self.parentTabName = parentTabName
@@ -1428,7 +1429,7 @@ class TabBookControl:
 	def resize(self, control, newwidth, newheight):
 		if control.name == "tabBar":
 			control.x, control.y = 0, newheight - 34
-			control.width, control.height = newwidth - 8, 35
+			control.width, control.height = newwidth, 35
 
 	def addTab(self, buttonText, tabName, controlPage=None):
 		newTab = TabSheetControl(buttonText, tabName, None, globalEvents.getNewID(), self.tabBar, self.container, self.onTabClick, controlPage)
@@ -1650,10 +1651,10 @@ def guiBaseResize(control, newwidth, newheight):
 	#	control.x, control.y = 0, 378
 	#	control.width, control.height = 506, 55
 	if control.name == "guiMainContainer":
-		control.x, control.y = (newwidth/2)-253, (newheight/2) -235
-		control.width, control.height = 506, 456
+		control.x, control.y = (newwidth/2)-253, (newheight/2) -203
+		control.width, control.height = 506, 406
 	elif control.name == "guiHeaderBar":
-		control.x, control.y = (newwidth/2)-253, (newheight/2) +221
+		control.x, control.y = (newwidth/2)-253, (newheight/2) +203
 		control.width, control.height = 506, 20
 	elif control.name == "guiExportButton":
 		control.x, control.y = newwidth-73, newheight - 47
@@ -2273,9 +2274,11 @@ class NodeControlsClass:
 
 	def resize(self, control, newwidth, newheight):
 		if control.name == "guiNodeText":
-			control.x, control.y = 10,newheight-15
+			control.x, control.y = 10,newheight-20
 		elif control.name == "guiNodeList":
-			control.x, control.y, control.width, control.height = 10,70, 470,242
+			#control.x, control.y, control.width, control.height = 10,70, 470,242
+			control.x, control.y = 10, 90
+			control.width, control.height = newwidth - 20, newheight-120
 		elif control.name == "guiMatchText":
 			control.x, control.y = 10,newheight-285
 		elif control.name == "guiPatternText":
