@@ -48,6 +48,9 @@ dragInitial = None
 dragState = False
 dragError = 10
 
+# Shift key
+shiftState = False
+
 
 LastOverlapControlClickTime = Blender.sys.time()
 
@@ -1352,7 +1355,7 @@ class Progress:
 
 # Function to process general events
 def event(evt, val):
-	global Controls, exitCallback, dragOffset, dragInitial, dragState, dragError
+	global Controls, exitCallback, dragOffset, dragInitial, dragState, dragError, shiftState
 	
 	acceptedEvents = [Draw.LEFTMOUSE, Draw.MIDDLEMOUSE, Draw.MOUSEX, Draw.MOUSEY, Draw.WHEELDOWNMOUSE, Draw.WHEELUPMOUSE]
 	curMousePos = [Window.GetMouseCoords()[0], Window.GetMouseCoords()[1]]
@@ -1369,6 +1372,15 @@ def event(evt, val):
 	elif evt == Draw.RIGHTMOUSE:
 		if Draw.PupMenu("Display%t|Reset Gui Offset%x1") == 1:
 			 dragOffset = [0,0]
+	elif shiftState and (evt in [Draw.MOUSEX, Draw.MOUSEY]):
+		areaBounds = Window.GetScreenInfo(Window.Types["SCRIPT"])[0]["vertices"]
+		# Make sure mouse is still inside script window
+		if not ((curMousePos[0] > (areaBounds[0]+dragError) and curMousePos[0] < (areaBounds[2]-dragError)) and (curMousePos[1] > (areaBounds[1]+dragError) and curMousePos[1] < (areaBounds[3]-dragError))):
+			shiftState = False
+	elif evt == Draw.LEFTSHIFTKEY or evt == Draw.RIGHTSHIFTKEY:
+		if val == 1: shiftState = True
+		else: shiftState = False
+	
 	elif dragState and (evt in [Draw.MOUSEX, Draw.MOUSEY]):
 		areaBounds = Window.GetScreenInfo(Window.Types["SCRIPT"])[0]["vertices"]
 
