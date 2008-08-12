@@ -1059,16 +1059,44 @@ class SceneInfoClass:
 		print "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 	
 
+	# -----------------------------------------------------------
 	# public methods for getting data from the sceneinfo object
 	
-	
+	# get the names of all nodes in the scene
 	def getAllNodeNames(self):
 		nameList = []
 		for ni in self.nodes.values():
 			nameList.append(ni.nodeName)
 		return nameList
 
+	# returns the detail level name that a given layer is assigned to, or none if not assigned
+	def getLayerAssignment(self, layerNum):
+		for dlName in Prefs['DetailLevels'].keys():
+			dl = Prefs['DetailLevels'][dlName]
+			if layerNum in dl:
+				return dlName
+				
+	# reassigns a given layer to a different detail level
+	# this method makes sure that a given layer can be assigned to only one dl at a time.
+	def setLayerAssignment(self, dlName, newLayer):
+		# remove any existing assignment
+		self.removeLayerAssignment(newLayer)
+		# assign layer to detail level
+		Prefs['DetailLevels'][dlName].append(newLayer)
+			
+	def removeLayerAssignment(self, layerNum):
+		# remove any existing assignment
+		for dl in Prefs['DetailLevels'].values():
+			print "dl=",dl
+			for i in range(len(dl)-1, -1, -1):
+				print "i=",i
+				layer = dl[i]
+				if layer == layerNum:
+					del dl[i]
 		
+	
+	
+	# -----------------------------------------------------------
 
 def doExport(progressBar):
 	global Debug
@@ -1778,21 +1806,52 @@ def validateSequenceName(seqName, seqType, oldName = None):
 class DetailLevelControlsClass:
 	def __init__(self, guiDetailLevelsSubtab):
 		global globalEvents
+
+		# panel state
+		self.curListEvent = 40
 		
 		# initialize GUI controls
-		self.guiAboutText = Common_Gui.MultilineText("guiAboutText", 
-		"Torque Exporter Plugin for Blender\n" +
-		"\n"
-		"Written by James Urquhart, with assistance from Tim Gift, Clark Fagot, Wes Beary,\n" +
-		"Ben Garney, Joshua Ritter, Emanuel Greisen, Todd Koeckeritz,\n" +
-		"Ryan J. Parker, Walter Yoon, and Joseph Greenawalt.\n" +
-		"GUI code written with assistance from Xen and Xavier Amado.\n" +
-		"Additional thanks goes to the testers.\n" +
-		"\n" +
-		"Visit GarageGames at http://www.garagegames.com", None, self.resize)
+		self.guiDetailLevelsListTitle = Common_Gui.SimpleText("guiDetailLevelsListTitle", "Detail Levels:", None, self.resize)
+		self.guiDetailLevelsList = Common_Gui.ListContainer("guiDetailLevelsList", "dl.list", self.handleEvent, self.resize)		
+		#self.guiDetailLevelsOptions = Common_Gui.BasicContainer("guiDetailLevelsOptions", "", None, self.resize)
+		#self.guiDetailLevelsOptionsTitle = Common_Gui.SimpleText("guiDetailLevelsOptionsTitle", "Detail Level: None Selected", None, self.resize)
+		
+		#
+		self.guiDetailLevelsList.childHeight = 30
+		
+		'''
+		self.guiMaterialTransFrame = Common_Gui.BasicFrame("guiMaterialTransFrame", "", None, 29, None, self.resize)
+		self.guiMaterialAdvancedFrame = Common_Gui.BasicFrame("guiMaterialAdvancedFrame", "", None, 30, None, self.resize)
+		self.guiMaterialImportRefreshButton = Common_Gui.BasicButton("guiMaterialImportRefreshButton", "Refresh", "Import Blender materials and settings", 7, self.handleEvent, self.resize)
+		self.guiMaterialSWrapButton = Common_Gui.ToggleButton("guiMaterialSWrapButton", "SWrap", "SWrap", 9, self.handleEvent, self.resize)
+		self.guiMaterialTWrapButton = Common_Gui.ToggleButton("guiMaterialTWrapButton", "TWrap", "TWrap", 10, self.handleEvent, self.resize)
+		self.guiMaterialTransButton = Common_Gui.ToggleButton("guiMaterialTransButton", "Translucent", "Translucent", 11, self.handleEvent, self.resize)
+		self.guiMaterialAddButton = Common_Gui.ToggleButton("guiMaterialAddButton", "Additive", "Blending Additive", 12, self.handleEvent, self.resize)
+		self.guiMaterialSubButton = Common_Gui.ToggleButton("guiMaterialSubButton", "Subtractive", "Blending Subtractive", 13, self.handleEvent, self.resize)
+		self.guiMaterialSelfIllumButton = Common_Gui.ToggleButton("guiMaterialSelfIllumButton", "Self Illuminating", "Mark material as self illuminating", 14, self.handleEvent, self.resize)
+		self.guiMaterialEnvMapButton = Common_Gui.ToggleButton("guiMaterialEnvMapButton", "Environment Mapping", "Enable Environment Mapping", 15, self.handleEvent, self.resize)
+		self.guiMaterialMipMapButton = Common_Gui.ToggleButton("guiMaterialMipMapButton", "Mipmap", "Allow MipMapping", 16, self.handleEvent, self.resize)
+		self.guiMaterialMipMapZBButton = Common_Gui.ToggleButton("guiMaterialMipMapZBButton", "Mipmap Zero Border", "Use Zero border MipMaps", 17, self.handleEvent, self.resize)
+		self.guiMaterialIFLMatButton = Common_Gui.ToggleButton("guiMaterialIFLMatButton", "IFL Material", "Use this material as an IFL material", 28, self.handleEvent, self.resize)
+		self.guiMaterialDetailMapButton = Common_Gui.ToggleButton("guiMaterialDetailMapButton", "Detail Map", "Use a detail map texture", 18, self.handleEvent, self.resize)
+		self.guiMaterialBumpMapButton = Common_Gui.ToggleButton("guiMaterialBumpMapButton", "Bump Map", "Use a bump map texture", 19, self.handleEvent, self.resize)
+		self.guiMaterialRefMapButton = Common_Gui.ToggleButton("guiMaterialRefMapButton", "Reflectance Map", "Use a reflectance map texture", 20, self.handleEvent, self.resize)
+		self.guiMaterialDetailMapMenu = Common_Gui.ComboBox("guiMaterialDetailMapMenu", "Detail Texture", "Select a texture from this list to use as a detail map", 22, self.handleEvent, self.resize)
+		self.guiMaterialShowAdvancedButton = Common_Gui.ToggleButton("guiMaterialShowAdvancedButton", "Show Advanced Settings", "Show advanced material settings. USE WITH CAUTION!!", 23, self.handleEvent, self.resize)
+		self.guiMaterialBumpMapMenu = Common_Gui.ComboBox("guiMaterialBumpMapMenu", "Bumpmap Texture", "Select a texture from this list to use as a bump map", 24, self.handleEvent, self.resize)
+		self.guiMaterialReflectanceMapMenu = Common_Gui.ComboBox("guiMaterialReflectanceMapMenu", "Reflectance Map", "Select a texture from this list to use as a Reflectance map", 25, self.handleEvent, self.resize)
+		self.guiMaterialReflectanceSlider = Common_Gui.NumberPicker("guiMaterialReflectanceSlider", "Reflectivity %", "Material reflectivity as a percentage", 26, self.handleEvent, self.resize)
+		self.guiMaterialDetailScaleSlider = Common_Gui.NumberPicker("guiMaterialDetailScaleSlider", "Detail Scale %", "Detail map scale as a percentage of original size", 27, self.handleEvent, self.resize)	
+		'''
 		
 		# add controls to containers
-		guiDetailLevelsSubtab.addControl(self.guiAboutText)
+		guiDetailLevelsSubtab.addControl(self.guiDetailLevelsListTitle)
+		guiDetailLevelsSubtab.addControl(self.guiDetailLevelsList)
+		#guiDetailLevelsSubtab.addControl(self.guiDetailLevelsOptions)
+		#self.guiDetailLevelsOptions.addControl(self.guiDetailLevelsOptionsTitle)
+		#guiDetailLevelsSubtab.addControl()
+		
+		self.populateDLList()
 		
 
 	def cleanup(self):
@@ -1807,10 +1866,175 @@ class DetailLevelControlsClass:
 	def refreshAll(self):
 		pass
 		
+	def handleEvent(self, control):
+		pass
+	
+	def handleListItemEvent(self, control):
+		evtOffset = 21
+		# Determine DL name
+		if control.evt == 40:
+			calcIdx = 0
+		else:
+			calcIdx = (control.evt - 40) / evtOffset
+		pass
+		dlName = self.guiDetailLevelsList.controls[calcIdx].controls[0].label
+		print "dlName =", dlName
+		realItem = control.evt - 40 - (calcIdx*evtOffset)
+		print "realItem =", realItem
+		# get the shift state
+		shiftState = Common_Gui.shiftState
+		
+		# a layer button was clicked		
+		if realItem > 0 and realItem < 21:
+			print "shiftState =",shiftState
+			# if shifted, click does not affect other layer buttons in the DL
+			if shiftState:
+				# button pressed
+				if control.state:
+					# assign the layer to the detail level
+					SceneInfo.setLayerAssignment(dlName, realItem)
+				# button un-pressed
+				else:
+					#Remove layer from this dl
+					SceneInfo.removeLayerAssignment(realItem)
+
+			# if not shifted, click turns all other layer buttons off
+			else:
+				# clear other layers assigned to this dl
+				Prefs['DetailLevels'][dlName] = []
+				SceneInfo.setLayerAssignment(dlName, realItem)
+				# clear button states
+				for i in range(1,21):
+					print "* i=", i
+					if i == realItem:						
+						control.state = True
+					else:
+						self.guiDetailLevelsList.controls[calcIdx].controls[i].state = False
+				control.state = True
+
+		#SceneInfo.getLayerAssignment(layerNum)
+		#SceneInfo.removeLayerAssignment(layerNum)
+		#SceneInfo.setLayerAssignment(dlName, newLayer)
+
+		# size was changed
+		elif realItem == 0:
+			pass
+		
 	def resize(self, control, newwidth, newheight):
-		if control.name == "guiAboutText":
-			control.x = 10
-			control.y = 120
+		# handle control resize events.
+		if control.name == "guiDetailLevelsListTitle":
+			control.x, control.y, control.height, control.width = 10,310, 20,150
+		elif control.name == "guiDetailLevelsList":
+			control.x, control.y, control.height, control.width = 10,30, newheight - 70, newwidth - 20
+
+	## @brief Creates a detail level list item and its associated GUI controls.
+	#  @note Called by populateDLList
+	#  @param dlName The name of the sequence for which we're creating the list item.
+	def createDLListItem(self, dlName):
+		DLPrefs = Prefs['DetailLevels'][dlName]
+		startEvent = self.curListEvent
+		listWidth = self.guiDetailLevelsList.width - self.guiDetailLevelsList.barWidth
+		
+		guiContainer = Common_Gui.BasicContainer("", None, None)		
+		guiName = Common_Gui.SimpleText("", dlName, None, None)
+		guiLayersLabel = Common_Gui.SimpleText("", "Use Layers:", None, None)
+		guiSize = Common_Gui.NumberPicker("guiSize", "Min Pixel Size:", "Height in pixels at which detail level begins to display", startEvent, self.handleListItemEvent, self.resize)
+		startEvent += 1
+
+		# create layer buttons
+		guiLayerButton = []
+		for i in range(1,21):
+			print "(1) i=",i
+			# create the button
+			guiLayerButton.append(Common_Gui.ToggleButton("guiLayer"+str(i), "", "Use Layer "+str(i) + " in Detail Level", startEvent + i - 1, self.handleListItemEvent, None))
+			if i in DLPrefs:
+				# turn on the button
+				guiLayerButton[len(guiLayerButton)-1].state = True
+			else:
+				# turn the button off
+				guiLayerButton[len(guiLayerButton)-1].state = False
+
+		
+
+		guiContainer.fade_mode = 0  # flat color
+
+		guiName.x, guiName.y = 5, 8
+		guiSize.x, guiSize.y = 100, 5
+		guiLayersLabel.x, guiLayersLabel.y = 270, 8
+
+		buttonWidth = 10
+		# position buttons in groups of 5
+		buttonsStartX = 340
+		buttonsStartY = 15
+		buttonPos = buttonsStartX
+		for i in range(0,5):
+			print "(g1) i = ", i
+			guiLayerButton[i].x, guiLayerButton[i].y = buttonPos, buttonsStartY
+			guiLayerButton[i].width = buttonWidth
+			guiLayerButton[i].height = buttonWidth
+			buttonPos += buttonWidth
+
+		buttonsStartX = 340
+		buttonsStartY = 5
+		buttonPos = buttonsStartX
+		for i in range(5,10):
+			print "(g2) i = ", i
+			guiLayerButton[i].x, guiLayerButton[i].y = buttonPos, buttonsStartY
+			guiLayerButton[i].width = buttonWidth
+			guiLayerButton[i].height = buttonWidth
+			buttonPos += buttonWidth
+
+		buttonsStartX = 395
+		buttonsStartY = 15
+		buttonPos = buttonsStartX
+		for i in range(10,15):
+			print "(g3) i = ", i
+			guiLayerButton[i].x, guiLayerButton[i].y = buttonPos, buttonsStartY
+			guiLayerButton[i].width = buttonWidth
+			guiLayerButton[i].height = buttonWidth
+			buttonPos += buttonWidth
+
+		buttonsStartX = 395
+		buttonsStartY = 5
+		buttonPos = buttonsStartX
+		for i in range(15,20):
+			print "(g4) i = ", i
+			guiLayerButton[i].x, guiLayerButton[i].y = buttonPos, buttonsStartY
+			guiLayerButton[i].width = buttonWidth
+			guiLayerButton[i].height = buttonWidth
+			buttonPos += buttonWidth
+		
+		# Add everything
+		guiContainer.addControl(guiName)
+		
+		for i in range(0,20):
+			guiContainer.addControl(guiLayerButton[i])
+
+		guiContainer.addControl(guiSize)
+		guiContainer.addControl(guiLayersLabel)
+
+		
+		# increment the current event counter
+		self.curListEvent += 21
+		
+		return guiContainer
+
+	## @brief Populates the sequence list using current pref values.
+	def populateDLList(self):
+		print "populating DL list..."
+		#self.clearSequenceList()
+		# Force a  list resize event, to make sure our button offsets
+		# are correct.
+		#if self.guiDetailLevelsList.width == 0: return
+		# loop through all detail levels in the preferences
+		global Prefs
+		keys = Prefs['DetailLevels'].keys()
+		print "keys =", keys
+		keys.sort(lambda x, y: cmp(x.lower(),y.lower()))
+		for dlName in keys:			
+			print "Blah."
+			print "dlName =", dlName
+			self.guiDetailLevelsList.addControl(self.createDLListItem(dlName))
 
 	
 	# other event callbacks and helper methods go here.
