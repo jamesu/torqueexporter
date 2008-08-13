@@ -1415,7 +1415,7 @@ IFLControls = None
 VisControls = None
 MaterialControls = None
 ActionControls = None
-ArmatureControls = None
+NodeControls = None
 GeneralControls = None
 AboutControls = None
 
@@ -1472,6 +1472,7 @@ class TabBookControl:
 		self.tabs = []
 		self.container = container
 		self.parentTabName = parentTabName
+		self.defaultTab = None
 		if container != None:
 			container.addControl(self.tabBar)
 		else:
@@ -1479,8 +1480,8 @@ class TabBookControl:
 	
 	def resize(self, control, newwidth, newheight):
 		if control.name == "tabBar":
-			control.x, control.y = 0, newheight - 34
-			control.width, control.height = newwidth, 35
+			control.x, control.y = 4, newheight - 34
+			control.width, control.height = newwidth-8, 35
 
 	def addTab(self, buttonText, tabName, controlPage=None):
 		newTab = TabSheetControl(buttonText, tabName, None, globalEvents.getNewID(), self.tabBar, self.container, self.onTabClick, controlPage)
@@ -1490,15 +1491,23 @@ class TabBookControl:
 			newPos += tab.tabButton.width + 2
 		newTab.tabButton.x = newPos
 		self.tabs.append(newTab)
+		
+	def showTabPage(self, tab):
+		tab.tabButton.state = True
+		tab.tabContainer.visible = True
+		tab.tabContainer.enabled = True
+
+	def hideTabPage(self, tab):
+		tab.tabButton.state = False
+		tab.tabContainer.visible = False
+		tab.tabContainer.enabled = False
+		
 	
 	def onTabClick(self, control):
-		global Prefs
 		for tab in self.tabs:
 			if control == tab.tabButton:
 				# turn on the tab button, show and enable the tab container
-				control.state = True
-				tab.tabContainer.visible = True
-				tab.tabContainer.enabled = True
+				self.showTabPage(tab)
 				# call the refresh all method if it exists
 				if tab.controlPage != None:
 					tab.controlPage.refreshAll()				
@@ -1510,63 +1519,41 @@ class TabBookControl:
 					Prefs['LastActivePanel'] = self.parentTabName
 					Prefs['LastActiveSubPanel'] = tab.tabName
 				continue
-			# disable all other tab containers and set tab button states to false.
-			tab.tabButton.state = False
-			tab.tabContainer.visible = False
-			tab.tabContainer.enabled = False
+			self.hideTabPage(tab)
 
 	def getTabSheetContainer(self, tabName):
 		for tab in self.tabs:
 			if tab.tabName == tabName:
 				return tab.tabContainer
 
+	def setDetaultTab(self, tabName):
+		self.defaultTab = tabName
+
 	def restoreLastActivePanel(self):
 		global Prefs
 		found = False
 		for tab in self.tabs:
-			# we're at the root level of tabs
 			if self.parentTabName == None:
 				if Prefs['LastActivePanel'] == tab.tabName:
-					print "(1) Enabling panel:", tab.tabName
-					# turn on the tab button, show and enable the tab container
-					tab.tabButton.state = True
-					tab.tabContainer.visible = True
-					tab.tabContainer.enabled = True
-					matchFound = True
+					self.showTabPage(tab)
 				else:
-					print "(1) Disabling panel:", tab.tabName
-					# turn off the tab button, hide and disable the tab container
-					tab.tabButton.state = False
-					tab.tabContainer.visible = False
-					tab.tabContainer.enabled = False
-					matchFound = False
-
-			# on 2nd level of tabs and our parent tab the last active panel
+					self.hideTabPage(tab)
 			elif self.parentTabName == Prefs['LastActivePanel']:
-				# did we find the last active subpanel?
 				if Prefs['LastActiveSubPanel'] == tab.tabName:
-					print "(2) Enabling panel:", tab.tabName
-					# turn on the tab button, show and enable the tab container
-					tab.tabButton.state = True
-					tab.tabContainer.visible = True
-					tab.tabContainer.enabled = True
-					matchFound = True
+					self.showTabPage(tab)
 				else:
-					print "(2) Disabling panel:", tab.tabName
-					# turn off the tab button, hide and disable the tab container
-					tab.tabButton.state = False
-					tab.tabContainer.visible = False
-					tab.tabContainer.enabled = False
-					matchFound = False
+					self.hideTabPage(tab)
 					
 			else:
-				print "(3) Disabling panel:", tab.tabName
-				# turn off the tab button, hide and disable the tab container
-				tab.tabButton.state = False
-				tab.tabContainer.visible = False
-				tab.tabContainer.enabled = False
-				matchFound = False
-				
+				if self.defaultTab == None:
+					self.showTabPage(self.tabs[0])
+				else:	
+					if tab.tabName == self.defaultTab:
+						self.showTabPage(tab)
+					else:				
+						self.hideTabPage(tab)
+
+	
 		
 	
 
@@ -1893,7 +1880,9 @@ class DetailLevelControlsClass:
 		# "error totblock" message when exiting Blender.
 		# Note: __del__ is not guaranteed to be called for objects that still
 		# exist when the interpreter exits.
-		del self.guiAboutText
+		
+		# todo - clean up objects
+		pass
 
 	def refreshAll(self):
 		pass
@@ -5730,7 +5719,7 @@ def initGui():
 	# object that hands out global event id numbers
 	global GlobalEvents
 	# these objects create and own all of the actual gui controls on a subtab page
-	global DetailLevelControls, SeqCommonControls, IFLControls, VisControls, ActionControls, MaterialControls, ArmatureControls, GeneralControls, AboutControls
+	global DetailLevelControls, SeqCommonControls, IFLControls, VisControls, ActionControls, MaterialControls, NodeControls, GeneralControls, AboutControls
 	# tab bar containers so far
 	global guiTabBar, guiSequencesTabBar
 	
@@ -5779,6 +5768,7 @@ def initGui():
 	
 	shapeTabBook = TabBookControl(mainTabBook.getTabSheetContainer("Shape"), "Shape")
 	
+	shapeTabBook.addTab("Options", "ShapeOptions")
 	shapeTabBook.addTab("Detail Levels", "DetailLevels")
 	shapeTabBook.addTab("Nodes", "Nodes")
 	shapeTabBook.addTab("Materials", "Materials")
@@ -5807,7 +5797,9 @@ def initGui():
 	#ActionControls = ActionControlsClass(guiSeqActSubtab)
 	IFLControls = IFLControlsClass(sequencesTabBook.getTabSheetContainer("IFL"))
 	VisControls = VisControlsClass(sequencesTabBook.getTabSheetContainer("Visibility"))
-	
+	GeneralControls = GeneralControlsClass(mainTabBook.getTabSheetContainer("General"))
+	AboutControls = AboutControlsClass(mainTabBook.getTabSheetContainer("About"))
+
 	
 	mainTabBook.restoreLastActivePanel()
 	shapeTabBook.restoreLastActivePanel()
@@ -6014,18 +6006,17 @@ def initGui():
 
 # Called when gui exits
 def exit_callback():
-	global DetailLevelControls, SeqCommonControls, IFLControls, ActionControls, MaterialControls, ArmatureControls, GeneralControls, AboutControls
+	global DetailLevelControls, SeqCommonControls, IFLControls, ActionControls, MaterialControls, NodeControls, GeneralControls, AboutControls
 	Torque_Util.dump_setout("stdout")
-	#DetailLevelControls.cleanup()
+	DetailLevelControls.cleanup()
 	#ActionControls.clearSequenceList()
-	#ArmatureControls.clearBoneGrid()
-	#AboutControls.cleanup()
-	#GeneralControls.cleanup()
-	#ArmatureControls.cleanup()
+	AboutControls.cleanup()
+	GeneralControls.cleanup()
+	NodeControls.cleanup()
 	#ActionControls.cleanup()
-	#IFLControls.cleanup()	
-	#VisControls.cleanup()
-	#MaterialControls.cleanup()	
+	IFLControls.cleanup()	
+	VisControls.cleanup()
+	MaterialControls.cleanup()	
 	
 	
 	savePrefs()
