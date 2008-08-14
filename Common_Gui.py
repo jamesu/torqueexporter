@@ -866,7 +866,53 @@ class TabContainer(BasicContainer):
 		BGL.glVertex2d(real_x + self.tabButton.x + self.tabButton.width,real_y+self.height)
 		BGL.glVertex2d(real_x+self.width,real_y+self.height)
 		BGL.glEnd()
+
+
+# draws text in a box with a solid background and border; looks like a number picker but without the arrows
+class TextDisplayBox(SimpleText):
+	def __init__(self, name=None, text=None, callback=None, resize_callback=None):
+		global curTheme
+		SimpleText.__init__(self, name, text, None, resize_callback)
+		numColor = curTheme.get('ui').num
+		outlineColor = curTheme.get('ui').outline
+		print "numColor =", numColor		
+		print "outlineColor =", outlineColor
+		self.numColor = [(numColor[0]+25)/255.0, (numColor[1]+25)/255.0, (numColor[2]+25)/255.0, numColor[3]/255.0]
+		self.outlineColor = [(outlineColor[0]-80)/255.0, (outlineColor[1]-80)/255.0, (outlineColor[2]-80)/255.0, outlineColor[3]/255.0]
+
 		
+
+	def onDraw(self, offset):
+		self.color = self.numColor
+		self.borderColor = self.outlineColor
+		real_x = offset[0] + self.x
+		real_y = offset[1] + self.y
+
+		# draw background
+		BGL.glColor4f(self.color[0],self.color[1],self.color[2], self.color[3])
+		BGL.glRecti(real_x, real_y, real_x+self.width, real_y+self.height)
+
+		# draw border		
+		BGL.glBegin(BGL.GL_LINES)
+		BGL.glColor4f(self.borderColor[0],self.borderColor[1],self.borderColor[2], self.borderColor[3])
+		# Left up
+		BGL.glVertex2d(real_x,real_y)
+		BGL.glVertex2d(real_x,real_y+self.height)
+		# Top right
+		BGL.glVertex2d(real_x,real_y+self.height)
+		BGL.glVertex2d(real_x+self.width,real_y+self.height)
+		# Right down
+		BGL.glVertex2d(real_x+self.width,real_y+self.height)
+		BGL.glVertex2d(real_x+self.width,real_y)
+		# Bottom left
+		BGL.glVertex2d(real_x+self.width,real_y)
+		BGL.glVertex2d(real_x,real_y)
+		BGL.glEnd()
+
+
+		self.color = [0.0, 0.0, 0.0, 0.0]
+		offset = [offset[0]+5, offset[1]+5]
+		SimpleText.onDraw(self, offset)
 
 
 class ListContainer(BasicContainer):
@@ -1289,20 +1335,6 @@ class BoneListContainer(ListContainer):
 	def selectItem(self, idx):
 		return
 
-class TabBookContainer(BasicContainer):
-	'''
-	This class implements a tab book control.
-	
-	All controls are resized during the resize event,
-	taking into account properties set.
-	'''
-	def __init__(self, name=None, text=None, callback=None, resize_callback=None):
-		ListContainer.__init__(self, name, text, callback, resize_callback)
-		self.minimumChildHeight = 20
-		self.childHeight = 20	# Height of each child item
-
-	def selectItem(self, idx):
-		return
 
 
 # Util class for blender progress bar
