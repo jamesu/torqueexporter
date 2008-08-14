@@ -1860,7 +1860,7 @@ class TabSheetControl:
 		self.tabButton = Common_Gui.TabButton(tabName, buttonText, tooltip, None, callback, self.resize)
 		self.tabButton.state = False
 		self.tabContainer = Common_Gui.TabContainer(tabName, None, self.tabButton, None, self.resize)
-		self.tabContainer.fade_mode = 8
+		self.tabContainer.fade_mode = 11
 		self.tabContainer.borderColor = [0,0,0,1]
 		self.tabContainer.color = [.67,.67,.67,1]
 		self.tabContainer.enabled = False
@@ -5318,9 +5318,10 @@ def initGui():
 
 	sequencesTabBook = TabBookControl(mainTabBook.getTabSheetContainer("Sequences"), "Sequences")
 	
-	sequencesTabBook.addTab("Common/All", "CommonAll")
-	sequencesTabBook.addTab("IFL", "IFL")
-	sequencesTabBook.addTab("Visibility", "Visibility")
+	sequencesTabBook.addTab("Sequence Properties", "CommonAll")
+	sequencesTabBook.addTab("Visibility Animations", "Visibility")
+	sequencesTabBook.addTab("IFL Animations", "IFL")
+	
 
 
 	# ----------------------------
