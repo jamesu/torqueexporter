@@ -719,6 +719,10 @@ class BasicContainer(BasicControl):
 				startColor = self.color
 				endColor = [self.color[0]*0.6,self.color[1]*0.6,self.color[2]*0.6,self.color[3]]
 				fadeStyle = self.fade_mode-6
+			if self.fade_mode > 9:   # even brighter endColor
+				startColor = self.color
+				endColor = [self.color[0]*0.85,self.color[1]*0.85,self.color[2]*0.85,self.color[3]]
+				fadeStyle = self.fade_mode-9
 			elif self.fade_mode > 3: # normal endColor
 				startColor = [self.color[0]*0.2,self.color[1]*0.2,self.color[2]*0.2,self.color[3]]
 				endColor = self.color
