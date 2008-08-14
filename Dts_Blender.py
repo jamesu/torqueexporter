@@ -3299,7 +3299,7 @@ class SeqCommonControlsClass(SeqControlsClassBase):
 		# initialize GUI controls
 		self.guiToggle = Common_Gui.ToggleButton("guiToggle", "Toggle All", "Toggle export of all sequences", self.getNextEvent(), self.handleGuiToggleEvent, self.guiToggleResize)
 		self.guiRefresh = Common_Gui.BasicButton("guiRefresh", "Refresh", "Refresh list of sequences", self.getNextEvent(), self.handleGuiRefreshEvent, self.guiRefreshResize)
-		self.guiSeqFramesLabel =  Common_Gui.SimpleText("guiSeqFramesLabel", "Total Frame Count:  ", None, self.guiSeqFramesLabelResize)
+		self.guiSeqFramesLabel =  Common_Gui.TextDisplayBox("guiSeqFramesLabel", "Frames:  ", None, self.guiSeqFramesLabelResize)
 		self.guiSeqDuration = Common_Gui.NumberPicker("guiSeqDuration", "Seconds: ", "The animation plays for this number of seconds", self.getNextEvent(), self.handleGuiSeqDurationEvent, self.guiSeqDurationResize)
 		self.guiSeqDurationLock = Common_Gui.ToggleButton("guiSeqDurationLock", "Lock", "Lock Sequence Duration (changes in frame count don't affect playback time)", self.getNextEvent(), self.handleGuiSeqDurationLockEvent, self.guiSeqDurationLockResize)
 		self.guiSeqFPS = Common_Gui.NumberPicker("guiSeqFPS", "FPS: ", "The animation plays back at a rate of this number of keyframes per second", self.getNextEvent(), self.handleGuiSeqFPSEvent, self.guiSeqFPSResize)
@@ -3547,7 +3547,7 @@ class SeqCommonControlsClass(SeqControlsClassBase):
 
 		#updateSeqDurationAndFPS(seqName, seqPrefs)
 
-		self.guiSeqFramesLabel.label = "Total Frame Count:  " + str(maxNumFrames)
+		self.guiSeqFramesLabel.label = "Frames:  " + str(maxNumFrames)
 
 		if maxNumFrames == 0:
 			self.guiSeqDuration.value = 0.0
@@ -3627,6 +3627,25 @@ class SeqCommonControlsClass(SeqControlsClassBase):
 	def guiSeqListTitleResize(self, control, newwidth, newheight):
 		control.x, control.y, control.height, control.width = 10,310, 20,82
 
+	## @brief Resize callback for guiRefresh
+	#  @param control The invoking GUI control object
+	def guiRefreshResize(self, control, newwidth, newheight):
+		control.x = 112
+		control.y = 25
+		control.width = 100
+
+	## @brief Resize callback for guiToggle
+	#  @param control The invoking GUI control object
+	def guiToggleResize(self, control, newwidth, newheight):
+		control.x = 10
+		control.y = 25
+		control.width = 100
+
+	def guiAddSeqResize(self, control, newWidth, newheight):
+		control.x = 112
+		control.y = 5
+		control.width = 100
+
 	## @brief Resize callback for guiSeqOptsContainer
 	#  @param control The invoking GUI control object
 	def guiSeqOptsContainerResize(self, control, newwidth, newheight):
@@ -3641,69 +3660,50 @@ class SeqCommonControlsClass(SeqControlsClassBase):
 	#  @param control The invoking GUI control object
 	def guiSeqFramesLabelResize(self, control, newwidth, newheight):
 		control.x = 5
-		control.y = newheight - 50
+		control.y = newheight - 60
 		control.width = newwidth - 10
+		control.height = 20
 
 	## @brief Resize callback for guiSeqDuration
 	#  @param control The invoking GUI control object
 	def guiSeqDurationResize(self, control, newwidth, newheight):
 		control.x = 5
-		control.y = newheight - 75
-		control.width = newwidth - 55
+		control.y = newheight - 82
+		control.width = newwidth - 52
 
 	## @brief Resize callback for guiSeqDurationLock
 	#  @param control The invoking GUI control object
 	def guiSeqDurationLockResize(self, control, newwidth, newheight):
-		control.x = newwidth - 48
-		control.y = newheight - 75
+		control.x = newwidth - 45
+		control.y = newheight - 82
 		control.width = 40
 
 	## @brief Resize callback for guiSeqFPS
 	#  @param control The invoking GUI control object
 	def guiSeqFPSResize(self, control, newwidth, newheight):
 		control.x = 5
-		control.y = newheight - 97
-		control.width = newwidth - 55
+		control.y = newheight - 104
+		control.width = newwidth - 52
 
 	## @brief Resize callback for guiSeqFPSLock
 	#  @param control The invoking GUI control object
 	def guiSeqFPSLockResize(self, control, newwidth, newheight):
-		control.x = newwidth - 48
-		control.y = newheight - 97
+		control.x = newwidth - 45
+		control.y = newheight - 104
 		control.width = 40
 
 	## @brief Resize callback for guiPriority
 	#  @param control The invoking GUI control object
 	def guiPriorityResize(self, control, newwidth, newheight):
 		control.x = 5
-		control.y = newheight - 127
+		control.y = newheight - 133
 		control.width = newwidth - 10
-
-	## @brief Resize callback for guiToggle
-	#  @param control The invoking GUI control object
-	def guiToggleResize(self, control, newwidth, newheight):
-		control.x = 10
-		control.y = 25
-		control.width = 100
-
-	## @brief Resize callback for guiRefresh
-	#  @param control The invoking GUI control object
-	def guiRefreshResize(self, control, newwidth, newheight):
-		control.x = 112
-		control.y = 25
-		control.width = 100
-
-	def guiAddSeqResize(self, control, newWidth, newheight):
-		control.x = 112
-		control.y = 5
-		control.width = 100
-		
 
 	## @brief Resize callback for guiGroundFrameSamples
 	#  @param control The invoking GUI control object
 	def guiGroundFrameSamplesResize(self, control, newwidth, newheight):
 		control.x = 5
-		control.y = newheight - 157
+		control.y = newheight - 162
 		control.width = newwidth - 10
 	
 	## @brief Resize callback for guiBlendSequence
