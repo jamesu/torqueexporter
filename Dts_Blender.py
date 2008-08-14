@@ -2991,6 +2991,7 @@ class SeqControlsClassBase:
 		self.guiSeqList = Common_Gui.ListContainer("guiSeqList", "sequence.list", self.handleListEvent, self.guiSeqListResize)
 		self.guiSeqListTitle = Common_Gui.SimpleText("guiSeqListTitle", "All Sequences:", None, self.guiSeqListTitleResize)
 		self.guiSeqOptsContainerTitle = Common_Gui.MultilineText("guiSeqOptsContainerTitle", "Selected Sequence:\n None Selected", None, self.guiSeqOptsContainerTitleResize)
+		self.guiSeqOptsContainerTitleBox = Common_Gui.BasicFrame(resize_callback = self.guiSeqOptsContainerTitleBoxResize)
 		self.guiSeqOptsContainer = Common_Gui.BasicContainer("guiSeqOptsContainer", "guiSeqOptsContainer", None, self.guiSeqOptsContainerResize)
 		
 		# set initial states
@@ -3001,10 +3002,11 @@ class SeqControlsClassBase:
 		
 
 		# add controls to containers
+		self.guiSeqOptsContainer.addControl(self.guiSeqOptsContainerTitle)
+		self.guiSeqOptsContainer.addControl(self.guiSeqOptsContainerTitleBox)
+		tabContainer.addControl(self.guiSeqOptsContainer)
 		tabContainer.addControl(self.guiSeqList)
 		tabContainer.addControl(self.guiSeqListTitle)
-		tabContainer.addControl(self.guiSeqOptsContainerTitle)
-		tabContainer.addControl(self.guiSeqOptsContainer)
 	
 		## Need to set this explicitly in child classes
 		#  @note valid values are: "All", "Action", "IFL", "Vis" and eventually "TexUV" and "Morph"
@@ -3179,14 +3181,12 @@ class SeqControlsClassBase:
 	#  @param newheight The new height of the GUI control in pixels.
 	def guiSeqOptsContainerResize(self, control, newwidth, newheight):
 		control.x, control.y, control.height, control.width = 241,0, 334,249
-	## @brief Place holder resize callback
-	#  @note Child classes should call override this method explicitly
-	#  @param control The invoking GUI control object
-	#  @param newwidth The new width of the GUI control in pixels.
-	#  @param newheight The new height of the GUI control in pixels.
-	def guiSeqOptsContainerTitleResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 250,310, 20,82
 
+	def guiSeqOptsContainerTitleResize(self, control, newwidth, newheight):
+		control.x, control.y, control.height, control.width = 5,newheight-30, 20,82
+
+	def guiSeqOptsContainerTitleBoxResize(self, control, newwidth, newheight):
+		control.x, control.y, control.height, control.width = 3,newheight-35, 33,117
 
 	## @brief Creates a sequence list item and it's associated GUI controls.
 	#  @note If a child class needs to display a "DSQ" button, it should call 
@@ -3197,49 +3197,48 @@ class SeqControlsClassBase:
 	#  @param seqName The name of the sequence for which we're creating the list item.
 	#  @param ShowDSQButton If true, a DSQ button is displayed in the list item.  If
 	# false, no DSQ button is displayed.
-	def createSequenceListItem(self, seqName, ShowDSQButton=False):
+	def createSequenceListItem(self, seqName, ShowButtons=False):
 		startEvent = self.curSeqListEvent
 		listWidth = self.guiSeqList.width - self.guiSeqList.barWidth
 		buttonWidth = 50
-		numButtons = 2
-		if ShowDSQButton: numButtons = 3
+		numButtons = 0
+		if ShowButtons: numButtons = 3
 		buttonPos = []
 		for i in range(1,numButtons+1): buttonPos.append(((listWidth - 5) - (buttonWidth*i + 1)))
 		# Note on positions:
 		# It quicker to assign these here, as there is no realistic chance of scaling being required.
 		guiContainer = Common_Gui.BasicContainer("", None, None)
 		guiName = Common_Gui.SimpleText("", seqName, None, None)
-		guiExport = Common_Gui.ToggleButton("guiExport", "Export", "Export Sequence", startEvent, self.handleListItemEvent, None)
-		guiCyclic = Common_Gui.ToggleButton("guiCyclic", "Cyclic", "Export Sequence as Cyclic", startEvent+1, self.handleListItemEvent, None)
-		if ShowDSQButton:
+		if ShowButtons:
+			guiExport = Common_Gui.ToggleButton("guiExport", "Export", "Export Sequence", startEvent, self.handleListItemEvent, None)
+			guiCyclic = Common_Gui.ToggleButton("guiCyclic", "Cyclic", "Export Sequence as Cyclic", startEvent+1, self.handleListItemEvent, None)
 			guiDSQ = Common_Gui.ToggleButton("guiDSQ", "Dsq", "Export Sequence as DSQ", startEvent+2, self.handleListItemEvent, None)
 
 		guiContainer.fade_mode = 0  # flat color
 
-		guiName.x, guiName.y = 5, 5
-		guiCyclic.x, guiCyclic.y = buttonPos[0], 5
-		if numButtons == 2:
-			guiExport.x, guiExport.y = buttonPos[1], 5
-		else:
-			guiExport.x, guiExport.y = buttonPos[2], 5
-			guiDSQ.x, guiDSQ.y = buttonPos[1], 5
-
-		guiCyclic.width, guiCyclic.height = 50, 15
-		guiExport.width, guiExport.height = 50, 15
-		if ShowDSQButton: guiDSQ.width, guiDSQ.height = 50, 15
-		# Add everything
 		guiContainer.addControl(guiName)
-		guiContainer.addControl(guiExport)
-		guiContainer.addControl(guiCyclic)
-		if ShowDSQButton: guiContainer.addControl(guiDSQ)
+		guiName.x, guiName.y = 5, 5
 		
-		guiExport.state = not Prefs['Sequences'][seqName]['NoExport']
-		guiCyclic.state = Prefs['Sequences'][seqName]['Cyclic']
-		if ShowDSQButton: guiDSQ.state = Prefs['Sequences'][seqName]['Dsq']
+		if numButtons == 3:
+			guiCyclic.x, guiCyclic.y = buttonPos[0], 5
+			guiExport.x, guiExport.y = buttonPos[1], 5
+			guiDSQ.x, guiDSQ.y = buttonPos[2], 5
+			guiCyclic.width, guiCyclic.height = 50, 15
+			guiExport.width, guiExport.height = 50, 15
+			guiDSQ.width, guiDSQ.height = 50, 15
+			# Add everything
+			guiContainer.addControl(guiExport)
+			guiContainer.addControl(guiCyclic)
+			guiContainer.addControl(guiDSQ)
 		
-		# increment the current event counter
-		if ShowDSQButton: self.curSeqListEvent += 3
-		else: self.curSeqListEvent += 2
+			guiExport.state = not Prefs['Sequences'][seqName]['NoExport']
+			guiCyclic.state = Prefs['Sequences'][seqName]['Cyclic']
+			guiDSQ.state = Prefs['Sequences'][seqName]['Dsq']
+		
+			# increment the current event counter
+			self.curSeqListEvent += 3
+		else:
+			self.curSeqListEvent += 1
 		
 		return guiContainer
 
@@ -3635,8 +3634,8 @@ class SeqCommonControlsClass(SeqControlsClassBase):
 
 	## @brief Resize callback for guiSeqOptsContainerTitle
 	#  @param control The invoking GUI control object
-	def guiSeqOptsContainerTitleResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 309,newheight-70, 20,82
+	#def guiSeqOptsContainerTitleResize(self, control, newwidth, newheight):
+	#	control.x, control.y, control.height, control.width = 309,newheight-70, 20,82
 
 	## @brief Resize callback for guiSeqFramesLabel
 	#  @param control The invoking GUI control object
@@ -3737,484 +3736,6 @@ class SeqCommonControlsClass(SeqControlsClassBase):
 		control.width = (newwidth) - 16
 
 
-# ***************************************************************************************************
-## @brief Class that creates and owns the GUI controls on the Actions sub-panel of the Sequences panel.
-#
-#  This class contains event handler and resize callbacks for it's associated GUI controls, along
-#  with implementations of refreshSequenceOptions and clearSequenceOptions specific to its
-#  controls.
-#
-class ActionControlsClass(SeqControlsClassBase):
-
-
-	#######################################
-	#  init and cleanup methods
-	#######################################
-
-
-	## @brief Initialize the controls and values that are specific to this panel
-	#  @note Calls parent init method
-	#  @param tabContainer The GUI tab container control into which everything should be placed.
-	def __init__(self, tabContainer):
-		#global guiSeqActSubtab
-		SeqControlsClassBase.__init__(self,tabContainer)
-
-		## @brief Need to set this in all classes derived from SeqControlsClassBase
-		#  @note valid values are: "All", "Action", "IFL", "Vis" and eventually "TexUV" and "Morph"
-		self.seqFilter = "Action"
-		
-		# initialize GUI controls
-		self.guiToggle = Common_Gui.ToggleButton("guiToggle", "Toggle All", "Toggle export of all sequences", self.getNextEvent(), self.handleGuiToggleEvent, self.guiToggleResize)
-		self.guiRefresh = Common_Gui.BasicButton("guiRefresh", "Refresh", "Refresh list of sequences", self.getNextEvent(), self.handleGuiRefreshEvent, self.guiRefreshResize)
-		self.guiStartFrame = Common_Gui.NumberPicker("guiStartFrame", "Sta fr:", "When exporting the action, start with this frame #", self.getNextEvent(), self.handleGuiStartFrameEvent, self.guiStartFrameResize)
-		self.guiEndFrame = Common_Gui.NumberPicker("guiEndFrame", "End fr:", "When exporting the action, end with this frame #", self.getNextEvent(), self.handleGuiEndFrameEvent, self.guiEndFrameResize)
-		self.guiAutoFrames = Common_Gui.ToggleButton("guiAutoFrames", "Auto Start/End frames", "Automatically determine frame range", self.getNextEvent(), self.handleGuiAutoFramesEvent, self.guiAutoFramesResize)
-		self.guiAutoSamples = Common_Gui.ToggleButton("guiAutoSamples", "Use all frames in range", "When turned on, every frame in the defined range is exported.", 25, self.handleGuiAutoSamplesEvent, self.guiAutoSamplesResize)
-		self.guiFrameSamples = Common_Gui.NumberPicker("guiFrameSamples", "Frame Samples", "Number of frames to export", self.getNextEvent(), self.handleGuiFrameSamplesEvent, self.guiFrameSamplesResize)
-		self.guiGroundFrameSamples = Common_Gui.NumberPicker("guiGroundFrameSamples", "Ground Frames", "Amount of ground frames to export", self.getNextEvent(), self.handleGuiGroundFrameSamplesEvent, self.guiGroundFrameSamplesResize)
-		self.guiBlendControlsBox = Common_Gui.BasicFrame("guiBlendControlsBox", None, None, None, None, self.guiBlendControlsBoxResize)
-		self.guiBlendSequence = Common_Gui.ToggleButton("guiBlendSequence", "Blend animation", "Export action as a Torque blend sequence", self.getNextEvent(), self.handleGuiBlendSequenceEvent, self.guiBlendSequenceResize)
-		self.guiRefPoseTitle = Common_Gui.SimpleText("guiRefPoseTitle", "Ref Pose for ", None, self.guiRefPoseTitleResize)
-		self.guiRefPoseMenu = Common_Gui.ComboBox("guiRefPoseMenu", "Use Action", "Select an action containing your refernce pose for this blend.", self.getNextEvent(), self.handleGuiRefPoseMenuEvent, self.guiRefPoseMenuResize)
-		self.guiRefPoseFrame = Common_Gui.NumberPicker("guiRefPoseFrame", "Frame", "Frame to use for reference pose", self.getNextEvent(), self.handleGuiRefPoseFrameEvent, self.guiRefPoseFrameResize)
-		
-		# set initial states
-		self.guiSeqListTitle.label = "Action Sequences :"
-		self.guiSeqList.fade_mode = 0
-		self.guiToggle.state = False
-		self.guiBlendSequence.state = False
-		self.guiSeqOptsContainer.enabled = False
-		self.guiSeqOptsContainer.fade_mode = 5
-		self.guiSeqOptsContainer.borderColor = None
-		self.guiRefPoseTitle.visible = False
-		self.guiRefPoseMenu.visible = False
-		self.guiRefPoseFrame.visible = False
-		self.guiRefPoseFrame.min = 1
-		self.guiStartFrame.min = 1
-		self.guiStartFrame.max = 4095
-		self.guiEndFrame.min = 1
-		self.guiEndFrame.max = 4095
-		self.guiFrameSamples.min = 1
-		
-		# add controls to containers
-		tabContainer.addControl(self.guiToggle)
-		tabContainer.addControl(self.guiRefresh)
-		self.guiSeqOptsContainer.addControl(self.guiStartFrame)
-		self.guiSeqOptsContainer.addControl(self.guiEndFrame)
-		self.guiSeqOptsContainer.addControl(self.guiAutoFrames)
-		self.guiSeqOptsContainer.addControl(self.guiAutoSamples)
-		self.guiSeqOptsContainer.addControl(self.guiFrameSamples)
-		self.guiSeqOptsContainer.addControl(self.guiGroundFrameSamples) # 2
-		self.guiSeqOptsContainer.addControl(self.guiBlendControlsBox)
-		self.guiSeqOptsContainer.addControl(self.guiBlendSequence)
-		self.guiSeqOptsContainer.addControl(self.guiRefPoseTitle) # 12
-		self.guiSeqOptsContainer.addControl(self.guiRefPoseMenu) # 13
-		self.guiSeqOptsContainer.addControl(self.guiRefPoseFrame) # 14
-		
-		
-		
-	## @brief Cleans up Blender GUI objects before the interpreter exits;
-	#     we must destroy any GUI objects that are referenced in a non-global scope
-	#     explicitly before interpreter shutdown to avoid the dreaded
-	#     "error totblock" message when exiting Blender.
-	#  @note The builtin __del__ method is not guaranteed to be called for objects
-	#     that still exist when the interpreter exits.
-	#  @note Calls base class cleanup method explicitly.
-	def cleanup(self):
-		SeqControlsClassBase.cleanup(self)
-		del self.guiToggle
-		del self.guiRefresh
-		del self.guiStartFrame
-		del self.guiEndFrame
-		del self.guiAutoFrames
-		del self.guiAutoSamples
-		del self.guiFrameSamples
-		del self.guiGroundFrameSamples
-		del self.guiBlendControlsBox
-		del self.guiBlendSequence
-		del self.guiRefPoseTitle
-		del self.guiRefPoseMenu
-		del self.guiRefPoseFrame
- 
-
-
-	#######################################
-	#  Event handler methods
-	#######################################
-
-
-	## @brief Handle events generated by the "Toggle All" button (guiToggle).
-	#  @param control The invoking GUI control (guiToggle)
-	def handleGuiToggleEvent(self, control):
-		for child in self.guiSeqList.controls:
-			child.controls[1].state = control.state
-			Prefs['Sequences'][child.controls[0].label]['NoExport'] = not control.state
-
-	## @brief Handle events generated by the "Refresh" button (guiRefresh)
-	#  @param control The invoking GUI control (guiRefresh)
-	def handleGuiRefreshEvent(self, control):
-		self.refreshAll()
-
-	## @brief Handle events generated by the "Blend button" (guiBlendSequence)
-	#  @param control The invoking GUI control (guiBlendSequence)
-	def handleGuiBlendSequenceEvent(self, control):
-		if self.guiSeqList.itemIndex == -1: return
-		seqName, seqPrefs = self.getSelectedSeqNameAndPrefs()
-		# blend ref pose selection
-		seqPrefs['Action']['Blend'] = control.state					
-		# if blend is true, show the ref pose controls
-		if seqPrefs['Action']['Blend'] == True:
-			self.guiRefPoseTitle.visible = True
-			self.guiRefPoseMenu.visible = True
-			self.guiRefPoseFrame.visible = True
-			# reset max to raw number of frames in ref pose action
-			try:
-				action = Blender.Armature.NLA.GetActions()[seqPrefs['Action']['BlendRefPoseAction']]				
-				maxNumFrames = DtsShape_Blender.getHighestActFrame(action)
-			except: maxNumFrames = 1
-			self.guiRefPoseFrame.max = maxNumFrames
-		else:
-			self.guiRefPoseTitle.visible = False
-			self.guiRefPoseMenu.visible = False
-			self.guiRefPoseFrame.visible = False
-
-	## @brief Handle events generated by the reference pose action menu (guiRefPoseMenu)
-	#  @param control The invoking GUI control (guiRefPoseMenu)
-	def handleGuiRefPoseMenuEvent(self, control):
-		if self.guiSeqList.itemIndex == -1: return
-		seqName, seqPrefs = self.getSelectedSeqNameAndPrefs()
-		seqPrefs['Action']['BlendRefPoseAction'] = control.items[control.itemIndex]
-		seqPrefs['Action']['BlendRefPoseFrame'] = 1
-		# reset max to raw number of frames in ref pose action
-		try:
-			action = Blender.Armature.NLA.GetActions()[seqPrefs['Action']['BlendRefPoseAction']]
-			maxNumFrames = DtsShape_Blender.getHighestActFrame(action)
-		except: maxNumFrames = 1
-		self.guiRefPoseFrame.max = maxNumFrames
-		self.guiRefPoseFrame.value = seqPrefs['Action']['BlendRefPoseFrame']					
-
-	## @brief Handle events generated by the reference pose frames number picker (guiRefPoseFrame)
-	#  @param control The invoking GUI control (guiRefPoseMeguiRefPoseFramenu)
-	def handleGuiRefPoseFrameEvent(self, control):
-		if self.guiSeqList.itemIndex == -1: return
-		seqName, seqPrefs = self.getSelectedSeqNameAndPrefs()
-		seqPrefs['Action']['BlendRefPoseFrame'] = control.value
-
-	## @brief Handle events generated by the start frame number picker (guiStartFrame)
-	#  @param control The invoking GUI control (guiStartFrameEvent)
-	def handleGuiStartFrameEvent(self, control):
-		if self.guiSeqList.itemIndex == -1: return
-		seqName, seqPrefs = self.getSelectedSeqNameAndPrefs()
-		self.updateFrameControls(seqName, seqPrefs)
-
-	## @brief Handle events generated by the end frame number picker (guiEndFrame)
-	#  @param control The invoking GUI control (guiEndFrameEvent)
-	def handleGuiEndFrameEvent(self, control):
-		if self.guiSeqList.itemIndex == -1: return
-		seqName, seqPrefs = self.getSelectedSeqNameAndPrefs()
-		self.updateFrameControls(seqName, seqPrefs)
-
-	## @brief Handle events generated by the "Auto Frames" button (guiAutoFrames)
-	#  @param control The invoking GUI control (guiAutoFrames)
-	def handleGuiAutoFramesEvent(self, control):
-		if self.guiSeqList.itemIndex == -1: return
-		seqName, seqPrefs = self.getSelectedSeqNameAndPrefs()
-		seqPrefs['Action']['AutoFrames'] = control.state
-		if seqPrefs['Action']['AutoFrames']:
-			self.guiEndFrame.enabled = False
-			self.guiStartFrame.enabled = False
-		else:
-			self.guiEndFrame.enabled = True
-			self.guiStartFrame.enabled = True
-		self.updateFrameControls(seqName, seqPrefs)					
-
- 	## @brief Handle events generated by the "Auto Samples" button (guiAutoSamples)
-	#  @param control The invoking GUI control (guiAutoFrames)
-	def handleGuiAutoSamplesEvent(self, control):
-		if self.guiSeqList.itemIndex == -1: return
-		seqName, seqPrefs = self.getSelectedSeqNameAndPrefs()
-		seqPrefs['Action']['AutoSamples'] = control.state
-		if seqPrefs['Action']['AutoSamples']:
-			self.guiFrameSamples.enabled = False
-		else:
-			self.guiFrameSamples.enabled = True
-		self.updateFrameControls(seqName, seqPrefs)
-
- 	## @brief Handle events generated by the "Frame Samples" number picker (guiFrameSamples)
-	#  @param control The invoking GUI control (guiFrameSamples)
-	def handleGuiFrameSamplesEvent(self, control):
-		if self.guiSeqList.itemIndex == -1: return
-		seqName, seqPrefs = self.getSelectedSeqNameAndPrefs()
-		seqPrefs['Action']['FrameSamples'] = control.value
-
- 	## @brief Handle events generated by the "Frame Samples" number picker (guiGroundFrameSamples)
-	#  @param control The invoking GUI control (guiGroundFrameSamples)
-	def handleGuiGroundFrameSamplesEvent(self, control):
-		if self.guiSeqList.itemIndex == -1: return
-		seqName, seqPrefs = self.getSelectedSeqNameAndPrefs()
-		seqPrefs['Action']['NumGroundFrames'] = control.value
-
-
-	#######################################
-	#  Refresh and Clear methods
-	#######################################
-
-
-	## @brief Refreshes sequence specific option controls on the right side of the sequences panel.
-	#  @note This method should be called whenever the sequence list is refreshed, or when sequence
-	#     list selection changes.
-	#  @param seqName The name of the currently selected sequence.
-	#  @param seqPrefs The preferences key of the currently selected sequence.
-	def refreshSequenceOptions(self, seqName, seqPrefs):
-		self.refreshBlendRefPosePulldown()
-		self.guiSeqOptsContainer.enabled = True
-		self.guiSeqOptsContainerTitle.label = "Selected Sequence:\n '%s'" % seqName
-		try:
-			action = Blender.Armature.NLA.GetActions()[seqName]
-			maxNumFrames = (seqPrefs['Action']['EndFrame'] - seqPrefs['Action']['StartFrame']) + 1
-		except:
-			maxNumFrames = 0
-
-		# Update gui control states
-		# make sure the user didn't delete the action containing the refrence pose
-		# out from underneath us while we weren't looking.
-		if seqPrefs['Action']['FrameSamples'] > maxNumFrames:
-			seqPrefs['Action']['FrameSamples'] = maxNumFrames
-		try: blah = Blender.Armature.NLA.GetActions()[seqPrefs['Action']['BlendRefPoseAction']]
-		except: seqPrefs['Action']['BlendRefPoseAction'] = seqName
-		self.guiRefPoseTitle.label = "Ref pose for '%s'" % seqName
-		self.guiRefPoseMenu.setTextValue(seqPrefs['Action']['BlendRefPoseAction'])
-		self.guiRefPoseFrame.min = 1
-		# reset max to raw number of frames in ref pose action
-		try:
-			action = Blender.Armature.NLA.GetActions()[seqPrefs['Action']['BlendRefPoseAction']]			
-			maxNumFrames = DtsShape_Blender.getHighestActFrame(action)
-		except: maxNumFrames = 1
-		self.guiRefPoseFrame.max = maxNumFrames
-		self.guiRefPoseFrame.value = seqPrefs['Action']['BlendRefPoseFrame']
-		self.guiGroundFrameSamples.value = seqPrefs['Action']['NumGroundFrames']
-		self.guiGroundFrameSamples.max = maxNumFrames
-		self.guiFrameSamples.value = seqPrefs['Action']['FrameSamples']
-		self.guiFrameSamples.max = maxNumFrames
-		self.guiStartFrame.value = seqPrefs['Action']['StartFrame']
-		self.guiEndFrame.value = seqPrefs['Action']['EndFrame']
-		self.guiEndFrame.min = seqPrefs['Action']['StartFrame']
-		self.guiStartFrame.max = seqPrefs['Action']['EndFrame']
-		self.guiAutoFrames.state = seqPrefs['Action']['AutoFrames']
-		self.guiAutoSamples.state = seqPrefs['Action']['AutoSamples']
-
-		self.updateFrameControls(seqName, seqPrefs)
-
-
-		if seqPrefs['Action']['AutoFrames']:
-			self.guiEndFrame.enabled = False
-			self.guiStartFrame.enabled = False
-		else:
-			self.guiEndFrame.enabled = True
-			self.guiStartFrame.enabled = True
-
-		if seqPrefs['Action']['AutoSamples']:
-			self.guiFrameSamples.enabled = False
-		else:
-			self.guiFrameSamples.enabled = True
-
-		# show/hide ref pose stuff.
-		self.guiBlendSequence.state = seqPrefs['Action']['Blend']
-		if seqPrefs['Action']['Blend'] == True:				
-			self.guiRefPoseTitle.visible = True
-			self.guiRefPoseMenu.visible = True
-			self.guiRefPoseFrame.visible = True
-		else:
-			self.guiRefPoseTitle.visible = False
-			self.guiRefPoseMenu.visible = False
-			self.guiRefPoseFrame.visible = False
-
-	## @brief Clears sequence specific option controls on the right side of the sequences panel.
-	#  @note This method should be called when no sequence list item is currently selected.
-	def clearSequenceOptions(self):
-		# refresh control states
-		self.guiFrameSamples.value = 0
-		self.guiGroundFrameSamples.value = 0
-		self.guiEndFrame.value = 0
-		self.guiStartFrame.value = 0
-		self.guiAutoFrames.state = False
-		self.guiAutoSamples.state = False
-		self.guiSeqOptsContainerTitle.label = "Selected Sequence:\n None Selected"
-		self.guiBlendSequence.state = False
-		self.guiRefPoseTitle.visible = False
-		self.guiRefPoseMenu.visible = False
-		self.guiRefPoseFrame.visible = False
-
-	## @brief Refresh the blend animation reference pose action pulldown.
-	def refreshBlendRefPosePulldown(self):
-		actions = Armature.NLA.GetActions()
-		keys = actions.keys()
-		keys.sort(lambda x, y: cmp(x.lower(),y.lower()))
-		for key in keys:
-			# skip the fake action (hack for blender 2.41 bug)
-			if key == "DTSEXPFAKEACT": continue		
-			# add any new animations to the ref pose combo box
-			if not (key in self.guiRefPoseMenu.items):
-				self.guiRefPoseMenu.items.append(key)
-
-	## @brief This method validates the current control states, adjusts preference values, and generally keeps everything consistent
-	#  @param seqName The name of the currently selected sequence.
-	#  @param seqPrefs The preference key of the currently selected sequence.
-	def updateFrameControls(self, seqName, seqPrefs):
-		
-		# update affected preferences for manual start and end frame changes.
-		if not seqPrefs['Action']['AutoFrames']:
-			seqPrefs['Action']['EndFrame'] = self.guiEndFrame.value
-			seqPrefs['Action']['StartFrame'] = self.guiStartFrame.value
-
-		refreshActionData() # <- update the prefs to reflect the current state of the blender actions
-		maxFrames = seqPrefs['Action']['EndFrame'] - seqPrefs['Action']['StartFrame'] + 1
-
-		# refresh control states
-		self.guiFrameSamples.max = maxFrames
-		self.guiFrameSamples.value = seqPrefs['Action']['FrameSamples']
-		self.guiGroundFrameSamples.max = maxFrames
-		self.guiGroundFrameSamples.value = seqPrefs['Action']['NumGroundFrames']
-		self.guiEndFrame.min = seqPrefs['Action']['StartFrame']
-		self.guiEndFrame.value = seqPrefs['Action']['EndFrame']
-		self.guiStartFrame.max = seqPrefs['Action']['EndFrame']
-		self.guiStartFrame.value = seqPrefs['Action']['StartFrame']
-
-
-
-	#########################
-	#  Class specific stuff
-	#########################
-	
-	## @brief Overrides base class version to show DSQ button in the sequence list items.
-	#  @note Calls base class version with ShowDSQButton set to True.
-	def createSequenceListItem(self, seqName, ShowDSQButton=True):
-		return SeqControlsClassBase.createSequenceListItem(self, seqName, True)
-
-	
-	#########################
-	#  Resize callback methods
-	#########################
-
-
-	## @brief Resize callback for guiSeqList
-	#  @param control The invoking GUI control object
-	def guiSeqListResize(self, control, newwidth, newheight):
-		control.x = 10
-		control.y = 30
-		control.height = newheight - 70
-		control.width = 299
-
-	## @brief Resize callback for guiSeqListTitle
-	#  @param control The invoking GUI control object
-	def guiSeqListTitleResize(self, control, newwidth, newheight):
-		control.x = 10
-		control.y = newheight-25
-
-	## @brief Resize callback for guiSeqOptsContainer
-	#  @param control The invoking GUI control object
-	def guiSeqOptsContainerResize(self, control, newwidth, newheight):
-		control.x = newwidth - 180
-		control.y = 0
-		control.width = 180
-		control.height = newheight
-
-	## @brief Resize callback for guiSeqOptsContainerTitle
-	#  @param control The invoking GUI control object
-	def guiSeqOptsContainerTitleResize(self, control, newwidth, newheight):
-		control.x = 315
-		control.y = newheight - 25
-
-	## @brief Resize callback for guiAutoFrames
-	#  @param control The invoking GUI control object
-	def guiAutoFramesResize(self, control, newwidth, newheight):
-		control.x = 5
-		control.y = newheight - 70
-		control.width = newwidth - 10
-
-	## @brief Resize callback for guiStartFrame
-	#  @param control The invoking GUI control object
-	def guiStartFrameResize(self, control, newwidth, newheight):
-		control.x = 5
-		control.y = newheight - 92
-		control.width = 83
-
-	## @brief Resize callback for guiEndFrame
-	#  @param control The invoking GUI control object
-	def guiEndFrameResize(self, control, newwidth, newheight):
-		control.x = 90
-		control.y = newheight - 92
-		control.width = 83
-
-	## @brief Resize callback for guiAutoSamples
-	#  @param control The invoking GUI control object
-	def guiAutoSamplesResize(self, control, newwidth, newheight):
-		control.x = 5
-		control.y = newheight - 125
-		control.width = newwidth - 10
-
-	## @brief Resize callback for guiFrameSamples
-	#  @param control The invoking GUI control object
-	def guiFrameSamplesResize(self, control, newwidth, newheight):
-		control.x = 5
-		control.y = newheight - 147
-		control.width = newwidth - 10
-
-	## @brief Resize callback for guiGroundFrameSamples
-	#  @param control The invoking GUI control object
-	def guiGroundFrameSamplesResize(self, control, newwidth, newheight):
-		control.x = 5
-		control.y = newheight - 197
-		control.width = newwidth - 10
-
-	## @brief Resize callback for guiBlendSequence
-	#  @param control The invoking GUI control object
-	def guiBlendSequenceResize(self, control, newwidth, newheight):
-		control.x = 10
-		control.width = newwidth - 20
-		control.y = newheight - 246
-
-	## @brief Resize callback for guiBlendControlsBox
-	#  @param control The invoking GUI control object
-	def guiBlendControlsBoxResize(self, control, newwidth, newheight):
-		control.x = 5
-		control.y = newheight - 323
-		control.width = newwidth - 10
-		control.height = 89
-
-	## @brief Resize callback for guiRefPoseTitle
-	#  @param control The invoking GUI control object
-	def guiRefPoseTitleResize(self, control, newwidth, newheight):
-		control.x = 8
-		control.y = newheight - 263
-
-	## @brief Resize callback for guiRefPoseMenu
-	#  @param control The invoking GUI control object
-	def guiRefPoseMenuResize(self, control, newwidth, newheight):
-		control.x = 8
-		control.y = newheight - 293
-		control.width = (newwidth) - 16
-
-	## @brief Resize callback for guiRefPoseFrame
-	#  @param control The invoking GUI control object
-	def guiRefPoseFrameResize(self, control, newwidth, newheight):
-		control.x = 8
-		control.y = newheight - 318
-		control.width = (newwidth) - 16
-
-	## @brief Resize callback for guiToggle
-	#  @param control The invoking GUI control object
-	def guiToggleResize(self, control, newwidth, newheight):
-		control.x = 10
-		control.y = 5
-		control.width = 100
-
-	## @brief Resize callback for guiRefresh
-	#  @param control The invoking GUI control object
-	def guiRefreshResize(self, control, newwidth, newheight):
-		control.x = 112
-		control.y = 5
-		control.width = 100
 
 
 # ***************************************************************************************************
@@ -4366,7 +3887,7 @@ class UserCreatedSeqControlsClassBase(SeqControlsClassBase):
 	## @brief Resize callback for guiSeqList
 	#  @param control The invoking GUI control object
 	def guiSeqListResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 10,100, newheight - 140,230
+		control.x, control.y, control.height, control.width = 10,52, newheight - 92,145
 
 
 	## @brief Resize callback for guiSeqAddToExistingTxt
@@ -4392,12 +3913,8 @@ class UserCreatedSeqControlsClassBase(SeqControlsClassBase):
 	## @brief Resize callback for guiSeqOptsContainer
 	#  @param control The invoking GUI control object
 	def guiSeqOptsContainerResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 241,0, 334,249
+		control.x, control.y, control.height, control.width = 155,52, newheight-92,newwidth-155
 
-	## @brief Resize callback for guiSeqOptsContainerTitle
-	#  @param control The invoking GUI control object
-	def guiSeqOptsContainerTitleResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 250,310, 20,82
 
 
 
@@ -4431,16 +3948,19 @@ class IFLControlsClass(UserCreatedSeqControlsClassBase):
 
 		
 
-		self.guiMatTxt = Common_Gui.SimpleText("guiMatTxt", "Select IFL Material:", None, self.guiMatTxtResize)
+		#self.guiMatTxt = Common_Gui.SimpleText("guiMatTxt", "IFL Material:", None, self.guiMatTxtResize)
 		self.guiMat = Common_Gui.ComboBox("guiMat", "IFL Material", "Select a Material from this list to use in the IFL Animation", self.getNextEvent(), self.handleGuiMatEvent, self.guiMatResize)
-		self.guiNumImagesTxt = Common_Gui.SimpleText("guiNumImagesTxt", "Number of Images:", None, self.guiNumImagesTxtResize)
 		self.guiNumImages = Common_Gui.NumberPicker("guiNumImages", "Images", "Number of Images in the IFL animation", self.getNextEvent(), self.handleGuiNumImagesEvent, self.guiNumImagesResize)
-		self.guiFramesListTxt = Common_Gui.SimpleText("guiFramesListTxt", "IFL Image Frames:", None, self.guiFramesListTxtResize)
+		self.guiFramesListTxt = Common_Gui.SimpleText("guiFramesListTxt", "Images:", None, self.guiFramesListTxtResize)
 		self.guiFramesList = Common_Gui.ListContainer("guiFramesList", "", self.handleGuiFrameListEvent, self.guiFramesListResize)
-		self.guiFramesListSelectedTxt = Common_Gui.SimpleText("guiFramesListSelectedTxt", "Selected:", None, self.guiFramesListSelectedTxtResize)
+		self.guiFramesListContainer = Common_Gui.BasicContainer("guiFramesListContainer", "", None, self.guiFramesListContainerResize)
+		self.guiFramesListSelectedTxt = Common_Gui.SimpleText("guiFramesListSelectedTxt", "Hold image for:", None, self.guiFramesListSelectedTxtResize)
 		self.guiNumFrames = Common_Gui.NumberPicker("guiNumFrames", "Frames", "Hold Selected image for n frames", self.getNextEvent(), self.handleGuiNumFramesEvent, self.guiNumFramesResize)
 		self.guiApplyToAll = Common_Gui.BasicButton("guiApplyToAll", "Apply to all", "Apply current frame display value to all IFL images", self.getNextEvent(), self.handleGuiApplyToAllEvent, self.guiApplyToAllResize)
 		self.guiWriteIFLFile = Common_Gui.ToggleButton("guiWriteIFLFile", "Write .ifl file", "Write .ifl file for this sequence to disk on export.", self.getNextEvent(), self.handleGuiWriteIFLFileEvent, self.guiWriteIFLFileResize)
+
+		self.guiFramesListContainerTitle = Common_Gui.MultilineText("guiFramesListContainerTitle", "Selected image:\n None Selected", None, self.guiSeqOptsContainerTitleResize)
+		self.guiFramesListContainerTitleBox = Common_Gui.BasicFrame(resize_callback = self.guiFramesListContainerTitleBoxResize)
 
 		# set initial states
 		self.guiFramesList.enabled = True
@@ -4452,16 +3972,19 @@ class IFLControlsClass(UserCreatedSeqControlsClassBase):
 		self.guiWriteIFLFile.state = False
 
 		# add controls to containers
-		self.guiSeqOptsContainer.addControl(self.guiMatTxt)
+		#self.guiSeqOptsContainer.addControl(self.guiMatTxt)
 		self.guiSeqOptsContainer.addControl(self.guiMat)
-		self.guiSeqOptsContainer.addControl(self.guiNumImagesTxt)
 		self.guiSeqOptsContainer.addControl(self.guiNumImages)
 		self.guiSeqOptsContainer.addControl(self.guiFramesListTxt)
 		self.guiSeqOptsContainer.addControl(self.guiFramesList)
-		self.guiSeqOptsContainer.addControl(self.guiFramesListSelectedTxt)
-		self.guiSeqOptsContainer.addControl(self.guiNumFrames)
-		self.guiSeqOptsContainer.addControl(self.guiApplyToAll)
+		self.guiSeqOptsContainer.addControl(self.guiFramesListContainer)
 		self.guiSeqOptsContainer.addControl(self.guiWriteIFLFile)
+		self.guiFramesListContainer.addControl(self.guiFramesListContainerTitle)
+		self.guiFramesListContainer.addControl(self.guiFramesListContainerTitleBox)
+		self.guiFramesListContainer.addControl(self.guiFramesListSelectedTxt)
+		self.guiFramesListContainer.addControl(self.guiNumFrames)
+		self.guiFramesListContainer.addControl(self.guiApplyToAll)
+		
 		
 	
 	## @brief Cleans up Blender GUI objects before the interpreter exits;
@@ -4473,9 +3996,8 @@ class IFLControlsClass(UserCreatedSeqControlsClassBase):
 	#  @note Calls base class cleanup method explicitly.
 	def cleanup(self):
 		UserCreatedSeqControlsClassBase.cleanup(self)
-		del self.guiMatTxt
+		#del self.guiMatTxt
 		del self.guiMat
-		del self.guiNumImagesTxt
 		del self.guiNumImages
 		del self.guiFramesListTxt
 		del self.guiFramesList
@@ -4483,6 +4005,8 @@ class IFLControlsClass(UserCreatedSeqControlsClassBase):
 		del self.guiNumFrames
 		del self.guiApplyToAll
 		del self.guiWriteIFLFile
+		del self.guiFramesListContainerTitle
+		del self.guiFramesListContainerTitleBox
 
 
 	#######################################
@@ -4713,7 +4237,7 @@ class IFLControlsClass(UserCreatedSeqControlsClassBase):
 		guiName = Common_Gui.SimpleText("", matName, None, None)
 		guiName.x, guiName.y = 5, 5
 		guiHoldFrames = Common_Gui.SimpleText("", "fr:"+ str(holdFrames), None, None)
-		guiHoldFrames.x, guiHoldFrames.y = 170, 5
+		guiHoldFrames.x, guiHoldFrames.y = 155, 5
 
 		# Add everything
 		guiContainer.addControl(guiName)
@@ -4773,25 +4297,22 @@ class IFLControlsClass(UserCreatedSeqControlsClassBase):
 	#########################
 
 	
+	'''
 	## @brief Resize callback for guiMatTxt
 	#  @param control The invoking GUI control object
 	def guiMatTxtResize(self, control, newwidth, newheight):
 		control.x, control.y, control.height, control.width = 10,278, 20,120
-
+	'''
 	## @brief Resize callback for guiMat
 	#  @param control The invoking GUI control object
 	def guiMatResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 125,275, 20,120
+		control.x, control.y, control.height, control.width = 125,newheight-50, 20,115
 
-	## @brief Resize callback for guiNumImagesTxt
-	#  @param control The invoking GUI control object
-	def guiNumImagesTxtResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 10,256, 20,120
 
 	## @brief Resize callback for guiNumImages
 	#  @param control The invoking GUI control object
 	def guiNumImagesResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 125,253, 20,120
+		control.x, control.y, control.height, control.width = 245,newheight-50, 20,85
 
 	## @brief Resize callback for guiSeqIFLFrame
 	#  @param control The invoking GUI control object
@@ -4811,32 +4332,41 @@ class IFLControlsClass(UserCreatedSeqControlsClassBase):
 	## @brief Resize callback for guiFramesListTxt
 	#  @param control The invoking GUI control object
 	def guiFramesListTxtResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 10,232, 20,120
+		control.x, control.y, control.height, control.width = 10,190, 20,120
 
 	## @brief Resize callback for guiFramesList
 	#  @param control The invoking GUI control object
 	def guiFramesListResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 20,52, 173,223
+		control.x, control.y, control.height, control.width = 20,10, 173,200
+
+	def guiFramesListContainerResize(self, control, newwidth, newheight):
+		control.x, control.y, control.height, control.width = 221,10, 173,newwidth-221
+	
+	def guiFramesListContainerTitleBoxResize(self, control, newwidth, newheight):
+		control.x, control.y, control.height, control.width = 3,newheight-35, 33,107
+
+	def guiFramesListContainerTitleResize(self, control, newwidth, newheight):
+		control.x, control.y, control.height, control.width = 5,newheight-30, 20,82
 
 	## @brief Resize callback for guiFramesListSelectedTxt
 	#  @param control The invoking GUI control object
 	def guiFramesListSelectedTxtResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 20,34, 20,120
+		control.x, control.y, control.height, control.width = 5,newheight-60, 20,120
 
 	## @brief Resize callback for guiNumFrames
 	#  @param control The invoking GUI control object
 	def guiNumFramesResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 75,29, 20,85
+		control.x, control.y, control.height, control.width = 5,newheight-88, 20,newwidth-10
 
 	## @brief Resize callback for guiApplyToAll
 	#  @param control The invoking GUI control object
 	def guiApplyToAllResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 164,29, 20,80
+		control.x, control.y, control.height, control.width = 5,newheight-114, 20,newwidth-10
 
 	## @brief Resize callback for guiWriteIFLFile
 	#  @param control The invoking GUI control object
 	def guiWriteIFLFileResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 20,5, 20,223
+		control.x, control.y, control.height, control.width = 125,newheight-25, 20,205
 		
 
 
@@ -4914,10 +4444,9 @@ class VisControlsClass(UserCreatedSeqControlsClassBase):
 		self.curVisTrackEvent = 80
 
 		# initialize GUI controls
-		self.guiStartFrame = Common_Gui.NumberPicker("guiStartFrame", "Start Frame", "Start frame for visibility IPO curve samples", self.getNextEvent(), self.handleGuiStartFrameEvent, self.guiStartFrameResize)
-		self.guiEndFrame = Common_Gui.NumberPicker("guiEndFrame", "End Frame", "End frame for visibility IPO curve samples", self.getNextEvent(), self.handleGuiEndFrameEvent, self.guiEndFrameResize)
 		self.guiVisTrackListTxt = Common_Gui.SimpleText("guiVisTrackListTxt", "Object Visibility Tracks:", None, self.guiVisTrackListTxtResize)
 		self.guiVisTrackList = Common_Gui.ListContainer("guiVisTrackList", "", self.handleGuiVisTrackListEvent, self.guiVisTrackListResize)
+		self.guiVisTrackListContainer = Common_Gui.BasicContainer("guiVisTrackListContainer", "", None, self.guiVisTrackListContainerResize)
 		self.guiIpoTypeTxt = Common_Gui.SimpleText("guiIpoTypeTxt", "IPO Type:", None, self.guiIpoTypeTxtResize)
 		self.guiIpoType = Common_Gui.ComboBox("guiIpoType", "IPO Type", "Select the type of IPO curve to use for Visibility Animation", self.getNextEvent(), self.handleGuiIpoTypeEvent, self.guiIpoTypeResize)
 		self.guiIpoChannelTxt = Common_Gui.SimpleText("guiIpoChannelTxt", "IPO Channel:", None, self.guiIpoChannelTxtResize)
@@ -4925,29 +4454,27 @@ class VisControlsClass(UserCreatedSeqControlsClassBase):
 		self.guiIpoObjectTxt = Common_Gui.SimpleText("guiIpoObjectTxt", "IPO Object:", None, self.guiIpoObjectTxtResize)
 		self.guiIpoObject = Common_Gui.ComboBox("guiIpoObject", "IPO Object", "Select the object whose IPO curve will be used for Visibility Animation", self.getNextEvent(), self.handleGuiIpoObjectEvent, self.guiIpoObjectResize)
 
+		self.guiTrackListContainerTitle = Common_Gui.MultilineText("guiTrackListContainerTitle", "Selected object:\n None Selected", None, self.guiTrackListContainerTitleResize)
+		self.guiTrackListContainerTitleBox = Common_Gui.BasicFrame(resize_callback = self.guiTrackListContainerTitleBoxResize)
+
 
 		# set initial states
 		self.guiVisTrackList.enabled = True
-		self.guiStartFrame.min = 1
-		self.guiEndFrame.min = 1
-		self.guiStartFrame.max = 4095
-		self.guiEndFrame.max = 4095
-		self.guiStartFrame.value = 1
-		self.guiEndFrame.value = 1
 
 
 		# add controls to containers
 		self.guiSeqOptsContainer.addControl(self.guiVisTrackListTxt)
 		self.guiSeqOptsContainer.addControl(self.guiVisTrackList)
-		self.guiSeqOptsContainer.addControl(self.guiStartFrame)
-		self.guiSeqOptsContainer.addControl(self.guiEndFrame)
 		self.guiSeqOptsContainer.addControl(self.guiVisTrackList)
-		self.guiSeqOptsContainer.addControl(self.guiIpoTypeTxt)
-		self.guiSeqOptsContainer.addControl(self.guiIpoChannelTxt)
-		self.guiSeqOptsContainer.addControl(self.guiIpoObjectTxt)
-		self.guiSeqOptsContainer.addControl(self.guiIpoType)
-		self.guiSeqOptsContainer.addControl(self.guiIpoChannel)
-		self.guiSeqOptsContainer.addControl(self.guiIpoObject)
+		self.guiSeqOptsContainer.addControl(self.guiVisTrackListContainer)
+		self.guiVisTrackListContainer.addControl(self.guiTrackListContainerTitle)
+		self.guiVisTrackListContainer.addControl(self.guiTrackListContainerTitleBox)
+		self.guiVisTrackListContainer.addControl(self.guiIpoTypeTxt)
+		self.guiVisTrackListContainer.addControl(self.guiIpoChannelTxt)
+		self.guiVisTrackListContainer.addControl(self.guiIpoObjectTxt)
+		self.guiVisTrackListContainer.addControl(self.guiIpoType)
+		self.guiVisTrackListContainer.addControl(self.guiIpoChannel)
+		self.guiVisTrackListContainer.addControl(self.guiIpoObject)
 
 		## @brief Stores a string corresponding to the last object visibility track selection
 		#  @note Used to restore the selection on panel switches.
@@ -4962,16 +4489,17 @@ class VisControlsClass(UserCreatedSeqControlsClassBase):
 	#  @note Calls base class cleanup method explicitly.
 	def cleanup(self):
 		UserCreatedSeqControlsClassBase.cleanup(self)
-		del self.guiStartFrame
-		del self.guiEndFrame
 		del self.guiVisTrackListTxt
 		del self.guiVisTrackList
+		del self.guiVisTrackListContainer
 		del self.guiIpoTypeTxt
 		del self.guiIpoType
 		del self.guiIpoChannelTxt
 		del self.guiIpoChannel
 		del self.guiIpoObjectTxt
 		del self.guiIpoObject
+		del self.guiTrackListContainerTitle
+		del self.guiTrackListContainerTitleBox
 
 
 	#######################################
@@ -4979,25 +4507,6 @@ class VisControlsClass(UserCreatedSeqControlsClassBase):
 	#######################################
 
 
-	## @brief Handle events generated by the "Start Frame" number picker (guiStartFrame).
-	#  @param control The invoking GUI control (guiStartFrame)
-	def handleGuiStartFrameEvent(self, control):
-		seqName, seqPrefs = self.getSelectedSeqNameAndPrefs()
-		seqPrefs['Vis']['StartFrame'] = control.value
-		if self.guiEndFrame.value < seqPrefs['Vis']['StartFrame']:
-			self.guiEndFrame.value = seqPrefs['Vis']['StartFrame']
-			seqPrefs['Vis']['EndFrame'] = seqPrefs['Vis']['StartFrame']
-		self.guiEndFrame.min = seqPrefs['Vis']['StartFrame']
-
-	## @brief Handle events generated by the "End Frame" number picker (guiEndFrame).
-	#  @param control The invoking GUI control (guiEndFrame)
-	def handleGuiEndFrameEvent(self, control):
-		seqName, seqPrefs = self.getSelectedSeqNameAndPrefs()
-		seqPrefs['Vis']['EndFrame'] = control.value
-		if self.guiStartFrame.value > seqPrefs['Vis']['EndFrame']:
-			self.guiStartFrame.value = seqPrefs['Vis']['EndFrame']
-			seqPrefs['Vis']['StartFrame'] = seqPrefs['Vis']['EndFrame']
-		self.guiStartFrame.max = seqPrefs['Vis']['EndFrame']
 
 	## @brief Handle events generated by the "Ipo Type" menu (guiIpoType).
 	#  @param control The invoking GUI control (guiIpoType)
@@ -5081,10 +4590,6 @@ class VisControlsClass(UserCreatedSeqControlsClassBase):
 	def refreshSequenceOptions(self, seqName, seqPrefs):
 		self.guiSeqOptsContainer.enabled = True
 		self.refreshVisTrackList(seqName)
-		self.guiStartFrame.value = seqPrefs['Vis']['StartFrame']
-		self.guiStartFrame.max = seqPrefs['Vis']['EndFrame']
-		self.guiEndFrame.value = seqPrefs['Vis']['EndFrame']
-		self.guiEndFrame.min = seqPrefs['Vis']['StartFrame']			
 		self.guiSeqOptsContainerTitle.label = ("Selected Sequence:\n %s" % seqName)
 		# restore last vis track list selection
 		found = False
@@ -5104,9 +4609,6 @@ class VisControlsClass(UserCreatedSeqControlsClassBase):
 	def clearSequenceOptions(self):
 		self.guiSeqOptsContainer.enabled = False
 		self.clearVisTrackList()
-		self.guiStartFrame.value = 1
-		self.guiEndFrame.min = 1
-		self.guiEndFrame.value = 1
 		self.guiSeqOptsContainerTitle.label = "Selected Sequence:\n None Selected"
 		self.clearIpoControls()
 
@@ -5244,9 +4746,6 @@ class VisControlsClass(UserCreatedSeqControlsClassBase):
 		seq = Prefs['Sequences'][newSeqName]
 		seq['Vis'] = {}
 		seq['Vis']['Enabled'] = True
-		seq['Vis']['StartFrame'] = 1
-		seq['Vis']['EndFrame'] = 1
-		seq['Vis']['Enabled'] = True
 		seq['Vis']['Tracks'] = {}
 		# add sequence to GUI sequence list		
 		#self.guiSeqList.addControl(self.createSequenceListItem(seqName))
@@ -5266,7 +4765,7 @@ class VisControlsClass(UserCreatedSeqControlsClassBase):
 		guiName = Common_Gui.SimpleText("", objName, None, None)
 		guiName.x, guiName.y = 5, 5
 		guiEnable = Common_Gui.ToggleButton("guiEnable", "Enable", "Enable Visibility track for object", startEvent, self.handleGuiVisTrackListItemEvent, None)
-		guiEnable.x, guiEnable.y = 152, 5
+		guiEnable.x, guiEnable.y = 105, 5
 		guiEnable.width, guiEnable.height = 50, 15
 
 
@@ -5298,55 +4797,55 @@ class VisControlsClass(UserCreatedSeqControlsClassBase):
 	#########################
 
 	
-	## @brief Resize callback for guiStartFrame
-	#  @param control The invoking GUI control object
-	def guiStartFrameResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 20,280, 20,110
-
-	## @brief Resize callback for guiEndFrame
-	#  @param control The invoking GUI control object
-	def guiEndFrameResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 133,280, 20,110
 
 	## @brief Resize callback for guiVisTrackListTxt
 	#  @param control The invoking GUI control object
 	def guiVisTrackListTxtResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 10,258, 20,120
+		control.x, control.y, control.height, control.width = 10,190, 20,120
 
 	## @brief Resize callback for guiVisTrackList
 	#  @param control The invoking GUI control object
 	def guiVisTrackListResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 20,100, 145,223
+		control.x, control.y, control.height, control.width = 20,10, 173,175
+
+	def guiVisTrackListContainerResize(self, control, newwidth, newheight):
+		control.x, control.y, control.height, control.width = 196,10, 173,newwidth - 196
+	
+	def guiTrackListContainerTitleBoxResize(self, control, newwidth, newheight):
+		control.x, control.y, control.height, control.width = 3,newheight-35, 33,107
+
+	def guiTrackListContainerTitleResize(self, control, newwidth, newheight):
+		control.x, control.y, control.height, control.width = 5,newheight-30, 20,82
 
 	## @brief Resize callback for guiIpoTypeTxt
 	#  @param control The invoking GUI control object
 	def guiIpoTypeTxtResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 20,80, 20,223
+		control.x, control.y, control.height, control.width = 10,newheight-50, 20,newwidth-20
 
 	## @brief Resize callback for guiIpoType
 	#  @param control The invoking GUI control object
 	def guiIpoTypeResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 110,75, 20,133
+		control.x, control.y, control.height, control.width = 5,newheight-75, 20,newwidth-10
 
 	## @brief Resize callback for ChannelTxt
 	#  @param control The invoking GUI control object
 	def guiIpoChannelTxtResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 20,58, 20,223
+		control.x, control.y, control.height, control.width = 10,newheight-95, 20,newwidth-20
 
 	## @brief Resize callback for guiIpoChannel
 	#  @param control The invoking GUI control object
 	def guiIpoChannelResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 110,53, 20,133
+		control.x, control.y, control.height, control.width = 5,newheight-120, 20,newwidth-10
 
 	## @brief Resize callback for guiIpoObjectTxt
 	#  @param control The invoking GUI control object
 	def guiIpoObjectTxtResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 20,36, 20,223
+		control.x, control.y, control.height, control.width = 10,newheight-140, 20,newwidth-20
 
 	## @brief Resize callback for guiIpoObject
 	#  @param control The invoking GUI control object
 	def guiIpoObjectResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 110,31, 20,133
+		control.x, control.y, control.height, control.width = 5,newheight-165, 20,newwidth-10
 
 
 	
