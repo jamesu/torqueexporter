@@ -181,16 +181,32 @@ class BasicFrame(BasicControl):
 	def onDraw(self, offset):
 		real_x = offset[0] + self.x
 		real_y = offset[1] + self.y
-		
-		# Draw border
+
 		BGL.glBegin(BGL.GL_LINES)
+
+		# cheap 3d effect
+		BGL.glColor4f(0.5,0.5,0.5, self.borderColor[3])
+		# Left up
+		BGL.glVertex2i(real_x+1,real_y)
+		BGL.glVertex2i(real_x+1,real_y+self.height)
+		# Top right
+		BGL.glVertex2i(real_x,real_y+self.height-1)
+		BGL.glVertex2i(real_x+self.width-1,real_y+self.height-1)
+		# Right down
+		BGL.glVertex2i(real_x+self.width+1,real_y+self.height-2)
+		BGL.glVertex2i(real_x+self.width+1,real_y+1)
+		# Bottom left
+		BGL.glVertex2i(real_x+self.width+1,real_y-1)
+		BGL.glVertex2i(real_x+1,real_y-1)
+
+		# Draw border
 		BGL.glColor4f(self.borderColor[0],self.borderColor[1],self.borderColor[2], self.borderColor[3])
 		# Left up
 		BGL.glVertex2i(real_x,real_y)
 		BGL.glVertex2i(real_x,real_y+self.height)
 		# Top right
 		BGL.glVertex2i(real_x,real_y+self.height)
-		BGL.glVertex2i(real_x+self.width-1,real_y+self.height)
+		BGL.glVertex2i(real_x+self.width,real_y+self.height)
 		# Right down
 		BGL.glVertex2i(real_x+self.width,real_y+self.height)
 		BGL.glVertex2i(real_x+self.width,real_y)
