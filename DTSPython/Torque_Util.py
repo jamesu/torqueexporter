@@ -312,29 +312,6 @@ def stripPath(filepath):
 		words = string.split(filepath, "/")
 	return words[-1]
 
-# Strip image names of trailing extension
-def stripImageExtension(imagename, filename=""):
-	imageExts = ['jpg', 'jpeg', 'gif', 'png', 
-		     'tif', 'tiff', 'mpg', 'mpeg',
-		     'tga', 'pcx', 'xcf', 'pix',
-		     'eps', 'fit', 'fits', 'jpe',
-		     'ico', 'pgm', 'psd', 'ps',
-		     'ppm', 'bmp', 'pcc', 'xbm',
-		     'xpm', 'xwd', 'bitmap']
-	temp = ""
-	if filename != "": filename = stripPath(filename)
-	if len(imagename) < len(filename) and imagename == filename[0:len(imagename)]:
-		temp = string.split(filename,".")
-	else:
-		temp = string.split(imagename,".")
-	if len(temp)==1: return temp[0]
-	retVal = ""
-	for i in range(0, len(temp)):
-		if not temp[i].lower() in imageExts:
-			retVal += (temp[i] + ".")
-	retVal = retVal[0:len(retVal)-1] # remove trailing "."
-	return retVal
-
 
 # if onlyIgnore is true, strips out any period separated
 # section of the string that starts with "IGNORE".
@@ -534,15 +511,3 @@ def getSeqNumFrames(seqName, seqPrefs):
 
 
 
-## @brief Returns the text portion of the passed in image name
-#     sans trailing number.
-#  @param matName The material name to be examined
-def getIFLMatTextPortion(matName):
-	i = len(matName)-1
-	while matName[i:len(matName)].isdigit() and i > -1: i -= 1
-	i += 1
-	textPortion = matName[0:i]
-	if len(textPortion) > 0:
-		return textPortion
-	else:
-		return ""
