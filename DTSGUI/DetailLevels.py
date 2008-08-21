@@ -25,6 +25,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import Common_Gui
 import DtsGlobals
+from DtsPrefs import *
 
 '''
 ***************************************************************************************************
@@ -34,6 +35,13 @@ import DtsGlobals
 ***************************************************************************************************
 '''
 class DetailLevelControlsClass:
+	
+
+	#######################################
+	#  init and cleanup methods
+	#######################################
+
+
 	def __init__(self, guiDetailLevelsSubtab):
 		global globalEvents
 
@@ -43,10 +51,9 @@ class DetailLevelControlsClass:
 		# initialize GUI controls
 		self.guiDetailLevelsListTitle = Common_Gui.SimpleText("guiDetailLevelsListTitle", "Detail Levels:", None, self.guiDetailLevelsListTitleResize)
 		self.guiDetailLevelsList = Common_Gui.ListContainer("guiDetailLevelsList", "dl.list", self.handleEvent, self.guiDetailLevelsListResize)		
-		self.guiDetailLevelsAddButton = Common_Gui.BasicButton("guiDetailLevelsAddButton", "Add:", "Add a new detail level of the indicated type", 1, self.handleEvent, self.guiDetailLevelsAddButtonResize)
-		self.guiDetailLevelsTypeMenu = Common_Gui.ComboBox("guiDetailLevelsTypeMenu", "Type", "Select the type of detail level to add", 2, self.handleEvent, self.guiDetailLevelsTypeMenuResize)
-		self.guiDetailLevelsDelButton = Common_Gui.BasicButton("guiDetailLevelsDelButton", "Delete Selected Detail Lvl", "Import Blender materials and settings", 3, self.handleEvent, self.guiDetailLevelsDelButtonResize)
-		self.guiDetailLevelsSortButton = Common_Gui.BasicButton("guiDetailLevelsSortButton", "Sort List", "Sort the detail levels list", 4, self.handleEvent, self.guiDetailLevelsSortButtonResize)
+		self.guiDetailLevelsAddButton = Common_Gui.BasicButton("guiDetailLevelsAddButton", "Add:", "Add a new detail level of the indicated type", 5, self.handleAddEvent, self.guiDetailLevelsAddButtonResize)
+		self.guiDetailLevelsTypeMenu = Common_Gui.ComboBox("guiDetailLevelsTypeMenu", "Type", "Select the type of detail level to add", 6, self.handleEvent, self.guiDetailLevelsTypeMenuResize)
+		self.guiDetailLevelsDelButton = Common_Gui.BasicButton("guiDetailLevelsDelButton", "Delete Selected Detail Level", "Import Blender materials and settings", 7, self.handleDelEvent, self.guiDetailLevelsDelButtonResize)
 		
 		# set default values for controls
 		self.guiDetailLevelsList.childHeight = 30
@@ -57,9 +64,9 @@ class DetailLevelControlsClass:
 		guiDetailLevelsSubtab.addControl(self.guiDetailLevelsAddButton)
 		guiDetailLevelsSubtab.addControl(self.guiDetailLevelsTypeMenu)
 		guiDetailLevelsSubtab.addControl(self.guiDetailLevelsDelButton)
-		guiDetailLevelsSubtab.addControl(self.guiDetailLevelsSortButton)
 		
 		self.populateDLList()
+		self.populateTypePulldown()
 		
 
 	def cleanup(self):
@@ -73,11 +80,41 @@ class DetailLevelControlsClass:
 		# todo - clean up objects
 		pass
 
-	def refreshAll(self):
-		pass
 		
+
+	#######################################
+	#  Event handler methods
+	#######################################
+
+
 	def handleEvent(self, control):
 		pass
+		
+	def handleAddEvent(self, control):
+		Prefs = DtsGlobals.Prefs
+		DLType = self.guiDetailLevelsTypeMenu.getSelectedItemString()
+		dlName = None
+		size = None
+		if DLType == "Visible Detail Level":
+			dlName = "Detail"
+		elif DLType == "Collision Detail Level":
+			dlName = "Collision"
+			size = -1
+		elif DLType == "LOS Col Detail Level":
+			dlName = "LOSCollision"
+			size = -1
+			
+		Prefs.addDetailLevel(dlName, size)
+		self.populateDLList()
+
+	def handleDelEvent(self, control):
+		Prefs = DtsGlobals.Prefs
+		dlName = self.getDLListSelectedItem()
+		
+		# todo - are you sure dialog?
+		Prefs.delDetailLevel(dlName)
+		self.populateDLList()
+
 	
 	def handleListItemEvent(self, control):
 		Prefs = DtsGlobals.Prefs
@@ -128,6 +165,17 @@ class DetailLevelControlsClass:
 				Prefs.renameDetailLevel(dlName, newName)
 				self.guiDetailLevelsList.controls[calcIdx].controls[0].label = newName
 				
+	#######################################
+	#  Refresh and Clear methods
+	#######################################
+
+	def refreshAll(self):
+		self.populateDLList()
+
+
+	#########################
+	#  Resize callback methods
+	#########################
 
 		
 	# resize events
@@ -140,11 +188,15 @@ class DetailLevelControlsClass:
 	def guiDetailLevelsTypeMenuResize(self, control, newwidth, newheight):
 		control.x, control.y, control.height, control.width = 62,15, 20,150
 	def guiDetailLevelsDelButtonResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 228,15, 20,160
-	def guiDetailLevelsSortButtonResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = newwidth - 85,15, 20,75
+		control.x, control.y, control.height, control.width = 228,15, 20,180
 
 
+
+
+	
+	#########################
+	#  Misc / utility methods
+	#########################
 
 	## @brief Creates a detail level list item and its associated GUI controls.
 	#  @note Called by populateDLList
@@ -152,6 +204,7 @@ class DetailLevelControlsClass:
 	def createDLListItem(self, dlName):
 		Prefs = DtsGlobals.Prefs
 		DLPrefs = Prefs['DetailLevels'][dlName]
+		DLType = prefsClass.getTextPortion(dlName)
 		startEvent = self.curListEvent
 		listWidth = self.guiDetailLevelsList.width - self.guiDetailLevelsList.barWidth
 		
@@ -160,8 +213,14 @@ class DetailLevelControlsClass:
 		guiLayersLabel = Common_Gui.SimpleText("", "Use Layers:", None, None)
 		guiSize = Common_Gui.NumberPicker("guiSize", "Min Pixel Size:", "Height in pixels at which detail level begins to display", startEvent, self.handleListItemEvent, None)
 		guiSize.value = Prefs.getTrailingNumber(dlName)
-		guiSize.min = 1
-		guiSize.max = 999
+		if DLType == 'Detail':
+			guiSize.min = 1
+			guiSize.max = 1024
+		elif DLType == 'Collision' or DLType == 'LOSCollision':
+			guiSize.min = -1
+			guiSize.max = -1
+			guiSize.enabled = False
+
 		#getTextPortion(dlName)
 		startEvent += 1
 
@@ -241,17 +300,36 @@ class DetailLevelControlsClass:
 
 	## @brief Populates the sequence list using current pref values.
 	def populateDLList(self):
-		#self.clearSequenceList()
+		Prefs = DtsGlobals.Prefs
+		self.clearDLList()
 		# Force a  list resize event, to make sure our button offsets
 		# are correct.
 		#if self.guiDetailLevelsList.width == 0: return
 		# loop through all detail levels in the preferences
 		Prefs = DtsGlobals.Prefs
 		keys = Prefs['DetailLevels'].keys()
-		keys.sort(lambda x, y: cmp(x.lower(),y.lower()))
+		keys.sort(lambda x, y: cmp(prefsClass.getTrailingNumber(x),prefsClass.getTrailingNumber(y)))
+		keys.reverse()
 		for dlName in keys:			
 			self.guiDetailLevelsList.addControl(self.createDLListItem(dlName))
 
-	
-	# other event callbacks and helper methods go here.
+	def clearDLList(self):
+		for i in range(0, len(self.guiDetailLevelsList.controls)):
+			del self.guiDetailLevelsList.controls[i].controls[:]
+		del self.guiDetailLevelsList.controls[:]
+		self.curListEvent = 40
+		self.guiDetailLevelsList.itemIndex = -1
+		self.guiDetailLevelsList.scrollPosition = 0
+		if self.guiDetailLevelsList.callback: self.guiDetailLevelsList.callback(self.guiDetailLevelsList) # Bit of a hack, but works
 
+	def populateTypePulldown(self):
+		self.guiDetailLevelsTypeMenu.items.append("Visible Detail Level")
+		self.guiDetailLevelsTypeMenu.items.append("Collision Detail Level")
+		self.guiDetailLevelsTypeMenu.items.append("LOS Col Detail Level")
+		self.guiDetailLevelsTypeMenu.selectStringItem("Visible Detail Level")
+
+	## @brief Returns a string corresponding to the currently selected vis track list item.
+	def getDLListSelectedItem(self):
+		if self.guiDetailLevelsList.itemIndex != -1:
+			return self.guiDetailLevelsList.controls[self.guiDetailLevelsList.itemIndex].controls[0].label
+		else: return ""
