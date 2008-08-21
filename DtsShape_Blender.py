@@ -483,7 +483,7 @@ class BlenderShape(DtsShape):
 			mat = self.materials.materials[i]		
 			if mat.flags & mat.IFLMaterial != 0:
 				# remove the trailing numbers from the IFL material
-				mntp = getIFLMatTextPortion(mat.name)
+				mntp = self.preferences.getTextPortion(mat.name)
 				# add a name for our IflMaterial into the string table
 				si = self.sTable.addString(mntp + ".ifl")
 				# create an IflMaterial object and append it to the shape
@@ -507,8 +507,8 @@ class BlenderShape(DtsShape):
 				continue
 			
 			isSkinned = False
-			if o.tempMeshes[0].mtype != o.tempMeshes[0].T_Null: o.mainMaterial = o.tempMeshes[0].mainMaterial
-			else: o.mainMaterial = None
+			#if o.tempMeshes[0].mtype != o.tempMeshes[0].T_Null: o.mainMaterial = o.tempMeshes[0].mainMaterial
+			#else: o.mainMaterial = None
 			
 			# Determine mesh type for these objects (assumed by first entry)
 			if o.tempMeshes[0].mtype != o.tempMeshes[0].T_Skin:
@@ -946,13 +946,17 @@ class BlenderShape(DtsShape):
 	# Adds a generic sequence
 	def addSequence(self, seqName, seqPrefs, scene = None, action=None):
 
-		numFrameSamples = getSeqNumFrames(seqName, seqPrefs)
+		numFrameSamples = self.preferences.getSeqNumFrames(seqName)
 
 		visIsValid = validateVisibility(seqName, seqPrefs)
 		IFLIsValid = validateIFL(seqName, seqPrefs)
-		ActionIsValid = validateAction(seqName, seqPrefs)
+		#ActionIsValid = validateAction(seqName, seqPrefs)
+		ActionIsValid = True
 
-		if getNumActFrames(seqName, seqPrefs) < 1: ActionIsValid = False
+		if numFrameSamples < 1:
+			ActionIsValid = False
+			visIsValid = False
+			IFLIsValid = False
 		# Did we have any valid animations at all for the sequence?
 		if not (visIsValid or IFLIsValid or ActionIsValid):
 			Torque_Util.dump_writeln("   Skipping sequence %s, no animation types were valid for the sequence. " % seqName)
@@ -993,7 +997,7 @@ class BlenderShape(DtsShape):
 		lastFrameRemoved = False
 		if ActionIsValid:
 			#print "   Adding action data for", seqName
-			sequence, lastFrameRemoved = self.addAction(sequence, action, numFrameSamples, scene, seqPrefs)
+			sequence, lastFrameRemoved = self.addNodeSeq(sequence, action, numFrameSamples, scene, seqPrefs)
 			# if we had to remove the last frame from a cyclic action, and the original action
 			# frame samples was the same as the overall number of frames for the sequence, adjust
 			# the overall sequence length.
@@ -1001,13 +1005,8 @@ class BlenderShape(DtsShape):
 				numFrameSamples -= 1
 		if visIsValid:
 			#print "   Adding visibility data for", seqName
-			numVisFrames = int(seqPrefs['Vis']['EndFrame'] - seqPrefs['Vis']['StartFrame'])
-			adjustedVisEndFrame = seqPrefs['Vis']['EndFrame']
-			if lastFrameRemoved and numVisFrames > numFrameSamples:
-				numVisFrames = numFrameSamples
-				adjustedVisEndFrame = (numVisFrames + int(seqPrefs['Vis']['StartFrame'])) -1
-			sequence = self.addSequenceVisibility( sequence, numFrameSamples, seqPrefs, int(seqPrefs['Vis']['StartFrame']), adjustedVisEndFrame )
-			if sequence.numKeyFrames <  numVisFrames: sequence.numKeyFrames = numVisFrames
+			sequence = self.addSequenceVisibility( sequence, numFrameSamples, seqPrefs, int(seqPrefs['StartFrame']), int(seqPrefs['EndFrame']))
+			#if sequence.numKeyFrames <  numVisFrames: sequence.numKeyFrames = numVisFrames
 		if IFLIsValid:
 			#print "   Adding IFL data for", seqName
 			sequence = self.addSequenceIFL(sequence, getNumIFLFrames(seqName, seqPrefs), seqPrefs)
@@ -1017,7 +1016,7 @@ class BlenderShape(DtsShape):
 		return sequence
 	
 	# Import an action
-	def addAction(self, sequence, action, numOverallFrames, scene, seqPrefs):
+	def addNodeSeq(self, sequence, action, numOverallFrames, scene, seqPrefs):
 		'''
 		This adds an action to a shape as a sequence.
 		
@@ -1061,6 +1060,7 @@ class BlenderShape(DtsShape):
 		sequence.has_scale = False
 		'''
 		
+		'''
 		# Figure out which nodes have IPO curves.  Need this to determine the number of keyframes; and
 		# possibly to force export of some channels where nothing actually moves but the user requires
 		# the transforms to be keyed in place for some reason.
@@ -1079,17 +1079,17 @@ class BlenderShape(DtsShape):
 			# Print informative track message
 			Torque_Util.dump_writeln("      Track: %s (node %d)" % (channel_name,nodeIndex))
 		del channels
-
+		'''
 			
 
-		# Add action specific flags
-		if seqPrefs['Action']['Blend']:
+		# Add sequence flags
+		if seqPrefs['Blend']:
 			isBlend = True
 			sequence.flags |= sequence.Blend
 		else: isBlend = False
-		if seqPrefs['Action']['NumGroundFrames'] != 0:
+		if seqPrefs['NumGroundFrames'] != 0:
 			sequence.has_ground = True
-			sequence.ground_target = seqPrefs['Action']['NumGroundFrames']
+			sequence.ground_target = seqPrefs['NumGroundFrames']
 			sequence.flags |= sequence.MakePath
 		else: sequence.has_ground = False
 
@@ -1098,6 +1098,7 @@ class BlenderShape(DtsShape):
 		#sequence.numKeyFrames = getNumFrames(action.getAllChannelIpos().values(), False)
 		sequence.numKeyFrames = numOverallFrames
 		
+		'''
 		# Calculate the raw number of action frames, from start frame to end frame, inclusive.
 		rawActFrames = (seqPrefs['Action']['EndFrame'] - seqPrefs['Action']['StartFrame']) + 1
 
@@ -1107,8 +1108,10 @@ class BlenderShape(DtsShape):
 		
 		# make sure it's not less than 1
 		if interpolateInc < 1.0: interpolateInc = 1.0
+		'''
+		interpolateInc = 1
 
-		Torque_Util.dump_writeln("      Frames: %d " % seqPrefs['Action']['FrameSamples'])
+		Torque_Util.dump_writeln("      Frames: %d " % numOverallFrames)
 		
 		# Depending on what we have, set the bases accordingly
 		if sequence.has_ground: sequence.firstGroundFrame = len(self.groundTranslations)
@@ -1116,7 +1119,8 @@ class BlenderShape(DtsShape):
 		
 		# this is the number of real action frames we are exporting.
 		#numFrameSamples = seqPrefs['Action']['FrameSamples']+1
-		numFrameSamples = seqPrefs['Action']['FrameSamples']
+		#numFrameSamples = seqPrefs['FrameSamples']
+		numFrameSamples = numOverallFrames
 		
 		removeLast = False
 		baseTransforms = []
@@ -1125,8 +1129,8 @@ class BlenderShape(DtsShape):
 		if isBlend:
 			# Need to build a list of node transforms to use as the
 			# base transforms for nodes in our blend animation.
- 			useAction = seqPrefs['Action']['BlendRefPoseAction']
-			useFrame = seqPrefs['Action']['BlendRefPoseFrame']
+ 			#useAction = seqPrefs['Action']['BlendRefPoseAction']
+			useFrame = seqPrefs['BlendRefPoseFrame']
 			baseTransforms = self.buildBaseTransforms(sequence, action, useAction, useFrame, scene)
 			if baseTransforms == None:
 				Torque_Util.dump_writeln("Error getting base Transforms!!!!!")
@@ -1147,11 +1151,11 @@ class BlenderShape(DtsShape):
 		# during the blend sequence.
 		if isBlend:
 			# get our blend ref pose action
-			refPoseAct = Blender.Armature.NLA.GetActions()[useAction]
+			#refPoseAct = Blender.Armature.NLA.GetActions()[useAction]
 			# now set the active action and move to the desired frame
-			for i in range(0, len(self.addedArmatures)):
-				arm = self.addedArmatures[i]
-				refPoseAct.setActive(arm)
+			#for i in range(0, len(self.addedArmatures)):
+			#	arm = self.addedArmatures[i]
+			#	refPoseAct.setActive(arm)
 			# Set the current frame in blender
 			Blender.Set('curframe', useFrame)
 
@@ -1189,7 +1193,7 @@ class BlenderShape(DtsShape):
 		# loop through all of the exisitng action frames
 		for frame in range(0, numOverallFrames):
 			# Set the current frame in blender
-			curFrame = int(round(float(frame)*interpolateInc,0)) + seqPrefs['Action']['StartFrame']
+			curFrame = int(round(float(frame)*interpolateInc,0)) + seqPrefs['StartFrame']
 			Blender.Set('curframe', curFrame)
 			# add ground frames
 			self.addGroundFrame(sequence, curFrame, boundsStartMat)
@@ -1422,7 +1426,8 @@ class BlenderShape(DtsShape):
 		for i in range(0, len(self.iflmaterials)):
 					mat = self.iflmaterials[i]
 					IFLMatName = self.sTable.get(mat.name)
-					if getIFLMatTextPortion(sequenceKey['IFL']['Material']) == IFLMatName[0:len(IFLMatName)-4]:
+					# must strip last four chars from IFLMatName (".ifl")
+					if self.preferences.getTextPortion(sequenceKey['IFL']['Material']) == IFLMatName[0:len(IFLMatName)-4]:
 						sequence.matters_ifl[i] = True
 					else:
 						pass
@@ -1444,6 +1449,7 @@ class BlenderShape(DtsShape):
 		NOTE: this function needs to be called AFTER finalizeObjects, for obvious reasons.
 		'''
 
+		print "addSequenceVisibility called..."
 		scene = Blender.Scene.GetCurrent()
 		sequence.matters_vis = [False]*len(self.objects)
 
@@ -1515,7 +1521,7 @@ class BlenderShape(DtsShape):
 		dsq_file.close()
 
 
-		# Remove anything we added (using addAction or addSequenceTrigger only) to the main list
+		# Remove anything we added (using addNodeSeq or addSequenceTrigger only) to the main list
 		
 		if sequence.baseTranslation != -1: del self.nodeTranslations[sequence.baseTranslation-1:sequence.baseTranslation+sequence.numKeyFrames]
 		if sequence.baseRotation != -1:    del self.nodeRotations[sequence.baseRotation-1:sequence.baseRotation+sequence.numKeyFrames]
@@ -1679,7 +1685,7 @@ class BlenderShape(DtsShape):
 		for seqName in self.preferences['Sequences'].keys():
 			seqPrefs = self.preferences['Sequences'][seqName]
 			if seqPrefs['IFL']['Enabled'] and validateIFL(seqName, seqPrefs) and seqPrefs['IFL']['WriteIFLFile']:				
-				iflName = getIFLMatTextPortion(seqPrefs['IFL']['Material'])
+				iflName = self.preferences.getTextPortion(seqPrefs['IFL']['Material'])
 				Torque_Util.dump_writeln("   Writing IFL script %s%s%s.ifl" % (self.preferences['exportBasepath'], pathSep, iflName))
 				IFLScript = open("%s%s%s.ifl" % (self.preferences['exportBasepath'], pathSep, iflName), "w")
 				for frame in seqPrefs['IFL']['IFLFrames']:
