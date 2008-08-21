@@ -322,4 +322,4 @@ class SeqControlsClassBase:
 		self.guiSeqList.itemIndex = -1
 		self.guiSeqList.scrollPosition = 0
 		if self.guiSeqList.callback: self.guiSeqList.callback(self.guiSeqList) # Bit of a hack, but works
-		pass
+
