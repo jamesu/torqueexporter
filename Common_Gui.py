@@ -1,7 +1,7 @@
 '''
 Blender_Gui.py
 
-Copyright (c) 2003 - 2006 James Urquhart(j_urquhart@btinternet.com)
+Copyright (c) 2003 - 2008 James Urquhart(j_urquhart@btinternet.com)
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
@@ -29,6 +29,8 @@ from Blender.Window import Theme
 import string
 import math
 import types
+
+from DtsGlobals import *
 
 ###########################
 #   Blender Exporter For Torque
@@ -875,8 +877,6 @@ class TextDisplayBox(SimpleText):
 		SimpleText.__init__(self, name, text, None, resize_callback)
 		numColor = curTheme.get('ui').num
 		outlineColor = curTheme.get('ui').outline
-		print "numColor =", numColor		
-		print "outlineColor =", outlineColor
 		self.numColor = [(numColor[0]+25)/255.0, (numColor[1]+25)/255.0, (numColor[2]+25)/255.0, numColor[3]/255.0]
 		self.outlineColor = [(outlineColor[0]-80)/255.0, (outlineColor[1]-80)/255.0, (outlineColor[2]-80)/255.0, outlineColor[3]/255.0]
 
