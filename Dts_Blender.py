@@ -31,58 +31,20 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 '''
 
+import Blender
+from Blender import *
+import os.path
+import string, math, re, gc
+
+
 from DTSPython import *
 from DTSGUI import *
 from DtsPrefs import *
 from DtsSceneInfo import *
-
-import Blender
-from Blender import *
+import DtsGlobals
 import Common_Gui
-import string, math, re, gc
-
 import DtsShape_Blender
 from DtsShape_Blender import *
-
-
-import os.path
-
-
-import DtsGlobals
-
-'''
-  Blender Exporter For Torque
--------------------------------
-  Blender Dts Classes for Python
-'''
-
-
-'''
-Version = "0.97 (NLA DEV)"
-Prefs = None
-SceneInfo = None
-Prefs_keyname = ""
-export_tree = None
-Debug = False
-Profiling = False
-pathSeparator = "/"
-'''
-
-
-'''
-Utility Functions
-'''
-#-------------------------------------------------------------------------------------------------
-
-
-
-'''
-	Preferences Code
-'''
-
-
-
-
 
 
 
