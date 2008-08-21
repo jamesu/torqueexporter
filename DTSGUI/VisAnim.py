@@ -397,6 +397,7 @@ class VisControlsClass(UserCreatedSeqControlsClassBase):
 	#  @param newSeqName The name of the sequence
 	def addNewAnim(self, newSeqName):
 		Prefs = DtsGlobals.Prefs
+		# todo - move this or delete it it it's already moved
 		# add vis pref key w/ default values
 		seq = Prefs['Sequences'][newSeqName]
 		seq['Vis'] = {}
