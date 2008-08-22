@@ -134,6 +134,7 @@ class BlenderShape(DtsShape):
 			
 		'''
 		
+		'''
 		# before we do anything else, reset the transforms of all bones.
 		# loop through each node and reset it's transforms.  This avoids transforms carrying over from
 		# other animations. Need to cycle through _ALL_ bones and reset the transforms.
@@ -150,12 +151,15 @@ class BlenderShape(DtsShape):
 				tempPose.bones[bonename].loc = bMath.Vector(0.0, 0.0, 0.0)
 			# update the pose.
 			tempPose.update()
-		#Blender.Scene.GetCurrent().makeCurrent()		
+		#Blender.Scene.GetCurrent().makeCurrent()
+		'''
 		
 		numAddedMeshes = 0
 		polyCount = 0
 		# First, import meshes
-		for o in meshes:
+		# First, import meshes
+		for ni in meshes:
+			o = ni.blenderObj
 			# skip bounds mesh
 			if o.getName() == "Bounds":
 				continue
@@ -222,6 +226,8 @@ class BlenderShape(DtsShape):
 			# the autobillboard LOD is set to a value higher than
 			# the lowest regular detail level. - Joe G.
 			if self.subshapes[0].numObjects < numAddedMeshes:
+				# todo - insert a proper error message here and discard
+				# autobillboard LOD if this condition is true?
 				print "PANIC!! PANIC!! RUN!!!"
 				return False
 			'''
