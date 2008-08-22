@@ -26,6 +26,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 import Common_Gui
 import DtsGlobals
 import Blender
+from DtsSceneInfo import *
 
 
 '''
@@ -400,10 +401,10 @@ class MaterialControlsClass:
 		self.guiMaterialBumpMapMenu.items = []
 		self.guiMaterialReflectanceMapMenu.items = []
 		# populate the texture pulldowns
-		for img in Blender.Image.Get():
-			self.guiMaterialDetailMapMenu.items.append(stripImageExtension(img.getName(), img.getFilename()))
-			self.guiMaterialBumpMapMenu.items.append(stripImageExtension(img.getName(), img.getFilename()))
-			self.guiMaterialReflectanceMapMenu.items.append(stripImageExtension(img.getName(), img.getFilename()))
+		for imageName in SceneInfoClass.getAllBlenderImages():
+			self.guiMaterialDetailMapMenu.items.append(imageName)
+			self.guiMaterialBumpMapMenu.items.append(imageName)
+			self.guiMaterialReflectanceMapMenu.items.append(imageName)
 
 
 		# autoimport blender materials
