@@ -167,7 +167,8 @@ class prefsClass(dict):
 	# this method makes sure that a given layer can be assigned to only one dl at a time.
 	def setLayerAssignment(self, dlName, newLayer):
 		# remove any existing assignment
-		self.removeLayerAssignment(newLayer)
+		# (nevermind, allow overlapping layers for DLs)
+		#self.removeLayerAssignment(newLayer)
 		# assign layer to detail level
 		self['DetailLevels'][dlName].append(newLayer)
 			
@@ -181,7 +182,7 @@ class prefsClass(dict):
 
 	def renameDetailLevel(self, oldName, newName):
 		if newName != oldName and newName in self['DetailLevels'].keys():
-			message = "A detail level with size of "+str(getTrailingNumber(newName))+" already exists.%t|Cancel"
+			message = "A detail level with size of "+str(prefsClass.getTrailingNumber(newName))+" already exists.%t|Cancel"
 			x = Blender.Draw.PupMenu(message)
 			del x
 		else:
@@ -195,6 +196,101 @@ class prefsClass(dict):
 			if layerNum in dl:
 				return dlName
 
+	# gets the highest LOD visibility number
+	def getHighestLODSize(self, DLType='Detail'):
+		largest = 0
+		for dlName in filter(lambda x: x[0:len(DLType)].lower() == DLType.lower(),  self['DetailLevels'].keys()):
+			size = abs(prefsClass.getTrailingNumber(dlName))
+			print "** size=",size
+			if size > largest: largest = size
+		if largest == 0: largest = None
+		return largest
+
+
+	
+	# adds a new detail level to the preferences
+	# if we are given an explicit size number, use that, otherwise
+	# there is some convoluted logic for picking a new (unique) size
+	# number that should make some kind of sense :-)
+	def addDetailLevel(self, dlName='Detail', size=None, layers=None):
+		if dlName == 'Detail': self.addVisibleDetailLevel()
+		elif dlName == 'Collision': self.addCollisionDetailLevel()
+		elif dlName == 'LOSCollision': self.addLosCollisionDetailLevel()
+
+	def addVisibleDetailLevel(self, size=None, layers=None):
+		dlName = 'Detail'
+		# ---------------		
+		# Pick a size, any size! Step right up, everyone's a winner!
+		if size == None:
+			# no size was specified, so create a unique
+			# size number automatically.
+			highest = self.getHighestLODSize()
+			# there's already at least one detail level
+			if highest != None and highest > 1:
+				size = int(round(float(highest) / 2.0))
+			else:
+				# highest dl has size of 1?
+				if highest != None:
+					size = highest * 2
+				# no detail levels?
+				else:
+					size = 1
+		fullName = dlName + str(size)
+		# make sure that the auto sized detail level dosen't already exist
+		# go down by 1/2
+		while fullName in self['DetailLevels'].keys() and size > 1:
+			size = int(round(float(size)/2.0))
+			fullName = dlName + str(size)			
+		# go up by 2x
+		while fullName in self['DetailLevels'].keys() and size < 1024:
+			size *= 2
+			fullName = dlName + str(size)
+		# if we still don't have a valid number, just start again from one
+		# and count up until we find a number that's not in use
+		if fullName in self['DetailLevels'].keys():
+			size = 1
+			fullName = dlName + str(size)
+			while fullName in self['DetailLevels'].keys() and size < 1024:
+				size += 1
+				fullName = dlName + str(size)
+		# we should have a valid size and dl name at this point
+		# ---------------
+		
+		# create the new detail level
+		if layers == None: layers = []
+		self['DetailLevels'][fullName] = layers
+
+
+	
+	def addCollisionDetailLevel(self, layers=None):
+		dlName = 'Collision'
+		# ---------------		
+		highest = self.getHighestLODSize(dlName)
+		if highest == None: highest = 0
+		number = highest + 1
+		fullName = dlName + '-' + str(number)
+
+		if layers == None: layers = []
+		self['DetailLevels'][fullName] = layers
+
+
+	def addLosCollisionDetailLevel(self, layers=None):
+		dlName = 'LOSCollision'
+		# ---------------		
+		highest = self.getHighestLODSize(dlName)
+		if highest == None: highest = 0
+		number = highest + 1
+		fullName = dlName + '-' + str(number)
+		if layers == None: layers = []
+		self['DetailLevels'][fullName] = layers
+
+				
+	def delDetailLevel(self, dlName):
+		try: del self['DetailLevels'][dlName]
+		except: pass
+	
+		
+	
 	#################################################
 	#  Sequences
 	#################################################
@@ -763,17 +859,19 @@ class prefsClass(dict):
 	__pythonizeFileName = staticmethod(__pythonizeFileName)
 
 	# gets a trailing number in a string
-	def getTrailingNumber(self, string):
+	def getTrailingNumber(string):
 		for i in range(len(string)-1, -1, -1):
 			if string[i].isalpha(): break
 		retVal = int(string[i+1:len(string)])
 		return retVal
+	
+	getTrailingNumber = staticmethod(getTrailingNumber)
 
 	# gets the text portion of a string (with a trailing number)
 	def getTextPortion(string):
 		for i in range(len(string)-1, -1, -1):
 			if string[i].isalpha(): break
-		retVal = string[0:i]
+		retVal = string[0:i+1]
 		return retVal
 
 	getTextPortion = staticmethod(getTextPortion)
