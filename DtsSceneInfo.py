@@ -27,6 +27,7 @@ import Blender
 import string, gc
 from DtsPrefs import *
 import DtsGlobals
+from DTSPython import stripPath
 
 
 
@@ -80,6 +81,12 @@ Note: Prefs object must be initialized before the SceneInfo object.
 '''
 
 class SceneInfoClass:
+
+
+	#################################################
+	#  Initialization/Refresh
+	#################################################
+
 	def __init__(self, prefs):	
 		gc.enable()
 		self.preferences = prefs
@@ -97,57 +104,6 @@ class SceneInfoClass:
 		self.detailLevels = {}
 		self.DTSObjects = {}
 		self.__populateData()
-
-	# Gets the Base Name from the File Path
-	def getDefaultBaseName():
-		filepath = Blender.Get("filename")
-		if "\\" in filepath:
-			words = string.split(filepath, "\\")
-		else:
-			words = string.split(filepath, "/")
-		words = string.split(words[-1], ".")
-		return SceneInfoClass.__noext(string.join(words[0:len(words)], "."))
-	
-	getDefaultBaseName = staticmethod(getDefaultBaseName)
-
-	# Gets base path with trailing /
-	def getDefaultBasePath():
-		filepath = Blender.Get("filename")
-		if "\\" in filepath: sep = "\\"
-		else: sep = "/"
-		words = string.split(filepath, sep)
-		return string.join(words[:-1], sep)
-	
-	getDefaultBasePath = staticmethod(getDefaultBasePath)
-
-	def getPathSeparator():
-		pathSeparator = DtsGlobals.pathSeparator
-		filepath = Blender.Get("filename")
-		if "\\" in filepath: pathSeparator = "\\"
-		else: pathSeparator = "/"
-		return pathSeparator
-	
-	getPathSeparator = staticmethod(getPathSeparator)
-
-	# Strips the extension from a file name
-	def __noext(filepath):
-		words = string.split(filepath, ".")
-		if len(words)==1: return filepath
-		return string.join(words[:-1], ".")
-	
-	__noext = staticmethod(__noext)
-
-	# Gets the children of an object
-	def getChildren(self, obj):
-		return filter(lambda x: x.parent==obj, Blender.Object.Get())
-
-	# Gets all the children of an object (recursive)
-	def getAllChildren(self, obj):
-		obj_children = getChildren(obj)
-		for child in obj_children[:]:
-			obj_children += getAllChildren(child)
-		return obj_children
-	
 
 	# recursive, for internal use only
 	def __addTree(self, obj, parentNI):
@@ -255,7 +211,55 @@ class SceneInfoClass:
 		print "__populateData finished in", endTime - startTime
 
 
+	#################################################
+	#  File name and path methods
+	#################################################
+
+
+	# Gets the Base Name from the File Path
+	def getDefaultBaseName():
+		filepath = Blender.Get("filename")
+		if "\\" in filepath:
+			words = string.split(filepath, "\\")
+		else:
+			words = string.split(filepath, "/")
+		words = string.split(words[-1], ".")
+		return SceneInfoClass.__noext(string.join(words[0:len(words)], "."))
 	
+	getDefaultBaseName = staticmethod(getDefaultBaseName)
+
+	# Gets base path with trailing /
+	def getDefaultBasePath():
+		filepath = Blender.Get("filename")
+		if "\\" in filepath: sep = "\\"
+		else: sep = "/"
+		words = string.split(filepath, sep)
+		return string.join(words[:-1], sep)
+	
+	getDefaultBasePath = staticmethod(getDefaultBasePath)
+
+	def getPathSeparator():
+		pathSeparator = DtsGlobals.pathSeparator
+		filepath = Blender.Get("filename")
+		if "\\" in filepath: pathSeparator = "\\"
+		else: pathSeparator = "/"
+		return pathSeparator
+	
+	getPathSeparator = staticmethod(getPathSeparator)
+
+	# Strips the extension from a file name
+	def __noext(filepath):
+		words = string.split(filepath, ".")
+		if len(words)==1: return filepath
+		return string.join(words[:-1], ".")
+	
+	__noext = staticmethod(__noext)
+
+
+	#################################################
+	#  Images and materials
+	#################################################
+
 
 	# Strip image names of trailing extension
 	def __stripImageExtension(imagename, filename=""):
@@ -317,8 +321,6 @@ class SceneInfoClass:
 
 		return imageList
 	
-	#getDtsMaterials = staticmethod(getDtsMaterials)
-	
 	# gets a dts material name for a given Blender mesh primitive
 	def getFaceDtsMatName(face, msh):
 		imageName = None
@@ -337,189 +339,21 @@ class SceneInfoClass:
 		
 	getFaceDtsMatName = staticmethod(getFaceDtsMatName)
 	
-
+	# gets the names of all Blender images with extensions stripped
+	def getAllBlenderImages():
+		imageNames = []
+		for img in Blender.Image.Get():
+			imageNames.append( SceneInfoClass.__stripImageExtension(img.getName(), img.getFilename()) )
+		return imageNames
 	
-	# refreshes material data read from blender and updates related preferences.
-	def __importMaterialList(self):	
-		pass
-		'''
-		global SceneInfo
-		try:
-			materials = Prefs['Materials']
-		except:			
-			Prefs['Materials'] = {}
-			materials = Prefs['Materials']
-
-		# loop through all faces of all meshes in the shape tree and compile a list
-		# of unique images that are UV mapped to the faces.
-		imageList = []	
-		if SceneInfo != None:
-			for dlName in SceneInfo.detailLevels:
-				print dlName
-				dl = SceneInfo.detailLevels[dlName]
-				for ni in dl:
-					obj = ni.blenderObj
-					if obj.getType() != "Mesh": continue
-					objData = obj.getData()
-					for face in objData.faces:					
-						try: x = face.image
-						except IndexError: x = None
-						# If we don't Have an image assigned to the face
-						if x == None:						
-							try: x = objData.materials[face.mat]
-							except IndexError: x = None
-							# is there a material index assigned?
-							if x != None:
-								#  add the material name to the imagelist
-								imageName = stripImageExtension(objData.materials[face.mat].name)
-								if not (imageName in imageList):
-									imageList.append(imageName)
-
-						# Otherwise we do have an image assigned to the face, so add it to the imageList.
-						else:
-							imageName = stripImageExtension(face.image.getName(), face.image.getFilename())
-							if not (imageName in imageList):
-								imageList.append(imageName)
-
-
-		# remove unused materials from the prefs
-		for imageName in materials.keys()[:]:
-			if not (imageName in imageList): del materials[imageName]
-
-		if len(imageList)==0: return
-
-		# populate materials list with all blender materials
-		for imageName in imageList:
-			bmat = None
-			# Do we have a blender material that matches the image name?
-			try: bmat = Blender.Material.Get(imageName)
-			except NameError:
-				# No blender material, do we have a prefs key for this material?
-				try: x = Prefs['Materials'][imageName]
-				except KeyError:
-					# no corresponding blender material and no existing texture material, so use reasonable defaults.
-					Prefs['Materials'][imageName] = {}
-					pmi = Prefs['Materials'][imageName]
-					pmi['SWrap'] = True
-					pmi['TWrap'] = True
-					pmi['Translucent'] = False
-					pmi['Additive'] = False
-					pmi['Subtractive'] = False
-					pmi['SelfIlluminating'] = False
-					pmi['NeverEnvMap'] = True
-					pmi['NoMipMap'] = False
-					pmi['MipMapZeroBorder'] = False
-					pmi['IFLMaterial'] = False
-					pmi['DetailMapFlag'] = False
-					pmi['BumpMapFlag'] = False
-					pmi['ReflectanceMapFlag'] = False
-					pmi['BaseTex'] = imageName
-					pmi['DetailTex'] = None
-					pmi['BumpMapTex'] = None
-					pmi['RefMapTex'] = None
-					pmi['reflectance'] = 0.0
-					pmi['detailScale'] = 1.0
-				continue
-
-			# We have a blender material, do we have a prefs key for it?
-			try: x = Prefs['Materials'][bmat.name]			
-			except:
-				# No prefs key, so create one.
-				Prefs['Materials'][bmat.name] = {}
-				pmb = Prefs['Materials'][bmat.name]
-				# init everything to make sure all keys exist with sane values
-				pmb['SWrap'] = True
-				pmb['TWrap'] = True
-				pmb['Translucent'] = False
-				pmb['Additive'] = False
-				pmb['Subtractive'] = False
-				pmb['SelfIlluminating'] = False
-				pmb['NeverEnvMap'] = True
-				pmb['NoMipMap'] = False
-				pmb['MipMapZeroBorder'] = False
-				pmb['IFLMaterial'] = False
-				pmb['DetailMapFlag'] = False
-				pmb['BumpMapFlag'] = False
-				pmb['ReflectanceMapFlag'] = False
-				pmb['BaseTex'] = imageName
-				pmb['DetailTex'] = None
-				pmb['BumpMapTex'] = None
-				pmb['RefMapTex'] = None
-				pmb['reflectance'] = 0.0
-				pmb['detailScale'] = 1.0
-
-				if bmat.getEmit() > 0.0: pmb['SelfIlluminating'] = True
-				else: pmb['SelfIlluminating'] = False
-
-				pmb['RefMapTex'] = None
-				pmb['BumpMapTex'] = None
-				pmb['DetailTex'] = None
-
-				# Look at the texture channels if they exist
-				textures = bmat.getTextures()
-				if len(textures) > 0:
-					if textures[0] != None:
-						if textures[0].tex.image != None:						
-							pmb['BaseTex'] = stripImageExtension(textures[0].tex.image.getName())
-						else:
-							pmb['BaseTex'] = None
-
-						if (textures[0] != None) and (textures[0].tex.type == Texture.Types.IMAGE):
-							# Translucency?
-							if textures[0].mapto & Texture.MapTo.ALPHA:
-								pmb['Translucent'] = True
-								if bmat.getAlpha() < 1.0: pmb['Additive'] = True
-								else: pmb['Additive'] = False
-							else:
-								pmb['Translucent'] = False
-								pmb['Additive'] = False
-							# Disable mipmaps?
-							if not (textures[0].tex.imageFlags & Texture.ImageFlags.MIPMAP):
-								pmb['NoMipMap'] = True
-							else:pmb['NoMipMap'] = False
-
-							if bmat.getRef() > 0 and (textures[0].mapto & Texture.MapTo.REF):
-								pmb['NeverEnvMap'] = False
-
-					pmb['ReflectanceMapFlag'] = False
-					pmb['DetailMapFlag'] = False
-					pmb['BumpMapFlag'] = False
-					for i in range(1, len(textures)):
-						texture_obj = textures[i]					
-						if texture_obj == None: continue
-						# Figure out if we have an Image
-						if texture_obj.tex.type != Texture.Types.IMAGE:
-							continue
-
-						# Determine what this texture is used for
-						# A) We have a reflectance map
-						if (texture_obj.mapto & Texture.MapTo.REF):
-							# We have a reflectance map
-							pmb['ReflectanceMapFlag'] = True
-							pmb['NeverEnvMap'] = False
-							if textures[0].tex.image != None:
-								pmb['RefMapTex'] = stripImageExtension(textures[i].tex.image.getName())
-							else:
-								pmb['RefMapTex'] = None
-						# B) We have a normal map (basically a 3d bump map)
-						elif (texture_obj.mapto & Texture.MapTo.NOR):
-							pmb['BumpMapFlag'] = True
-							if textures[0].tex.image != None:
-								pmb['BumpMapTex'] = stripImageExtension(textures[i].tex.image.getName())
-							else:
-								pmb['BumpMapTex'] = None
-						# C) We have a texture; Lets presume its a detail map (since its laid on top after all)
-						else:
-							pmb['DetailMapFlag'] = True
-							if textures[0].tex.image != None:
-								pmb['DetailTex'] = stripImageExtension(textures[i].tex.image.getName())
-							else:
-								pmb['DetailTex'] = None
+	getAllBlenderImages = staticmethod(getAllBlenderImages)
 	
-		'''
-	# -----------------------------------------------------------
-	# public methods for getting data from the SceneInfo object
-	
+
+	#################################################
+	#  Nodes
+	#################################################
+
+
 	# get the names of all nodes in the scene
 	def getAllNodeNames(self):
 		nameList = []
@@ -527,6 +361,10 @@ class SceneInfoClass:
 			nameList.append(ni.nodeName)
 		return nameList
 
+
+	#################################################
+	#  Sequences
+	#################################################
 
 	
 	# gets the name portion of a sequence marker string
@@ -603,6 +441,12 @@ class SceneInfoClass:
 	
 	getSequenceInfo = staticmethod(getSequenceInfo)
 
+
+	#################################################
+	#  Meshes and DTS objects
+	#################################################
+
+
 	# strips the last '.' and everything following it from the mesh name.
 	def getStrippedMeshName(meshName):
 		names = meshName.split("_")
@@ -623,3 +467,20 @@ class SceneInfoClass:
 				dtsObjName = SceneInfoClass.getStrippedMeshName(meshNI.nodeName)
 				uniqueNames[dtsObjName] = 0
 		return uniqueNames
+
+
+	#################################################
+	#  Misc
+	#################################################
+
+
+	# Gets the children of an object
+	def getChildren(self, obj):
+		return filter(lambda x: x.parent==obj, Blender.Object.Get())
+
+	# Gets all the children of an object (recursive)
+	def getAllChildren(self, obj):
+		obj_children = getChildren(obj)
+		for child in obj_children[:]:
+			obj_children += getAllChildren(child)
+		return obj_children
