@@ -94,28 +94,26 @@ def doExport(progressBar):
 		# add all nodes
 		Shape.addAllNodes()
 
-		# add detail levels
+		# add visible detail levels
 		for dlName in SceneInfo.detailLevels.keys():
-			if dlName[0:6].upper() != 'DETAIL': continue
-			dlSize = int(dlName[6:len(dlName)])
-			meshDetails = SceneInfo.detailLevels[dlName]			
+			textPortion = Prefs.getTextPortion(dlName)
+			if textPortion.upper() != 'DETAIL': continue
+			dlSize = Prefs.getTrailingNumber(dlName)
+			meshDetails = SceneInfo.detailLevels[dlName]
+			print "Adding visible detail level =",dlName
 			Shape.addDetailLevel(meshDetails, dlSize)
+
+		# add collision detail levels
+		for dlName in SceneInfo.detailLevels.keys():
+			textPortion = Prefs.getTextPortion(dlName)
+			#if textPortion.upper() != 'COLLISION' and textPortion.upper() != 'LOSCOLLISION': continue
+			meshDetails = SceneInfo.detailLevels[dlName]
+			print "Col/Los detail level        =",dlName
+			if textPortion.upper() == 'COLLISION':
+				Shape.addCollisionDetailLevel(meshDetails, False, -1)
+			if textPortion.upper() == 'LOSCOLLISION':
+				Shape.addCollisionDetailLevel(meshDetails, True, -1)
 		
-		#add collision and loscollision detail levels
-		'''
-		curSize = -1		
-		for marker in self.collisionMeshes:
-			meshes = getAllChildren(marker)
-			Shape.addCollisionDetailLevel(meshes, False, curSize)
-			curSize -= 1
-			progressBar.update()					
-		curSize = -1
-		for marker in self.losCollisionMeshes:
-			meshes = getAllChildren(marker)
-			Shape.addCollisionDetailLevel(meshes, True, curSize)
-			curSize -= 1
-			progressBar.update()
-		'''
 		
 		# We have finished adding the regular detail levels. Now add the billboard if required.
 		if Prefs['Billboard']['Enabled']:
