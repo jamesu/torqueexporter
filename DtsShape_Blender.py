@@ -305,15 +305,11 @@ class BlenderShape(DtsShape):
 			# skip bounds mesh
 			if ni.nodeName == "Bounds": # or o.getType() != "Mesh":
 				continue
-			names = ni.nodeName.split("_")
-			detail_name_dot_index = names[0].rfind(".")
-			if detail_name_dot_index != -1:
-				detail_name = names[0][0:detail_name_dot_index]
-			else:
-				detail_name = names[0].split(".")[0]
 
+			detail_name = ni.dtsObjName
 			obj = None
 			sorted = False			
+			
 			# Identify corresponding master object
 			if self.subshapes[0].numObjects != 0:
 				subshape = self.subshapes[self.detaillevels[self.numBaseDetails-1].subshape]
@@ -321,10 +317,9 @@ class BlenderShape(DtsShape):
 					if self.sTable.get(dObj.name).upper() == detail_name.upper():
 						obj = dObj
 						break
-				if obj == None:
-					Torque_Util.dump_writeWarning("Warning: No object found, make sure an object with prefix '%s' exists in the base detail." % detail_name)
-					continue
-			else:
+			
+			# Add a new master object (dts object) if needed
+			if obj == None:
 				# add New master object
 				# Check that the mesh node is not excluded from export
 				pNodeInfo = ni.getGoodParentNI()
@@ -335,25 +330,11 @@ class BlenderShape(DtsShape):
 							pNodeIdx = node.name
 							break
 
-				'''
-				# Check to see if the mesh is parented to a bone				
-				if o.getParent() != None and o.getParent().getType() == 'Armature' and o.parentbonename != None:
-					for node in self.nodes[0:len(self.nodes)]:
-						if self.sTable.get(node.name) == o.parentbonename:
-							pNodeIdx = node.name
-							break
-				'''
 				obj = dObject(self.addName(detail_name), -1, -1, pNodeIdx)
 				obj.tempMeshes = []
 				self.objects.append(obj)
 				
-			# Kill the clones
-			if (self.subshapes[0].numObjects != 0) and (len(obj.tempMeshes) > self.numBaseDetails):
-				Torque_Util.dump_writeWarning("Warning: Too many clone's of mesh found in detail level, object '%s' skipped!" % o.getName())
-				continue
 			
-			
-			# Now we can import as normal
 
 			hasArmatureDeform = False
 			# Check for armature modifier
@@ -411,7 +392,9 @@ class BlenderShape(DtsShape):
 			try: x = self.preferences['PrimType']
 			except KeyError: self.preferences['PrimType'] = "Tris"
 			tmsh = BlenderMesh( self, o.name, mesh_data, -1, 1.0, mat, hasArmatureDeform, False, (self.preferences['PrimType'] == "TriLists" or self.preferences['PrimType'] == "TriStrips") )
-			if len(names) > 1: tmsh.setBlenderMeshFlags(names[1:])
+			
+			# todo - fix mesh flags
+			#if len(names) > 1: tmsh.setBlenderMeshFlags(names[1:])
 			
 			# If we ended up being a Sorted Mesh, sort the faces
 			if tmsh.mtype == tmsh.T_Sorted:
@@ -423,6 +406,8 @@ class BlenderShape(DtsShape):
 			numAddedMeshes += 1
 			
 			# clean up temporary objects
+			Blender.Scene.GetCurrent().objects.unlink(Blender.Object.Get("DTSExpObj_Tmp"))
+			
 			del mesh_data
 			del temp_obj
 		
