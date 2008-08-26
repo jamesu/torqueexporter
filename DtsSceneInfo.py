@@ -29,7 +29,7 @@ from DtsPrefs import *
 import DtsGlobals
 from DTSPython import stripPath
 
-
+Prefs = None
 
 
 '''
@@ -40,14 +40,15 @@ for getting dynamic node transform data from Blender whether the node was create
 Blender object or Blender bone.
 '''
 class nodeInfoClass:
-	def __init__(self, nodeName, blenderType, blenderObj, parentNI, prefs):
-		self.preferences = prefs
+	def __init__(self, nodeName, blenderType, blenderObj, parentNI):
 		self.nodeName = nodeName
 		self.blenderType = blenderType
 		self.blenderObj = blenderObj # either a blender bone or blender object depending on blenderType
 		self.parentNodeInfo = parentNI
+		self.detailLevel = None
+		self.dtsObjName = None
 		
-		self.isBannedNode = nodeName in self.preferences['BannedNodes']
+		self.isBannedNode = nodeName in Prefs['BannedNodes']
 		self.layers = blenderObj.layers
 		
 		if parentNI != None: self.parentName = parentNI.nodeName
@@ -66,7 +67,7 @@ class nodeInfoClass:
 	# don't call this until the tree is completely built.
 	def getGoodParentNI(self):
 		pNI = self
-		while (pNI != None) and (pNI.nodeName.upper() in self.preferences['BannedNodes']):
+		while (pNI != None) and (pNI.nodeName.upper() in Prefs['BannedNodes']):
 			pNI = pNI.parentNI
 		return pNI
 
@@ -88,77 +89,106 @@ class SceneInfoClass:
 	#################################################
 
 	def __init__(self, prefs):	
+		global Prefs
 		gc.enable()
-		self.preferences = prefs
-		self.nodes = {}
-		self.armatures = {}
-		self.meshes = {}
-		self.detailLevels = {}
-		self.DTSObjects = {}
-		self.__populateData()
+		Prefs = prefs
+		self.refreshAll()
+		#self.nodes = {}
+		#self.armatures = {}
+		#self.meshes = {}
+		#self.detailLevels = {}
+		#self.DTSObjects = {}
+		#self.__populateData()
 
 	def refreshAll(self):
 		self.nodes = {}
 		self.armatures = {}
 		self.meshes = {}
 		self.detailLevels = {}
+		# stores final dts object assignments, indexed by dts object names
 		self.DTSObjects = {}
+		# intermediate data structures used to determine how we're going to
+		# match up meshes with dts objects.
+		self.IPOs = {}
+		self.strippedMeshNames = {}
+		# build the tree
 		self.__populateData()
 
 	# recursive, for internal use only
 	def __addTree(self, obj, parentNI):
-			#   "obj" is a blender object of any type
-			#   "parentNI" is the parent object (NodeInfo object) of obj
-			
-			nodeName = obj.name
-			blenderType = "object"
-			blenderObj = obj
+		#   "obj" is a blender object of any type
+		#   "parentNI" is the parent object (NodeInfo object) of obj
+
+		# skip temp objects
+		if obj.name == "DTSExpObj_Tmp": return
+
+		nodeName = obj.name
+		blenderType = "object"
+		blenderObj = obj
 
 
-			# create a new nodeInfo object for the Blender object
-			n = nodeInfoClass(nodeName, blenderType, blenderObj, parentNI, self.preferences)
+		# create a new nodeInfo object for the Blender object
+		n = nodeInfoClass(nodeName, blenderType, blenderObj, parentNI)
 
-			# the new node to the nodes dictionary
-			self.nodes[nodeName] = n
+		# the new node to the nodes dictionary
+		self.nodes[nodeName] = n
 
-			# add the node to other dictionaries as needed
-			bObjType = obj.getType()
-			if (bObjType == 'Armature'):
-				self.armatures[nodeName] = n		
-			
-			# don't add object to detail levels if it has no visible geometry
-			elif not (bObjType in ['Empty', 'Curve', 'Camera', 'Lamp', 'Lattice']):
-				self.meshes[nodeName] = n			
-				# add mesh node info to detail levels
-				for dlName in self.preferences['DetailLevels'].keys():
-					dl = self.preferences['DetailLevels'][dlName]
-					for layer in obj.layers:
-						if layer in dl:
-							self.detailLevels[dlName].append(n)
-				'''
-				# add to DTSObjects
-				dtsObjName = getStrippedMeshName(obj.name)
-				try: dtsObj = self.DTSObjects[dtsObjName]
-				except: self.DTSObjects[dtsObjName] = []
-				self.DTSObjects[dtsObjName].append
-				'''
+		# add the node to other dictionaries as needed
+		bObjType = obj.getType()
+		if (bObjType == 'Armature'):
+			self.armatures[nodeName] = n		
 
-			# add armature bones if needed
-			if (bObjType == 'Armature'):
-				# get blender armature datablock
-				armDb = obj.getData()
-				for bone in filter(lambda x: x.parent==None, armDb.bones.values()):					
-					self.__addBoneTree(obj, n, bone, armDb)
+		# don't add object to detail levels if it has no visible geometry
+		elif not (bObjType in ['Empty', 'Curve', 'Camera', 'Lamp', 'Lattice']):
+			self.meshes[nodeName] = n			
+			# add mesh node info to detail levels
+			for dlName in Prefs['DetailLevels'].keys():
+				dl = Prefs['DetailLevels'][dlName]
+				for layer in obj.layers:
+					if layer in dl:
+						self.detailLevels[dlName].append(n)
+						n.detailLevel = dlName
 
-					
-			# add child trees
-			for child in filter(lambda x: x.parent==obj, Blender.Object.Get()):
-				parentBoneName = child.getParentBoneName()
-				if (obj.getType() == 'Armature') and (parentBoneName != None):					
-					parentNode = self.nodes[parentBoneName]					
-					self.__addTree(child, parentNode)
-				else:
-					self.__addTree(child, n)
+			#-------
+			# add to the temp dictionaries for calculating DTSObject assignment later
+			strippedName = SceneInfoClass.getStrippedMeshName(obj.name)
+			# set the dts object name
+			n.dtsObjName = strippedName
+			try: x = self.strippedMeshNames[strippedName]
+			except: self.strippedMeshNames[strippedName] = []
+			self.strippedMeshNames[strippedName].append(n)
+			# -
+			ipo = obj.getIpo()
+			try: ipoName = ipo.name
+			except: ipoName = 'NoneAssigned'
+			try: x = self.IPOs[ipoName]
+			except: self.IPOs[ipoName] = []
+			self.IPOs[ipoName].append(n)
+			#-------
+			'''
+			# add to DTSObjects
+			dtsObjName = getStrippedMeshName(obj.name)
+			try: dtsObj = self.DTSObjects[dtsObjName]
+			except: self.DTSObjects[dtsObjName] = []
+			self.DTSObjects[dtsObjName].append
+			'''
+
+		# add armature bones if needed
+		if (bObjType == 'Armature'):
+			# get blender armature datablock
+			armDb = obj.getData()
+			for bone in filter(lambda x: x.parent==None, armDb.bones.values()):					
+				self.__addBoneTree(obj, n, bone, armDb)
+
+
+		# add child trees
+		for child in filter(lambda x: x.parent==obj, Blender.Object.Get()):
+			parentBoneName = child.getParentBoneName()
+			if (obj.getType() == 'Armature') and (parentBoneName != None):					
+				parentNode = self.nodes[parentBoneName]					
+				self.__addTree(child, parentNode)
+			else:
+				self.__addTree(child, n)
 		
 
 	
@@ -169,7 +199,7 @@ class SceneInfoClass:
 		blenderObj = obj
 
 		# add it to the nodes dict
-		n = nodeInfoClass(nodeName, blenderType, blenderObj, parentNI, self.preferences)
+		n = nodeInfoClass(nodeName, blenderType, blenderObj, parentNI)
 		self.nodes[nodeName] = n
 
 		# add child trees
@@ -196,7 +226,7 @@ class SceneInfoClass:
 		startTime = Blender.sys.time()
 		
 		# create empty detail levels based on prefs
-		for dlName in self.preferences['DetailLevels'].keys():
+		for dlName in Prefs['DetailLevels'].keys():
 			self.detailLevels[dlName] = []
 		
 		# go through each object and bone and add subtrees		
@@ -207,6 +237,94 @@ class SceneInfoClass:
 		#for ni in filter(lambda x: x.parentNI==None, self.nodes.values()):
 		#	self.__printTree(ni)
 		#print "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		
+		
+		# check that every mesh in a detail level has a unique dts object name
+		for dlName in self.detailLevels.keys():
+			dl = self.detailLevels[dlName]
+			found = {}
+			for meshNI in dl:
+				dtsObjName = meshNI.dtsObjName
+				try: x = found[dtsObjName]
+				except:
+					# new dts object
+					found[dtsObjName] = []
+				found[dtsObjName].append(meshNI)
+			
+			print "-----------------------------"
+			print "Report of dts object names for", dlName
+			for dtsObjName in found.keys():
+				foundList = found[dtsObjName]
+				if len(foundList) > 1:
+					dtsObjName = foundList[0].dtsObjName
+					nameList = []
+					for ni in foundList: nameList.append(ni.nodeName)
+					print " Warning: The following mesh names in",dlName,"all reduce to the same DTS Object name:", dtsObjName
+					print " ", nameList
+					print "  The exporter will use the original names for these meshes and any nodes generated from them."
+					print "  This may result in duplicate or unneccesary nodes and inefficent mesh packing in the exported dts file."
+					
+					# fix dtsObject names.
+					for ni in foundList:
+						ni.dtsObjName = ni.nodeName
+						print "   Fixed dts object name for:", ni.nodeName
+			print "-----------------------------"
+				
+			
+		'''
+		# check for unique mesh object names up to the last "." in each detail level
+		# we want the percentage of unique names, which should be 100% if the
+		# user has named all of their meshes correctly :-)
+		correctnessRatio = 0
+		total = 0
+		correct = 0
+		for dtsObjName in self.strippedMeshNames.keys():
+			foundList = []
+			dtsObjMeshes = self.strippedMeshNames[dtsObjName]
+			total += len(dtsObjMeshes)
+			for ni in dtsObjMeshes:
+				# should be no duplicate stripped mesh names in each detail level
+				if ni.detailLevel in foundList:
+					# Houston, we have a problem!
+					pass
+				else:
+					foundList.append(ni.detailLevel)
+					correct += 1
+		print "total = ", total
+		print "correct = ", correct
+		perCor =  float(correct)/float(total)
+		print "Percentage correct = ", perCor * 100.0
+		
+		# check for object unique IPOs for each object within each LOD
+		correctnessRatio = 0
+		total = 0
+		correct = 0
+		for IPOName in self.IPOs.keys():
+			foundList = []
+			dtsObjMeshes = self.IPOs[IPOName]
+			total += len(dtsObjMeshes)
+			for ni in dtsObjMeshes:
+				# should be no duplicate stripped mesh names in each detail level
+				if ni.detailLevel in foundList:
+					# Houston, we have a problem!
+					pass
+				else:
+					foundList.append(ni.detailLevel)
+					correct += 1
+		print "total = ", total
+		print "correct = ", correct
+		perCor =  float(correct)/float(total)
+		print "Percentage correct = ", perCor * 100.0
+					
+		print "-------------------------------------"
+		print self.strippedMeshNames
+		print "-------------------------------------"
+		print self.IPOs
+		print "-------------------------------------"
+		'''
+			
+			
+		
 		endTime = Blender.sys.time()
 		print "__populateData finished in", endTime - startTime
 
@@ -214,6 +332,27 @@ class SceneInfoClass:
 	#################################################
 	#  File name and path methods
 	#################################################
+
+	# Gets the base file name from a full file path (no extension)
+	def fileNameFromPath(filepath):
+		if "\\" in filepath:
+			words = string.split(filepath, "\\")
+		else:
+			words = string.split(filepath, "/")
+		words = string.split(words[-1], ".")
+		return SceneInfoClass.__noext(string.join(words[0:len(words)], "."))
+	
+	fileNameFromPath = staticmethod(fileNameFromPath)
+
+	# Gets base path from a full file path, with trailing slash
+	def pathPortion():
+		filepath = Blender.Get("filename")
+		if "\\" in filepath: sep = "\\"
+		else: sep = "/"
+		words = string.split(filepath, sep)
+		return string.join(words[:-1], sep)
+	
+	pathPortion = staticmethod(pathPortion)
 
 
 	# Gets the Base Name from the File Path
