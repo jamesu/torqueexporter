@@ -30,6 +30,9 @@ import DTSPython
 from DTSPython import *
 from DTSPython import Torque_Math
 
+from DtsGlobals import *
+from DtsSceneInfo import *
+
 
 import gc
 
@@ -49,6 +52,12 @@ class nodeInfoClass:
 		self.blenderType = blenderType
 		self.blenderObj = blenderObj # either a blender bone or blender object depending on blenderType
 		self.parentNodeInfo = parentNI		
+		
+		
+		
+		
+		
+		
 		if parentNI != None: self.parentName = parentNI.nodeName
 		else: self.parentName = None
 		if parentNI != None: self.parentBlenderType = parentNI.blenderType
@@ -208,23 +217,7 @@ class nodeInfoClass:
 
 
 
-# --------- some constants used by the below class ----------
-# indicies into armInfo's lists
-ARMOB = 0
-ARMDATA = 1
-ARMROT = 2
-ARMROTINV = 3
-ARMLOC = 4
-ARMSIZE = 5
 
-# indicies into armBone's lists
-BONE = 0
-BONEMAT = 1
-BONERESTPOSWS = 2
-BONERESTROTWS = 3
-PARENTNAME = 4
-BONEDEFPOSPS = 5
-BONEDEFROTPS = 6
 
 # --------- Class that stores all static data internally so we only have to get it once ----------
 class DtsPoseUtilClass:
@@ -248,7 +241,9 @@ class DtsPoseUtilClass:
 			#   "obj" is a blender object of any type
 			#   "parentNI" is the parent object (NodeInfo object) of obj
 
-			
+			# skip temp objects
+			if obj.name == "DTSExpObj_Tmp": return
+
 			nodeName = obj.name
 			blenderType = "object"
 			blenderObj = obj
