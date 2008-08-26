@@ -25,6 +25,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import Common_Gui
 import DtsGlobals
+from DtsSceneInfo import *
 
 '''
 ***************************************************************************************************
@@ -247,13 +248,13 @@ class GeneralControlsClass:
 		elif control.name == "guiShowWarnErrPopup":
 			Prefs["ShowWarningErrorPopup"] = control.state
 		elif control.name == "guiCustomFilename":
-			Prefs['exportBasename'] = noext(basename(control.value))
-			Prefs['exportBasepath'] = basepath(control.value)
+			Prefs['exportBasename'] = SceneInfoClass.fileNameFromPath(control.value)
+			Prefs['exportBasepath'] = SceneInfoClass.pathPortion(control.value)
 			if self.guiCustomFilename.value[len(self.guiCustomFilename.value)-4:] != ".dts":
 				self.guiCustomFilename.value += ".dts"
 
 			if Prefs['LogToOutputFolder']:
-				Torque_Util.dump_setout( "%s%s%s.log" % (Prefs['exportBasepath'], pathSeparator, noext(Prefs['exportBasename'])) )
+				Torque_Util.dump_setout( "%s%s%s.log" % (Prefs['exportBasepath'], pathSeparator, Prefs['exportBasename']) )
 		elif control.name == "guiCustomFilenameSelect":
 			if "\\" in Prefs['exportBasepath']:
 				pathSep = "\\"
@@ -261,8 +262,8 @@ class GeneralControlsClass:
 				pathSep = "/"
 			Blender.Window.FileSelector (self.guiGeneralSelectorCallback, 'Select destination and filename', Prefs['exportBasepath'] + pathSep + Prefs['exportBasename'])
 		elif control.name == "guiCustomFilenameDefaults":
-			Prefs['exportBasename'] = noext(basename(Blender.Get("filename")))
-			Prefs['exportBasepath'] = basepath(Blender.Get("filename"))		
+			Prefs['exportBasename'] = SceneInfoClass.getDefaultBaseName()
+			Prefs['exportBasepath'] = SceneInfoClass.getDefaultBasePath()
 			pathSep = "/"
 			if "\\" in Prefs['exportBasepath']:
 				pathSep = "\\"
@@ -277,9 +278,9 @@ class GeneralControlsClass:
 		elif control.name == "guiLogToOutputFolder":
 			Prefs['LogToOutputFolder'] = control.state
 			if control.state:
-				Torque_Util.dump_setout( "%s%s%s.log" % (Prefs['exportBasepath'], pathSeparator, noext(Prefs['exportBasename'])) )
+				Torque_Util.dump_setout( "%s%s%s.log" % (Prefs['exportBasepath'], pathSeparator, Prefs['exportBasename']) )
 			else:
-				Torque_Util.dump_setout("%s.log" % noext(Blender.Get("filename")))
+				Torque_Util.dump_setout("%s.log" % Prefs['exportBasename'])
 			Prefs['exportBasename']
 
 		
@@ -340,8 +341,8 @@ class GeneralControlsClass:
 		global guiGeneralSubtab
 		Prefs = DtsGlobals.Prefs
 		if filename != "":
-			Prefs['exportBasename'] = noext(basename(filename))
-			Prefs['exportBasepath'] = basepath(filename)
+			Prefs['exportBasename'] = SceneInfoClass.fileNameFromPath(filename)
+			Prefs['exportBasepath'] = SceneInfoClass.pathPortion(filename)
 
 			pathSep = "/"
 			if "\\" in Prefs['exportBasepath']: pathSep = "\\"
