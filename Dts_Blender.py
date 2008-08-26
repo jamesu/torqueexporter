@@ -260,9 +260,9 @@ def handleScene():
 	#cleanKeys()
 	#createActionKeys()
 	
+	SceneInfo.refreshAll()
 	Prefs.refreshSequencePrefs()
-	Prefs.refreshMaterialPrefs()
-	
+	Prefs.refreshMaterialPrefs()	
 
 def export():
 	SceneInfo = DtsGlobals.SceneInfo
@@ -363,7 +363,7 @@ def entryPoint(a):
 		
 		
 	
-	Torque_Util.dump_writeln("Torque Exporter %s " % Version)
+	Torque_Util.dump_writeln("Torque Exporter %s " % DtsGlobals.Version)
 	Torque_Util.dump_writeln("Using blender, version %s" % Blender.Get('version'))
 	
 	#if Torque_Util.Torque_Math.accelerator != None:
@@ -377,7 +377,7 @@ def entryPoint(a):
 	if (a == 'quick'):
 		handleScene()
 		# Use the profiler, if enabled.
-		if Profiling:
+		if DtsGlobals.Profiling:
 			# make the entry point available from __main__
 			__main__.export = export
 			profile.run('export(),', 'exporterProfilelog.txt')
@@ -385,7 +385,7 @@ def entryPoint(a):
 			export()
 		
 		# dump out profiler stats if enabled
-		if Profiling:
+		if DtsGlobals.Profiling:
 			# print out the profiler stats.
 			p = pstats.Stats('exporterProfilelog.txt')
 			p.strip_dirs().sort_stats('cumulative').print_stats(60)
