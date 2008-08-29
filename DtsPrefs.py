@@ -201,11 +201,16 @@ class prefsClass(dict):
 		largest = 0
 		for dlName in filter(lambda x: x[0:len(DLType)].lower() == DLType.lower(),  self['DetailLevels'].keys()):
 			size = abs(prefsClass.getTrailingNumber(dlName))
-			print "** size=",size
 			if size > largest: largest = size
 		if largest == 0: largest = None
 		return largest
 
+	def getSortedDLNames(self):
+		sortedKeys = self['DetailLevels'].keys()
+		sortedKeys.sort( lambda x,y: cmp(prefsClass.getTrailingNumber(x), prefsClass.getTrailingNumber(y)) )
+		sortedKeys.reverse()
+		return sortedKeys
+		
 
 	
 	# adds a new detail level to the preferences
