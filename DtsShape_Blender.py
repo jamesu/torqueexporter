@@ -355,16 +355,16 @@ class BlenderShape(DtsShape):
 
 			# Get name, do housekeeping			
 			strippedDLName = DtsGlobals.Prefs.getTextPortion(dlName)
+			self.numBaseDetails += 1
 			if strippedDLName.upper() == "DETAIL":
-				self.numBaseDetails += 1
 				detailName = "Detail-%d" % (self.numBaseDetails)				
 			elif strippedDLName.upper() == "COLLISION":
 				self.numCollisionDetails += 1
-				self.numBaseDetails += 1
 				detailName = "Collision-%d" % (self.numCollisionDetails)
 			elif strippedDLName.upper() == "LOSCOLLISION":
 				self.numLOSCollisionDetails += 1
 				detailName = "LOS-%d" % (self.numLOSCollisionDetails + 9)
+			
 
 			# Store constructed detail level info into shape
 			#self.detaillevels.append(DetailLevel(self.addName(detailName), 0, self.numBaseDetails-1, calcSize, -1, -1, polyCount))
