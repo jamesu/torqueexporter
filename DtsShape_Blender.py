@@ -115,228 +115,110 @@ class BlenderShape(DtsShape):
 		del self.addedArmatures
 		del self.externalSequences
 		del self.scriptMaterials
-	# Adds collision detail levels
-	def addCollisionDetailLevel(self, meshes, LOS=False, size=-1):
-		'''
-		This adds a collison or LOS detail level to the shape.
 
-		The end result is a set of objects in the first subshape something like this:
-		
-			Head: HeadMesh(128) HeadMesh(64) HeadMesh(32) NULL NULL
-			Body: BodyMesh(128) BodyMesh(64) HeadMesh(32) NULL NULL
-			RightLeg: RightLegMesh(128) RightLegMesh(64) RightLegMesh(32) NULL NULL
-			RightArm: RightArmMesh(128) RightArmMesh(64) RightArmMesh(32) NULL NULL
-			LeftLeg: LeftLegMesh(128) LeftLegMesh(64) LeftLegMesh(32) NULL NULL
-			LeftArm: LeftArmMesh(128) LeftArmMesh(64) LeftArmMesh(32) NULL NULL
-			Bag: BagMesh(128) NULL NULL NULL NULL
-			ColMesh1: NULL NULL NULL ColMesh1 NULL
-			LOSMesh1: NULL NULL NULL NULL LosMesh1
-			
-		'''
-		
-		'''
-		# before we do anything else, reset the transforms of all bones.
-		# loop through each node and reset it's transforms.  This avoids transforms carrying over from
-		# other animations. Need to cycle through _ALL_ bones and reset the transforms.
-		for armOb in Blender.Object.Get():
-			if (armOb.getType() != 'Armature') or (armOb.name == "DTS-EXP-GHOST-OB"): continue
-			tempPose = armOb.getPose()
-			armDb = armOb.getData()
-			#for bonename in armOb.getData().bones.keys():
-			#for bonename in self.poseUtil.armBones[armOb.name].keys():
-			for bonename in armDb.bones.keys():
-				# reset the bone's transform
-				tempPose.bones[bonename].quat = bMath.Quaternion().identity()
-				tempPose.bones[bonename].size = bMath.Vector(1.0, 1.0, 1.0)
-				tempPose.bones[bonename].loc = bMath.Vector(0.0, 0.0, 0.0)
-			# update the pose.
-			tempPose.update()
-		#Blender.Scene.GetCurrent().makeCurrent()
-		'''
-		
-		numAddedMeshes = 0
-		polyCount = 0
-		# First, import meshes
-		# First, import meshes
-		for ni in meshes:
-			o = ni.blenderObj
-			# skip bounds mesh
-			if o.getName() == "Bounds":
-				continue
 
-			pNodeIdx = -1
-			for con in o.constraints:
-				if con[Blender.Constraint.Settings.BONE] != None:
-					pNodeIdx = self.getNodeIndex(con[Blender.Constraint.Settings.BONE])
 
-			# Check to see if the mesh is parented to a bone				
-			if o.getParent() != None and o.getParent().getType() == 'Armature' and o.parentbonename != None:
-				for node in self.nodes[0:len(self.nodes)]:
-					if self.sTable.get(node.name) == o.parentbonename:
-						pNodeIdx = node.name
-						break
-			obj = dObject(self.addName(o.getName()), -1, -1, pNodeIdx)
-			obj.tempMeshes = []
-			self.objects.append(obj)
-				
-			# Kill the clones
-			if (self.subshapes[0].numObjects != 0) and (len(obj.tempMeshes) > self.numBaseDetails):
-				Torque_Util.dump_writeWarning("Warning: Too many clones of mesh found in detail level, object '%s' skipped!" % o.getName())
-				continue
-			
-			
-			# Now we can import as normal
-			mesh_data = o.getData();
-			mesh_data.update()
-			
-			# Get Object's Matrix
-			mat = self.collapseBlenderTransform(o)
-			
-			# Import Mesh, process flags
-			tmsh = BlenderMesh(self, o.name, mesh_data, 0, 1.0, mat, False, True)
-			
-			# Increment polycount metric
-			polyCount += tmsh.getPolyCount()
-			# prefix with null meshes so we're in the right objectDetail
-			#for i in range(0, len(self.detaillevels)-(self.numCollisionDetails + self.numLOSCollisionDetails) ):
-			for i in range(0, len(self.detaillevels) ):
-				obj.tempMeshes.append(DtsMesh(DtsMesh.T_Null))
-			obj.tempMeshes.append(tmsh)
-			numAddedMeshes += 1
-		
-		# Update the number of meshes in the first subshape
-		self.subshapes[0].numObjects += numAddedMeshes
-		
-		# Get name, do housekeeping
-		self.numBaseDetails += 1
-		
-		#detailName = "Detail-%d" % (self.numBaseDetails)
-		if LOS:
-			self.numLOSCollisionDetails += 1
-			# MaxCollisionShapes still has a value of 8 in TGE/TGEA, so we need to offset
-			# by 9 (calculated as i + 1 + MaxCollisionShapes).  This should still work, even as the numbers begin to overlap.
-			detailName = "LOS-%d" % (9+self.numLOSCollisionDetails)
+
+	# Find an existing dts object in the shape	
+	def findDtsObject(self, dtsObjName):
+		# get/add dts object to shape
+		masterObject = None
+		for dObj in self.objects:
+			if self.sTable.get(dObj.name).upper() == dtsObjName.upper():
+				masterObject = dObj
+		return masterObject
+
+	# Adds a dts object to the shape
+	def addDtsObject(self, dtsObjName, pNodeIdx):
+		masterObject = dObject(self.addName(dtsObjName), -1, -1, pNodeIdx)
+		masterObject.tempMeshes = []
+		self.objects.append(masterObject)
+		return masterObject
+
+	# Adds a mesh to a dts object
+	def addMesh(self, o, masterObject):
+		hasArmatureDeform = False
+		# Check for armature modifier
+		for mod in o.modifiers:
+			if mod.type == Blender.Modifier.Types.ARMATURE:					
+				hasArmatureDeform = True
+		# Check for an armature parent
+		try:
+			if o.parentType == Blender.Object.ParentTypes['ARMATURE']:
+				hasArmatureDeform = True
+		except: pass
+		# does the object have geometry?
+
+		# do we even have any modifiers?  If not, we can skip copying the display data.
+		#print "Checking object", o.name
+
+		try: hasMultiRes = o.getData(False,True).multires
+		except AttributeError: hasMultiRes = False
+
+		if len(o.modifiers) != 0 or hasMultiRes:
+			hasModifiers = True
 		else:
-			self.numCollisionDetails += 1
-			detailName = "Collision-%d" % (self.numCollisionDetails)
+			hasModifiers = False
 
-		if self.subshapes[0].numObjects != numAddedMeshes:
-			# The following condition should NEVER happen
-			# Actually, this can happen if the detail number for
-			# the autobillboard LOD is set to a value higher than
-			# the lowest regular detail level. - Joe G.
-			if self.subshapes[0].numObjects < numAddedMeshes:
-				# todo - insert a proper error message here and discard
-				# autobillboard LOD if this condition is true?
-				print "PANIC!! PANIC!! RUN!!!"
-				return False
-			'''
-			# Ok, so we have an object with not enough meshes - find the odd one out
-			for obj in self.objects[self.subshapes[0].firstObject:self.subshapes[0].firstObject+self.subshapes[0].numObjects]:
-				if len(obj.tempMeshes) != self.numBaseDetails:
-					# Add dummy mesh (presumed non-existant)
-					obj.tempMeshes.append(DtsMesh(DtsMesh.T_Null))
-			'''
-		
-		# Store constructed detail level info into shape
-		self.detaillevels.append(DetailLevel(self.addName(detailName), 0, self.numBaseDetails-1, size, -1, -1, polyCount))
-			
-		return True
-	
-	# Adds non-specific detail levels
-	def addDetailLevel(self, meshes, size=-1):
-		'''
-		This adds a detail level to the shape.
-		Meshes are bundled into individual object's, all of which belong in the first subshape.
-		The first detail level is used as a template for the rest; All other detail levels
-		must contain the same, or a lower amount of mesh objects than the first detail level.
-		
-		A mesh is matched with its corresponding copy in the first detail level via checking the
-		first part of its name, prefixed before the ".", e.g:
-		
-			Head_<flags>
-			Head.1_<flags>
-			Head.2
-			
-		Would all link to the object "Head".
-		
-		The end result is a set of objects in the first subshape something like this:
-		
-			Head: HeadMesh(128) HeadMesh(64) HeadMesh(32)
-			Body: BodyMesh(128) BodyMesh(64) HeadMesh(32)
-			RightLeg: RightLegMesh(128) RightLegMesh(64) RightLegMesh(32)
-			RightArm: RightArmMesh(128) RightArmMesh(64) RightArmMesh(32)
-			LeftLeg: LeftLegMesh(128) LeftLegMesh(64) LeftLegMesh(32)
-			LeftArm: LeftArmMesh(128) LeftArmMesh(64) LeftArmMesh(32)
-			Bag: BagMesh(128) NULL NULL
-			
-		An obvious limitation with this method is that, presuming all your meshes are rigid, you cannot
-		have HeadMesh(128) animated by bone1 and HeadMesh(32) animated by bone12 - they all need to be attached to the same bone!
-		This limitation can of course be worked around if you use skinned meshes instead.
-		'''
-		
-		'''
-		# before we do anything else, reset the transforms of all bones.
-		# loop through each node and reset it's transforms.  This avoids transforms carrying over from
-		# other animations. Need to cycle through _ALL_ bones and reset the transforms.
-		for armOb in Blender.Object.Get():
-			if (armOb.getType() != 'Armature') or (armOb.name == "DTS-EXP-GHOST-OB"): continue
-			tempPose = armOb.getPose()
-			armDb = armOb.getData()
-			#for bonename in armOb.getData().bones.keys():
-			#for bonename in self.poseUtil.armBones[armOb.name].keys():
-			#for bonename in filter(lambda x: x.armParentNI.blenderObj==obj, self.poseUtil.nodes.values()):
-			for bonename in armDb.bones.keys():
-				#bonename = bone.name
-				# reset the bone's transform
-				tempPose.bones[bonename].quat = bMath.Quaternion().identity()
-				tempPose.bones[bonename].size = bMath.Vector(1.0, 1.0, 1.0)
-				tempPose.bones[bonename].loc = bMath.Vector(0.0, 0.0, 0.0)
-			# update the pose.
-			tempPose.update()
-		#Blender.Scene.GetCurrent().makeCurrent()		
-		'''
-		
-		numAddedMeshes = 0
-		polyCount = 0
-		# First, import meshes
-		for ni in meshes:
-			o = ni.blenderObj
-			# skip bounds mesh
-			if ni.nodeName == "Bounds": # or o.getType() != "Mesh":
-				continue
+		# Otherwise, get the final display data, as affected by modifers.
+		if ((not hasArmatureDeform) and hasModifiers) or (o.getType() in ['Surf', 'Text', 'MBall']):
+			#print "Getting raw data for", o.getName()
+			try:
+				temp_obj = Blender.Object.Get("DTSExpObj_Tmp")
+			except:
+				temp_obj = Blender.Object.New("Mesh", "DTSExpObj_Tmp")
+			try:
+				mesh_data = Blender.Mesh.Get("DTSExpMshObj_Tmp")
+			except:
+				mesh_data = Blender.Mesh.New("DTSExpMshObj_Tmp")
+			# try to get the raw display data
+			try:
+				mesh_data.getFromObject(o)
+				temp_obj.link(mesh_data)
+			except: 
+				#todo - warn when we couldn't get mesh data?
+				pass			
 
-			detail_name = ni.dtsObjName
-			obj = None
-			sorted = False			
-			
-			# Identify corresponding master object
-			if self.subshapes[0].numObjects != 0:
-				subshape = self.subshapes[self.detaillevels[self.numBaseDetails-1].subshape]
-				for dObj in self.objects[subshape.firstObject:subshape.firstObject+subshape.numObjects]:
-					if self.sTable.get(dObj.name).upper() == detail_name.upper():
-						obj = dObj
-						break
-			
-			# Add a new master object (dts object) if needed
-			if obj == None:
-				# add New master object
-				# Check that the mesh node is not excluded from export
-				pNodeInfo = ni.getGoodParentNI()
-				pNodeIdx = -1
-				if pNodeInfo != None:
-					for node in self.nodes[0:len(self.nodes)]:
-						if self.sTable.get(node.name) == pNodeInfo.nodeName:
-							pNodeIdx = node.name
-							break
+		# if we have armature deformation, or don't have any modifiers, get the mesh data the old fashon way
+		else:
+			#print "Getting mesh data for", o.getName()
+			mesh_data = o.getData(False,True);
+			temp_obj = None
 
-				obj = dObject(self.addName(detail_name), -1, -1, pNodeIdx)
-				obj.tempMeshes = []
-				self.objects.append(obj)
-				
-			
 
-			hasArmatureDeform = False
+		# Get Object's Matrix
+		mat = self.collapseBlenderTransform(o)
+
+		# Import Mesh, process flags
+		try: x = self.preferences['PrimType']
+		except KeyError: self.preferences['PrimType'] = "Tris"
+		tmsh = BlenderMesh( self, o.name, mesh_data, -1, 1.0, mat, hasArmatureDeform, False, (self.preferences['PrimType'] == "TriLists" or self.preferences['PrimType'] == "TriStrips") )
+
+		# todo - fix mesh flags
+		#if len(names) > 1: tmsh.setBlenderMeshFlags(names[1:])
+
+		# If we ended up being a Sorted Mesh, sort the faces
+		if tmsh.mtype == tmsh.T_Sorted:
+			tmsh.sortMesh(self.preferences['AlwaysWriteDepth'], self.preferences['ClusterDepth'])
+
+		# Increment polycount metric
+		polyCount = tmsh.getPolyCount()
+		masterObject.tempMeshes.append(tmsh)
+		
+
+		# clean up temporary objects
+		Blender.Scene.GetCurrent().objects.unlink(Blender.Object.Get("DTSExpObj_Tmp"))
+
+		del mesh_data
+		del temp_obj
+		
+		return polyCount
+
+
+	# todo - combine with addMesh and paramatize
+	def addCollisionMesh(self, o, masterObject):
+		hasArmatureDeform = False
+		if False:
 			# Check for armature modifier
 			for mod in o.modifiers:
 				if mod.type == Blender.Modifier.Types.ARMATURE:					
@@ -346,105 +228,150 @@ class BlenderShape(DtsShape):
 				if o.parentType == Blender.Object.ParentTypes['ARMATURE']:
 					hasArmatureDeform = True
 			except: pass
-			# does the object have geometry?
-			
-			# do we even have any modifiers?  If not, we can skip copying the display data.
-			print "Checking object", o.name
-			
-			try: hasMultiRes = o.getData(False,True).multires
-			except AttributeError: hasMultiRes = False
-			
-			if len(o.modifiers) != 0 or hasMultiRes:
-				hasModifiers = True
-			else:
-				hasModifiers = False
-				
-			# Otherwise, get the final display data, as affected by modifers.
-			if ((not hasArmatureDeform) and hasModifiers) or (o.getType() in ['Surf', 'Text', 'MBall']):
-				print "Getting raw data for", o.getName()
-				try:
-					temp_obj = Blender.Object.Get("DTSExpObj_Tmp")
-				except:
-					temp_obj = Blender.Object.New("Mesh", "DTSExpObj_Tmp")
-				try:
-					mesh_data = Blender.Mesh.Get("DTSExpMshObj_Tmp")
-				except:
-					mesh_data = Blender.Mesh.New("DTSExpMshObj_Tmp")
-				# try to get the raw display data
-				try:
-					mesh_data.getFromObject(o)
-					temp_obj.link(mesh_data)
-				except: 
-					#todo - warn when we couldn't get mesh data?
-					pass			
-					
-			# if we have armature deformation, or don't have any modifiers, get the mesh data the old fashon way
-			else:
-				print "Getting mesh data for", o.getName()
-				mesh_data = o.getData(False,True);
-				temp_obj = None
+		
+
+		# do we even have any modifiers?  If not, we can skip copying the display data.
+		print "Checking object", o.name
+
+		try: hasMultiRes = o.getData(False,True).multires
+		except AttributeError: hasMultiRes = False
+
+		if len(o.modifiers) != 0 or hasMultiRes:
+			hasModifiers = True
+		else:
+			hasModifiers = False
+
+		# Otherwise, get the final display data, as affected by modifers.
+		if ((not hasArmatureDeform) and hasModifiers) or (o.getType() in ['Surf', 'Text', 'MBall']):
+			#print "Getting raw data for", o.getName()
+			try:
+				temp_obj = Blender.Object.Get("DTSExpObj_Tmp")
+			except:
+				temp_obj = Blender.Object.New("Mesh", "DTSExpObj_Tmp")
+			try:
+				mesh_data = Blender.Mesh.Get("DTSExpMshObj_Tmp")
+			except:
+				mesh_data = Blender.Mesh.New("DTSExpMshObj_Tmp")
+			# try to get the raw display data
+			try:
+				mesh_data.getFromObject(o)
+				temp_obj.link(mesh_data)
+			except: 
+				#todo - warn when we couldn't get mesh data?
+				pass			
+
+		# if we have armature deformation, or don't have any modifiers, get the mesh data the old fashon way
+		else:
+			#print "Getting mesh data for", o.getName()
+			mesh_data = o.getData(False,True);
+			temp_obj = None
+
+
+		# Get Object's Matrix
+		mat = self.collapseBlenderTransform(o)
+
+		# Import Mesh, process flags
+		try: x = self.preferences['PrimType']
+		except KeyError: self.preferences['PrimType'] = "Tris"
+		tmsh = BlenderMesh(self, o.name, mesh_data, 0, 1.0, mat, False, True)
+		#tmsh = BlenderMesh( self, o.name, mesh_data, -1, 1.0, mat, hasArmatureDeform, False, (self.preferences['PrimType'] == "TriLists" or self.preferences['PrimType'] == "TriStrips") )
+
+
+		# Increment polycount metric
+		polyCount = tmsh.getPolyCount()
+		masterObject.tempMeshes.append(tmsh)
+		
+
+		# clean up temporary objects
+		Blender.Scene.GetCurrent().objects.unlink(Blender.Object.Get("DTSExpObj_Tmp"))
+
+		del mesh_data
+		del temp_obj
+		
+		return polyCount
+
+		
+
+	
+	# Adds all meshes, detail levels, and dts objects to the shape.
+	# this should be called after nodes are added.
+	def addAllDetailLevels(self, dtsObjects, sortedDetailLevels):
+		dtsObjList = dtsObjects.keys()
+		# add each detail level
+		for dlName in sortedDetailLevels:
+			# --------------------------------------------
+			numAddedMeshes = 0
+			polyCount = 0
+			size = DtsGlobals.Prefs.getTrailingNumber(dlName)
+			# loop through each dts object, add dts objects and meshes to the shape.
+			for dtsObjName in dtsObjList:
+
+				# get nodeinfo struct for the current DL and dts object
+				ni = dtsObjects[dtsObjName][dlName]
+
+				# get parent node index for dts object
+				pNodeNI = None
+				# find the actual parent node
+				for dln in sortedDetailLevels:
+					if dtsObjects[dtsObjName][dln] != None:
+						pNodeNI = dtsObjects[dtsObjName][dln].getGoodParentNI()
+						break
+
+				if pNodeNI == None:
+					pNodeIdx = -1
+				else:
+					pNodeIdx = -1
+					for node in self.nodes:
+						if self.sTable.get(node.name).upper() == pNodeNI.dtsObjName.upper():
+							pNodeIdx = node.name
+							break
 
 				
-			# Get Object's Matrix
-			mat = self.collapseBlenderTransform(o)
-			
-			# Import Mesh, process flags
-			try: x = self.preferences['PrimType']
-			except KeyError: self.preferences['PrimType'] = "Tris"
-			tmsh = BlenderMesh( self, o.name, mesh_data, -1, 1.0, mat, hasArmatureDeform, False, (self.preferences['PrimType'] == "TriLists" or self.preferences['PrimType'] == "TriStrips") )
-			
-			# todo - fix mesh flags
-			#if len(names) > 1: tmsh.setBlenderMeshFlags(names[1:])
-			
-			# If we ended up being a Sorted Mesh, sort the faces
-			if tmsh.mtype == tmsh.T_Sorted:
-				tmsh.sortMesh(self.preferences['AlwaysWriteDepth'], self.preferences['ClusterDepth'])
+				# get/add dts object to shape
+				masterObject = self.findDtsObject(dtsObjName)
+				if masterObject == None:
+					masterObject = self.addDtsObject(dtsObjName, pNodeIdx)
+
 				
-			# Increment polycount metric
-			polyCount += tmsh.getPolyCount()
-			obj.tempMeshes.append(tmsh)
-			numAddedMeshes += 1
-			
-			# clean up temporary objects
-			Blender.Scene.GetCurrent().objects.unlink(Blender.Object.Get("DTSExpObj_Tmp"))
-			
-			del mesh_data
-			del temp_obj
-		
-		# Modify base subshape if required
-		if self.numBaseDetails == 0:
-			self.subshapes[0].firstObject = len(self.objects)-numAddedMeshes
-			self.subshapes[0].numObjects = numAddedMeshes
-			
-		# Get name, do housekeeping
-		self.numBaseDetails += 1
-		detailName = "Detail-%d" % (self.numBaseDetails)
-		if self.subshapes[0].numObjects != numAddedMeshes:
-			# The following condition should NEVER happen
-			if self.subshapes[0].numObjects < numAddedMeshes:
-				print "PANIC!! PANIC!! RUN!!!"
-				return False
-			# Ok, so we have an object with not enough meshes - find the odd one out
-			for obj in self.objects[self.subshapes[0].firstObject:self.subshapes[0].firstObject+self.subshapes[0].numObjects]:
-				if len(obj.tempMeshes) != self.numBaseDetails:
-					# Add dummy mesh (presumed non-existant)
-					obj.tempMeshes.append(DtsMesh(DtsMesh.T_Null))
-		
-		# Does my bum look big in this?
-		if size == -1:
-			# Calculate size using meshes
-			# TODO
-			print "TODO: calcSize"
-			calcSize = 0
-		else:
-			# No, not at all
-			calcSize = size
-		
-		# Store constructed detail level info into shape
-		self.detaillevels.append(DetailLevel(self.addName(detailName), 0, self.numBaseDetails-1, calcSize, -1, -1, polyCount))
-			
-		return True
-		
+				if ni == None:
+					# add a null mesh if there's no mesh for this dl
+					masterObject.tempMeshes.append(DtsMesh(DtsMesh.T_Null))
+				else:
+					# otherwise add a regular mesh
+					o = ni.blenderObj
+					if dlName[0:3].upper() == "DET":
+						polyCount += self.addMesh(o, masterObject)
+					elif dlName[0:3].upper() == "COL" or dlName[0:3].upper() == "LOS":
+						polyCount += self.addCollisionMesh(o, masterObject)
+				
+				numAddedMeshes += 1
+				
+				#print "self.tempMeshes =", masterObject.tempMeshes
+								
+			# Modify base subshape if required
+			if self.numBaseDetails == 0:
+				self.subshapes[0].firstObject = len(self.objects)-numAddedMeshes
+				self.subshapes[0].numObjects = numAddedMeshes
+
+			# Get name, do housekeeping			
+			strippedDLName = DtsGlobals.Prefs.getTextPortion(dlName)
+			if strippedDLName.upper() == "DETAIL":
+				self.numBaseDetails += 1
+				detailName = "Detail-%d" % (self.numBaseDetails)				
+			elif strippedDLName.upper() == "COLLISION":
+				self.numCollisionDetails += 1
+				self.numBaseDetails += 1
+				detailName = "Collision-%d" % (self.numCollisionDetails)
+			elif strippedDLName.upper() == "LOSCOLLISION":
+				self.numLOSCollisionDetails += 1
+				detailName = "LOS-%d" % (self.numLOSCollisionDetails + 9)
+
+			# Store constructed detail level info into shape
+			#self.detaillevels.append(DetailLevel(self.addName(detailName), 0, self.numBaseDetails-1, calcSize, -1, -1, polyCount))
+			self.detaillevels.append(DetailLevel(self.addName(detailName), 0, self.numBaseDetails-1, size, -1, -1, polyCount))
+			# --------------------------------------------
+	
+
 	def addBillboardDetailLevel(self, dispDetail, equator, polar, polarangle, dim, includepoles, size):
 		self.numBaseDetails += 1
 		bb = DetailLevel(self.addName("BILLBOARD-%d" % (self.numBaseDetails)),-1,
@@ -458,6 +385,7 @@ class BlenderShape(DtsShape):
 						size,-1,-1,0)
 		self.detaillevels.insert(self.numBaseDetails-1, bb)
 
+	# create triangle strips
 	def stripMeshes(self, maxsize):
 		subshape = self.subshapes[0]
 		for obj in self.objects[subshape.firstObject:subshape.firstObject+(subshape.numObjects-(self.numCollisionDetails+self.numLOSCollisionDetails))]:
@@ -681,7 +609,7 @@ class BlenderShape(DtsShape):
 	# adds a node tree recursively.
 	# called by addAllNodes, not to be called externally.
 	def addNodeTree(self, nodeInfo, parentNodeIndex =-1):
-		n = Node(self.sTable.addString(nodeInfo.nodeName), parentNodeIndex)
+		n = Node(self.sTable.addString(nodeInfo.dtsObjName), parentNodeIndex)
 		if parentNodeIndex == -1:
 			#pos = nodeInfo.getNodeLocWS(pose)
 			#rot = nodeInfo.getNodeRotWS(pose)
