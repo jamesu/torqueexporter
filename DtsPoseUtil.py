@@ -38,184 +38,196 @@ import gc
 
 gc.enable()
 #-------------------------------------------------------------------------------------------------
+def initTransformData(self, initPose=None):
+	#self.nodeName = nodeName
+	#self.blenderType = blenderType
+	#self.blenderObj = blenderObj # either a blender bone or blender object depending on blenderType
+	#self.parentNodeInfo = parentNI		
 
-class nodeInfoClass:
-	'''
-	NodeInfoClass
-	
-	This class stores static node information for a node and provides a standard interface
-	for getting dynamic node transform data from Blender whether the node was created from a
-	Blender object or Blender bone.
-	'''
-	def __init__(self, nodeName, blenderType, blenderObj, parentNI, armParentNI, initPose=None):
-		self.nodeName = nodeName
-		self.blenderType = blenderType
-		self.blenderObj = blenderObj # either a blender bone or blender object depending on blenderType
-		self.parentNodeInfo = parentNI		
-		
-		
-		
-		
-		
-		
-		if parentNI != None: self.parentName = parentNI.nodeName
-		else: self.parentName = None
-		if parentNI != None: self.parentBlenderType = parentNI.blenderType
-		else: self.parentBlenderType = None
-		
-		self.parentNI = parentNI
-		self.armParentNI = armParentNI
-		#self.parentScale = parentScale
-		
-		if blenderType == "object":
-			mat = blenderObj.getMatrix('worldspace')
-			# Note: Blender quaternions must be inverted since torque uses column vectors
-			self.restRotWS = toTorqueQuat(mat.rotationPart().toQuat().inverse())
-			self.restPosWS = toTorqueVec(mat.translationPart())
 
-			self.defPosPS = self.__calcNodeDefPosPS(nodeName)
-			self.defRotPS = self.__calcNodeDefRotPS(nodeName)
+	#if parentNI != None: self.parentName = parentNI.nodeName
+	#else: self.parentName = None
+	#if parentNI != None: self.parentBlenderType = parentNI.blenderType
+	#else: self.parentBlenderType = None
 
-		elif blenderType == "bone":			
-			bone = blenderObj.getData().bones[nodeName]
-			bMat = bone.matrix['ARMATURESPACE']
-			self.restPosWS = self.__calcBoneRestPosWS(bMat)
-			self.restRotWS = self.__calcBoneRestRotWS(bMat)
+	#self.parentNI = parentNI
+	#self.armParentNI = armParentNI
+	#self.parentScale = parentScale
 
-			self.defPosPS = self.__calcNodeDefPosPS(bone.name)
-			self.defRotPS = self.__calcNodeDefRotPS(bone.name)
-			
-			
-	
-	# methods used to calculate static node tranform data
-	# ***********************
-	# these next four functions should not be called by any other functions, only in init
+	if self.blenderType == "object":
+		mat = self.blenderObj.getMatrix('worldspace')
+		# Note: Blender quaternions must be inverted since torque uses column vectors
+		self.restRotWS = toTorqueQuat(mat.rotationPart().toQuat().inverse())
+		self.restPosWS = toTorqueVec(mat.translationPart())
 
-	# Determine a node's default position for the current pose in the parent node's space.
-	# This is where the node should be if it has not been explicitly moved or
-	# effected by a constraint.
-	# 
-	def __calcNodeDefPosPS(self, nodeName):
-		# early out if we've got no parent
-		if self.parentNI == None:
-			nodeLocWS = self.restPosWS
-			return nodeLocWS			
-		# get the node's default position in worldspace
+		self.defPosPS = self.__calcNodeDefPosPS(self.dtsObjName)
+		self.defRotPS = self.__calcNodeDefRotPS(self.dtsObjName)
+
+	elif self.blenderType == "bone":			
+		bone = self.blenderObj.getData().bones[self.nodeName]
+		bMat = bone.matrix['ARMATURESPACE']
+		self.restPosWS = self.__calcBoneRestPosWS(bMat)
+		self.restRotWS = self.__calcBoneRestRotWS(bMat)
+
+		self.defPosPS = self.__calcNodeDefPosPS(bone.name)
+		self.defRotPS = self.__calcNodeDefRotPS(bone.name)
+
+
+
+# methods used to calculate static node tranform data
+# ***********************
+# these next four functions should not be called by any other functions, only in init
+
+# Determine a node's default position for the current pose in the parent node's space.
+# This is where the node should be if it has not been explicitly moved or
+# effected by a constraint.
+# 
+def __calcNodeDefPosPS(self, nodeName):
+	# early out if we've got no parent
+	if self.parentNI == None:
 		nodeLocWS = self.restPosWS
-		# get the parent node's default position in worldspace
-		parentnodeLocWS = self.parentNI.restPosWS
-		# subtract out the parent node's position, this gives us the offset of the child in worldspace
-		offsetWS = nodeLocWS - parentnodeLocWS
-		# scale the offset by armature's scale
-		# todo - this wasn't doing anything?
-		# rotate the offset into the parent node's default local space		
-		offsetPS = self.parentNI.restRotWS.inverse().apply(offsetWS)
-		return offsetPS
+		return nodeLocWS			
+	# get the node's default position in worldspace
+	nodeLocWS = self.restPosWS
+	# get the parent node's default position in worldspace
+	parentnodeLocWS = self.parentNI.restPosWS
+	# subtract out the parent node's position, this gives us the offset of the child in worldspace
+	offsetWS = nodeLocWS - parentnodeLocWS
+	# scale the offset by armature's scale
+	# todo - this wasn't doing anything?
+	# rotate the offset into the parent node's default local space		
+	offsetPS = self.parentNI.restRotWS.inverse().apply(offsetWS)
+	return offsetPS
 
-	# determine a node's default rotation in parent space
-	# This is what the node's rotation should be, relative to the parent node,
-	# if it has not been directly rotated or affected by a constraint.
-	# 
-	def __calcNodeDefRotPS(self, nodeName):
-		# early out if we've got no parent
-		if self.parentNI == None:
-			nodeRotWS = self.restRotWS
-			return nodeRotWS			
-		# get the node's default rotation in worldspace
+# determine a node's default rotation in parent space
+# This is what the node's rotation should be, relative to the parent node,
+# if it has not been directly rotated or affected by a constraint.
+# 
+def __calcNodeDefRotPS(self, nodeName):
+	# early out if we've got no parent
+	if self.parentNI == None:
 		nodeRotWS = self.restRotWS
-		# get the parent node's default rotation in worldspace
-		parentNodeRotWS = self.parentNI.restRotWS
-		# get the difference
-		bDefRotPS = nodeRotWS * parentNodeRotWS.inverse()
-		return bDefRotPS
-
-			
-	# --------- Worldspace getters ----------------
-
-	# determine a bone's rest position in worldspace
-	#
-	# todo - what happens if parent armature node is collapsed?
-	def __calcBoneRestPosWS(self, bMat):
-		# get the armature's rotation
-		armRot = self.armParentNI.restRotWS
-		# get the bone's location in armaturespace
-		bLoc = toTorqueVec(bMat.translationPart())
-		# rotate out of armature space
-		bLoc = armRot.apply(bLoc)
-		# add on armature's scale
-		armSize = [1,1,1]
-		bLoc = Vector( bLoc[0] * armSize[0], bLoc[1] * armSize[1], bLoc[2] * armSize[2] )
-		# add on armature's location
-		bLoc = bLoc + self.armParentNI.restPosWS
-		return bLoc
-
-	# determine a bone's rest rotation in worldspace
-	#
-	# todo - what happens if parent armature node is collapsed
-	def __calcBoneRestRotWS(self, bMat):
-		# get the armature's rotation		
-		armRot = self.armParentNI.restRotWS
-		# get the bone's rotation in armaturespace
-		bRot = toTorqueQuat(bMat.rotationPart().toQuat().inverse())
-		# rotate out of armature space
-		bRot = (bRot * armRot)
-		return bRot
+		return nodeRotWS			
+	# get the node's default rotation in worldspace
+	nodeRotWS = self.restRotWS
+	# get the parent node's default rotation in worldspace
+	parentNodeRotWS = self.parentNI.restRotWS
+	# get the difference
+	bDefRotPS = nodeRotWS * parentNodeRotWS.inverse()
+	return bDefRotPS
 
 
+# --------- Worldspace getters ----------------
 
-	# ***********************
-	# determine the position of any bone in worldspace
-	# TESTED
-	def __getBoneLocWS(self, pose):
-		# get the armature's rotation
-		armRot = self.armParentNI.getNodeRotWS(pose)
-		# and it's inverse
-		# get the pose location
-		bTrans = armRot.apply(toTorqueVec(pose.bones[self.nodeName].poseMatrix.translationPart()))
-		# Scale by armature's scale
-		armSize = toTorqueVec([1,1,1])
-		bTrans = Vector(bTrans.members[0] * armSize.members[0], bTrans.members[1] * armSize.members[1], bTrans.members[2]  * armSize.members[2])
-		# add on armature pivot to translate into worldspace
-		bTrans = bTrans + self.armParentNI.getNodeLocWS(pose)
-		return bTrans
+# determine a bone's rest position in worldspace
+#
+# todo - what happens if parent armature node is collapsed?
+def __calcBoneRestPosWS(self, bMat):
+	# get the armature's rotation
+	armRot = self.armParentNI.restRotWS
+	# get the bone's location in armaturespace
+	bLoc = toTorqueVec(bMat.translationPart())
+	# rotate out of armature space
+	bLoc = armRot.apply(bLoc)
+	# add on armature's scale
+	armSize = [1,1,1]
+	bLoc = Vector( bLoc[0] * armSize[0], bLoc[1] * armSize[1], bLoc[2] * armSize[2] )
+	# add on armature's location
+	bLoc = bLoc + self.armParentNI.restPosWS
+	return bLoc
 
-	# determine the rotation of any bone in worldspace
-	# TESTED
-	def __getBoneRotWS(self, pose):
-		# get the armature's rotation
-		armRot = self.armParentNI.getNodeRotWS(pose)
-		# get the pose rotation and rotate into worldspace
-		bRot = ( toTorqueQuat(pose.bones[self.nodeName].poseMatrix.rotationPart().toQuat().inverse()) * armRot)
-		return bRot
-
-
-	# determine the location of an object node in worldspace
-	# TESTED
-	def __getObjectLocWS(self):
-		bLoc = toTorqueVec(Blender.Object.Get(self.nodeName).getMatrix('worldspace').translationPart())
-		return bLoc
-	
-	# determine the rotation of an object node in worldspace
-	# TESTED
-	def __getObjectRotWS(self):
-		bRot = toTorqueQuat(Blender.Object.Get(self.nodeName).getMatrix('worldspace').rotationPart().toQuat()).inverse()
-		return bRot
-		
-	def getNodeLocWS(self, pose):
-		if self.blenderType == "object":
-			retVal = self.__getObjectLocWS()
-		elif self.blenderType == "bone":
-			retVal = self.__getBoneLocWS(pose)
-		return retVal
-		
-	def getNodeRotWS(self, pose):
-		if self.blenderType == "object":
-			retVal = self.__getObjectRotWS()
-		elif self.blenderType == "bone":
-			retVal = self.__getBoneRotWS(pose)
-		return retVal
+# determine a bone's rest rotation in worldspace
+#
+# todo - what happens if parent armature node is collapsed
+def __calcBoneRestRotWS(self, bMat):
+	# get the armature's rotation		
+	armRot = self.armParentNI.restRotWS
+	# get the bone's rotation in armaturespace
+	bRot = toTorqueQuat(bMat.rotationPart().toQuat().inverse())
+	# rotate out of armature space
+	bRot = (bRot * armRot)
+	return bRot
 
 
+
+# ***********************
+# determine the position of any bone in worldspace
+# TESTED
+def __getBoneLocWS(self, pose):
+	# get the armature's rotation
+	armRot = self.armParentNI.getNodeRotWS(pose)
+	# and it's inverse
+	# get the pose location
+	bTrans = armRot.apply(toTorqueVec(pose.bones[self.nodeName].poseMatrix.translationPart()))
+	# Scale by armature's scale
+	armSize = toTorqueVec([1,1,1])
+	bTrans = Vector(bTrans.members[0] * armSize.members[0], bTrans.members[1] * armSize.members[1], bTrans.members[2]  * armSize.members[2])
+	# add on armature pivot to translate into worldspace
+	bTrans = bTrans + self.armParentNI.getNodeLocWS(pose)
+	return bTrans
+
+# determine the rotation of any bone in worldspace
+# TESTED
+def __getBoneRotWS(self, pose):
+	# get the armature's rotation
+	armRot = self.armParentNI.getNodeRotWS(pose)
+	# get the pose rotation and rotate into worldspace
+	bRot = ( toTorqueQuat(pose.bones[self.nodeName].poseMatrix.rotationPart().toQuat().inverse()) * armRot)
+	return bRot
+
+
+# determine the location of an object node in worldspace
+# TESTED
+def __getObjectLocWS(self):
+	bLoc = toTorqueVec(Blender.Object.Get(self.nodeName).getMatrix('worldspace').translationPart())
+	return bLoc
+
+# determine the rotation of an object node in worldspace
+# TESTED
+def __getObjectRotWS(self):
+	bRot = toTorqueQuat(Blender.Object.Get(self.nodeName).getMatrix('worldspace').rotationPart().toQuat()).inverse()
+	return bRot
+
+def getNodeLocWS(self, pose):
+	if self.blenderType == "object":
+		retVal = self.__getObjectLocWS()
+	elif self.blenderType == "bone":
+		retVal = self.__getBoneLocWS(pose)
+	return retVal
+
+def getNodeRotWS(self, pose):
+	if self.blenderType == "object":
+		retVal = self.__getObjectRotWS()
+	elif self.blenderType == "bone":
+		retVal = self.__getBoneRotWS(pose)
+	return retVal
+
+
+# binds the above methods to the nodeInfo class imported from DtsSceneInfo.py.
+def bindDynamicMethods():
+	import new
+	new.instancemethod(initTransformData, None, nodeInfoClass)
+	nodeInfoClass.__dict__['initTransformData'] = initTransformData
+	new.instancemethod(__calcNodeDefPosPS, None, nodeInfoClass)
+	nodeInfoClass.__dict__['__calcNodeDefPosPS'] = __calcNodeDefPosPS
+	new.instancemethod(__calcNodeDefRotPS, None, nodeInfoClass)
+	nodeInfoClass.__dict__['__calcNodeDefRotPS'] = __calcNodeDefRotPS
+	new.instancemethod(__calcBoneRestPosWS, None, nodeInfoClass)
+	nodeInfoClass.__dict__['__calcBoneRestPosWS'] = __calcBoneRestPosWS
+	new.instancemethod(__calcBoneRestRotWS, None, nodeInfoClass)
+	nodeInfoClass.__dict__['__calcBoneRestRotWS'] = __calcBoneRestRotWS
+	new.instancemethod(__getBoneLocWS, None, nodeInfoClass)
+	nodeInfoClass.__dict__['__getBoneLocWS'] = __getBoneLocWS
+	new.instancemethod(__getBoneRotWS, None, nodeInfoClass)
+	nodeInfoClass.__dict__['__getBoneRotWS'] = __getBoneRotWS
+	new.instancemethod(__getObjectLocWS, None, nodeInfoClass)
+	nodeInfoClass.__dict__['__getObjectLocWS'] = __getObjectLocWS
+	new.instancemethod(__getObjectRotWS, None, nodeInfoClass)
+	nodeInfoClass.__dict__['__getObjectRotWS'] = __getObjectRotWS
+	new.instancemethod(getNodeLocWS, None, nodeInfoClass)
+	nodeInfoClass.__dict__['getNodeLocWS'] = getNodeLocWS
+	new.instancemethod(getNodeRotWS, None, nodeInfoClass)
+	nodeInfoClass.__dict__['getNodeRotWS'] = getNodeRotWS
 
 
 
@@ -231,7 +243,10 @@ class DtsPoseUtilClass:
 	'''
 	def __init__(self, prefs):	
 		gc.enable()
-		self.nodes = {}
+		# bind dynamic methods to nodeInfoClass
+		bindDynamicMethods()
+		self.nodes = DtsGlobals.SceneInfo.nodes
+		for node in self.nodes.values(): node.initTransformData()
 		self.armatures = {}
 		self.__populateData(prefs)
 	
@@ -337,12 +352,19 @@ class DtsPoseUtilClass:
 	# Nodes in this tree are representative of actual exported nodes; The tree
 	# does not include banned nodes.
 	def __populateData(self, prefs):
+		# Build armatures dictionary
+		for ni in self.nodes.values():
+			if ni.blenderObj.getType == "Armature":
+				pass
+				#self.armatures[ni.]
+		'''
 		# go through each object		
 		for obj in filter(lambda x: x.parent==None, Blender.Object.Get()):
 			if obj.parent == None:
 				self.__addTree(obj, None, prefs)
 		for ni in filter(lambda x: x.parentNI==None, self.nodes.values()):
 			self.__printTree(ni)
+		'''
 
 
 	# --------- Localspace getters ----------------
