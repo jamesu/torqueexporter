@@ -45,7 +45,7 @@ class nodeInfoClass:
 		self.blenderType = blenderType
 		self.blenderObj = blenderObj # either a blender bone or blender object depending on blenderType
 		self.parentNodeInfo = parentNI
-		self.detailLevel = None
+		self.detailLevels = []
 		self.dtsObjName = nodeName
 		self.armParentNI = armParentNI
 		
@@ -148,7 +148,8 @@ class SceneInfoClass:
 				for layer in obj.layers:
 					if layer in dl:
 						self.detailLevels[dlName].append(n)
-						n.detailLevel = dlName
+						# single meshes *can* exist in multiple detail levels
+						n.detailLevels.append(dlName)
 
 			#-------
 			# add to the temp dictionaries for calculating DTSObject assignment later
@@ -291,11 +292,11 @@ class SceneInfoClass:
 		# insert meshes into correct slots in dts object lists.
 		for ni in self.nodes.values():
 			# insert meshes into the correct detail levels
-			if ni.detailLevel != None:
-				self.DTSObjects[ni.dtsObjName][ni.detailLevel] = ni
+			for dl in ni.detailLevels:
+				self.DTSObjects[ni.dtsObjName][dl] = ni
 
 		
-		'''
+
 		# ----------------
 		# debug prints
 		sortedKeys = self.detailLevels.keys()
@@ -320,7 +321,7 @@ class SceneInfoClass:
 			print tempString
 
 		# ----------------
-		'''
+
 		
 		# re-index the main nodes dict by dts object name
 		# If we're dealing with a mesh node, we want the highest lod
