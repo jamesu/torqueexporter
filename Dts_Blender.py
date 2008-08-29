@@ -93,27 +93,14 @@ def doExport(progressBar):
 
 		# add all nodes
 		Shape.addAllNodes()
-
-		# add visible detail levels
-		for dlName in SceneInfo.detailLevels.keys():
-			textPortion = Prefs.getTextPortion(dlName)
-			if textPortion.upper() != 'DETAIL': continue
-			dlSize = Prefs.getTrailingNumber(dlName)
-			meshDetails = SceneInfo.detailLevels[dlName]
-			print "Adding visible detail level =",dlName
-			Shape.addDetailLevel(meshDetails, dlSize)
-
-		# add collision detail levels
-		for dlName in SceneInfo.detailLevels.keys():
-			textPortion = Prefs.getTextPortion(dlName)
-			#if textPortion.upper() != 'COLLISION' and textPortion.upper() != 'LOSCOLLISION': continue
-			meshDetails = SceneInfo.detailLevels[dlName]
-			print "Col/Los detail level        =",dlName
-			if textPortion.upper() == 'COLLISION':
-				Shape.addCollisionDetailLevel(meshDetails, False, -1)
-			if textPortion.upper() == 'LOSCOLLISION':
-				Shape.addCollisionDetailLevel(meshDetails, True, -1)
 		
+		
+		# add visible detail levels
+		sortedKeys = SceneInfo.detailLevels.keys()
+		sortedKeys.sort( lambda x,y: cmp(Prefs.getTrailingNumber(x), Prefs.getTrailingNumber(y)) )
+		sortedKeys.reverse()
+
+		Shape.addAllDetailLevels(SceneInfo.DTSObjects, sortedKeys)
 		
 		# We have finished adding the regular detail levels. Now add the billboard if required.
 		if Prefs['Billboard']['Enabled']:
