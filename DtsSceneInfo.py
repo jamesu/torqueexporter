@@ -40,13 +40,14 @@ for getting dynamic node transform data from Blender whether the node was create
 Blender object or Blender bone.
 '''
 class nodeInfoClass:
-	def __init__(self, nodeName, blenderType, blenderObj, parentNI):
+	def __init__(self, nodeName, blenderType, blenderObj, parentNI, armParentNI=None):
 		self.nodeName = nodeName
 		self.blenderType = blenderType
 		self.blenderObj = blenderObj # either a blender bone or blender object depending on blenderType
 		self.parentNodeInfo = parentNI
 		self.detailLevel = None
-		self.dtsObjName = None
+		self.dtsObjName = nodeName
+		self.armParentNI = armParentNI
 		
 		self.isBannedNode = nodeName in Prefs['BannedNodes']
 		self.layers = blenderObj.layers
@@ -178,7 +179,7 @@ class SceneInfoClass:
 			# get blender armature datablock
 			armDb = obj.getData()
 			for bone in filter(lambda x: x.parent==None, armDb.bones.values()):					
-				self.__addBoneTree(obj, n, bone, armDb)
+				self.__addBoneTree(obj, n, bone, armDb, n)
 
 
 		# add child trees
@@ -193,18 +194,18 @@ class SceneInfoClass:
 
 	
 	# adds a bone tree recursively, for internal use only
-	def __addBoneTree(self, obj, parentNI, boneOb, armDb):
+	def __addBoneTree(self, obj, parentNI, boneOb, armDb, armParentNI):
 		nodeName = boneOb.name
 		blenderType = "bone"
 		blenderObj = obj
 
 		# add it to the nodes dict
-		n = nodeInfoClass(nodeName, blenderType, blenderObj, parentNI)
+		n = nodeInfoClass(nodeName, blenderType, blenderObj, parentNI, armParentNI)
 		self.nodes[nodeName] = n
 
 		# add child trees
 		for bone in filter(lambda x: x.parent==boneOb, armDb.bones.values()):					
-			self.__addBoneTree(obj, n, bone, armDb)
+			self.__addBoneTree(obj, n, bone, armDb, armParentNI)
 
 	# for debugging
 	def __printTree(self, ni, indent=0):
@@ -251,9 +252,10 @@ class SceneInfoClass:
 					found[dtsObjName] = []
 				found[dtsObjName].append(meshNI)
 			
-			print "-----------------------------"
-			print "Report of dts object names for", dlName
+			#print "-----------------------------"
+			#print "Report of dts object names for", dlName
 			for dtsObjName in found.keys():
+				#print "*** Checking Dts object:", dtsObjName
 				foundList = found[dtsObjName]
 				if len(foundList) > 1:
 					dtsObjName = foundList[0].dtsObjName
@@ -267,61 +269,71 @@ class SceneInfoClass:
 					# fix dtsObject names.
 					for ni in foundList:
 						ni.dtsObjName = ni.nodeName
-						print "   Fixed dts object name for:", ni.nodeName
-			print "-----------------------------"
-				
-			
-		'''
-		# check for unique mesh object names up to the last "." in each detail level
-		# we want the percentage of unique names, which should be 100% if the
-		# user has named all of their meshes correctly :-)
-		correctnessRatio = 0
-		total = 0
-		correct = 0
-		for dtsObjName in self.strippedMeshNames.keys():
-			foundList = []
-			dtsObjMeshes = self.strippedMeshNames[dtsObjName]
-			total += len(dtsObjMeshes)
-			for ni in dtsObjMeshes:
-				# should be no duplicate stripped mesh names in each detail level
-				if ni.detailLevel in foundList:
-					# Houston, we have a problem!
-					pass
-				else:
-					foundList.append(ni.detailLevel)
-					correct += 1
-		print "total = ", total
-		print "correct = ", correct
-		perCor =  float(correct)/float(total)
-		print "Percentage correct = ", perCor * 100.0
+						#print "   Fixed dts object name for:", ni.nodeName
+			#print "-----------------------------"
 		
-		# check for object unique IPOs for each object within each LOD
-		correctnessRatio = 0
-		total = 0
-		correct = 0
-		for IPOName in self.IPOs.keys():
-			foundList = []
-			dtsObjMeshes = self.IPOs[IPOName]
-			total += len(dtsObjMeshes)
-			for ni in dtsObjMeshes:
-				# should be no duplicate stripped mesh names in each detail level
-				if ni.detailLevel in foundList:
-					# Houston, we have a problem!
-					pass
-				else:
-					foundList.append(ni.detailLevel)
-					correct += 1
-		print "total = ", total
-		print "correct = ", correct
-		perCor =  float(correct)/float(total)
-		print "Percentage correct = ", perCor * 100.0
-					
-		print "-------------------------------------"
-		print self.strippedMeshNames
-		print "-------------------------------------"
-		print self.IPOs
-		print "-------------------------------------"
+		
+		# build DTSObjects index
+		NIList = self.nodes.values()
+		
+		# create 'None' lists for DTS Objects
+		for ni in self.nodes.values():
+			# create a dts object if it doesn't already exist.
+			try: dtsObj = self.DTSObjects[ni.dtsObjName]
+			except:
+				# populate dts object with "None" entries for each dl
+				self.DTSObjects[ni.dtsObjName] = {}
+				for dl in self.detailLevels.keys():
+					self.DTSObjects[ni.dtsObjName][dl] = None
+		
+		sortedDLs = Prefs.getSortedDLNames()
+
+		# insert meshes into correct slots in dts object lists.
+		for ni in self.nodes.values():
+			# insert meshes into the correct detail levels
+			if ni.detailLevel != None:
+				self.DTSObjects[ni.dtsObjName][ni.detailLevel] = ni
+
+		
 		'''
+		# ----------------
+		# debug prints
+		sortedKeys = self.detailLevels.keys()
+		sortedKeys.sort( lambda x,y: cmp(Prefs.getTrailingNumber(x), Prefs.getTrailingNumber(y)) )
+		sortedKeys.reverse()
+
+		# print header row
+		fieldWidth = 20
+		tempString = "DtsObject".ljust(18) + "| "
+		for dlName in sortedKeys:
+			tempString += dlName.ljust(20)
+		print tempString
+
+		
+		for obName in self.DTSObjects.keys():
+			tempString = ""
+			tempString += obName.ljust(18) + "| "
+			for dlName in sortedKeys:				
+				c = self.DTSObjects[obName][dlName]
+				if c == None: tempString += "None".ljust(20)
+				else: tempString += c.nodeName.ljust(20)
+			print tempString
+
+		# ----------------
+		'''
+		
+		# re-index the main nodes dict by dts object name
+		# If we're dealing with a mesh node, we want the highest lod
+		# version of the mesh indexed in nodes, since that's
+		# where we'll be pulling our animations from.
+		temp = {}
+		for ni in self.nodes.values():
+			# re-index
+			temp[ni.dtsObjName] = ni
+			
+		del self.nodes
+		self.nodes = temp
+			
 			
 			
 		
@@ -497,7 +509,7 @@ class SceneInfoClass:
 	def getAllNodeNames(self):
 		nameList = []
 		for ni in self.nodes.values():
-			nameList.append(ni.nodeName)
+			nameList.append(ni.dtsObjName)
 		return nameList
 
 
