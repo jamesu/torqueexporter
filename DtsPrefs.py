@@ -294,7 +294,13 @@ class prefsClass(dict):
 		try: del self['DetailLevels'][dlName]
 		except: pass
 	
-		
+	# returns a list of layers used in detail levels.
+	def getAllDetailLayers(self):
+		retVal = []
+		for dlName in self['DetailLevels'].keys():
+			dl = self['DetailLevels'][dlName]
+			for v in dl:retVal.append(v)
+		return retVal
 	
 	#################################################
 	#  Sequences
