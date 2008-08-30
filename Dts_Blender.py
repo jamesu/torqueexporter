@@ -38,17 +38,19 @@ import string, math, re, gc
 
 
 from DTSPython import *
-from DTSGUI import *
+
 from DtsPrefs import *
 from DtsSceneInfo import *
 import DtsGlobals
-import Common_Gui
+
 import DtsShape_Blender
 from DtsShape_Blender import *
 
+import Common_Gui
 
-
-
+# don't bother importing GUI stuff if we don't need to.
+if __name__ == "__main__":
+	from DTSGUI import *
 
 
 def doExport(progressBar):
@@ -60,10 +62,10 @@ def doExport(progressBar):
 	#try:
 	# double check the base path before opening the stream
 	if not os.path.exists(Prefs['exportBasepath']):
-		Prefs['exportBasepath'] = basepath(Blender.Get("filename"))
+		Prefs['exportBasepath'] = SceneInfoClass.getDefaultBasePath()
 	# double check the file name
 	if Prefs['exportBasename'] == "":
-		Prefs['exportBasename'] = noext(basename(Blender.Get("filename")))
+		Prefs['exportBasename'] = SceneInfoClass.getDefaultBaseName()
 
 	# make sure our path Separator is correct.
 	pathSeparator = SceneInfoClass.getPathSeparator()
@@ -325,15 +327,12 @@ if DtsGlobals.Profiling:
 		Profiling = False
 	
 def entryPoint(a):
-	#global Prefs, SceneInfo, pathSeparator
-	#ScneInfo = SceneInfoClass()
 	DtsGlobals.Prefs = prefsClass()
 	Prefs = DtsGlobals.Prefs
 	# sets the global pathSeparator variable
 	pathSeparator = SceneInfoClass.getPathSeparator()
 	
-	#loadPrefs()
-	
+
 	if DtsGlobals.Debug:
 		Torque_Util.dump_setout("stdout")
 	else:
