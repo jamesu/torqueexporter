@@ -330,7 +330,7 @@ def entryPoint(a):
 	DtsGlobals.Prefs = prefsClass()
 	Prefs = DtsGlobals.Prefs
 	# sets the global pathSeparator variable
-	SceneInfoClass.getPathSeparator()
+	pathSeparator = SceneInfoClass.getPathSeparator()
 	
 	#loadPrefs()
 	
