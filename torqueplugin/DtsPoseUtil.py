@@ -381,32 +381,9 @@ class DtsPoseUtilClass:
 		# get the armature's rotation
 		armRot = self.armInfo[armName][ARMROT].inverse()
 		# get the pose rotation and rotate into worldspace
-		bRot = ( armRot * self.bMatToTorqueQuat(pose.bones[bName].poseMatrix).inverse() )
+		bRot = ( armRot * self.toTorqueQuat(pose.bones[bName].poseMatrix.rotationPart().toQuat().inverse()) )
 		return bRot
 
-	# Blender's matrix toQuat() method gives incorrect values for matrices containing non-uniform scale.
-	# This method is (mostly) scale invariant.. hrmmm... not sure if this helps or hinders, really.
-	def bMatToTorqueQuat(self, bMat):
-		#return self.toTorqueQuat(bMat.rotationPart().toQuat())
-		# get 3x3 submatrix
-		rotMat = bMat.rotationPart()
-		# get the scale components
-		s1 = pMath.sqrt( (rotMat[0][0] * rotMat[0][0]) + (rotMat[1][0] * rotMat[1][0]) + (rotMat[2][0] * rotMat[2][0]) )
-		s2 = pMath.sqrt( (rotMat[0][1] * rotMat[0][1]) + (rotMat[1][1] * rotMat[1][1]) + (rotMat[2][1] * rotMat[2][1]) )
-		s3 = pMath.sqrt( (rotMat[0][2] * rotMat[0][2]) + (rotMat[1][2] * rotMat[1][2]) + (rotMat[2][2] * rotMat[2][2]) )
-		# divide 3x3 matrix columns by each component of scale
-		r1 = [rotMat[0][0]/s1, rotMat[0][1]/s2, rotMat[0][2]/s3]
-		r2 = [rotMat[1][0]/s1, rotMat[1][1]/s2, rotMat[1][2]/s3]
-		r3 = [rotMat[2][0]/s1, rotMat[2][1]/s2, rotMat[2][2]/s3]
-		# construct a new matrix
-		newMat = bMath.Matrix(r1,r2,r3)
-		# convert to torque quat and return.
-		retVal = self.toTorqueQuat(newMat.toQuat())
-		return retVal  # <- closest match so far
-		#return self.toTorqueQuat(bMat.rotationPart().toQuat()) # <- not very close
-		#return self.toTorqueQuat(bMat.toQuat()) # <- same as above, not very close
-	
-		
 	def toTorqueVec(self, v):
 		return Vector(v[0], v[1], v[2])
 
