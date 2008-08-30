@@ -609,25 +609,26 @@ class BlenderShape(DtsShape):
 	# adds a node tree recursively.
 	# called by addAllNodes, not to be called externally.
 	def addNodeTree(self, nodeInfo, parentNodeIndex =-1):
-		n = Node(self.sTable.addString(nodeInfo.dtsObjName), parentNodeIndex)
-		if parentNodeIndex == -1:
-			#pos = nodeInfo.getNodeLocWS(pose)
-			#rot = nodeInfo.getNodeRotWS(pose)
-			pos = nodeInfo.defPosPS
-			rot = nodeInfo.defRotPS
+		if not nodeInfo.isExcluded():
+			n = Node(self.sTable.addString(nodeInfo.dtsObjName), parentNodeIndex)
+			if parentNodeIndex == -1:
+				#pos = nodeInfo.getNodeLocWS(pose)
+				#rot = nodeInfo.getNodeRotWS(pose)
+				pos = nodeInfo.defPosPS
+				rot = nodeInfo.defRotPS
 
-		else:
-			pos = nodeInfo.defPosPS
-			rot = nodeInfo.defRotPS
-			
-		self.defaultTranslations.append(pos)
-		self.defaultRotations.append(rot)
-		try: n.armName = nodeInfo.armParentNI.nodeName
-		except: n.armName = None
-		n.obj = nodeInfo.blenderObj
-		self.nodes.append(n)		
-		nodeIndex = len(self.nodes)-1
-		self.subshapes[0].numNodes += 1
+			else:
+				pos = nodeInfo.defPosPS
+				rot = nodeInfo.defRotPS
+
+			self.defaultTranslations.append(pos)
+			self.defaultRotations.append(rot)
+			try: n.armName = nodeInfo.armParentNI.nodeName
+			except: n.armName = None
+			n.obj = nodeInfo.blenderObj
+			self.nodes.append(n)		
+			nodeIndex = len(self.nodes)-1
+			self.subshapes[0].numNodes += 1
 		for nodeInfo in filter(lambda x: x.parentNI == nodeInfo, self.poseUtil.nodes.values()):
 			self.addNodeTree(nodeInfo, nodeIndex)
 		
@@ -1131,7 +1132,7 @@ class BlenderShape(DtsShape):
 				#if self.nodes[nodeIndex].armIdx != -1: continue
 				
 				try:
-					pose = armPoses[self.nodes[nodeIndex].armName]
+					pose = armPoses[ self.nodes[nodeIndex].armName ]
 					lastGoodPose = pose
 				except:
 					pose = lastGoodPose
