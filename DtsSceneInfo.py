@@ -68,11 +68,15 @@ class nodeInfoClass:
 	# don't call this until the tree is completely built.
 	def getGoodParentNI(self):
 		pNI = self
-		while (pNI != None) and (pNI.nodeName.upper() in Prefs['BannedNodes']):
+		while (pNI != None) and \
+		((pNI.nodeName.upper() in Prefs['BannedNodes']) \
+		or (len(pNI.detailLevels) == 0)):		
 			pNI = pNI.parentNI
 		return pNI
 
-
+	def isExcluded(self):
+		return (self.dtsObjName.upper() in Prefs['BannedNodes'])
+		
 
 #-------------------------------------------------------------------------------------------------			
 '''
