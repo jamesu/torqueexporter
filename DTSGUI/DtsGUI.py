@@ -107,7 +107,10 @@ class TabSheetControl:
 		if control == self.tabContainer:
 			control.x, control.y = 4, 4
 			control.width, control.height = newwidth-8, newheight - 35
-
+	
+	def cleanup(self):
+		pass
+		
 
 # Class that implements a gui tab book control
 # owns and initializes tab sheet controls
@@ -289,54 +292,6 @@ def guiHeaderResize(control, newwidth, newheight):
 	elif control.name == "guiVersionText":
 		control.x = newwidth-80
 		control.y = 5
-
-'''
-# Used to validate a sequence name entered by the user.
-# Sequence names must be unique amongst other sequences
-# having the same type.
-def validateSequenceName(seqName, seqType, oldName = None):
-	Prefs = DtsGlobals.Prefs
-
-	# check the obvious stuff first.
-	# is the sequence name blank?
-	if seqName == "" or seqName == None:
-		Blender.Draw.PupMenu("The sequence name is not valid (blank).%t|Cancel")
-		return False
-	
-	
-	seqPrefs = Prefs['Sequences']
-	# loop thorough each sequence and see what we've got.
-	for pSeqName in seqPrefs.keys():
-		if pSeqName != seqName: continue
-		seq = seqPrefs[seqName]
-		if (seq['IFL']['Enabled'] and seqType == "IFL")\
-		or (seq['Vis']['Enabled'] and seqType == "Vis"):
-			message = ("%s animation sequence named %s already exists." % (seqType, seqName)) + "%t|Cancel"
-			Blender.Draw.PupMenu(message)
-			return False
-		# If a sequence containing visibility and ifl animations is merged with an action sequence that already
-		# contains one or the other animation type, that animation type will be overwritten by the merged in values;
-		# we need to ask the user what they want to do in this case.
-		if oldName != None:
-			oldSeq = seqPrefs[oldName]
-			if seqType == "Vis" and seq['IFL']['Enabled'] and oldSeq['IFL']['Enabled']:
-				message = ("IFL animation in \'%s\' will be overwritten with IFL animation from \'%s\' !" % (seqName, oldName)) + "%t|Merge Sequences and Overwrite IFL animation.|Cancel Merge"
-				if Blender.Draw.PupMenu(message) == 1:
-					return True
-				else:
-					return False
-			if seqType == "IFL" and seq['Vis']['Enabled'] and oldSeq['Vis']['Enabled']:
-				message = ("Vis animation in \'%s\' will be overwritten with Vis animation from \'%s\' !" % (seqName, oldName)) + "%t|Merge Sequences and Overwrite Vis animation.|Cancel Merge"
-				if Blender.Draw.PupMenu(message) == 1:
-					return True
-				else:
-					return False
-
-
-	return True
-	pass
-'''
-
 
 
 def initGui():
