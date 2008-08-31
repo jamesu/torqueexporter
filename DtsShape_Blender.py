@@ -207,7 +207,8 @@ class BlenderShape(DtsShape):
 		
 
 		# clean up temporary objects
-		Blender.Scene.GetCurrent().objects.unlink(Blender.Object.Get("DTSExpObj_Tmp"))
+		try:Blender.Scene.GetCurrent().objects.unlink(Blender.Object.Get("DTSExpObj_Tmp"))
+		except: pass
 
 		del mesh_data
 		del temp_obj
@@ -338,7 +339,7 @@ class BlenderShape(DtsShape):
 					masterObject.tempMeshes.append(DtsMesh(DtsMesh.T_Null))
 				else:
 					# otherwise add a regular mesh
-					o = ni.blenderObj
+					o = ni.getBlenderObj()
 					if dlName[0:3].upper() == "DET":
 						polyCount += self.addMesh(o, masterObject)
 					elif dlName[0:3].upper() == "COL" or dlName[0:3].upper() == "LOS":
@@ -625,10 +626,12 @@ class BlenderShape(DtsShape):
 			self.defaultRotations.append(rot)
 			try: n.armName = nodeInfo.armParentNI.nodeName
 			except: n.armName = None
-			n.obj = nodeInfo.blenderObj
+			n.obj = nodeInfo.getBlenderObj()
 			self.nodes.append(n)		
 			nodeIndex = len(self.nodes)-1
 			self.subshapes[0].numNodes += 1
+		else:
+			nodeIndex = parentNodeIndex
 		for nodeInfo in filter(lambda x: x.parentNI == nodeInfo, self.poseUtil.nodes.values()):
 			self.addNodeTree(nodeInfo, nodeIndex)
 		
@@ -1544,11 +1547,11 @@ class BlenderShape(DtsShape):
 		mat = self.preferences['Materials'][imageName]
 
 		# Build the material string.
-		materialString = "new Material(%s)\n{\n" % ( finalizeImageName(stripImageExtension(imageName), True))
+		materialString = "new Material(%s)\n{\n" % ( finalizeImageName(SceneInfoClass.stripImageExtension(imageName), True))
 		
 		materialString += "// Rendering Stage 0\n"
 		
-		materialString += "baseTex[0] = \"./%s\";\n" % (finalizeImageName(stripImageExtension(imageName)))
+		materialString += "baseTex[0] = \"./%s\";\n" % (finalizeImageName(SceneInfoClass.stripImageExtension(imageName)))
 		
 		if mat['DetailMapFlag'] == True and mat['DetailTex'] != None:
 			materialString += "detailTex[0] = \"./%s\";\n" % (mat['DetailTex'])
