@@ -43,7 +43,7 @@ textDocName = "TorqueExporter_SCONF2"
 
 tracebackImported = True
 try:
-	import traceback	
+	import traceback
 except:
 	print "Could not import exception traceback module."
 	tracebackImported = False
