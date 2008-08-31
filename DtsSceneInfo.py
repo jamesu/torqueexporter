@@ -29,8 +29,6 @@ from DtsPrefs import *
 import DtsGlobals
 from DTSPython import stripPath
 
-Prefs = None
-
 
 '''
 NodeInfoClass
@@ -42,14 +40,15 @@ Blender object or Blender bone.
 class nodeInfoClass:
 	def __init__(self, nodeName, blenderType, blenderObj, parentNI, armParentNI=None):
 		self.nodeName = nodeName
-		self.blenderType = blenderType
+		self.blenderType = blenderType		
 		self.blenderObjName = blenderObj.name # either a blender bone or blender object depending on blenderType
-		self.parentNodeInfo = parentNI
+		self.hasGeometry = False
+		self.parentNodeInfo = parentNI		
 		self.detailLevels = []
 		self.dtsObjName = nodeName
 		self.armParentNI = armParentNI
 		
-		self.isBannedNode = nodeName in Prefs['BannedNodes']
+		self.isBannedNode = nodeName in DtsGlobals.Prefs['BannedNodes']
 		self.layers = blenderObj.layers
 		
 		if parentNI != None: self.parentName = parentNI.nodeName
@@ -69,13 +68,15 @@ class nodeInfoClass:
 	def getGoodParentNI(self):
 		pNI = self
 		while (pNI != None) and \
-		((pNI.nodeName.upper() in Prefs['BannedNodes']) \
+		((pNI.nodeName.upper() in DtsGlobals.Prefs['BannedNodes']) \
 		or (len(pNI.detailLevels) == 0)):		
 			pNI = pNI.parentNI
 		return pNI
 
 	def isExcluded(self):
-		return (self.dtsObjName.upper() in Prefs['BannedNodes'])
+		print DtsGlobals.Prefs['BannedNodes']
+		print "nodeInfo isExcluded returning", (self.dtsObjName.upper() in DtsGlobals.Prefs['BannedNodes']), "for node:", self.dtsObjName.upper()
+		return (self.dtsObjName.upper() in DtsGlobals.Prefs['BannedNodes'])
 	
 	def getBlenderObj(self):
 		try: retval = Blender.Object.Get(self.blenderObjName)
@@ -98,9 +99,8 @@ class SceneInfoClass:
 	#################################################
 
 	def __init__(self, prefs):	
-		global Prefs
 		gc.enable()
-		Prefs = prefs
+		DtsGlobals.Prefs = prefs		
 		self.refreshAll()
 		#self.nodes = {}
 		#self.armatures = {}
@@ -153,13 +153,14 @@ class SceneInfoClass:
 		elif not (bObjType in ['Empty', 'Curve', 'Camera', 'Lamp', 'Lattice']):
 			self.meshes[nodeName] = n			
 			# add mesh node info to detail levels
-			for dlName in Prefs['DetailLevels'].keys():
-				dl = Prefs['DetailLevels'][dlName]
+			for dlName in DtsGlobals.Prefs['DetailLevels'].keys():
+				dl = DtsGlobals.Prefs['DetailLevels'][dlName]
 				for layer in obj.layers:
 					if layer in dl:
 						self.detailLevels[dlName].append(n)
 						# single meshes *can* exist in multiple detail levels
 						n.detailLevels.append(dlName)
+						n.hasGeometry = True
 
 			#-------
 			# add to the temp dictionaries for calculating DTSObject assignment later
@@ -238,7 +239,7 @@ class SceneInfoClass:
 		#startTime = Blender.sys.time()
 		
 		# create empty detail levels based on prefs
-		for dlName in Prefs['DetailLevels'].keys():
+		for dlName in DtsGlobals.Prefs['DetailLevels'].keys():
 			self.detailLevels[dlName] = []
 		
 		# go through each object and bone and add subtrees		
@@ -290,6 +291,7 @@ class SceneInfoClass:
 		
 		# create 'None' lists for DTS Objects
 		for ni in self.nodes.values():
+			if not ni.hasGeometry: continue
 			# create a dts object if it doesn't already exist.
 			try: dtsObj = self.DTSObjects[ni.dtsObjName]
 			except:
@@ -298,7 +300,7 @@ class SceneInfoClass:
 				for dl in self.detailLevels.keys():
 					self.DTSObjects[ni.dtsObjName][dl] = None
 		
-		sortedDLs = Prefs.getSortedDLNames()
+		sortedDLs = DtsGlobals.Prefs.getSortedDLNames()
 
 		# insert meshes into correct slots in dts object lists.
 		for ni in self.nodes.values():
