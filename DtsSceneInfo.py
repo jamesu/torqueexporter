@@ -110,7 +110,6 @@ class SceneInfoClass:
 		#self.__populateData()
 
 	def refreshAll(self):
-		print "Crashing now."
 		self.nodes = {}
 		self.armatures = {}
 		self.meshes = {}
@@ -121,8 +120,7 @@ class SceneInfoClass:
 		# match up meshes with dts objects.
 		self.IPOs = {}
 		self.strippedMeshNames = {}
-		print "You are never here!"
-		# build the tree
+		# build the tree		
 		self.__populateData()
 
 
