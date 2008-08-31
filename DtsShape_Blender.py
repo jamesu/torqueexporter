@@ -284,7 +284,8 @@ class BlenderShape(DtsShape):
 		
 
 		# clean up temporary objects
-		Blender.Scene.GetCurrent().objects.unlink(Blender.Object.Get("DTSExpObj_Tmp"))
+		try:Blender.Scene.GetCurrent().objects.unlink(Blender.Object.Get("DTSExpObj_Tmp"))
+		except: pass
 
 		del mesh_data
 		del temp_obj
