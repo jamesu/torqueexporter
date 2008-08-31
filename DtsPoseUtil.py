@@ -72,19 +72,21 @@ def initPSTransformData(self, initPose=None):
 # 
 def __calcNodeDefPosPS(self, nodeName):
 	# early out if we've got no parent
-	if self.parentNI == None:
-		nodeLocWS = self.restPosWS
-		return nodeLocWS			
+	if self.getGoodNodeParentNI() == None:
+		print nodeName, "has no parent!"
+		offsetPS = self.restPosWS
+		return offsetPS			
 	# get the node's default position in worldspace
 	nodeLocWS = self.restPosWS
 	# get the parent node's default position in worldspace
-	parentnodeLocWS = self.parentNI.restPosWS
+	parentnodeLocWS = self.getGoodNodeParentNI().restPosWS
+	parentnodeRotWS = self.getGoodNodeParentNI().restRotWS
 	# subtract out the parent node's position, this gives us the offset of the child in worldspace
 	offsetWS = nodeLocWS - parentnodeLocWS
 	# scale the offset by armature's scale
 	# todo - this wasn't doing anything?
 	# rotate the offset into the parent node's default local space		
-	offsetPS = self.parentNI.restRotWS.inverse().apply(offsetWS)
+	offsetPS = parentnodeRotWS.inverse().apply(offsetWS)
 	return offsetPS
 
 # determine a node's default rotation in parent space
@@ -93,13 +95,13 @@ def __calcNodeDefPosPS(self, nodeName):
 # 
 def __calcNodeDefRotPS(self, nodeName):
 	# early out if we've got no parent
-	if self.parentNI == None:
-		nodeRotWS = self.restRotWS
-		return nodeRotWS			
+	if self.getGoodNodeParentNI() == None:
+		bDefRotPS = self.restRotWS
+		return bDefRotPS			
 	# get the node's default rotation in worldspace
 	nodeRotWS = self.restRotWS
 	# get the parent node's default rotation in worldspace
-	parentNodeRotWS = self.parentNI.restRotWS
+	parentNodeRotWS = self.getGoodNodeParentNI().restRotWS
 	# get the difference
 	bDefRotPS = nodeRotWS * parentNodeRotWS.inverse()
 	return bDefRotPS
@@ -394,7 +396,7 @@ class DtsPoseUtilClass:
 	def getNodeLocRotLS(self, nodeName, pose):
 		loc = None
 		rot = None
-		if self.nodes[nodeName].parentNI == None:
+		if self.nodes[nodeName].getGoodNodeParentNI() == None:
 			loc = self.getOrphanNodeLocLS(nodeName, pose)
 			rot = self.getOrphanNodeRotLS(nodeName, pose)
 		else:
@@ -408,7 +410,7 @@ class DtsPoseUtilClass:
 	# TESTED
 	def getNodeLocLS(self, nodeName, pose):
 		node = self.nodes[nodeName]
-		parent = node.parentNI
+		parent = node.getGoodNodeParentNI()
 		if parent == None: raise ValueError
 		# get the bone's location in parent space
 		whereIsBonePS = self.getNodePosPS(nodeName, pose)
@@ -426,7 +428,7 @@ class DtsPoseUtilClass:
 	# TESTED
 	def getNodeRotLS(self, nodeName, pose):
 		node = self.nodes[nodeName]
-		parent = node.parentNI
+		parent = node.getGoodNodeParentNI()
 		if parent == None: raise ValueError
 		# get the default rotation of the bone in parent space, this
 		# is what the bone's rotation should be if it has not been
@@ -474,7 +476,7 @@ class DtsPoseUtilClass:
 	# TESTED
 	def getNodePosPS(self, nodeName, pose):
 		node = self.nodes[nodeName]
-		parent = node.parentNI
+		parent = node.getGoodNodeParentNI()
 		if parent == None: raise ValueError
 		# find the parent's location in worldspace
 		whereIsParentWS = parent.getNodeLocWS(pose)
@@ -490,7 +492,7 @@ class DtsPoseUtilClass:
 	# TESTED
 	def getNodeRotPS(self, nodeName, pose):
 		node = self.nodes[nodeName]
-		parent = node.parentNI
+		parent = node.getGoodNodeParentNI()
 		if parent == None: raise ValueError
 		# get the node's rotation in worldspace
 		nodeRotWS = node.getNodeRotWS(pose)
