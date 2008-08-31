@@ -43,7 +43,7 @@ class nodeInfoClass:
 	def __init__(self, nodeName, blenderType, blenderObj, parentNI, armParentNI=None):
 		self.nodeName = nodeName
 		self.blenderType = blenderType
-		self.blenderObj = blenderObj # either a blender bone or blender object depending on blenderType
+		self.blenderObjName = blenderObj.name # either a blender bone or blender object depending on blenderType
 		self.parentNodeInfo = parentNI
 		self.detailLevels = []
 		self.dtsObjName = nodeName
@@ -76,7 +76,11 @@ class nodeInfoClass:
 
 	def isExcluded(self):
 		return (self.dtsObjName.upper() in Prefs['BannedNodes'])
-		
+	
+	def getBlenderObj(self):
+		try: retval = Blender.Object.Get(self.blenderObjName)
+		except: retval = None
+		return retval
 
 #-------------------------------------------------------------------------------------------------			
 '''
@@ -106,6 +110,7 @@ class SceneInfoClass:
 		#self.__populateData()
 
 	def refreshAll(self):
+		print "Crashing now."
 		self.nodes = {}
 		self.armatures = {}
 		self.meshes = {}
@@ -116,8 +121,10 @@ class SceneInfoClass:
 		# match up meshes with dts objects.
 		self.IPOs = {}
 		self.strippedMeshNames = {}
+		print "You are never here!"
 		# build the tree
 		self.__populateData()
+
 
 	# recursive, for internal use only
 	def __addTree(self, obj, parentNI):
@@ -229,7 +236,7 @@ class SceneInfoClass:
 			
 
 	def __populateData(self):
-		startTime = Blender.sys.time()
+		#startTime = Blender.sys.time()
 		
 		# create empty detail levels based on prefs
 		for dlName in Prefs['DetailLevels'].keys():
@@ -266,11 +273,12 @@ class SceneInfoClass:
 					dtsObjName = foundList[0].dtsObjName
 					nameList = []
 					for ni in foundList: nameList.append(ni.nodeName)
+					'''
 					print " Warning: The following mesh names in",dlName,"all reduce to the same DTS Object name:", dtsObjName
 					print " ", nameList
 					print "  The exporter will use the original names for these meshes and any nodes generated from them."
 					print "  This may result in duplicate or unneccesary nodes and inefficent mesh packing in the exported dts file."
-					
+					'''
 					# fix dtsObject names.
 					for ni in foundList:
 						ni.dtsObjName = ni.nodeName
@@ -300,7 +308,7 @@ class SceneInfoClass:
 				self.DTSObjects[ni.dtsObjName][dl] = ni
 
 		
-
+		'''
 		# ----------------
 		# debug prints
 		sortedKeys = self.detailLevels.keys()
@@ -325,7 +333,7 @@ class SceneInfoClass:
 			print tempString
 
 		# ----------------
-
+		'''
 		
 		# re-index the main nodes dict by dts object name
 		# If we're dealing with a mesh node, we want the highest lod
@@ -342,8 +350,8 @@ class SceneInfoClass:
 			
 			
 		
-		endTime = Blender.sys.time()
-		print "__populateData finished in", endTime - startTime
+		#endTime = Blender.sys.time()
+		#print "__populateData finished in", endTime - startTime
 
 
 	#################################################
@@ -418,7 +426,7 @@ class SceneInfoClass:
 
 
 	# Strip image names of trailing extension
-	def __stripImageExtension(imagename, filename=""):
+	def stripImageExtension(imagename, filename=""):
 		imageExts = ['jpg', 'jpeg', 'gif', 'png', 
 			     'tif', 'tiff', 'mpg', 'mpeg',
 			     'tga', 'pcx', 'xcf', 'pix',
@@ -440,7 +448,7 @@ class SceneInfoClass:
 		retVal = retVal[0:len(retVal)-1] # remove trailing "."
 		return retVal
 
-	__stripImageExtension = staticmethod(__stripImageExtension)
+	stripImageExtension = staticmethod(stripImageExtension)
 
 	# not static because it needs to know about detail levels.
 	def getDtsMaterials(self):
@@ -450,7 +458,7 @@ class SceneInfoClass:
 		for dlName in self.detailLevels:
 			dl = self.detailLevels[dlName]
 			for ni in dl:
-				obj = ni.blenderObj
+				obj = ni.getBlenderObj()
 				if obj.getType() != "Mesh": continue
 				objData = obj.getData()
 				for face in objData.faces:					
@@ -463,13 +471,13 @@ class SceneInfoClass:
 						# is there a material index assigned?
 						if x != None:
 							#  add the material name to the imagelist
-							imageName = SceneInfoClass.__stripImageExtension(objData.materials[face.mat].name)
+							imageName = SceneInfoClass.stripImageExtension(objData.materials[face.mat].name)
 							if not (imageName in imageList):
 								imageList.append(imageName)
 
 					# Otherwise we do have an image assigned to the face, so add it to the imageList.
 					else:
-						imageName = SceneInfoClass.__stripImageExtension(face.image.getName(), face.image.getFilename())
+						imageName = SceneInfoClass.stripImageExtension(face.image.getName(), face.image.getFilename())
 						if not (imageName in imageList):
 							imageList.append(imageName)
 
@@ -480,7 +488,7 @@ class SceneInfoClass:
 	# gets a dts material name for a given Blender mesh primitive
 	def getFaceDtsMatName(face, msh):
 		imageName = None
-		try: imageName = SceneInfoClass.__stripImageExtension(face.image.getName(), face.image.getFilename())
+		try: imageName = SceneInfoClass.stripImageExtension(face.image.getName(), face.image.getFilename())
 		#except AttributeError:
 		except (ValueError, AttributeError):
 			# there isn't an image assigned to the face...
@@ -489,7 +497,7 @@ class SceneInfoClass:
 			except IndexError: mat = None
 			if mat != None:
 				# we have a material index, so get the name of the material
-				imageName = SceneInfoClass.__stripImageExtension(mat.name)
+				imageName = SceneInfoClass.stripImageExtension(mat.name)
 
 		return imageName
 		
@@ -499,7 +507,7 @@ class SceneInfoClass:
 	def getAllBlenderImages():
 		imageNames = []
 		for img in Blender.Image.Get():
-			imageNames.append( SceneInfoClass.__stripImageExtension(img.getName(), img.getFilename()) )
+			imageNames.append( SceneInfoClass.stripImageExtension(img.getName(), img.getFilename()) )
 		return imageNames
 	
 	getAllBlenderImages = staticmethod(getAllBlenderImages)
