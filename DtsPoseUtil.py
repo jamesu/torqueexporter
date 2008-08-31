@@ -33,45 +33,33 @@ from DTSPython import Torque_Math
 from DtsGlobals import *
 from DtsSceneInfo import *
 
-
+import new
 import gc
 
 gc.enable()
 #-------------------------------------------------------------------------------------------------
-def initTransformData(self, initPose=None):
-	#self.nodeName = nodeName
-	#self.blenderType = blenderType
-	#self.blenderObj = blenderObj # either a blender bone or blender object depending on blenderType
-	#self.parentNodeInfo = parentNI		
-
-
-	#if parentNI != None: self.parentName = parentNI.nodeName
-	#else: self.parentName = None
-	#if parentNI != None: self.parentBlenderType = parentNI.blenderType
-	#else: self.parentBlenderType = None
-
-	#self.parentNI = parentNI
-	#self.armParentNI = armParentNI
-	#self.parentScale = parentScale
-
+def initWSTransformData(self, initPose=None):
 	if self.blenderType == "object":
-		mat = self.blenderObj.getMatrix('worldspace')
+		mat = self.getBlenderObj().getMatrix('worldspace')
 		# Note: Blender quaternions must be inverted since torque uses column vectors
 		self.restRotWS = toTorqueQuat(mat.rotationPart().toQuat().inverse())
 		self.restPosWS = toTorqueVec(mat.translationPart())
 
-		self.defPosPS = self.__calcNodeDefPosPS(self.dtsObjName)
-		self.defRotPS = self.__calcNodeDefRotPS(self.dtsObjName)
-
 	elif self.blenderType == "bone":			
-		bone = self.blenderObj.getData().bones[self.nodeName]
+		bone = self.getBlenderObj().getData().bones[self.nodeName]
 		bMat = bone.matrix['ARMATURESPACE']
 		self.restPosWS = self.__calcBoneRestPosWS(bMat)
 		self.restRotWS = self.__calcBoneRestRotWS(bMat)
 
+def initPSTransformData(self, initPose=None):
+	if self.blenderType == "object":
+		self.defPosPS = self.__calcNodeDefPosPS(self.dtsObjName)
+		self.defRotPS = self.__calcNodeDefRotPS(self.dtsObjName)
+
+	elif self.blenderType == "bone":			
+		bone = self.getBlenderObj().getData().bones[self.nodeName]
 		self.defPosPS = self.__calcNodeDefPosPS(bone.name)
 		self.defRotPS = self.__calcNodeDefRotPS(bone.name)
-
 
 
 # methods used to calculate static node tranform data
@@ -205,9 +193,10 @@ def getNodeRotWS(self, pose):
 
 # binds the above methods to the nodeInfo class imported from DtsSceneInfo.py.
 def bindDynamicMethods():
-	import new
-	new.instancemethod(initTransformData, None, nodeInfoClass)
-	nodeInfoClass.__dict__['initTransformData'] = initTransformData
+	new.instancemethod(initWSTransformData, None, initWSTransformData)
+	nodeInfoClass.__dict__['initWSTransformData'] = initWSTransformData
+	new.instancemethod(initPSTransformData, None, initPSTransformData)
+	nodeInfoClass.__dict__['initPSTransformData'] = initPSTransformData
 	new.instancemethod(__calcNodeDefPosPS, None, nodeInfoClass)
 	nodeInfoClass.__dict__['__calcNodeDefPosPS'] = __calcNodeDefPosPS
 	new.instancemethod(__calcNodeDefRotPS, None, nodeInfoClass)
@@ -245,10 +234,15 @@ class DtsPoseUtilClass:
 		gc.enable()
 		# bind dynamic methods to nodeInfoClass
 		bindDynamicMethods()
+		# get dictionaries
 		self.nodes = DtsGlobals.SceneInfo.nodes
-		for node in self.nodes.values(): node.initTransformData()
-		self.armatures = {}
-		self.__populateData(prefs)
+		self.armatures = DtsGlobals.SceneInfo.armatures
+		
+		for node in self.nodes.values():
+			node.initWSTransformData()
+		for node in self.nodes.values():
+			node.initPSTransformData()		
+		#self.__populateData(prefs)
 	
 
 	# recursive, for internal use only
@@ -354,7 +348,7 @@ class DtsPoseUtilClass:
 	def __populateData(self, prefs):
 		# Build armatures dictionary
 		for ni in self.nodes.values():
-			if ni.blenderObj.getType == "Armature":
+			if ni.getBlenderObj().getType == "Armature":
 				pass
 				#self.armatures[ni.]
 		'''
