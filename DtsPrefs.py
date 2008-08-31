@@ -22,7 +22,6 @@ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 '''
-
 from DtsSceneInfo import *
 import DTSPython
 from DTSPython import *
@@ -791,7 +790,7 @@ class prefsClass(dict):
 				if len(textures) > 0:
 					if textures[0] != None:
 						if textures[0].tex.image != None:						
-							pmb['BaseTex'] = stripImageExtension(textures[0].tex.image.getName())
+							pmb['BaseTex'] = SceneInfoClass.stripImageExtension(textures[0].tex.image.getName())
 						else:
 							pmb['BaseTex'] = None
 
@@ -829,21 +828,21 @@ class prefsClass(dict):
 							pmb['ReflectanceMapFlag'] = True
 							pmb['NeverEnvMap'] = False
 							if textures[0].tex.image != None:
-								pmb['RefMapTex'] = stripImageExtension(textures[i].tex.image.getName())
+								pmb['RefMapTex'] = SceneInfoClass.stripImageExtension(textures[i].tex.image.getName())
 							else:
 								pmb['RefMapTex'] = None
 						# B) We have a normal map (basically a 3d bump map)
 						elif (texture_obj.mapto & Texture.MapTo.NOR):
 							pmb['BumpMapFlag'] = True
 							if textures[0].tex.image != None:
-								pmb['BumpMapTex'] = stripImageExtension(textures[i].tex.image.getName())
+								pmb['BumpMapTex'] = SceneInfoClass.stripImageExtension(textures[i].tex.image.getName())
 							else:
 								pmb['BumpMapTex'] = None
 						# C) We have a texture; Lets presume its a detail map (since its laid on top after all)
 						else:
 							pmb['DetailMapFlag'] = True
 							if textures[0].tex.image != None:
-								pmb['DetailTex'] = stripImageExtension(textures[i].tex.image.getName())
+								pmb['DetailTex'] = SceneInfoClass.stripImageExtension(textures[i].tex.image.getName())
 							else:
 								pmb['DetailTex'] = None
 	
