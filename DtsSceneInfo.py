@@ -120,6 +120,7 @@ class SceneInfoClass:
 		# match up meshes with dts objects.
 		self.IPOs = {}
 		self.strippedMeshNames = {}
+		gc.collect()
 		# build the tree		
 		self.__populateData()
 
