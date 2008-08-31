@@ -63,9 +63,9 @@ class nodeInfoClass:
 		elif blenderType == "bone":
 			pass
 
-	# find a non-excluded node to use as a parent for another node/object
-	# don't call this until the tree is completely built.
-	def getGoodParentNI(self):
+	# find a non-excluded node to use as a parent for a dts object
+	# Returns the object's own generated node if it's valid.
+	def getGoodMeshParentNI(self):
 		pNI = self
 		while (pNI != None) and \
 		((pNI.nodeName.upper() in DtsGlobals.Prefs['BannedNodes']) \
@@ -73,9 +73,24 @@ class nodeInfoClass:
 			pNI = pNI.parentNI
 		return pNI
 
+	# find a non-excluded node to use as a parent for another node
+	# never returns the object's own generated node
+	def getGoodNodeParentNI(self):
+		pNI = self.parentNI
+		while (pNI != None):
+			# break if pNI is good.
+			if not (pNI.nodeName.upper() in DtsGlobals.Prefs['BannedNodes']):
+				break
+			if pNI.hasGeometry and (len(pNI.detailLevels) == 0):
+				break
+			# otherwise continue up the chain
+			pNI = pNI.parentNI
+		
+		# return whatever we found.
+		return pNI
+
+
 	def isExcluded(self):
-		print DtsGlobals.Prefs['BannedNodes']
-		print "nodeInfo isExcluded returning", (self.dtsObjName.upper() in DtsGlobals.Prefs['BannedNodes']), "for node:", self.dtsObjName.upper()
 		return (self.dtsObjName.upper() in DtsGlobals.Prefs['BannedNodes'])
 	
 	def getBlenderObj(self):
@@ -151,7 +166,8 @@ class SceneInfoClass:
 
 		# don't add object to detail levels if it has no visible geometry
 		elif not (bObjType in ['Empty', 'Curve', 'Camera', 'Lamp', 'Lattice']):
-			self.meshes[nodeName] = n			
+			self.meshes[nodeName] = n
+			n.hasGeometry = True
 			# add mesh node info to detail levels
 			for dlName in DtsGlobals.Prefs['DetailLevels'].keys():
 				dl = DtsGlobals.Prefs['DetailLevels'][dlName]
@@ -160,7 +176,9 @@ class SceneInfoClass:
 						self.detailLevels[dlName].append(n)
 						# single meshes *can* exist in multiple detail levels
 						n.detailLevels.append(dlName)
-						n.hasGeometry = True
+						# don't add the same object to the same dl more than once :-)
+						break
+						
 
 			#-------
 			# add to the temp dictionaries for calculating DTSObject assignment later
@@ -291,7 +309,7 @@ class SceneInfoClass:
 		
 		# create 'None' lists for DTS Objects
 		for ni in self.nodes.values():
-			if not ni.hasGeometry: continue
+			if len(ni.detailLevels) == 0: continue
 			# create a dts object if it doesn't already exist.
 			try: dtsObj = self.DTSObjects[ni.dtsObjName]
 			except:
@@ -304,6 +322,7 @@ class SceneInfoClass:
 
 		# insert meshes into correct slots in dts object lists.
 		for ni in self.nodes.values():
+			if len(ni.detailLevels) == 0: continue
 			# insert meshes into the correct detail levels
 			for dl in ni.detailLevels:
 				self.DTSObjects[ni.dtsObjName][dl] = ni
