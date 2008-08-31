@@ -230,20 +230,45 @@ class DtsPoseUtilClass:
 	
 	
 	'''
-	def __init__(self, prefs):	
+	def __init__(self, prefs):
 		gc.enable()
 		# bind dynamic methods to nodeInfoClass
 		bindDynamicMethods()
 		# get dictionaries
 		self.nodes = DtsGlobals.SceneInfo.nodes
 		self.armatures = DtsGlobals.SceneInfo.armatures
-		
+		self.__initTransforms()
+		'''
+		# first init armatures
+		for node in self.armatures.values():
+			node.initWSTransformData()
+		for node in self.armatures.values():
+			node.initPSTransformData()
+		# now the rest (there's some overlap, but not much unless a scene has a crap-ton of armatures)
 		for node in self.nodes.values():
 			node.initWSTransformData()
 		for node in self.nodes.values():
-			node.initPSTransformData()		
+			node.initPSTransformData()
 		#self.__populateData(prefs)
+		'''
 	
+	def __initTransforms(self):
+		# start with nodes at the root of the tree
+		for node in filter(lambda x: x.parentNI == None, self.nodes.values()):
+			node.initWSTransformData()
+			# add child trees
+			self.__walkTreeInitTransforms(None)
+			# finally init PS transform data
+			node.initPSTransformData()
+		
+
+	def __walkTreeInitTransforms(self, node):
+		for node in filter(lambda x: x.parentNI == node, self.nodes.values()):
+			node.initWSTransformData()
+			# add child trees
+			self.__walkTreeInitTransforms(node)
+			# finally init PS transform data
+			node.initPSTransformData()
 
 	# recursive, for internal use only
 	def __addTree(self, obj, parentNI, prefs):
