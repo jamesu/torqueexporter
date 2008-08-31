@@ -316,7 +316,7 @@ class BlenderShape(DtsShape):
 				# find the actual parent node
 				for dln in sortedDetailLevels:
 					if dtsObjects[dtsObjName][dln] != None:
-						pNodeNI = dtsObjects[dtsObjName][dln].getGoodParentNI()
+						pNodeNI = dtsObjects[dtsObjName][dln].getGoodMeshParentNI()
 						break
 
 				if pNodeNI == None:
