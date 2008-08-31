@@ -613,16 +613,8 @@ class BlenderShape(DtsShape):
 	def addNodeTree(self, nodeInfo, parentNodeIndex =-1):
 		if not nodeInfo.isExcluded():
 			n = Node(self.sTable.addString(nodeInfo.dtsObjName), parentNodeIndex)
-			if parentNodeIndex == -1:
-				#pos = nodeInfo.getNodeLocWS(pose)
-				#rot = nodeInfo.getNodeRotWS(pose)
-				pos = nodeInfo.defPosPS
-				rot = nodeInfo.defRotPS
-
-			else:
-				pos = nodeInfo.defPosPS
-				rot = nodeInfo.defRotPS
-
+			pos = nodeInfo.defPosPS
+			rot = nodeInfo.defRotPS
 			self.defaultTranslations.append(pos)
 			self.defaultRotations.append(rot)
 			try: n.armName = nodeInfo.armParentNI.nodeName
