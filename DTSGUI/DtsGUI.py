@@ -36,6 +36,7 @@ import DtsGlobals
 # bring export function into scope
 from Dts_Blender import export
 
+
 # import GUI control pages
 from SequenceProperties import *
 from VisAnim import *
