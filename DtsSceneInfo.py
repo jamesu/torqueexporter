@@ -29,6 +29,7 @@ from DtsPrefs import *
 import DtsGlobals
 from DTSPython import stripPath
 
+noGeometryTypes = ['Empty', 'Curve', 'Camera', 'Lamp', 'Lattice', 'Armature']
 
 '''
 NodeInfoClass
@@ -39,59 +40,65 @@ Blender object or Blender bone.
 '''
 class nodeInfoClass:
 	def __init__(self, nodeName, blenderType, blenderObj, parentNI, armParentNI=None):
-		self.nodeName = nodeName
-		self.blenderType = blenderType		
+		self.dtsNodeName = nodeName  # <- name of the (exported) dts node
+		self.dtsObjName = None # <- name of the dts object (for meshes)
 		self.blenderObjName = blenderObj.name # either a blender bone or blender object depending on blenderType
-		self.hasGeometry = False
-		self.parentNodeInfo = parentNI		
-		self.detailLevels = []
-		self.dtsObjName = nodeName
+		self.blenderType = blenderType		
+		self.hasGeometry = not (blenderObj.getType() in noGeometryTypes)
+		self.detailLevels = []		
 		self.armParentNI = armParentNI
-		
-		self.isBannedNode = nodeName in DtsGlobals.Prefs['BannedNodes']
-		self.layers = blenderObj.layers
-		
-		if parentNI != None: self.parentName = parentNI.nodeName
-		else: self.parentName = None
-		if parentNI != None: self.parentBlenderType = parentNI.blenderType
-		else: self.parentBlenderType = None
-		
+		self.isBannedNode = self.__isBanned() # <- whether or not the node is in the banned nodes list
+		self.isExportable = self.__isInExportLayer() # <- whether or not the node is in a layer that is being exported
+		self.layers = [layer for layer in blenderObj.layers] # make sure we're not keeping a reference to a blender-owned object
 		self.parentNI = parentNI
 		
+		if self.hasGeometry:
+			self.dtsObjName = SceneInfoClass.getStrippedMeshName(nodeName)
+			self.dtsNodeName = SceneInfoClass.getStrippedMeshName(nodeName)
+			
+		'''
 		if blenderType == "object":
 			pass
 		elif blenderType == "bone":
 			pass
+		'''
+		#print "Constructed", self.blenderType, "node", self.dtsNodeName, "from Blender object", self.blenderObjName
 
 	# find a non-excluded node to use as a parent for a dts object
 	# Returns the object's own generated node if it's valid.
 	def getGoodMeshParentNI(self):
 		pNI = self
-		while (pNI != None) and \
-		((pNI.nodeName.upper() in DtsGlobals.Prefs['BannedNodes']) \
-		or (len(pNI.detailLevels) == 0)):		
+		while (pNI != None) and ((not pNI.isExportable) or pNI.isBannedNode):
 			pNI = pNI.parentNI
 		return pNI
 
 	# find a non-excluded node to use as a parent for another node
 	# never returns the object's own generated node
-	def getGoodNodeParentNI(self):
+	def getGoodNodeParentNI(self, debug=False):
 		pNI = self.parentNI
-		while (pNI != None):
-			# break if pNI is good.
-			if not (pNI.nodeName.upper() in DtsGlobals.Prefs['BannedNodes']):
-				break
-			if pNI.hasGeometry and (len(pNI.detailLevels) == 0):
-				break
-			# otherwise continue up the chain
+		while (pNI != None) and ((not pNI.isExportable) or pNI.isBannedNode):
 			pNI = pNI.parentNI
 		
 		# return whatever we found.
 		return pNI
 
-
-	def isExcluded(self):
-		return (self.dtsObjName.upper() in DtsGlobals.Prefs['BannedNodes'])
+	def __isBanned(self):
+		# is the node on the banned nodes list?
+		banned = (self.dtsNodeName.upper() in DtsGlobals.Prefs['BannedNodes'])
+		return banned
+		
+	def __isInExportLayer(self):
+		# is the node in a layer that is exported?
+		goodLayer = False
+		obj = self.getBlenderObj()
+		for dlName in DtsGlobals.Prefs['DetailLevels'].keys():
+			dl = DtsGlobals.Prefs['DetailLevels'][dlName]			
+			for layer in obj.layers:
+				if layer in dl:
+					goodLayer = True
+					break
+		retval = goodLayer
+		return retval
 	
 	def getBlenderObj(self):
 		try: retval = Blender.Object.Get(self.blenderObjName)
@@ -117,30 +124,71 @@ class SceneInfoClass:
 		gc.enable()
 		DtsGlobals.Prefs = prefs		
 		self.refreshAll()
-		#self.nodes = {}
-		#self.armatures = {}
-		#self.meshes = {}
-		#self.detailLevels = {}
-		#self.DTSObjects = {}
-		#self.__populateData()
 
 	def refreshAll(self):
-		self.nodes = {}
-		self.armatures = {}
-		self.meshes = {}
-		self.detailLevels = {}
-		# stores final dts object assignments, indexed by dts object names
-		self.DTSObjects = {}
-		# intermediate data structures used to determine how we're going to
-		# match up meshes with dts objects.
-		self.IPOs = {}
-		self.strippedMeshNames = {}
+		# node lists and indicies
+		self.allThings = [] # <- contains info for all objects and bones in the blender scene.
+		self.meshExportList = []
+		self.nodes = {} # <- indexed by dtsNodeName, contains all good (exported) nodes after initialization
+		self.armatures = {} # <- indexed by actual blender object name(?)		
+		self.DTSObjects = {} # <- indexed by dtsObjName (final dts object name)
+		
+		# take out the trash
 		gc.collect()
+		
 		# build the tree		
 		self.__populateData()
 
+	def __alreadyExists(self, n, getTest=False):
+		# see if we've got a naming conflict		
+		alreadyExists = False
+		try:
+			test = self.nodes[n.dtsNodeName]
+			alreadyExists = True
+		except: test = None
+		if getTest: return alreadyExists, test
+		else: return alreadyExists
+
+	# gets the highest LOD for a given node (nodeInfo)
+	def getHighestLodNI(self, n):
+		highestSize = -1
+		for dlName in n.detailLevels:
+			dlSize = DtsGlobals.getTrailingNumber(dlName)
+			if dlSize > highest: highest = dlSize
+		return highestSize
+
+	# utility method used in __safeAddToNodesDict below
+	# returns the nodeInfo struct with the highest lod assignment.
+	def getHighestLodNI(self, n1, n2):
+		if self.getHighestLodNI(n1) > self.getHighestLodNI(n2):
+			return n1
+		else:
+			return n2
+
+	# add a nodes to the (good, exported) nodes dictionary
+	# does not change dts object names, only node names
+	def __safeAddToNodesDict(self, n):		
+		alreadyExists, existing = self.__alreadyExists(n, True)
+		if alreadyExists:
+			finalName = n.dtsNodeName
+			print "\nWarning:", n.blenderType, "node", finalName, "(Blender Object:"+n.blenderObjName+") conflicts with existing", existing.blenderType, "node name", finalName,"(Blender Object:"+existing.blenderObjName+") !"
+			newName = n.getBlenderObj().getType() + "-" + finalName
+			n.dtsNodeName = newName
+			i = 1
+			while(self.__alreadyExists(n)):
+				newName = n.getBlenderObj().getType() + ("(%s)-" % str(i)) + finalName
+				n.dtsNodeName = newName				
+				
+			print "  Changed name of", n.blenderType, "node to:", newName, "\n"
+			n.dtsNodeName = newName
+			self.nodes[newName] = n
+		else:
+			self.nodes[n.dtsNodeName] = n
+
+
 
 	# recursive, for internal use only
+	# adds a blender object (sub) tree to the allThings list recursively.
 	def __addTree(self, obj, parentNI):
 		#   "obj" is a blender object of any type
 		#   "parentNI" is the parent object (NodeInfo object) of obj
@@ -148,94 +196,72 @@ class SceneInfoClass:
 		# skip temp objects
 		if obj.name == "DTSExpObj_Tmp": return
 
-		nodeName = obj.name
+		#nodeName = obj.name
 		blenderType = "object"
 		blenderObj = obj
 
 
 		# create a new nodeInfo object for the Blender object
-		n = nodeInfoClass(nodeName, blenderType, blenderObj, parentNI)
+		n = nodeInfoClass(obj.name, blenderType, blenderObj, parentNI)
 
-		# the new node to the nodes dictionary
-		self.nodes[nodeName] = n
-
-		# add the node to other dictionaries as needed
+		# always keep track of armatures, even if they're not exported at all.
 		bObjType = obj.getType()
 		if (bObjType == 'Armature'):
-			self.armatures[nodeName] = n		
+			# add the node to the armatures dictionary if needed
+			self.armatures[n.blenderObjName] = n
 
-		# don't add object to detail levels if it has no visible geometry
-		elif not (bObjType in ['Empty', 'Curve', 'Camera', 'Lamp', 'Lattice']):
-			self.meshes[nodeName] = n
-			n.hasGeometry = True
+		# add the new node to the allThings list
+		self.allThings.append(n)
+		
+		#self.__safeAddToNodesDict(n)
+		'''
+		#if n.hasGeometry and n.isExportable:
+		#	self.__safeAddToNodesDict(n)
+		#elif (not n.isBannedNode)
+		#	self.__safeAddToNodesDict(n)
+		'''			
+
+		if n.isExportable and n.hasGeometry:
 			# add mesh node info to detail levels
 			for dlName in DtsGlobals.Prefs['DetailLevels'].keys():
 				dl = DtsGlobals.Prefs['DetailLevels'][dlName]
 				for layer in obj.layers:
 					if layer in dl:
-						self.detailLevels[dlName].append(n)
 						# single meshes *can* exist in multiple detail levels
 						n.detailLevels.append(dlName)
-						# don't add the same object to the same dl more than once :-)
 						break
-						
 
-			#-------
-			# add to the temp dictionaries for calculating DTSObject assignment later
-			strippedName = SceneInfoClass.getStrippedMeshName(obj.name)
-			# set the dts object name
-			n.dtsObjName = strippedName
-			try: x = self.strippedMeshNames[strippedName]
-			except: self.strippedMeshNames[strippedName] = []
-			self.strippedMeshNames[strippedName].append(n)
-			# -
-			ipo = obj.getIpo()
-			try: ipoName = ipo.name
-			except: ipoName = 'NoneAssigned'
-			try: x = self.IPOs[ipoName]
-			except: self.IPOs[ipoName] = []
-			self.IPOs[ipoName].append(n)
-			#-------
-			'''
-			# add to DTSObjects
-			dtsObjName = getStrippedMeshName(obj.name)
-			try: dtsObj = self.DTSObjects[dtsObjName]
-			except: self.DTSObjects[dtsObjName] = []
-			self.DTSObjects[dtsObjName].append
-			'''
-
-		# add armature bones if needed
+		
+		
+		
+		# always add bone nodes
 		if (bObjType == 'Armature'):
-			# get blender armature datablock
+			tempBones = {}
+			# add armature bones if needed
 			armDb = obj.getData()
-			for bone in filter(lambda x: x.parent==None, armDb.bones.values()):					
-				self.__addBoneTree(obj, n, bone, armDb, n)
-
+			for bone in filter(lambda x: x.parent==None, armDb.bones.values()):
+				self.__addBoneTree(obj, n, bone, armDb, n, tempBones)
 
 		# add child trees
 		for child in filter(lambda x: x.parent==obj, Blender.Object.Get()):
 			parentBoneName = child.getParentBoneName()
 			if (obj.getType() == 'Armature') and (parentBoneName != None):					
-				parentNode = self.nodes[parentBoneName]					
+				parentNode = tempBones[parentBoneName]
 				self.__addTree(child, parentNode)
 			else:
 				self.__addTree(child, n)
 		
 
 	
-	# adds a bone tree recursively, for internal use only
-	def __addBoneTree(self, obj, parentNI, boneOb, armDb, armParentNI):
-		nodeName = boneOb.name
-		blenderType = "bone"
-		blenderObj = obj
-
-		# add it to the nodes dict
-		n = nodeInfoClass(nodeName, blenderType, blenderObj, parentNI, armParentNI)
-		self.nodes[nodeName] = n
-
+	# adds a bone tree to the allThings list recursively, for internal use only
+	def __addBoneTree(self, blenderObj, parentNI, boneOb, armDb, armParentNI, boneDictionary):
+		#print "Adding Bone:", boneOb.name
+		n = nodeInfoClass(boneOb.name, 'bone', blenderObj, parentNI, armParentNI)
+		boneDictionary[boneOb.name] = n
+		self.allThings.append(n)
 		# add child trees
 		for bone in filter(lambda x: x.parent==boneOb, armDb.bones.values()):					
-			self.__addBoneTree(obj, n, bone, armDb, armParentNI)
+			self.__addBoneTree(blenderObj, n, bone, armDb, armParentNI, boneDictionary)
 
 	# for debugging
 	def __printTree(self, ni, indent=0):
@@ -243,38 +269,40 @@ class SceneInfoClass:
 		for i in range(0, indent):
 			pad += " "
 		print pad+"|"
-		print pad+"Node:", ni.nodeName
+		print pad+"Node:", ni.dtsNodeName, "(",ni.blenderObjName,")"
 		try:
-			nn = ni.parentNI.nodeName
-			print pad+"Parent:", nn
+			nn = ni.getGoodNodeParentNI().dtsNodeName
+			print pad+"Parent:", nn,"(",ni.getGoodNodeParentNI().blenderObjName,")"
 		except: print pad+"No Parent."
 		indent += 3
-		for nic in filter(lambda x: x.parentNI==ni, self.nodes.values()):			
+		for nic in filter(lambda x: x.getGoodNodeParentNI()==ni, self.nodes.values()):
 			self.__printTree(nic, indent)
 			
 
 	def __populateData(self):
-		#startTime = Blender.sys.time()
+		startTime = Blender.sys.time()
 		
-		# create empty detail levels based on prefs
-		for dlName in DtsGlobals.Prefs['DetailLevels'].keys():
-			self.detailLevels[dlName] = []
-		
-		# go through each object and bone and add subtrees		
+		# go through each Blender object and bone and add subtrees (construct allThings list)
 		for obj in filter(lambda x: x.parent==None, Blender.Object.Get()):
 			if obj.parent == None:
 				self.__addTree(obj, None)
-		#print "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-		#for ni in filter(lambda x: x.parentNI==None, self.nodes.values()):
-		#	self.__printTree(ni)
-		#print "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 		
+		# nodes that should be exported
+		nodeExportList = filter(lambda x: (x.isBannedNode==False) and (x.isExportable==True), self.allThings)
+
+		# meshes that should be exported
+		meshExportList = filter(lambda x: (x.hasGeometry==True) and (x.isExportable==True), self.allThings)
+		self.meshExportList = meshExportList
 		
-		# check that every mesh in a detail level has a unique dts object name
-		for dlName in self.detailLevels.keys():
-			dl = self.detailLevels[dlName]
+		# construct dts objects
+		
+		dlNames = DtsGlobals.Prefs['DetailLevels'].keys()
+
+		# check that every mesh within a given detail level has a unique dts object name
+		for dlName in dlNames:
+			dlMeshes = filter(lambda x: dlName in x.detailLevels, meshExportList)
 			found = {}
-			for meshNI in dl:
+			for meshNI in dlMeshes:
 				dtsObjName = meshNI.dtsObjName
 				try: x = found[dtsObjName]
 				except:
@@ -282,57 +310,75 @@ class SceneInfoClass:
 					found[dtsObjName] = []
 				found[dtsObjName].append(meshNI)
 			
-			#print "-----------------------------"
+			print "-----------------------------"
 			#print "Report of dts object names for", dlName
 			for dtsObjName in found.keys():
-				#print "*** Checking Dts object:", dtsObjName
+				print "*** Checking Dts object:", dtsObjName
 				foundList = found[dtsObjName]
 				if len(foundList) > 1:
 					dtsObjName = foundList[0].dtsObjName
 					nameList = []
-					for ni in foundList: nameList.append(ni.nodeName)
-					'''
-					print " Warning: The following mesh names in",dlName,"all reduce to the same DTS Object name:", dtsObjName
+					for ni in foundList: nameList.append(ni.blenderObjName)
+					
+					print "\n Warning: The following mesh names in",dlName,"all reduce to the same DTS Object name:", dtsObjName
 					print " ", nameList
 					print "  The exporter will use the original names for these meshes and any nodes generated from them."
-					print "  This may result in duplicate or unneccesary nodes and inefficent mesh packing in the exported dts file."
-					'''
+					print "  This may result in duplicate or unneccesary nodes and inefficent mesh packing in the exported dts file.\n"
+					
 					# fix dtsObject names.
 					for ni in foundList:
-						ni.dtsObjName = ni.nodeName
-						#print "   Fixed dts object name for:", ni.nodeName
-			#print "-----------------------------"
-		
-		
+						ni.dtsObjName = ni.blenderObjName
+						print "   Fixed dts object name for:", ni.dtsNodeName
+			print "-----------------------------"
+
+				
 		# build DTSObjects index
-		NIList = self.nodes.values()
-		
 		# create 'None' lists for DTS Objects
-		for ni in self.nodes.values():
-			if len(ni.detailLevels) == 0: continue
+		for ni in meshExportList:
 			# create a dts object if it doesn't already exist.
-			try: dtsObj = self.DTSObjects[ni.dtsObjName]
+			try: test = self.DTSObjects[ni.dtsObjName]
 			except:
 				# populate dts object with "None" entries for each dl
 				self.DTSObjects[ni.dtsObjName] = {}
-				for dl in self.detailLevels.keys():
+				for dl in dlNames:
 					self.DTSObjects[ni.dtsObjName][dl] = None
 		
 		sortedDLs = DtsGlobals.Prefs.getSortedDLNames()
 
 		# insert meshes into correct slots in dts object lists.
-		for ni in self.nodes.values():
-			if len(ni.detailLevels) == 0: continue
+		for ni in meshExportList:
 			# insert meshes into the correct detail levels
 			for dl in ni.detailLevels:
 				self.DTSObjects[ni.dtsObjName][dl] = ni
 
+		# construct nodes dictionary, fixing node names if dups exist.
+		for ni in nodeExportList:
+			# skip object nodes that need skippin'
+			if ni.blenderType == 'object' and ni.dtsObjName != None:
+				# don't add nodes for skinned meshes
+				if self.isSkinnedMesh(ni.getBlenderObj()): continue
+				# only add nodes for the highest lod version of a mesh
+				dtsObj = self.DTSObjects[ni.dtsObjName]
+				for dlName in sortedDLs:
+					highest = dtsObj[dlName]
+					if highest != None: break
+				
+				print "highest = ", highest.blenderObjName
+				if highest != ni: continue
+			
+			self.__safeAddToNodesDict(ni)
 		
+		print "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		for ni in filter(lambda x: x.getGoodNodeParentNI()==None, self.nodes.values()):
+			self.__printTree(ni)
+		print "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+
 		'''
+
 		# ----------------
 		# debug prints
 		sortedKeys = self.detailLevels.keys()
-		sortedKeys.sort( lambda x,y: cmp(Prefs.getTrailingNumber(x), Prefs.getTrailingNumber(y)) )
+		sortedKeys.sort( lambda x,y: cmp(DtsGlobals.Prefs.getTrailingNumber(x), DtsGlobals.Prefs.getTrailingNumber(y)) )
 		sortedKeys.reverse()
 
 		# print header row
@@ -349,29 +395,13 @@ class SceneInfoClass:
 			for dlName in sortedKeys:				
 				c = self.DTSObjects[obName][dlName]
 				if c == None: tempString += "None".ljust(20)
-				else: tempString += c.nodeName.ljust(20)
+				else: tempString += c.blenderObjName.ljust(20)
 			print tempString
 
 		# ----------------
 		'''
-		
-		# re-index the main nodes dict by dts object name
-		# If we're dealing with a mesh node, we want the highest lod
-		# version of the mesh indexed in nodes, since that's
-		# where we'll be pulling our animations from.
-		temp = {}
-		for ni in self.nodes.values():
-			# re-index
-			temp[ni.dtsObjName] = ni
-			
-		del self.nodes
-		self.nodes = temp
-			
-			
-			
-		
-		#endTime = Blender.sys.time()
-		#print "__populateData finished in", endTime - startTime
+		endTime = Blender.sys.time()
+		print "__populateData finished in", endTime - startTime
 
 
 	#################################################
@@ -475,31 +505,29 @@ class SceneInfoClass:
 		# loop through all faces of all meshes in visible detail levels and compile a list
 		# of unique images that are UV mapped to the faces.
 		imageList = []	
-		for dlName in self.detailLevels:
-			dl = self.detailLevels[dlName]
-			for ni in dl:
-				obj = ni.getBlenderObj()
-				if obj.getType() != "Mesh": continue
-				objData = obj.getData()
-				for face in objData.faces:					
-					try: x = face.image
+		for ni in self.meshExportList:
+			obj = ni.getBlenderObj()
+			if obj.getType() != "Mesh": continue
+			objData = obj.getData()
+			for face in objData.faces:					
+				try: x = face.image
+				except IndexError: x = None
+				# If we don't Have an image assigned to the face
+				if x == None:						
+					try: x = objData.materials[face.mat]
 					except IndexError: x = None
-					# If we don't Have an image assigned to the face
-					if x == None:						
-						try: x = objData.materials[face.mat]
-						except IndexError: x = None
-						# is there a material index assigned?
-						if x != None:
-							#  add the material name to the imagelist
-							imageName = SceneInfoClass.stripImageExtension(objData.materials[face.mat].name)
-							if not (imageName in imageList):
-								imageList.append(imageName)
-
-					# Otherwise we do have an image assigned to the face, so add it to the imageList.
-					else:
-						imageName = SceneInfoClass.stripImageExtension(face.image.getName(), face.image.getFilename())
+					# is there a material index assigned?
+					if x != None:
+						#  add the material name to the imagelist
+						imageName = SceneInfoClass.stripImageExtension(objData.materials[face.mat].name)
 						if not (imageName in imageList):
 							imageList.append(imageName)
+
+				# Otherwise we do have an image assigned to the face, so add it to the imageList.
+				else:
+					imageName = SceneInfoClass.stripImageExtension(face.image.getName(), face.image.getFilename())
+					if not (imageName in imageList):
+						imageList.append(imageName)
 
 
 
@@ -541,8 +569,9 @@ class SceneInfoClass:
 	# get the names of all nodes in the scene
 	def getAllNodeNames(self):
 		nameList = []
-		for ni in self.nodes.values():
-			nameList.append(ni.dtsObjName)
+		nodes = filter(lambda x: (x.isExportable==True), self.allThings)		
+		for ni in nodes:
+			nameList.append(ni.dtsNodeName)
 		return nameList
 
 
@@ -648,10 +677,24 @@ class SceneInfoClass:
 		uniqueNames = {}
 		for dl in self.detailLevels.values():
 			for meshNI in dl:
-				dtsObjName = SceneInfoClass.getStrippedMeshName(meshNI.nodeName)
+				dtsObjName = meshNI.dtsObjName
 				uniqueNames[dtsObjName] = 0
 		return uniqueNames
 
+	# test whether or not a mesh object is skinned
+	def isSkinnedMesh(o):
+		hasArmatureDeform = False
+		for mod in o.modifiers:
+			if mod.type == Blender.Modifier.Types.ARMATURE:
+				hasArmatureDeform = True
+		# Check for an armature parent
+		try:
+			if (o.parentType == Blender.Object.ParentTypes['ARMATURE']) and (o.parentbonename == None) :
+				hasArmatureDeform = True
+		except: pass
+		return hasArmatureDeform
+		
+	isSkinnedMesh = staticmethod(isSkinnedMesh)
 
 	#################################################
 	#  Misc
