@@ -566,12 +566,14 @@ class SceneInfoClass:
 	#################################################
 
 
-	# get the names of all nodes in the scene
+	# get the names of nodes in all exported layers
 	def getAllNodeNames(self):
-		nameList = []
+		temp = {}
 		nodes = filter(lambda x: (x.isExportable==True), self.allThings)		
 		for ni in nodes:
-			nameList.append(ni.dtsNodeName)
+			temp[ni.dtsNodeName] = 0
+		nameList = temp.keys()
+		nameList.sort()
 		return nameList
 
 
