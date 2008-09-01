@@ -47,7 +47,7 @@ class nodeInfoClass:
 		self.hasGeometry = not (blenderObj.getType() in noGeometryTypes)
 		self.detailLevels = []		
 		self.armParentNI = armParentNI
-		self.isBannedNode = self.__isBanned() # <- whether or not the node is in the banned nodes list
+		#self.isBannedNode = self.isBanned() # <- whether or not the node is in the banned nodes list
 		self.isExportable = self.__isInExportLayer() # <- whether or not the node is in a layer that is being exported
 		self.layers = [layer for layer in blenderObj.layers] # make sure we're not keeping a reference to a blender-owned object
 		self.parentNI = parentNI
@@ -68,7 +68,7 @@ class nodeInfoClass:
 	# Returns the object's own generated node if it's valid.
 	def getGoodMeshParentNI(self):
 		pNI = self
-		while (pNI != None) and ((not pNI.isExportable) or pNI.isBannedNode):
+		while (pNI != None) and ((not pNI.isExportable) or pNI.isBanned()):
 			pNI = pNI.parentNI
 		return pNI
 
@@ -76,16 +76,17 @@ class nodeInfoClass:
 	# never returns the object's own generated node
 	def getGoodNodeParentNI(self, debug=False):
 		pNI = self.parentNI
-		while (pNI != None) and ((not pNI.isExportable) or pNI.isBannedNode):
+		while (pNI != None) and ((not pNI.isExportable) or pNI.isBanned()):
 			pNI = pNI.parentNI
 		
 		# return whatever we found.
 		return pNI
 
-	def __isBanned(self):
+	def isBanned(self):
 		# is the node on the banned nodes list?
 		banned = (self.dtsNodeName.upper() in DtsGlobals.Prefs['BannedNodes'])
 		return banned
+	
 		
 	def __isInExportLayer(self):
 		# is the node in a layer that is exported?
@@ -288,7 +289,7 @@ class SceneInfoClass:
 				self.__addTree(obj, None)
 		
 		# nodes that should be exported
-		nodeExportList = filter(lambda x: (x.isBannedNode==False) and (x.isExportable==True), self.allThings)
+		nodeExportList = filter(lambda x: (x.isBanned()==False) and (x.isExportable==True), self.allThings)
 
 		# meshes that should be exported
 		meshExportList = filter(lambda x: (x.hasGeometry==True) and (x.isExportable==True), self.allThings)
