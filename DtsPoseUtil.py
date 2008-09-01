@@ -46,18 +46,18 @@ def initWSTransformData(self, initPose=None):
 		self.restPosWS = toTorqueVec(mat.translationPart())
 
 	elif self.blenderType == "bone":			
-		bone = self.getBlenderObj().getData().bones[self.nodeName]
+		bone = self.getBlenderObj().getData().bones[self.dtsNodeName]
 		bMat = bone.matrix['ARMATURESPACE']
 		self.restPosWS = self.__calcBoneRestPosWS(bMat)
 		self.restRotWS = self.__calcBoneRestRotWS(bMat)
 
 def initPSTransformData(self, initPose=None):
 	if self.blenderType == "object":
-		self.defPosPS = self.__calcNodeDefPosPS(self.dtsObjName)
-		self.defRotPS = self.__calcNodeDefRotPS(self.dtsObjName)
+		self.defPosPS = self.__calcNodeDefPosPS(self.dtsNodeName)
+		self.defRotPS = self.__calcNodeDefRotPS(self.dtsNodeName)
 
 	elif self.blenderType == "bone":			
-		bone = self.getBlenderObj().getData().bones[self.nodeName]
+		bone = self.getBlenderObj().getData().bones[self.dtsNodeName]
 		self.defPosPS = self.__calcNodeDefPosPS(bone.name)
 		self.defRotPS = self.__calcNodeDefRotPS(bone.name)
 
@@ -73,7 +73,6 @@ def initPSTransformData(self, initPose=None):
 def __calcNodeDefPosPS(self, nodeName):
 	# early out if we've got no parent
 	if self.getGoodNodeParentNI() == None:
-		print nodeName, "has no parent!"
 		offsetPS = self.restPosWS
 		return offsetPS			
 	# get the node's default position in worldspace
@@ -148,7 +147,7 @@ def __getBoneLocWS(self, pose):
 	armRot = self.armParentNI.getNodeRotWS(pose)
 	# and it's inverse
 	# get the pose location
-	bTrans = armRot.apply(toTorqueVec(pose.bones[self.nodeName].poseMatrix.translationPart()))
+	bTrans = armRot.apply(toTorqueVec(pose.bones[self.dtsNodeName].poseMatrix.translationPart()))
 	# Scale by armature's scale
 	armSize = toTorqueVec([1,1,1])
 	bTrans = Vector(bTrans.members[0] * armSize.members[0], bTrans.members[1] * armSize.members[1], bTrans.members[2]  * armSize.members[2])
@@ -162,21 +161,40 @@ def __getBoneRotWS(self, pose):
 	# get the armature's rotation
 	armRot = self.armParentNI.getNodeRotWS(pose)
 	# get the pose rotation and rotate into worldspace
-	bRot = ( toTorqueQuat(pose.bones[self.nodeName].poseMatrix.rotationPart().toQuat().inverse()) * armRot)
+	bRot = ( toTorqueQuat(pose.bones[self.dtsNodeName].poseMatrix.rotationPart().toQuat().inverse()) * armRot)
 	return bRot
+
+
+
+# !!!! New
+def __getBoneScale(self, pose):
+	bScale = toTorqueVec(pose.bones[self.dtsNodeName].size)
+	return bScale
+
 
 
 # determine the location of an object node in worldspace
 # TESTED
 def __getObjectLocWS(self):
-	bLoc = toTorqueVec(Blender.Object.Get(self.nodeName).getMatrix('worldspace').translationPart())
+	bLoc = toTorqueVec(Blender.Object.Get(self.blenderObjName).getMatrix('worldspace').translationPart())
 	return bLoc
 
 # determine the rotation of an object node in worldspace
 # TESTED
 def __getObjectRotWS(self):
-	bRot = toTorqueQuat(Blender.Object.Get(self.nodeName).getMatrix('worldspace').rotationPart().toQuat()).inverse()
+	bRot = toTorqueQuat(Blender.Object.Get(self.blenderObjName).getMatrix('worldspace').rotationPart().toQuat()).inverse()
 	return bRot
+
+
+
+# !!!! New
+def __getObjectScale(self):
+	bLoc = toTorqueVec([Blender.Object.Get(self.blenderObjName).SizeX,\
+	                    Blender.Object.Get(self.blenderObjName).SizeY,\
+	                    Blender.Object.Get(self.blenderObjName).SizeZ])
+	return bLoc
+
+
 
 def getNodeLocWS(self, pose):
 	if self.blenderType == "object":
@@ -190,6 +208,13 @@ def getNodeRotWS(self, pose):
 		retVal = self.__getObjectRotWS()
 	elif self.blenderType == "bone":
 		retVal = self.__getBoneRotWS(pose)
+	return retVal
+
+def getNodeScale(self, pose):
+	if self.blenderType == "object":
+		retVal = self.__getObjectScale()
+	elif self.blenderType == "bone":
+		retVal = self.__getBoneScale(pose)
 	return retVal
 
 
@@ -211,15 +236,26 @@ def bindDynamicMethods():
 	nodeInfoClass.__dict__['__getBoneLocWS'] = __getBoneLocWS
 	new.instancemethod(__getBoneRotWS, None, nodeInfoClass)
 	nodeInfoClass.__dict__['__getBoneRotWS'] = __getBoneRotWS
+
+	new.instancemethod(__getBoneScale, None, nodeInfoClass)
+	nodeInfoClass.__dict__['__getBoneScale'] = __getBoneScale
+
+
 	new.instancemethod(__getObjectLocWS, None, nodeInfoClass)
 	nodeInfoClass.__dict__['__getObjectLocWS'] = __getObjectLocWS
 	new.instancemethod(__getObjectRotWS, None, nodeInfoClass)
 	nodeInfoClass.__dict__['__getObjectRotWS'] = __getObjectRotWS
+
+	new.instancemethod(__getObjectScale, None, nodeInfoClass)
+	nodeInfoClass.__dict__['__getObjectScale'] = __getObjectScale
+
 	new.instancemethod(getNodeLocWS, None, nodeInfoClass)
 	nodeInfoClass.__dict__['getNodeLocWS'] = getNodeLocWS
 	new.instancemethod(getNodeRotWS, None, nodeInfoClass)
 	nodeInfoClass.__dict__['getNodeRotWS'] = getNodeRotWS
 
+	new.instancemethod(getNodeScale, None, nodeInfoClass)
+	nodeInfoClass.__dict__['getNodeScale'] = getNodeScale
 
 
 # --------- Class that stores all static data internally so we only have to get it once ----------
@@ -240,6 +276,11 @@ class DtsPoseUtilClass:
 		self.nodes = DtsGlobals.SceneInfo.nodes
 		self.armatures = DtsGlobals.SceneInfo.armatures
 		self.__initTransforms()
+		
+		#print "-------------------------------------"
+		#for nic in filter(lambda x: x.getGoodNodeParentNI()==None, self.nodes.values()):
+		#	self.__printTree(nic, 0)
+		#print "-------------------------------------"
 		'''
 		# first init armatures
 		for node in self.armatures.values():
@@ -256,7 +297,7 @@ class DtsPoseUtilClass:
 	
 	def __initTransforms(self):
 		# start with nodes at the root of the tree
-		for node in filter(lambda x: x.parentNI == None, self.nodes.values()):
+		for node in filter(lambda x: x.getGoodNodeParentNI() == None, self.nodes.values()):
 			node.initWSTransformData()
 			# add child trees
 			self.__walkTreeInitTransforms(None)
@@ -265,7 +306,7 @@ class DtsPoseUtilClass:
 		
 
 	def __walkTreeInitTransforms(self, node):
-		for node in filter(lambda x: x.parentNI == node, self.nodes.values()):
+		for node in filter(lambda x: x.getGoodNodeParentNI() == node, self.nodes.values()):
 			node.initWSTransformData()
 			# add child trees
 			self.__walkTreeInitTransforms(node)
@@ -359,13 +400,13 @@ class DtsPoseUtilClass:
 		for i in range(0, indent):
 			pad += " "
 		print pad+"|"
-		print pad+"Node:", ni.nodeName
+		print pad+"Node:", ni.dtsNodeName
 		try:
-			nn = ni.parentNI.nodeName
+			nn = ni.getGoodNodeParentNI().dtsNodeName
 			print pad+"Parent:", nn
 		except: print pad+"No Parent."
 		indent += 3
-		for nic in filter(lambda x: x.parentNI==ni, self.nodes.values()):			
+		for nic in filter(lambda x: x.getGoodNodeParentNI()==ni, self.nodes.values()):
 			self.__printTree(nic, indent)
 			
 
@@ -393,16 +434,17 @@ class DtsPoseUtilClass:
 
 	# *****
 	# This is our only exposed public method.
-	def getNodeLocRotLS(self, nodeName, pose):
+	def getNodeLocRotScaleLS(self, nodeName, pose):
 		loc = None
 		rot = None
 		if self.nodes[nodeName].getGoodNodeParentNI() == None:
 			loc = self.getOrphanNodeLocLS(nodeName, pose)
-			rot = self.getOrphanNodeRotLS(nodeName, pose)
+			rot = self.getOrphanNodeRotLS(nodeName, pose)			
 		else:
 			loc = self.getNodeLocLS(nodeName, pose)
 			rot = self.getNodeRotLS(nodeName, pose)
-		return loc, rot
+		scale = self.nodes[nodeName].getNodeScale(pose)
+		return loc, rot, scale
 	# *****
 	
 	# -----  everything below this point is private (pretend it is, anyway)
@@ -483,10 +525,61 @@ class DtsPoseUtilClass:
 		# find the child's location in worldspace
 		whereIsChildWS = node.getNodeLocWS(pose)
 		# subtract out the parent's location
-		whereIsBonePS = whereIsChildWS - whereIsParentWS
+		offsetFromParent = whereIsChildWS - whereIsParentWS
+		# remove scale from the offset, as best we can.
+		offsetScaleRemoved = self.correctScaledOffset(offsetFromParent, node, pose)
 		# determine the transform needed to get to the same point in the parent's space.
-		whereIsBonePS = parent.getNodeRotWS(pose).inverse().apply(whereIsBonePS)
+		whereIsBonePS = parent.getNodeRotWS(pose).inverse().apply(offsetScaleRemoved)
 		return whereIsBonePS
+
+	# walk back up the node tree and build a list of scales and transforms for each bone
+	# that has it's scale explicitly set to a non (1,1,1) value.  We then rotate the passed in
+	# offset into each space and apply the corresponding inverted scale.  The end result is
+	# an offset that has all scale and most importantly, worldspace skew effects removed.
+	def correctScaledOffset(self, offsetIn, node, pose):
+		# inverse scales
+		scaleListLS = []
+		# rotations (not inverse)
+		rotListWS = []
+
+		# set initial parent
+		parent = node.parentNI
+		# go backwards through the hierarchy and build a list of scale and rotation operations (both inverse)
+		while parent != None:
+			rot = parent.getNodeRotWS(pose)
+			scaleRaw = parent.getNodeScale(pose)
+			scaleInv = Vector(1.0/scaleRaw[0], 1.0/scaleRaw[1], 1.0/scaleRaw[2])
+			# check to see if all members are within delta of one, if so, don't
+			# even bother adding them to the list since it'll only throw off accuracy
+			if scaleRaw.eqDelta( Vector(1.0,1.0,1.0), 0.008 ):
+				parent = parent.parentNI
+				continue
+			scaleListLS.append(scaleInv)
+			rotListWS.append(rot)
+			parent = parent.parentNI
+			
+		# reverse both lists so inverse scales are applied in correct order
+		# note - this *does* matter since scales are applied in parent space
+		scaleListLS.reverse()
+		rotListWS.reverse()
+		
+		# apply the inverse scales in the correct space
+		offsetAccum = offsetIn		
+		for i in range(0, len(scaleListLS)):
+			scaleInv = scaleListLS[i]
+			rot = rotListWS[i]
+			rotInv = rot.inverse()
+			# rotate the offset into parent bone's space 
+			offsetAccum = rot.apply(offsetAccum)
+			# remove the parent bone's scale from the offset.
+			offsetAccum = Vector(offsetAccum[0] * scaleInv[0], offsetAccum[1] * scaleInv[1], offsetAccum[2] * scaleInv[2])
+			# rotate back into worldspace for next iteration :-)
+			offsetAccum = rotInv.apply(offsetAccum)
+
+		# return the calculated offset		
+		offsetOut = offsetAccum
+		return offsetOut
+		
 
 	# Get a non-orphan Node's rotation in parent space
 	# TESTED
