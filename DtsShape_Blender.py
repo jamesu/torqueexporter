@@ -317,7 +317,10 @@ class BlenderShape(DtsShape):
 				for dln in sortedDetailLevels:
 					if dtsObjects[dtsObjName][dln] != None:
 						pNodeNI = dtsObjects[dtsObjName][dln].getGoodMeshParentNI()
-						print "getGoodMeshParentNI returned", pNodeNI.dtsNodeName, "for mesh", dtsObjects[dtsObjName][dln].blenderObjName
+						if pNodeNI != None:
+							print "getGoodMeshParentNI returned", pNodeNI.dtsNodeName, "for mesh", dtsObjects[dtsObjName][dln].blenderObjName
+						else:
+							print "getGoodMeshParentNI returned None for mesh", dtsObjects[dtsObjName][dln].blenderObjName
 						break
 
 				if pNodeNI == None:
@@ -610,8 +613,8 @@ class BlenderShape(DtsShape):
 	
 	# adds a node tree recursively.
 	# called by addAllNodes, not to be called externally.
-	def addNodeTree(self, nodeInfo, parentNodeIndex =-1):
-		if not nodeInfo.isBannedNode:
+	def addNodeTree(self, nodeInfo, parentNodeIndex = -1):
+		if not nodeInfo.isBanned():
 			print "Adding node:", nodeInfo.dtsNodeName, "( type:", nodeInfo.blenderType, ")"
 			n = Node(self.sTable.addString(nodeInfo.dtsNodeName), parentNodeIndex)
 			pos = nodeInfo.defPosPS
