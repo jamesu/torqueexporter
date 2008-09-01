@@ -47,3 +47,22 @@ try:
 except:
 	print "Could not import exception traceback module."
 	tracebackImported = False
+
+
+# utility methods
+
+# gets the text portion of a string (with a trailing number)
+def getTextPortion(string):
+	for i in range(len(string)-1, -1, -1):
+		if string[i].isalpha(): break
+	retVal = string[0:i+1]
+	return retVal
+
+# gets a trailing number in a string
+def getTrailingNumber(string):
+	for i in range(len(string)-1, -1, -1):
+		if string[i].isalpha(): break
+	retVal = int(string[i+1:len(string)])
+	return retVal
+
+
