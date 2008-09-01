@@ -140,7 +140,7 @@ class BlenderShape(DtsShape):
 		hasArmatureDeform = False
 		# Check for armature modifier
 		for mod in o.modifiers:
-			if mod.type == Blender.Modifier.Types.ARMATURE:					
+			if mod.type == Blender.Modifier.Types.ARMATURE:
 				hasArmatureDeform = True
 		# Check for an armature parent
 		try:
@@ -317,6 +317,7 @@ class BlenderShape(DtsShape):
 				for dln in sortedDetailLevels:
 					if dtsObjects[dtsObjName][dln] != None:
 						pNodeNI = dtsObjects[dtsObjName][dln].getGoodMeshParentNI()
+						print "getGoodMeshParentNI returned", pNodeNI.dtsNodeName, "for mesh", dtsObjects[dtsObjName][dln].blenderObjName
 						break
 
 				if pNodeNI == None:
@@ -324,7 +325,7 @@ class BlenderShape(DtsShape):
 				else:
 					pNodeIdx = -1
 					for node in self.nodes:
-						if self.sTable.get(node.name).upper() == pNodeNI.dtsObjName.upper():
+						if self.sTable.get(node.name).upper() == pNodeNI.dtsNodeName.upper():
 							pNodeIdx = node.name
 							break
 
@@ -602,22 +603,22 @@ class BlenderShape(DtsShape):
 		#poses = {}
 		for arm in filter(lambda x: x.getType()=='Armature', Blender.Object.Get()):
 			self.addedArmatures.append(arm)
-		print "self.addedArmatures:",self.addedArmatures
 		# get a list of ordered nodes by walking the poseUtil node tree.
 		nodeList = []
-		for nodeInfo in filter(lambda x: x.parentNI == None, self.poseUtil.nodes.values()):
+		for nodeInfo in filter(lambda x: x.getGoodNodeParentNI() == None, self.poseUtil.nodes.values()):
 			self.addNodeTree(nodeInfo)
 	
 	# adds a node tree recursively.
 	# called by addAllNodes, not to be called externally.
 	def addNodeTree(self, nodeInfo, parentNodeIndex =-1):
-		if not nodeInfo.isExcluded():
-			n = Node(self.sTable.addString(nodeInfo.dtsObjName), parentNodeIndex)
+		if not nodeInfo.isBannedNode:
+			print "Adding node:", nodeInfo.dtsNodeName, "( type:", nodeInfo.blenderType, ")"
+			n = Node(self.sTable.addString(nodeInfo.dtsNodeName), parentNodeIndex)
 			pos = nodeInfo.defPosPS
 			rot = nodeInfo.defRotPS
 			self.defaultTranslations.append(pos)
 			self.defaultRotations.append(rot)
-			try: n.armName = nodeInfo.armParentNI.nodeName
+			try: n.armName = nodeInfo.armParentNI.dtsNodeName
 			except: n.armName = None
 			n.obj = nodeInfo.getBlenderObj()
 			self.nodes.append(n)		
@@ -625,7 +626,7 @@ class BlenderShape(DtsShape):
 			self.subshapes[0].numNodes += 1
 		else:
 			nodeIndex = parentNodeIndex
-		for nodeInfo in filter(lambda x: x.parentNI == nodeInfo, self.poseUtil.nodes.values()):
+		for nodeInfo in filter(lambda x: x.getGoodNodeParentNI() == nodeInfo, self.poseUtil.nodes.values()):
 			self.addNodeTree(nodeInfo, nodeIndex)
 		
 		
@@ -712,10 +713,10 @@ class BlenderShape(DtsShape):
 
 		
 		# Get our values from the poseUtil interface		
-		transVec, quatRot = self.poseUtil.getNodeLocRotLS(bonename, pose)
+		transVec, quatRot, scaleVec = self.poseUtil.getNodeLocRotScaleLS(bonename, pose)
 		# - determine the scale of the bone.
 		#scaleVec = pose.bones[bonename].size
-		scaleVec = self.poseUtil.toTorqueVec([1,1,1])
+		#scaleVec = self.poseUtil.toTorqueVec([1,1,1])
 
 
 		# We dump out every transform regardless of whether it matters or not.  This avoids having to
