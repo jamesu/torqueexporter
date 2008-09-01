@@ -296,6 +296,10 @@ class DtsPoseUtilClass:
 		'''
 	
 	def __initTransforms(self):
+		# first init armatures
+		for node in self.armatures.values():
+			node.initWSTransformData()
+
 		# start with nodes at the root of the tree
 		for node in filter(lambda x: x.getGoodNodeParentNI() == None, self.nodes.values()):
 			node.initWSTransformData()
