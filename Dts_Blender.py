@@ -98,7 +98,7 @@ def doExport(progressBar):
 		
 		
 		# add visible detail levels
-		sortedKeys = SceneInfo.detailLevels.keys()
+		sortedKeys = DtsGlobals.Prefs['DetailLevels'].keys()
 		sortedKeys.sort( lambda x,y: cmp(Prefs.getTrailingNumber(x), Prefs.getTrailingNumber(y)) )
 		sortedKeys.reverse()
 
