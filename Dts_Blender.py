@@ -250,11 +250,11 @@ def doExport(progressBar):
 			Torque_Util.dump_writeln( "  ****************************************************************************")
 			Torque_Util.dump_writeErr("  Error: Skinned mesh "+warn[0]+" without armature parent has an armature")
 			Torque_Util.dump_writeln( "   modifier target ("+warn[1]+") which is animated!")
-			Torque_Util.dump_writeln( "   This mesh will probably appear to be mangled.  The problem can be")
-			Torque_Util.dump_writeln( "   corrected by either parenting the mesh to the armature, or by removing")
-			Torque_Util.dump_writeln( "   the object level animation of the armature.")
-			Torque_Util.dump_writeln( "   See: http://jsgreenawalt.com/documentation/troubleshooting/errors-and-warnings/skinned-mesh-modifier-prob.html")
-			Torque_Util.dump_writeln( "   for more information.")
+			Torque_Util.dump_writeln( "    This mesh will probably appear to be mangled.  The problem can be")
+			Torque_Util.dump_writeln( "    corrected by either parenting the mesh to the armature, or by removing")
+			Torque_Util.dump_writeln( "    the object level animation of the armature.")
+			Torque_Util.dump_writeln( "    See: http://jsgreenawalt.com/documentation/troubleshooting/errors-and-warnings/skinned-mesh-modifier-prob.html")
+			Torque_Util.dump_writeln( "    for more information.")
 			Torque_Util.dump_writeln( "  ****************************************************************************")
 		
 
