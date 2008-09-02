@@ -108,6 +108,9 @@ class BlenderShape(DtsShape):
 		# pose module and the blender armature system.		
 		self.poseUtil = DtsPoseUtil.DtsPoseUtilClass(prefs)
 		
+		# extra book keeping for armature modifier warning (see long note/explanation in Dts_Blender.py)
+		self.badArmatures = []
+		
 		gc.enable()
 		
 	def __del__(self):
@@ -1000,7 +1003,12 @@ class BlenderShape(DtsShape):
 			Torque_Util.dump_writeln("      Track: %s (node %d)" % (channel_name,nodeIndex))
 		del channels
 		'''
-			
+
+		# Get a list of armatures that need to be checked in order to issue
+		# warnings regarding armature modifiers (see long note in Dts_Blender.py)
+		checkArmatureNIs = DtsGlobals.SceneInfo.getArmaturesOfConcern()
+		
+
 
 		# Add sequence flags
 		if seqPrefs['Blend']:
@@ -1112,11 +1120,24 @@ class BlenderShape(DtsShape):
 		#	act.setActive(arm)
 		# loop through all of the exisitng action frames
 		for frame in range(0, numOverallFrames):
+			
 			# Set the current frame in blender
 			curFrame = int(round(float(frame)*interpolateInc,0)) + seqPrefs['StartFrame']
 			Blender.Set('curframe', curFrame)
 			# add ground frames
 			self.addGroundFrame(sequence, curFrame, boundsStartMat)
+
+			# This check relates to problems with armature modifiers,
+			# see long note in Dts_Blender.py.
+			for ni in checkArmatureNIs:
+				#transVec, quatRot, scaleVec = self.poseUtil.getNodeLocRotScaleLS(bonename, pose)
+				deltaRot = ni.restRotWS.inverse() * ni.getNodeRotWS(None)
+				deltaPos = ni.restPosWS - ni.getNodeLocWS(None)
+				print "deltaRot = ", deltaRot
+				print "deltaPos = ", deltaPos
+				if self.isTranslated(deltaPos) or self.isRotated(deltaRot):
+					if not ni in self.badArmatures:
+						self.badArmatures.append(ni)
 			
 			# get poses for all armatures in the scene
 			armPoses = {}
