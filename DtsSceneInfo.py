@@ -28,7 +28,7 @@ import string, gc
 from DtsPrefs import *
 import DtsGlobals
 from DTSPython import stripPath
-
+from DTSPython import dump_write, dump_writeln, dump_writeWarning, dump_writeErr
 noGeometryTypes = ['Empty', 'Curve', 'Camera', 'Lamp', 'Lattice', 'Armature']
 
 '''
@@ -121,24 +121,25 @@ class SceneInfoClass:
 	#  Initialization/Refresh
 	#################################################
 
-	def __init__(self, prefs):	
+	def __init__(self, prefs, issueWarnings=False):	
 		gc.enable()
 		DtsGlobals.Prefs = prefs		
-		self.refreshAll()
+		self.refreshAll(issueWarnings)
 
-	def refreshAll(self):
+	def refreshAll(self, issueWarnings=False):
 		# node lists and indicies
 		self.allThings = [] # <- contains info for all objects and bones in the blender scene.
 		self.meshExportList = []
 		self.nodes = {} # <- indexed by dtsNodeName, contains all good (exported) nodes after initialization
 		self.armatures = {} # <- indexed by actual blender object name(?)		
 		self.DTSObjects = {} # <- indexed by dtsObjName (final dts object name)
-		
+		self.issueWarnings = issueWarnings #<- so we don't have to pass this around
 		# take out the trash
 		gc.collect()
 		
 		# build the tree		
 		self.__populateData()
+		self.issueWarnings = False #<- make sure we don't somehow issue warnings when we shouldn't.
 
 	def __alreadyExists(self, n, getTest=False):
 		# see if we've got a naming conflict		
@@ -172,7 +173,11 @@ class SceneInfoClass:
 		alreadyExists, existing = self.__alreadyExists(n, True)
 		if alreadyExists:
 			finalName = n.dtsNodeName
-			print "\nWarning:", n.blenderType, "node", finalName, "(Blender Object:"+n.blenderObjName+") conflicts with existing", existing.blenderType, "node name", finalName,"(Blender Object:"+existing.blenderObjName+") !"
+			if self.issueWarnings:
+				warnString = "  ****************************************************************************\n"\
+					   + "   Warning: " + n.blenderType + " node " + finalName + " (Blender Object:"+n.blenderObjName+") conflicts\n"\
+					   + "   with existing " + existing.blenderType + " node name " + finalName + " (Blender Object:" + existing.blenderObjName + ") !"
+				dump_writeWarning(warnString)
 			newName = n.getBlenderObj().getType() + "-" + finalName
 			n.dtsNodeName = newName
 			i = 1
@@ -180,7 +185,11 @@ class SceneInfoClass:
 				newName = n.getBlenderObj().getType() + ("(%s)-" % str(i)) + finalName
 				n.dtsNodeName = newName				
 				
-			print "  Changed name of", n.blenderType, "node to:", newName, "\n"
+			if self.issueWarnings:
+				message = "    Changed name of " + n.blenderType + " node to: " + newName + "\n"\
+				        + "   ****************************************************************************\n"
+				dump_writeln(message)
+				
 			n.dtsNodeName = newName
 			self.nodes[newName] = n
 		else:
@@ -311,26 +320,35 @@ class SceneInfoClass:
 					found[dtsObjName] = []
 				found[dtsObjName].append(meshNI)
 			
-			print "-----------------------------"
 			#print "Report of dts object names for", dlName
 			for dtsObjName in found.keys():
-				print "*** Checking Dts object:", dtsObjName
 				foundList = found[dtsObjName]
 				if len(foundList) > 1:
 					dtsObjName = foundList[0].dtsObjName
 					nameList = []
 					for ni in foundList: nameList.append(ni.blenderObjName)
 					
-					print "\n Warning: The following mesh names in",dlName,"all reduce to the same DTS Object name:", dtsObjName
-					print " ", nameList
-					print "  The exporter will use the original names for these meshes and any nodes generated from them."
-					print "  This may result in duplicate or unneccesary nodes and inefficent mesh packing in the exported dts file.\n"
+					if self.issueWarnings:
+						warnString = "  ****************************************************************************\n"\
+						           + "   Warning: Multiple Blender mesh names in "+dlName+" all reduce to the same DTS\n"\
+						           + "   Object name: "+dtsObjName + "\n"\
+						           + "    The exporter will use the original names for these meshes and any nodes\n"\
+						           + "    generated from them.  This may result in duplicate or unneccesary nodes,\n"\
+						           + "    extra animation tracks, and inefficent mesh packing in the exported dts\n"\
+						           + "    file."
+						dump_writeWarning(warnString)
 					
 					# fix dtsObject names.
 					for ni in foundList:
+						if self.issueWarnings:
+							dump_writeln("     Changed dts object and node name for Blender mesh "+ni.blenderObjName)
+							dump_writeln("       from \""+ni.dtsObjName+"\" to \""+ni.blenderObjName+"\".")
 						ni.dtsObjName = ni.blenderObjName
-						print "   Fixed dts object name for:", ni.dtsNodeName
-			print "-----------------------------"
+						ni.dtsNodeName = ni.dtsObjName
+
+					if self.issueWarnings:
+						dump_writeln("  ****************************************************************************\n")
+
 
 				
 		# build DTSObjects index
