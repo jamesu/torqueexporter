@@ -190,6 +190,74 @@ def doExport(progressBar):
 				progressBar.update()
 
 			progressBar.popTask()
+			
+		# ***** NOTE **********************************************************************************************
+		#
+		# Here's the low-down on this error/warning:
+		#
+		# As of Blender 2.47 (and probably earlier versions as well), Blender calculates vertex displacement
+		#  for skinned meshes according to bone transform deltas in *Armature Space*.  Torque calculates its
+		#  vertex displacements in *world space*.
+		#
+		# What does this mean?  I'm getting to that...
+		#
+		# Consider the following scenario:
+		#
+		#  An armature is rotated 360 degrees in a cyclic animation.  A single bone contained within the
+		#  armature is rotated 360 degrees in the opposite direction.  The two rotations nearly cancel
+		#  each other out, with just a bit of wobble.
+		#
+		#  Two meshes are skinned to the single bone contained within the armature; one using Blender's
+		#  "Armature parent deform" (implicit armature modifier), and the other one using an explicit armature
+		#  modifier (not parented to the armature object).
+		#
+		#  When the animation is played back in Blender, the mesh with armature parent deform will appear to
+		#  wobble somewhat, but will not rotate significantly.  The rotation of the bone in *armature space*
+		#  is counteracted by the rotation of the parent armature object.
+		#
+		#  The mesh with the explicit armature modifier that is not parented to the armature object will go
+		#  through a full 360 degree rotation during the animation (when played back in Blender); even though
+		#  the bone to which the mesh is skinned appears (mostly) stationary in world space!
+		#
+		#  When such an animation is exported to the dts file format, both meshes will appear to wobble
+		#  slightly, but neither will rotate!
+		#
+		# The Bottom line:
+		#
+		#  In a sense, the results as displayed within Blender are counter-intuitive.  One would expect that
+		#  Blender should calculate the skinning for a skinned mesh without an armature parent in *world space*,
+		#  not in the armature's local space.  This weird behavior does have some possible uses within Blender,
+		#  so I can't really say that this is a "bug" :-)
+		#
+		#  The bad news is that there is no practical way to reproduce the effect of the one "spinning" cube in
+		#  the dts file format.  The only way that I can think of that it could conceivably be done would be to
+		#  duplicate all of the bones in an armature for every skinned mesh, and set/animate the bones in
+		#  worldspace as if they were in the armature's local space (throwing out or ignoring the parent
+		#  armature's explicit and implicit rotations).  This approach would be way too messy to implement
+		#  and the potential explosion in node count could kill performance if more than one skinned mesh is
+		#  present.
+		#
+		#  Instead, the exporter just warns the user that animations may be screwy if an armature modifier is
+		#  used with an implicitly or explicitly animated armature object which is not the direct parent of the
+		#  skinned Blender mesh.
+		#
+		# *********************************************************************************************************
+		print "Shape.badArmatures=", Shape.badArmatures
+		# Issue warnings for all meshes that have an armature modifier, but no armature parent iff armature *object*
+		# is animated.
+		warnList = DtsGlobals.SceneInfo.getWarnMeshes(Shape.badArmatures)
+		for warn in warnList:
+			Torque_Util.dump_writeln( "  ****************************************************************************")
+			Torque_Util.dump_writeErr("  Error: Skinned mesh "+warn[0]+" without armature parent has an armature")
+			Torque_Util.dump_writeln( "   modifier target ("+warn[1]+") which is animated!")
+			Torque_Util.dump_writeln( "   This mesh will probably appear to be mangled.  The problem can be")
+			Torque_Util.dump_writeln( "   corrected by either parenting the mesh to the armature, or by removing")
+			Torque_Util.dump_writeln( "   the object level animation of the armature.")
+			Torque_Util.dump_writeln( "   See: http://jsgreenawalt.com/documentation/troubleshooting/errors-and-warnings/skinned-mesh-modifier-prob.html")
+			Torque_Util.dump_writeln( "   for more information.")
+			Torque_Util.dump_writeln( "  ****************************************************************************")
+		
+
 
 		Torque_Util.dump_writeln("> Shape Details")
 		Shape.dumpShapeInfo()
