@@ -289,7 +289,7 @@ class SceneInfoClass:
 				self.__addTree(obj, None)
 		
 		# nodes that should be exported
-		nodeExportList = filter(lambda x: (x.isBanned()==False) and (x.isExportable==True), self.allThings)
+		nodeExportList = filter(lambda x: x.isExportable, self.allThings)
 
 		# meshes that should be exported
 		meshExportList = filter(lambda x: (x.hasGeometry==True) and (x.isExportable==True), self.allThings)
