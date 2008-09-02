@@ -87,35 +87,6 @@ class BlenderMesh(DtsMesh):
 					materialGroups['NoMaterialFound'] = []
 					materialGroups['NoMaterialFound'].append(face)
 			
-			'''
-			try: imageName = SceneInfoClass.getFaceDtsMatName(face, msh)
-			#except AttributeError:
-			except (ValueError, AttributeError):
-				# there isn't an image assigned to the face...
-				# do we have a material index?
-				try: mat = msh.materials[face.mat]
-				except IndexError: mat = None
-				if mat != None:
-					# we have a material index, so get the name of the material
-					imageName = stripImageExtension(mat.name)
-					#  create a new materialGroup if needed.
-					try: materialGroups[imageName].append(face)
-					except KeyError:
-						materialGroups[imageName] = []
-						materialGroups[imageName].append(face)
-					continue
-
-				# Create a "NoMaterialFound" group if needed, and add our face to it.
-				try: materialGroups['NoMaterialFound'].append(face)
-				except KeyError:
-					materialGroups['NoMaterialFound'] = []
-					materialGroups['NoMaterialFound'].append(face)
-				continue
-			try: materialGroups[imageName].append(face)
-			except KeyError:
-				materialGroups[imageName] = []
-				materialGroups[imageName].append(face)
-			'''
 		
 		# Then, we can add in batches
 		limitExceeded = False
@@ -161,40 +132,6 @@ class BlenderMesh(DtsMesh):
 				else:
 					matIndex = pr.NoMaterial # Nope, no material
 						
-
-				'''
-				if hasImage and face.image != None:
-					imageName = stripImageExtension(face.image.getName(), face.image.getFilename())
-					matIndex = shape.materials.findMaterial(imageName)
-					if matIndex == None: matIndex = shape.addMaterial(imageName)
-					if matIndex == None: matIndex = pr.NoMaterial
-					if matIndex != pr.NoMaterial: 
-						#self.mainMaterial = matIndex
-						pass
-					else:
-						#self.mainMaterial = None
-						pass
-				else:
-					# do we have a blender material?
-					try: mat = msh.materials[face.mat]
-					except IndexError: mat = None
-					if mat != None:
-						# we have a material index, so get the name of the material
-						imageName = stripImageExtension(mat.name)
-						matIndex = shape.materials.findMaterial(imageName)
-						if matIndex == None: matIndex = shape.addMaterial(imageName)
-						if matIndex == None: matIndex = pr.NoMaterial
-						if matIndex != pr.NoMaterial: 
-							#self.mainMaterial = matIndex
-							pass
-						else:
-							#self.mainMaterial = None
-							matIndex = pr.NoMaterial # Nope, no material
-					else:
-						#self.mainMaterial = None
-						matIndex = pr.NoMaterial # Nope, no material
-				'''
-				
 				pr.matindex |= matIndex
 
 				isTwoSided = False
@@ -259,25 +196,11 @@ class BlenderMesh(DtsMesh):
 				pr.numElements = (len(self.indices) - pr.firstElement) #-1
 				self.primitives.append(pr)
 			
-			if limitExceeded:
-				Torque_Util.dump_writeErr("Error: Vertex index limit exceeded for mesh %s, truncating mesh!" % meshName)
+		if limitExceeded:
+			Torque_Util.dump_writeErr("Error: Vertex index limit exceeded for mesh %s, truncating mesh!" % meshName)
 
 			
 
-
-		
-		'''
-		# Determine shape type based on vertex weights
-		if len(self.bindex) <= 1:
-			self.mtype = self.T_Standard
-		else:
-			if not self.mtype == self.T_Standard:
-				self.mtype = self.T_Standard # default
-				for v in self.bindex:
-					if v != self.bindex[0]:
-						self.mtype = self.T_Skin
-						break
-		'''
 		self.mtype = self.T_Standard
 		if isSkinned:
 			self.mtype = self.T_Skin
@@ -374,13 +297,19 @@ class BlenderMesh(DtsMesh):
 		for i in range(len(mesh.verts)):
 			weightDictionary[i] = []
 		
-		for group in mesh.getVertGroupNames():
+		
+		originalGroups = mesh.getVertGroupNames()
+		translatedGroups = DtsGlobals.SceneInfo.translateVertGroupNames(mesh.getVertGroupNames())
+		#for group in mesh.getVertGroupNames():
+		for i in range(0, len(originalGroups)):
+			oGroup = originalGroups[i]
+			tGroup = translatedGroups[i]
 			# ignore groups that have no corresponding bone.
-			if not (group in boneList): continue
+			if not (oGroup in boneList): continue
 			try:
-				for vert in mesh.getVertsFromGroup(group, 1):
+				for vert in mesh.getVertsFromGroup(oGroup, 1):
 					index, weight = vert[0], vert[1]
-					weightDictionary[index].append((group, weight))
+					weightDictionary[index].append((tGroup, weight))
 					hasWeights = True
 			except AttributeError:
 				continue
