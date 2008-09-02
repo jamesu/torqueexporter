@@ -232,7 +232,7 @@ def doExport(progressBar):
 	Functions to export shape and load script
 '''
 #-------------------------------------------------------------------------------------------------
-def handleScene():	
+def handleScene(issueWarnings=False):	
 	Prefs = DtsGlobals.Prefs
 	#DtsGlobals.SceneInfo = SceneInfoClass(Prefs)
 	SceneInfo = DtsGlobals.SceneInfo
@@ -249,7 +249,7 @@ def handleScene():
 	#cleanKeys()
 	#createActionKeys()
 	
-	SceneInfo.refreshAll()
+	SceneInfo.refreshAll(issueWarnings)
 	Prefs.refreshSequencePrefs()
 	Prefs.refreshMaterialPrefs()	
 
@@ -260,7 +260,7 @@ def export():
 	print "Exporting..."
 	# switch out of edit mode if we are in edit mode
 	Window.EditMode(0)
-	handleScene()
+	handleScene(True)
 	#importMaterialList()
 	#refreshActionData()
 	Prefs.savePrefs()
@@ -269,16 +269,10 @@ def export():
 
 	if SceneInfo != None:
 		cur_progress.pushTask("Done", 1, 1.0)
+
+		# start the export
 		doExport(cur_progress)
-		'''
-		#if not export_tree.process(cur_progress):
-			# try again :-)
-			handleScene()
-			importMaterialList()
-			refreshActionData()
-			savePrefs()
-			#export_tree.process(cur_progress)
-		'''		
+
 		cur_progress.update()
 		cur_progress.popTask()
 		Torque_Util.dump_writeln("Finished.")
@@ -361,7 +355,6 @@ def entryPoint(a):
 	
 	
 	if (a == 'quick'):
-		handleScene()
 		# Use the profiler, if enabled.
 		if DtsGlobals.Profiling:
 			# make the entry point available from __main__
