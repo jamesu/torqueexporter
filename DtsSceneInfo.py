@@ -24,6 +24,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 '''
 
 import Blender
+from Blender import Modifier
 import string, gc
 from DtsPrefs import *
 import DtsGlobals
@@ -133,7 +134,7 @@ class SceneInfoClass:
 	def refreshAll(self, issueWarnings=False):
 		# node lists and indicies
 		self.allThings = [] # <- contains info for all objects and bones in the blender scene.
-		self.meshExportList = []
+		self.meshExportList = [] # <- contains all exportable meshes, even those with banned object-nodes.
 		self.nodes = {} # <- indexed by dtsNodeName, contains all good (exported) nodes after initialization
 		self.armatures = {} # <- indexed by actual blender object name(?)		
 		self.DTSObjects = {} # <- indexed by dtsObjName (final dts object name)
@@ -184,7 +185,7 @@ class SceneInfoClass:
 			if self.issueWarnings:
 				warnString = "  ****************************************************************************\n"\
 					   + "   Warning: " + n.blenderType + " node " + finalName + " (Blender Object:"+n.blenderObjName+") conflicts\n"\
-					   + "   with existing " + existing.blenderType + " node name " + finalName + " (Blender Object:" + existing.blenderObjName + ") !"
+					   + "    with existing " + existing.blenderType + " node name " + finalName + " (Blender Object:" + existing.blenderObjName + ") !"
 				dump_writeWarning(warnString)
 			newName = n.getBlenderObj().getType() + "-" + finalName
 			n.dtsNodeName = newName
@@ -194,7 +195,7 @@ class SceneInfoClass:
 				n.dtsNodeName = newName
 				
 			if self.issueWarnings:
-				message = "    Changed name of " + n.blenderType + " node to: " + newName + "\n"\
+				message = "     Changed name of " + n.blenderType + " node to: " + newName + "\n"\
 				        + "   ****************************************************************************\n"
 				dump_writeln(message)
 				
@@ -340,18 +341,18 @@ class SceneInfoClass:
 					if self.issueWarnings:
 						warnString = "  ****************************************************************************\n"\
 						           + "   Warning: Multiple Blender mesh names in "+dlName+" all reduce to the same DTS\n"\
-						           + "   Object name: "+dtsObjName + "\n"\
-						           + "    The exporter will use the original names for these meshes and any nodes\n"\
-						           + "    generated from them.  This may result in duplicate or unneccesary nodes,\n"\
-						           + "    extra animation tracks, and inefficent mesh packing in the exported dts\n"\
-						           + "    file."
+						           + "    Object name: "+dtsObjName + "\n"\
+						           + "     The exporter will use the original names for these meshes and any nodes\n"\
+						           + "     generated from them.  This may result in duplicate or unneccesary nodes,\n"\
+						           + "     extra animation tracks, and inefficent mesh packing in the exported dts\n"\
+						           + "     file."
 						dump_writeWarning(warnString)
 					
 					# fix dtsObject names.
 					for ni in foundList:
 						if self.issueWarnings:
-							dump_writeln("     Changed dts object and node name for Blender mesh "+ni.blenderObjName)
-							dump_writeln("       from \""+ni.dtsObjName+"\" to \""+ni.blenderObjName+"\".")
+							dump_writeln("      Changed dts object and node name for Blender mesh "+ni.blenderObjName)
+							dump_writeln("        from \""+ni.dtsObjName+"\" to \""+ni.blenderObjName+"\".")
 						ni.dtsObjName = ni.blenderObjName
 						ni.dtsNodeName = ni.dtsObjName
 
@@ -751,3 +752,66 @@ class SceneInfoClass:
 		for child in obj_children[:]:
 			obj_children += getAllChildren(child)
 		return obj_children
+
+	#################################################
+	#  These methods are used to detect and warn
+	#   on a certain condition that causes skinned mesh
+	#   animations to go wonky.  See long note/explanation
+	#   in Dts_Blender.py.
+	#################################################
+	
+	# todo - what happens if parent is a different armature?
+	
+	# gets a list of meshes that have an armature modifier but not
+	# an armature parent.
+	def __getMeshesOfConcern(self):
+		foundList = []
+		for ni in self.meshExportList:
+			hasExplicitModifier = False
+			hasArmatureParent = False
+			# Check for an armature modifier
+			o = ni.getBlenderObj()
+			for mod in o.modifiers:
+				if mod.type == Blender.Modifier.Types.ARMATURE:
+					hasExplicitModifier = True
+			# Check for an armature parent
+			try:
+				if (o.parentType == Blender.Object.ParentTypes['ARMATURE']) and (o.parentbonename == None):
+					hasArmatureParent = True
+			except: pass
+			# add mesh to the list if we've got a modifier, but no armature parent.
+			if hasExplicitModifier and not hasArmatureParent:
+				foundList.append(ni)
+			
+		return foundList
+	
+	
+	# Gets a list of armatures ni structs that are exportable
+	# and are targets of an armature modifier without an armature parent
+	# for the mesh with the modifier.
+	def getArmaturesOfConcern(self):
+		concernList = []
+		# first make a list of "armature modifier" target armatures
+		for ni in self.__getMeshesOfConcern():
+			o = ni.getBlenderObj()
+			# find the armature modifier(s)
+			for mod in o.modifiers:
+				if mod.type == Blender.Modifier.Types.ARMATURE:
+					concernList.append(mod[Modifier.Settings.OBJECT].name)
+		retval = [self.armatures[armName] for armName in concernList]
+		return retval
+
+	# get meshes that need the warning
+	def getWarnMeshes(self, badArmNIList):
+		warnings = []
+		badArmNameList = [armNI.blenderObjName for armNI in badArmNIList]
+		for meshNI in self.__getMeshesOfConcern():
+			o = meshNI.getBlenderObj()
+			# find the armature modifier(s)
+			for mod in o.modifiers:
+				if mod.type == Blender.Modifier.Types.ARMATURE:
+					if mod[Modifier.Settings.OBJECT].name in badArmNameList:
+						warnings.append([o.name, mod[Modifier.Settings.OBJECT].name])
+		return warnings
+						
+			
