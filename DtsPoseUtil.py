@@ -46,7 +46,8 @@ def initWSTransformData(self, initPose=None):
 		self.restPosWS = toTorqueVec(mat.translationPart())
 
 	elif self.blenderType == "bone":			
-		bone = self.getBlenderObj().getData().bones[self.dtsNodeName]
+		print "for node:", self.blenderObjName, "dts node name is:", self.originalBoneName
+		bone = self.getBlenderObj().getData().bones[self.originalBoneName]
 		bMat = bone.matrix['ARMATURESPACE']
 		self.restPosWS = self.__calcBoneRestPosWS(bMat)
 		self.restRotWS = self.__calcBoneRestRotWS(bMat)
@@ -57,7 +58,7 @@ def initPSTransformData(self, initPose=None):
 		self.defRotPS = self.__calcNodeDefRotPS(self.dtsNodeName)
 
 	elif self.blenderType == "bone":			
-		bone = self.getBlenderObj().getData().bones[self.dtsNodeName]
+		bone = self.getBlenderObj().getData().bones[self.originalBoneName]
 		self.defPosPS = self.__calcNodeDefPosPS(bone.name)
 		self.defRotPS = self.__calcNodeDefRotPS(bone.name)
 
@@ -145,9 +146,8 @@ def __calcBoneRestRotWS(self, bMat):
 def __getBoneLocWS(self, pose):
 	# get the armature's rotation
 	armRot = self.armParentNI.getNodeRotWS(pose)
-	# and it's inverse
 	# get the pose location
-	bTrans = armRot.apply(toTorqueVec(pose.bones[self.dtsNodeName].poseMatrix.translationPart()))
+	bTrans = armRot.apply(toTorqueVec(pose.bones[self.originalBoneName].poseMatrix.translationPart()))
 	# Scale by armature's scale
 	armSize = toTorqueVec([1,1,1])
 	bTrans = Vector(bTrans.members[0] * armSize.members[0], bTrans.members[1] * armSize.members[1], bTrans.members[2]  * armSize.members[2])
@@ -161,14 +161,14 @@ def __getBoneRotWS(self, pose):
 	# get the armature's rotation
 	armRot = self.armParentNI.getNodeRotWS(pose)
 	# get the pose rotation and rotate into worldspace
-	bRot = ( toTorqueQuat(pose.bones[self.dtsNodeName].poseMatrix.rotationPart().toQuat().inverse()) * armRot)
+	bRot = ( toTorqueQuat(pose.bones[self.originalBoneName].poseMatrix.rotationPart().toQuat().inverse()) * armRot)
 	return bRot
 
 
 
 # !!!! New
 def __getBoneScale(self, pose):
-	bScale = toTorqueVec(pose.bones[self.dtsNodeName].size)
+	bScale = toTorqueVec(pose.bones[self.originalBoneName].size)
 	return bScale
 
 
