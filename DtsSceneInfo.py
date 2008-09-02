@@ -51,17 +51,21 @@ class nodeInfoClass:
 		self.isExportable = self.__isInExportLayer() # <- whether or not the node is in a layer that is being exported
 		self.layers = [layer for layer in blenderObj.layers] # make sure we're not keeping a reference to a blender-owned object
 		self.parentNI = parentNI
+
+		if blenderType == "bone":
+			self.originalBoneName = nodeName
+		else:
+			originalBoneName = None
+
+		#if blenderType == "object":
+		#	pass
 		
 		if self.hasGeometry:
 			self.dtsObjName = SceneInfoClass.getStrippedMeshName(nodeName)
 			self.dtsNodeName = SceneInfoClass.getStrippedMeshName(nodeName)
 			
-		'''
-		if blenderType == "object":
-			pass
-		elif blenderType == "bone":
-			pass
-		'''
+
+
 		#print "Constructed", self.blenderType, "node", self.dtsNodeName, "from Blender object", self.blenderObjName
 
 	# find a non-excluded node to use as a parent for a dts object
@@ -134,6 +138,10 @@ class SceneInfoClass:
 		self.armatures = {} # <- indexed by actual blender object name(?)		
 		self.DTSObjects = {} # <- indexed by dtsObjName (final dts object name)
 		self.issueWarnings = issueWarnings #<- so we don't have to pass this around
+		
+		# translation lookup dictionary for vertex group names
+		self.boneNameChanges = {}
+		
 		# take out the trash
 		gc.collect()
 		
@@ -183,7 +191,7 @@ class SceneInfoClass:
 			i = 1
 			while(self.__alreadyExists(n)):
 				newName = n.getBlenderObj().getType() + ("(%s)-" % str(i)) + finalName
-				n.dtsNodeName = newName				
+				n.dtsNodeName = newName
 				
 			if self.issueWarnings:
 				message = "    Changed name of " + n.blenderType + " node to: " + newName + "\n"\
@@ -191,6 +199,7 @@ class SceneInfoClass:
 				dump_writeln(message)
 				
 			n.dtsNodeName = newName
+			self.boneNameChanges[n.originalBoneName] = newName
 			self.nodes[newName] = n
 		else:
 			self.nodes[n.dtsNodeName] = n
@@ -391,6 +400,9 @@ class SceneInfoClass:
 		for ni in filter(lambda x: x.getGoodNodeParentNI()==None, self.nodes.values()):
 			self.__printTree(ni)
 		print "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+
+
+		
 
 		'''
 
@@ -716,6 +728,13 @@ class SceneInfoClass:
 		return hasArmatureDeform
 		
 	isSkinnedMesh = staticmethod(isSkinnedMesh)
+
+	def translateVertGroupNames(self, names):
+		output = []
+		for name in names:
+			output.append(self.boneNameChanges[name])
+		return output
+			
 
 	#################################################
 	#  Misc
