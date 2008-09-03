@@ -135,7 +135,7 @@ class SceneInfoClass:
 		# node lists and indicies
 		self.allThings = [] # <- contains info for all objects and bones in the blender scene.
 		self.meshExportList = [] # <- contains all exportable meshes, even those with banned object-nodes.
-		self.nodes = {} # <- indexed by dtsNodeName, contains all good (exported) nodes after initialization
+		self.nodes = {} # <- indexed by dtsNodeName, contains all nodes in exportable layers after init (including banned nodes)
 		self.armatures = {} # <- indexed by actual blender object name(?)		
 		self.DTSObjects = {} # <- indexed by dtsObjName (final dts object name)
 		self.issueWarnings = issueWarnings #<- so we don't have to pass this around
@@ -187,13 +187,14 @@ class SceneInfoClass:
 					   + "   Warning: " + n.blenderType + " node \"" + finalName + "\" (Blender Object:"+n.blenderObjName+") conflicts\n"\
 					   + "    with existing " + existing.blenderType + " node name \"" + finalName + "\" (Blender Object:" + existing.blenderObjName + ") !"
 				dump_writeWarning(warnString)
-			newName = n.getBlenderObj().getType() + "-" + finalName
-			n.dtsNodeName = newName
 			i = 1
+			newName = finalName + ("(%s)" % str(i))
+			n.dtsNodeName = newName			
 			while(self.__alreadyExists(n)):
-				newName = n.getBlenderObj().getType() + ("(%s)-" % str(i)) + finalName
-				n.dtsNodeName = newName
 				i += 1
+				newName = finalName + ("(%s)" % str(i))
+				n.dtsNodeName = newName
+				
 				
 			if self.issueWarnings:
 				message = "     Changed name of " + n.blenderType + " node to: \"" + newName + "\"\n"\
@@ -234,14 +235,7 @@ class SceneInfoClass:
 		# add the new node to the allThings list
 		self.allThings.append(n)
 		
-		#self.__safeAddToNodesDict(n)
-		'''
-		#if n.hasGeometry and n.isExportable:
-		#	self.__safeAddToNodesDict(n)
-		#elif (not n.isBannedNode)
-		#	self.__safeAddToNodesDict(n)
-		'''			
-
+		# set up detail levels
 		if n.isExportable and n.hasGeometry:
 			# add mesh node info to detail levels
 			for dlName in DtsGlobals.Prefs['DetailLevels'].keys():
@@ -393,15 +387,15 @@ class SceneInfoClass:
 					highest = dtsObj[dlName]
 					if highest != None: break
 				
-				print "highest = ", highest.blenderObjName
+				#print "highest = ", highest.blenderObjName
 				if highest != ni: continue
 			
 			self.__safeAddToNodesDict(ni)
 		
-		print "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-		for ni in filter(lambda x: x.getGoodNodeParentNI()==None, self.nodes.values()):
-			self.__printTree(ni)
-		print "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		#print "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		#for ni in filter(lambda x: x.getGoodNodeParentNI()==None, self.nodes.values()):
+		#	self.__printTree(ni)
+		#print "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 
 
 		
@@ -769,19 +763,27 @@ class SceneInfoClass:
 		foundList = []
 		for ni in self.meshExportList:
 			hasExplicitModifier = False
-			hasArmatureParent = False
+			hasArmDeformParent = False
+			hasArmObjParent = False
 			# Check for an armature modifier
 			o = ni.getBlenderObj()
 			for mod in o.modifiers:
+				print ni.blenderObjName, "mod.type =", mod.type
 				if mod.type == Blender.Modifier.Types.ARMATURE:
 					hasExplicitModifier = True
 			# Check for an armature parent
-			try:
+			try:				
+				print o.name
 				if (o.parentType == Blender.Object.ParentTypes['ARMATURE']) and (o.parentbonename == None):
-					hasArmatureParent = True
+					print o.name, "has armature deform parent."
+					hasArmDeformParent = True
+				if (o.parentType == Blender.Object.ParentTypes['OBJECT']) and (o.parentbonename == None):
+					print o.name, "has *object* parent."
+					hasArmObjParent = True
+				
 			except: pass
 			# add mesh to the list if we've got a modifier, but no armature parent.
-			if hasExplicitModifier and not hasArmatureParent:
+			if hasExplicitModifier and not hasArmDeformParent:
 				foundList.append(ni)
 			
 		return foundList
