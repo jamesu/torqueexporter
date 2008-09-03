@@ -1242,6 +1242,9 @@ class ListContainer(BasicContainer):
 		control.x = 0
 		control.height = self.childHeight
 		control.width = self.width-self.barWidth
+		# issue resize callbacks to children
+		for c in control.controls:
+			c.onContainerResize(control.width, control.height)
 		
 	def addControl(self, control):
 		BasicContainer.addControl(self, control)
