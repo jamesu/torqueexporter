@@ -184,8 +184,8 @@ class SceneInfoClass:
 			finalName = n.dtsNodeName
 			if self.issueWarnings:
 				warnString = "  ****************************************************************************\n"\
-					   + "   Warning: " + n.blenderType + " node " + finalName + " (Blender Object:"+n.blenderObjName+") conflicts\n"\
-					   + "    with existing " + existing.blenderType + " node name " + finalName + " (Blender Object:" + existing.blenderObjName + ") !"
+					   + "   Warning: " + n.blenderType + " node \"" + finalName + "\" (Blender Object:"+n.blenderObjName+") conflicts\n"\
+					   + "    with existing " + existing.blenderType + " node name \"" + finalName + "\" (Blender Object:" + existing.blenderObjName + ") !"
 				dump_writeWarning(warnString)
 			newName = n.getBlenderObj().getType() + "-" + finalName
 			n.dtsNodeName = newName
@@ -193,9 +193,10 @@ class SceneInfoClass:
 			while(self.__alreadyExists(n)):
 				newName = n.getBlenderObj().getType() + ("(%s)-" % str(i)) + finalName
 				n.dtsNodeName = newName
+				i += 1
 				
 			if self.issueWarnings:
-				message = "     Changed name of " + n.blenderType + " node to: " + newName + "\n"\
+				message = "     Changed name of " + n.blenderType + " node to: \"" + newName + "\"\n"\
 				        + "   ****************************************************************************\n"
 				dump_writeln(message)
 				
@@ -341,7 +342,7 @@ class SceneInfoClass:
 					if self.issueWarnings:
 						warnString = "  ****************************************************************************\n"\
 						           + "   Warning: Multiple Blender mesh names in "+dlName+" all reduce to the same DTS\n"\
-						           + "    Object name: "+dtsObjName + "\n"\
+						           + "    Object name: \""+dtsObjName + "\"\n"\
 						           + "     The exporter will use the original names for these meshes and any nodes\n"\
 						           + "     generated from them.  This may result in duplicate or unneccesary nodes,\n"\
 						           + "     extra animation tracks, and inefficent mesh packing in the exported dts\n"\
@@ -351,7 +352,7 @@ class SceneInfoClass:
 					# fix dtsObject names.
 					for ni in foundList:
 						if self.issueWarnings:
-							dump_writeln("      Changed dts object and node name for Blender mesh "+ni.blenderObjName)
+							dump_writeln("      Changed dts object and node name for Blender mesh \""+ni.blenderObjName+"\"")
 							dump_writeln("        from \""+ni.dtsObjName+"\" to \""+ni.blenderObjName+"\".")
 						ni.dtsObjName = ni.blenderObjName
 						ni.dtsNodeName = ni.dtsObjName
