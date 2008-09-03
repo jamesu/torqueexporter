@@ -596,13 +596,33 @@ class SceneInfoClass:
 	# get the names of nodes in all exported layers
 	def getAllNodeNames(self):
 		temp = {}
-		nodes = filter(lambda x: (x.isExportable==True), self.allThings)		
+		nodes = filter(lambda x: (x.isExportable==True), self.allThings)
 		for ni in nodes:
 			temp[ni.dtsNodeName] = 0
 		nameList = temp.keys()
 		nameList.sort()
 		return nameList
 
+	# get the names of all object generated nodes
+	def getObjectNodeNames(self):
+		temp = {}
+		nodes = filter(lambda x: (x.isExportable==True and x.blenderType=='object'), self.allThings)
+		for ni in nodes:
+			temp[ni.dtsNodeName] = 0
+		nameList = temp.keys()
+		nameList.sort()
+		return nameList
+
+	# get the names of all bone generated nodes
+	def getBoneNodeNames(self):
+		temp = {}
+		nodes = filter(lambda x: (x.isExportable==True and x.blenderType=='bone'), self.allThings)
+		nameList = self.getAllNodeNames()
+		for ni in nodes:
+			temp[ni.dtsNodeName] = 0
+		nameList = temp.keys()
+		nameList.sort()
+		return nameList
 
 	#################################################
 	#  Sequences
