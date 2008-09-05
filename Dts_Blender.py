@@ -242,7 +242,6 @@ def doExport(progressBar):
 		#  skinned Blender mesh.
 		#
 		# *********************************************************************************************************
-		print "Shape.badArmatures=", Shape.badArmatures
 		# Issue warnings for all meshes that have an armature modifier, but no armature parent iff armature *object*
 		# is animated.
 		warnList = DtsGlobals.SceneInfo.getWarnMeshes(Shape.badArmatures)
