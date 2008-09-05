@@ -202,7 +202,9 @@ class SceneInfoClass:
 				dump_writeln(message)
 				
 			n.dtsNodeName = newName
-			self.boneNameChanges[n.originalBoneName] = newName
+			try: x = self.boneNameChanges[n.armParentNI.blenderObjName]
+			except: self.boneNameChanges[n.armParentNI.blenderObjName] = {}
+			self.boneNameChanges[n.armParentNI.blenderObjName][n.originalBoneName] = newName
 			self.nodes[newName] = n
 		else:
 			self.nodes[n.dtsNodeName] = n
@@ -737,18 +739,59 @@ class SceneInfoClass:
 			if mod.type == Blender.Modifier.Types.ARMATURE:
 				hasArmatureDeform = True
 		# Check for an armature parent
-		try:
-			if (o.parentType == Blender.Object.ParentTypes['ARMATURE']) and (o.parentbonename == None) :
-				hasArmatureDeform = True
-		except: pass
+		if (o.parentType == Blender.Object.ParentTypes['ARMATURE']) and (o.parentbonename == None) :
+			hasArmatureDeform = True
+
 		return hasArmatureDeform
 		
 	isSkinnedMesh = staticmethod(isSkinnedMesh)
 
-	def translateVertGroupNames(self, names):
+	def getSkinArmTargets(self, o):
+		targets = []
+		hasArmatureDeform = False
+		for mod in o.modifiers:
+			if mod.type == Blender.Modifier.Types.ARMATURE:
+				targetObj = mod[Modifier.Settings.OBJECT]
+				if targetObj != None and targetObj.getType() == 'Armature':
+					targets.append(self.armatures[targetObj.name])
+		# Check for an armature deform parent
+		if (o.parentType == Blender.Object.ParentTypes['ARMATURE']) and (o.parentbonename == None) :
+			targetObj = o.getParent()
+			if targetObj != None and targetObj.getType() == 'Armature':
+				if not (self.armatures[targetObj.name] in targets):
+					targets.append(self.armatures[targetObj.name])
+		print "Returning targets:", targets
+		return targets
+
+
+
+	def translateVertGroupNames(self, meshName, names, armNIList):
+		print "armNIList = ", armNIList
+		# issue warnings if mesh is multi-skinned and bone matching vgroup
+		# name exists in more than one of the target armatures
+		for name in names:
+			foundList = []
+			for armNI in armNIList:
+				try: newName = self.boneNameChanges[armNI.blenderObjName][name]
+				except: newName = None
+				if newName != None: foundList.append(name)
+			if len(foundList) > 1:
+				warnString = "\n  ****************************************************************************\n"\
+				+ "  Warning: Vertex group \"" + name + "\" in multi-skinned mesh \"" + meshName +"\"\n"\
+				+ "   could not be resolved because a bone matching the name of the vertex group\n"\
+				+ "   exists in more than one of the target armatures.\n"\
+				+ "  ****************************************************************************\n"
+				dump_writeWarning(warnString)
+			print "foundList = ", foundList
+
 		output = []
 		for name in names:
-			output.append(self.boneNameChanges[name])
+			for armNI in armNIList:
+				try:
+					output.append(self.boneNameChanges[armNI.blenderObjName][name])
+					break
+				except: continue
+				
 		return output
 			
 
