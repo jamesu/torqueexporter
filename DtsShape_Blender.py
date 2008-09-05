@@ -192,10 +192,13 @@ class BlenderShape(DtsShape):
 		# Get Object's Matrix
 		mat = self.collapseBlenderTransform(o)
 
+		# Get armatures targets if mesh is skinned
+		armTargets = DtsGlobals.SceneInfo.getSkinArmTargets(o)
+
 		# Import Mesh, process flags
 		try: x = self.preferences['PrimType']
 		except KeyError: self.preferences['PrimType'] = "Tris"
-		tmsh = BlenderMesh( self, o.name, mesh_data, -1, 1.0, mat, hasArmatureDeform, False, (self.preferences['PrimType'] == "TriLists" or self.preferences['PrimType'] == "TriStrips") )
+		tmsh = BlenderMesh( self, o.name, mesh_data, -1, 1.0, mat, hasArmatureDeform, armTargets, False, (self.preferences['PrimType'] == "TriLists" or self.preferences['PrimType'] == "TriStrips") )
 
 		# todo - fix mesh flags
 		#if len(names) > 1: tmsh.setBlenderMeshFlags(names[1:])
@@ -1118,6 +1121,8 @@ class BlenderShape(DtsShape):
 		#for i in range(0, len(self.addedArmatures)):
 		#	arm = self.addedArmatures[i][0]			
 		#	act.setActive(arm)
+		
+		
 		# loop through all of the exisitng action frames
 		for frame in range(0, numOverallFrames):
 			
@@ -1173,53 +1178,6 @@ class BlenderShape(DtsShape):
 					loc, rot, scale = sequence.frames[nodeIndex][-1][0], sequence.frames[nodeIndex][-1][1], sequence.frames[nodeIndex][-1][2]
 					sequence.frames[nodeIndex].append([loc,rot,scale])
 			
-			'''
-			# add bone node frames
-			# loop through each armature, we only want to call getPose once for each armature in the scene.			
-			for armIdx in range(0, len(self.addedArmatures)):
-				arm = self.addedArmatures[armIdx][0]
-				pose = arm.getPose()
-				print self.nodes
-				# loop through each node for the current frame.
-				for nodeIndex in range(1, len(self.nodes)):
-					# since Armature.getPose() leaks memory in Blender 2.41, skip nodes not
-					# belonging to the current armature to avoid having to call it unnecessarily.
-
-
-					# see if we're dealing with an object node
-					if self.nodes[nodeIndex].armIdx == -1: continue
-
-					if self.nodes[nodeIndex].armIdx != armIdx and self.nodes[nodeIndex].armIdx != -1: continue
-
-
-					if isBlend:
-						baseTransform = baseTransforms[nodeIndex]
-					else:
-						baseTransform = None
-					# make sure we're not past the end of our action
-					print "frame=",frame
-					print "numFrameSamples=",numFrameSamples
-					if frame < numFrameSamples:
-						# let's pretend that everything matters, we'll remove the cruft later
-						# this prevents us from having to do a second pass through the frames.
-						print "Sequence=",sequence
-						print "nodeIndex=",nodeIndex
-						print "curFrame=",curFrame
-						print "pose=",pose
-						print "baseTransform=",baseTransform
-						print "parent node idx=",self.nodes[nodeIndex].parent
-						loc, rot, scale = self.getPoseTransform(sequence, nodeIndex, curFrame, pose, baseTransform)
-						print "loc=",loc
-						print "rot=",rot
-						print "scale=",scale
-						sequence.frames[nodeIndex].append([loc,rot,scale])
-					# if we're past the end, just duplicate the last good frame.
-					else:
-						loc, rot, scale = sequence.frames[nodeIndex][-1][0], sequence.frames[nodeIndex][-1][1], sequence.frames[nodeIndex][-1][2]
-						sequence.frames[nodeIndex].append([loc,rot,scale])
-						
-			'''
-		
 		
 		# if nothing was actually animated abandon exporting the action.
 		if not (sequence.has_loc or sequence.has_rot or sequence.has_scale):
