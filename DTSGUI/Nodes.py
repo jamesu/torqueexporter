@@ -151,7 +151,6 @@ class NodeControlsClass:
 					boneName = Prefs['BannedNodes'][i].upper()
 					if name.upper() == boneName:
 						del Prefs['BannedNodes'][i]
-						print "removing node:", name
 			self.populateNodeGrid()
 		elif control.name == "guiTypeOff":
 			typeStr = self.guiMatchTypePulldown.getSelectedItemString()
@@ -160,12 +159,9 @@ class NodeControlsClass:
 			else: nodeList = SceneInfo.getBoneNodeNames()			
 			for name in nodeList:
 				Prefs['BannedNodes'].append(name.upper())
-				print "adding node:", name
 			self.populateNodeGrid()
 		
 	def resize(self, control, newwidth, newheight):
-		print "ordinary resize callback called..."
-		print " control.name =", control.name
 		if control.name == "guiNodeListLabel":
 			control.x, control.y = 10,newheight-20
 		elif control.name == "guiNodeList":
@@ -203,9 +199,6 @@ class NodeControlsClass:
 		control.x, control.y = 1 + (control.columnNum*(buttonWidth)), 0
 		control.width, control.height = buttonWidth, buttonHeight
 
-	#def resizeListLine(self, control, newwidth, newheight):
-	#	self.newwidth = 
-	
 	def guiNodeListItemCallback(self, control):
 		Prefs = DtsGlobals.Prefs
 		real_name = control.text.upper()
