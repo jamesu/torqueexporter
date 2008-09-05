@@ -64,10 +64,7 @@ class nodeInfoClass:
 		if self.hasGeometry:
 			self.dtsObjName = SceneInfoClass.getStrippedMeshName(nodeName)
 			self.dtsNodeName = SceneInfoClass.getStrippedMeshName(nodeName)
-			
 
-
-		#print "Constructed", self.blenderType, "node", self.dtsNodeName, "from Blender object", self.blenderObjName
 
 	# find a non-excluded node to use as a parent for a dts object
 	# Returns the object's own generated node if it's valid.
@@ -272,7 +269,6 @@ class SceneInfoClass:
 	
 	# adds a bone tree to the allThings list recursively, for internal use only
 	def __addBoneTree(self, blenderObj, parentNI, boneOb, armDb, armParentNI, boneDictionary):
-		#print "Adding Bone:", boneOb.name
 		n = nodeInfoClass(boneOb.name, 'bone', blenderObj, parentNI, armParentNI)
 		boneDictionary[boneOb.name] = n
 		self.allThings.append(n)
@@ -327,7 +323,6 @@ class SceneInfoClass:
 					found[dtsObjName] = []
 				found[dtsObjName].append(meshNI)
 			
-			#print "Report of dts object names for", dlName
 			for dtsObjName in found.keys():
 				foundList = found[dtsObjName]
 				if len(foundList) > 1:
@@ -388,8 +383,6 @@ class SceneInfoClass:
 				for dlName in sortedDLs:
 					highest = dtsObj[dlName]
 					if highest != None: break
-				
-				#print "highest = ", highest.blenderObjName
 				if highest != ni: continue
 			
 			self.__safeAddToNodesDict(ni)
@@ -760,13 +753,11 @@ class SceneInfoClass:
 			if targetObj != None and targetObj.getType() == 'Armature':
 				if not (self.armatures[targetObj.name] in targets):
 					targets.append(self.armatures[targetObj.name])
-		print "Returning targets:", targets
 		return targets
 
 
 
 	def translateVertGroupNames(self, meshName, names, armNIList):
-		print "armNIList = ", armNIList
 		# issue warnings if mesh is multi-skinned and bone matching vgroup
 		# name exists in more than one of the target armatures
 		for name in names:
@@ -782,7 +773,6 @@ class SceneInfoClass:
 				+ "   exists in more than one of the target armatures.\n"\
 				+ "  ****************************************************************************\n"
 				dump_writeWarning(warnString)
-			print "foundList = ", foundList
 
 		output = []
 		for name in names:
@@ -831,17 +821,13 @@ class SceneInfoClass:
 			# Check for an armature modifier
 			o = ni.getBlenderObj()
 			for mod in o.modifiers:
-				print ni.blenderObjName, "mod.type =", mod.type
 				if mod.type == Blender.Modifier.Types.ARMATURE:
 					hasExplicitModifier = True
 			# Check for an armature parent
 			try:				
-				print o.name
 				if (o.parentType == Blender.Object.ParentTypes['ARMATURE']) and (o.parentbonename == None):
-					print o.name, "has armature deform parent."
 					hasArmDeformParent = True
 				if (o.parentType == Blender.Object.ParentTypes['OBJECT']) and (o.parentbonename == None):
-					print o.name, "has *object* parent."
 					hasArmObjParent = True
 				
 			except: pass
