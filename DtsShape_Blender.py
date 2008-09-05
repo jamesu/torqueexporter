@@ -153,8 +153,6 @@ class BlenderShape(DtsShape):
 		# does the object have geometry?
 
 		# do we even have any modifiers?  If not, we can skip copying the display data.
-		#print "Checking object", o.name
-
 		try: hasMultiRes = o.getData(False,True).multires
 		except AttributeError: hasMultiRes = False
 
@@ -165,7 +163,6 @@ class BlenderShape(DtsShape):
 
 		# Otherwise, get the final display data, as affected by modifers.
 		if ((not hasArmatureDeform) and hasModifiers) or (o.getType() in ['Surf', 'Text', 'MBall']):
-			#print "Getting raw data for", o.getName()
 			try:
 				temp_obj = Blender.Object.Get("DTSExpObj_Tmp")
 			except:
@@ -184,7 +181,6 @@ class BlenderShape(DtsShape):
 
 		# if we have armature deformation, or don't have any modifiers, get the mesh data the old fashon way
 		else:
-			#print "Getting mesh data for", o.getName()
 			mesh_data = o.getData(False,True);
 			temp_obj = None
 
@@ -238,8 +234,6 @@ class BlenderShape(DtsShape):
 		
 
 		# do we even have any modifiers?  If not, we can skip copying the display data.
-		print "Checking object", o.name
-
 		try: hasMultiRes = o.getData(False,True).multires
 		except AttributeError: hasMultiRes = False
 
@@ -250,7 +244,6 @@ class BlenderShape(DtsShape):
 
 		# Otherwise, get the final display data, as affected by modifers.
 		if ((not hasArmatureDeform) and hasModifiers) or (o.getType() in ['Surf', 'Text', 'MBall']):
-			#print "Getting raw data for", o.getName()
 			try:
 				temp_obj = Blender.Object.Get("DTSExpObj_Tmp")
 			except:
@@ -269,7 +262,6 @@ class BlenderShape(DtsShape):
 
 		# if we have armature deformation, or don't have any modifiers, get the mesh data the old fashon way
 		else:
-			#print "Getting mesh data for", o.getName()
 			mesh_data = o.getData(False,True);
 			temp_obj = None
 
@@ -323,10 +315,6 @@ class BlenderShape(DtsShape):
 				for dln in sortedDetailLevels:
 					if dtsObjects[dtsObjName][dln] != None:
 						pNodeNI = dtsObjects[dtsObjName][dln].getGoodMeshParentNI()
-						if pNodeNI != None:
-							print "getGoodMeshParentNI returned", pNodeNI.dtsNodeName, "for mesh", dtsObjects[dtsObjName][dln].blenderObjName
-						else:
-							print "getGoodMeshParentNI returned None for mesh", dtsObjects[dtsObjName][dln].blenderObjName
 						break
 
 				if pNodeNI == None:
@@ -358,7 +346,6 @@ class BlenderShape(DtsShape):
 				
 				numAddedMeshes += 1
 				
-				#print "self.tempMeshes =", masterObject.tempMeshes
 								
 			# Modify base subshape if required
 			if self.numBaseDetails == 0:
@@ -561,7 +548,6 @@ class BlenderShape(DtsShape):
 			csize[0],csize[1],csize[2] = csize[0]*nsize[0],csize[1]*nsize[1],csize[2]*nsize[2]
 			parent = parent.getParent()
 		exportScale = self.preferences['ExportScale']
-		#print "exportScale = ", exportScale
 		# add on export scale factor
 		csize[0], csize[1], csize[2] = csize[0]*exportScale, csize[1]*exportScale, csize[2]*exportScale
 		return csize
@@ -621,7 +607,6 @@ class BlenderShape(DtsShape):
 	# called by addAllNodes, not to be called externally.
 	def addNodeTree(self, nodeInfo, parentNodeIndex = -1):
 		if not nodeInfo.isBanned():
-			print "Adding node:", nodeInfo.dtsNodeName, "( type:", nodeInfo.blenderType, ")"
 			n = Node(self.sTable.addString(nodeInfo.dtsNodeName), parentNodeIndex)
 			pos = nodeInfo.defPosPS
 			rot = nodeInfo.defRotPS
@@ -700,7 +685,7 @@ class BlenderShape(DtsShape):
 
 	
 	# grab the pose transform of whatever frame we're currently at.  Frame must be set before calling this method.
-	def getPoseTransform(self, sequence, nodeIndex, frame_idx, pose, baseTransform=None, getRawValues=False):
+	def getPoseTransform(self, sequence, nodeIndex, frame_idx, poses, baseTransform=None, getRawValues=False):
 
 		loc, rot, scale = None, None, None
 		#try: armName = self.addedArmatures[self.nodes[nodeIndex].armIdx][0].name
@@ -722,10 +707,7 @@ class BlenderShape(DtsShape):
 
 		
 		# Get our values from the poseUtil interface		
-		transVec, quatRot, scaleVec = self.poseUtil.getNodeLocRotScaleLS(bonename, pose)
-		# - determine the scale of the bone.
-		#scaleVec = pose.bones[bonename].size
-		#scaleVec = self.poseUtil.toTorqueVec([1,1,1])
+		transVec, quatRot, scaleVec = self.poseUtil.getNodeLocRotScaleLS(bonename, poses)
 
 
 		# We dump out every transform regardless of whether it matters or not.  This avoids having to
@@ -922,7 +904,6 @@ class BlenderShape(DtsShape):
 	
 		lastFrameRemoved = False
 		if ActionIsValid:
-			#print "   Adding action data for", seqName
 			sequence, lastFrameRemoved = self.addNodeSeq(sequence, action, numFrameSamples, scene, seqPrefs)
 			# if we had to remove the last frame from a cyclic action, and the original action
 			# frame samples was the same as the overall number of frames for the sequence, adjust
@@ -930,11 +911,8 @@ class BlenderShape(DtsShape):
 			if lastFrameRemoved:
 				numFrameSamples -= 1
 		if visIsValid:
-			#print "   Adding visibility data for", seqName
 			sequence = self.addSequenceVisibility( sequence, numFrameSamples, seqPrefs, int(seqPrefs['StartFrame']), int(seqPrefs['EndFrame']))
-			#if sequence.numKeyFrames <  numVisFrames: sequence.numKeyFrames = numVisFrames
 		if IFLIsValid:
-			#print "   Adding IFL data for", seqName
 			sequence = self.addSequenceIFL(sequence, getNumIFLFrames(seqName, seqPrefs), seqPrefs)
 			
 		self.sequences.append(sequence)
@@ -1114,15 +1092,6 @@ class BlenderShape(DtsShape):
 		for nodeIndex in range(1, len(self.nodes)):
 			sequence.frames[nodeIndex] = []
 		
-		# loop through all of the armatures and set the current action as active for all
-		# of them.  Sadly, there is no way to tell which action belongs with which armature
-		# using the Python API in Blender, so this is a bit messy.
-		#act = Blender.Armature.NLA.GetActions()[sequence.name]
-		#for i in range(0, len(self.addedArmatures)):
-		#	arm = self.addedArmatures[i][0]			
-		#	act.setActive(arm)
-		
-		
 		# loop through all of the exisitng action frames
 		for frame in range(0, numOverallFrames):
 			
@@ -1138,8 +1107,6 @@ class BlenderShape(DtsShape):
 				#transVec, quatRot, scaleVec = self.poseUtil.getNodeLocRotScaleLS(bonename, pose)
 				deltaRot = ni.restRotWS.inverse() * ni.getNodeRotWS(None)
 				deltaPos = ni.restPosWS - ni.getNodeLocWS(None)
-				print "deltaRot = ", deltaRot
-				print "deltaPos = ", deltaPos
 				if self.isTranslated(deltaPos) or self.isRotated(deltaRot):
 					if not ni in self.badArmatures:
 						self.badArmatures.append(ni)
@@ -1154,9 +1121,6 @@ class BlenderShape(DtsShape):
 			lastGoodPose = None
 			# add object node frames
 			for nodeIndex in range(1, len(self.nodes)):
-				# see if we're dealing with an object node
-				#if self.nodes[nodeIndex].armIdx != -1: continue
-				
 				try:
 					pose = armPoses[ self.nodes[nodeIndex].armName ]
 					lastGoodPose = pose
@@ -1171,7 +1135,7 @@ class BlenderShape(DtsShape):
 				if frame < numFrameSamples:
 					# let's pretend that everything matters, we'll remove the cruft later
 					# this prevents us from having to do a second pass through the frames.
-					loc, rot, scale = self.getPoseTransform(sequence, nodeIndex, curFrame, pose, baseTransform)
+					loc, rot, scale = self.getPoseTransform(sequence, nodeIndex, curFrame, armPoses, baseTransform)
 					sequence.frames[nodeIndex].append([loc,rot,scale])
 				# if we're past the end, just duplicate the last good frame.
 				else:
@@ -1348,7 +1312,6 @@ class BlenderShape(DtsShape):
 		NOTE: this function needs to be called AFTER finalizeObjects, for obvious reasons.
 		'''
 
-		print "addSequenceVisibility called..."
 		scene = Blender.Scene.GetCurrent()
 		sequence.matters_vis = [False]*len(self.objects)
 
@@ -1387,8 +1350,6 @@ class BlenderShape(DtsShape):
 				sequence.baseObjectState = len(self.objectstates)
 			# add the object states, include the last frame
 			for fr in range(startFrame, numOverallFrames + startFrame):
-				#print "#####  Writing IPO for frame:%2i (%f)" % (int(fr), IPOCurve[fr])
-				#print "#####  Writing IPO Value:", IPOCurve[fr]				
 				val = IPOCurve[int(fr)]
 				if val > 1.0: val = 1.0
 				elif val < 0.0: val = 0.0
