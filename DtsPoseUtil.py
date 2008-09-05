@@ -44,12 +44,14 @@ def initWSTransformData(self, initPose=None):
 		# Note: Blender quaternions must be inverted since torque uses column vectors
 		self.restRotWS = toTorqueQuat(mat.rotationPart().toQuat().inverse())
 		self.restPosWS = toTorqueVec(mat.translationPart())
+		self.restScale = self.__getNodeRestScale(initPose)
 
 	elif self.blenderType == "bone":			
 		bone = self.getBlenderObj().getData().bones[self.originalBoneName]
 		bMat = bone.matrix['ARMATURESPACE']
 		self.restPosWS = self.__calcBoneRestPosWS(bMat)
 		self.restRotWS = self.__calcBoneRestRotWS(bMat)
+		self.restScale = self.__getNodeRestScale(initPose)
 
 def initPSTransformData(self, initPose=None):
 	if self.blenderType == "object":
@@ -137,6 +139,12 @@ def __calcBoneRestRotWS(self, bMat):
 	bRot = (bRot * armRot)
 	return bRot
 
+def __getNodeRestScale(self, poses):
+	if self.blenderType == "object":
+		retVal = self.__getObjectScale()
+	elif self.blenderType == "bone":
+		retVal = self.__getBoneScale(poses)
+	return retVal
 
 
 # ***********************
@@ -187,8 +195,6 @@ def __getObjectRotWS(self):
 	bRot = toTorqueQuat(Blender.Object.Get(self.blenderObjName).getMatrix('worldspace').rotationPart().toQuat()).inverse()
 	return bRot
 
-
-
 # !!!! New
 def __getObjectScale(self):
 	bLoc = toTorqueVec([Blender.Object.Get(self.blenderObjName).SizeX,\
@@ -217,6 +223,7 @@ def getNodeScale(self, poses):
 		retVal = self.__getObjectScale()
 	elif self.blenderType == "bone":
 		retVal = self.__getBoneScale(poses)
+	retVal = Vector(retVal[0]/self.restScale[0], retVal[1]/self.restScale[1], retVal[2]/self.restScale[2])
 	return retVal
 
 
@@ -234,28 +241,26 @@ def bindDynamicMethods():
 	nodeInfoClass.__dict__['__calcBoneRestPosWS'] = __calcBoneRestPosWS
 	new.instancemethod(__calcBoneRestRotWS, None, nodeInfoClass)
 	nodeInfoClass.__dict__['__calcBoneRestRotWS'] = __calcBoneRestRotWS
+
+	new.instancemethod(__getNodeRestScale, None, nodeInfoClass)
+	nodeInfoClass.__dict__['__getNodeRestScale'] = __getNodeRestScale
+	
 	new.instancemethod(__getBoneLocWS, None, nodeInfoClass)
 	nodeInfoClass.__dict__['__getBoneLocWS'] = __getBoneLocWS
 	new.instancemethod(__getBoneRotWS, None, nodeInfoClass)
 	nodeInfoClass.__dict__['__getBoneRotWS'] = __getBoneRotWS
-
 	new.instancemethod(__getBoneScale, None, nodeInfoClass)
 	nodeInfoClass.__dict__['__getBoneScale'] = __getBoneScale
-
-
 	new.instancemethod(__getObjectLocWS, None, nodeInfoClass)
 	nodeInfoClass.__dict__['__getObjectLocWS'] = __getObjectLocWS
 	new.instancemethod(__getObjectRotWS, None, nodeInfoClass)
 	nodeInfoClass.__dict__['__getObjectRotWS'] = __getObjectRotWS
-
 	new.instancemethod(__getObjectScale, None, nodeInfoClass)
 	nodeInfoClass.__dict__['__getObjectScale'] = __getObjectScale
-
 	new.instancemethod(getNodeLocWS, None, nodeInfoClass)
 	nodeInfoClass.__dict__['getNodeLocWS'] = getNodeLocWS
 	new.instancemethod(getNodeRotWS, None, nodeInfoClass)
 	nodeInfoClass.__dict__['getNodeRotWS'] = getNodeRotWS
-
 	new.instancemethod(getNodeScale, None, nodeInfoClass)
 	nodeInfoClass.__dict__['getNodeScale'] = getNodeScale
 
@@ -277,34 +282,41 @@ class DtsPoseUtilClass:
 		# get dictionaries
 		self.nodes = DtsGlobals.SceneInfo.nodes
 		self.armatures = DtsGlobals.SceneInfo.armatures
-		self.__initTransforms()
+
+		# get poses for all armatures in the scene
+		armPoses = {}
+		for armNI in self.armatures.values():
+			arm = armNI.getBlenderObj()
+			armPoses[arm.name] = arm.getPose()
+
+		self.__initTransforms(armPoses)
 		
 		#print "-------------------------------------"
 		#for nic in filter(lambda x: x.getGoodNodeParentNI()==None, self.nodes.values()):
 		#	self.__printTree(nic, 0)
 		#print "-------------------------------------"
 	
-	def __initTransforms(self):
+	def __initTransforms(self, armPoses):
 		# first init armatures
 		for node in self.armatures.values():
-			node.initWSTransformData()
+			node.initWSTransformData(armPoses)
 
 		# start with nodes at the root of the tree
 		for node in filter(lambda x: x.getGoodNodeParentNI() == None, self.nodes.values()):
-			node.initWSTransformData()
+			node.initWSTransformData(armPoses)
 			# add child trees
-			self.__walkTreeInitTransforms(None)
+			self.__walkTreeInitTransforms(None, armPoses)
 			# finally init PS transform data
-			node.initPSTransformData()
+			node.initPSTransformData(armPoses)
 		
 
-	def __walkTreeInitTransforms(self, node):
+	def __walkTreeInitTransforms(self, node, armPoses):
 		for node in filter(lambda x: x.getGoodNodeParentNI() == node, self.nodes.values()):
-			node.initWSTransformData()
+			node.initWSTransformData(armPoses)
 			# add child trees
-			self.__walkTreeInitTransforms(node)
+			self.__walkTreeInitTransforms(node, armPoses)
 			# finally init PS transform data
-			node.initPSTransformData()
+			node.initPSTransformData(armPoses)
 
 
 	# for debugging
@@ -445,7 +457,7 @@ class DtsPoseUtilClass:
 			scaleInv = Vector(1.0/scaleRaw[0], 1.0/scaleRaw[1], 1.0/scaleRaw[2])
 			# check to see if all members are within delta of one, if so, don't
 			# even bother adding them to the list since it'll only throw off accuracy
-			if scaleRaw.eqDelta( Vector(1.0,1.0,1.0), 0.008 ):
+			if scaleRaw.eqDelta( Vector(1.0,1.0,1.0), 0.008 ):				
 				parent = parent.parentNI
 				continue
 			scaleListLS.append(scaleInv)
