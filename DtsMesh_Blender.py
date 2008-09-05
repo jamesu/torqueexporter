@@ -42,11 +42,13 @@ from DtsSceneInfo import *
 #-------------------------------------------------------------------------------------------------
 
 class BlenderMesh(DtsMesh):
-	def __init__(self, shape, meshName, msh,  rootBone, scaleFactor, matrix, isSkinned=False, isCollision=False, useLists = False):		
+	def __init__(self, shape, meshName, msh,  rootBone, scaleFactor, matrix, isSkinned=False, armTargets=None,  isCollision=False, useLists = False):		
 		DtsMesh.__init__(self)		
 		# store off the transpose of the inverse of the object's 3x3 submatrix so we don't have to recalculate it every time we need it.
 		self.tpinvmat = Torque_Math.Matrix3x3(matrix).transpose().inverse()
 		self.isSkinned = isSkinned
+		self.armTargets = armTargets
+		self.meshName = meshName
 		self.bVertList = [] 		# list of blender mesh vertex indices ordered by value, for fast searching
 		self.dVertList = [] 		# list containing lists of dts vertex indices, the outer list elements correspond to the bVertList element in the same position.
 		#self.mainMaterial = None	# For determining material ipo track to use for ObjectState visibility animation
@@ -299,7 +301,7 @@ class BlenderMesh(DtsMesh):
 		
 		
 		originalGroups = mesh.getVertGroupNames()
-		translatedGroups = DtsGlobals.SceneInfo.translateVertGroupNames(mesh.getVertGroupNames())
+		translatedGroups = DtsGlobals.SceneInfo.translateVertGroupNames(self.meshName, originalGroups, self.armTargets)
 		#for group in mesh.getVertGroupNames():
 		for i in range(0, len(originalGroups)):
 			oGroup = originalGroups[i]
