@@ -41,6 +41,7 @@ gc.enable()
 '''
 #-------------------------------------------------------------------------------------------------
 
+headerRow = True
 
 # --------- some constants used by the below class ----------
 # indicies into armInfo's lists
@@ -381,12 +382,14 @@ class DtsPoseUtilClass:
 		# get the armature's rotation
 		armRot = self.armInfo[armName][ARMROT].inverse()
 		# get the pose rotation and rotate into worldspace
-		bRot = ( armRot * self.bMatToTorqueQuat(pose.bones[bName].poseMatrix).inverse() )
+		bRot = ( armRot * self.bMatToTorqueQuat(pose.bones[bName].poseMatrix, bName ).inverse())
 		return bRot
 
 	# Blender's matrix toQuat() method gives incorrect values for matrices containing non-uniform scale.
 	# This method is (mostly) scale invariant...
-	def bMatToTorqueQuat(self, bMat):
+	def bMatToTorqueQuat(self, bMat, bName=None):		
+		return self.toTorqueQuat(bMat.rotationPart().toQuat())
+		'''
 		#return self.toTorqueQuat(bMat.rotationPart().toQuat())
 		# get 3x3 submatrix
 		rotMat = bMat.rotationPart()
@@ -408,6 +411,7 @@ class DtsPoseUtilClass:
 		return retVal  # <- closest match so far
 		#return self.toTorqueQuat(bMat.rotationPart().toQuat()) # <- not very close
 		#return self.toTorqueQuat(bMat.toQuat()) # <- same as above, not very close
+		'''
 	
 		
 	def toTorqueVec(self, v):
