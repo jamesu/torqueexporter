@@ -31,6 +31,7 @@ from DtsMesh_Blender import *
 import Blender
 from Blender import NMesh, Armature, Scene, Object, Material, Texture
 from Blender import Mathutils as bMath
+import copy
 
 import DtsPoseUtil
 
@@ -1164,6 +1165,7 @@ class BlenderShape(DtsShape):
 		sequence.has_rot = False
 		sequence.has_scale = False
 		sequence.has_ground = False
+		sequence.has_ansitropic_scale = False
 		
 		sequence.frames = []
 		for n in self.nodes:
@@ -1208,6 +1210,59 @@ class BlenderShape(DtsShape):
 		
 		return sequence
 	
+	def getActionFrames(self, numOverallFrames, interpolateInc, seqPrefs, sequence, boundsStartMat, baseTransforms, numFrameSamples, isBlend, addScale):
+		# loop through all of the exisitng action frames
+		for frame in range(0, numOverallFrames):
+			# Set the current frame in blender
+			#context.currentFrame(int(frame*interpolateInc))
+			curFrame = int(round(float(frame)*interpolateInc,0)) + seqPrefs['Action']['StartFrame']
+			Blender.Set('curframe', curFrame)
+			# add ground frames
+			self.addGroundFrame(sequence, curFrame, boundsStartMat)
+			# loop through each armature
+			for armIdx in range(0, len(self.addedArmatures)):
+				arm = self.addedArmatures[armIdx][0]
+				pose = arm.getPose()
+				# loop through each node for the current frame.
+				#i = 0
+				for nodeIndex in range(1, len(self.nodes)):
+					# since Armature.getPose() leaks memory in Blender 2.41, skip nodes not
+					# belonging to the current armature to avoid having to call it unnecessarily.
+					if self.nodes[nodeIndex].armIdx != armIdx: continue
+					if isBlend: 
+						baseTransform = baseTransforms[nodeIndex]
+					else:
+						baseTransform = None
+					if not addScale:
+						# make sure we're not past the end of our action
+						if frame < numFrameSamples:
+							# let's pretend that everything matters, we'll remove the cruft later
+							# this prevents us from having to do a second pass through the frames.
+							loc, rot, scale = self.getPoseTransform(sequence, nodeIndex, curFrame, pose, baseTransform)
+							sequence.frames[nodeIndex].append([loc,rot,scale])
+						# if we're past the end, just duplicate the last good frame.
+						else:
+							loc, rot, scale = sequence.frames[nodeIndex][-1][0], sequence.frames[nodeIndex][-1][1], sequence.frames[nodeIndex][-1][2]
+							sequence.frames[nodeIndex].append([loc,rot,scale])
+					else:
+						# make sure we're not past the end of our action
+						if frame < numFrameSamples:
+							# let's pretend that everything matters, we'll remove the cruft later
+							# this prevents us from having to do a second pass through the frames.							
+							node = self.nodes[nodeIndex]
+							bonename = self.sTable.get(node.name)
+							scale = self.poseUtil.toTorqueVec(pose.bones[bonename].size)
+							if self.isScaled(scale):
+								sequence.matters_scale[nodeIndex] = True
+								sequence.has_scale = True
+								sequence.frames[nodeIndex][frame][2] = scale
+						# if we're past the end, just duplicate the last good frame.
+						else:
+							loc, rot, scale = sequence.frames[nodeIndex][-1][0], sequence.frames[nodeIndex][-1][1], sequence.frames[nodeIndex][-1][2]
+							sequence.frames[nodeIndex].append([loc,rot,scale])
+
+
+
 	# Import an action
 	def addAction(self, sequence, action, numOverallFrames, scene, context, seqPrefs):
 		'''
@@ -1273,11 +1328,22 @@ class BlenderShape(DtsShape):
 				if (channels[channel_name].getCurve('QuatX') != None) or (channels[channel_name].getCurve('QuatY') != None) or (channels[channel_name].getCurve('QuatZ') != None):
 					sequence.matters_rotation[nodeIndex] = True
 					sequence.has_rot = True
-				if (channels[channel_name].getCurve('SizeX') != None) or (channels[channel_name].getCurve('SizeY') != None) or (channels[channel_name].getCurve('SizeZ') != None):
+				if (channels[channel_name][Blender.Ipo.PO_SCALEX] != None) or (channels[channel_name][Blender.Ipo.PO_SCALEY] != None) or (channels[channel_name][Blender.Ipo.PO_SCALEZ] != None):
+					nf = getHighestActFrame(action)
 					sequence.matters_scale[nodeIndex] = True
 					sequence.has_scale = True
+					# check for anisotropic scale
+					for i in range(0, nf):
+						sx = channels[channel_name][Blender.Ipo.PO_SCALEX][i]
+						sy = channels[channel_name][Blender.Ipo.PO_SCALEY][i]
+						sz = channels[channel_name][Blender.Ipo.PO_SCALEZ][i]
+						sv = self.poseUtil.toTorqueVec([sx, sy, sz])
+						sv2 = self.poseUtil.toTorqueVec([sy, sz, sx])
+						if not sv.eqDelta(sv2, 0.001):
+							sequence.has_ansitropic_scale = True
 			except ValueError:
 				# not an Action IPO...
+				print "whoops!"
 				pass
 			
 			# TODO: how do we determine RVK channels?
@@ -1386,48 +1452,120 @@ class BlenderShape(DtsShape):
 		for nodeIndex in range(1, len(self.nodes)):
 			sequence.frames[nodeIndex] = []
 		
+
+		act = Blender.Armature.NLA.GetActions()[sequence.name]
+
 		# loop through all of the armatures and set the current action as active for all
 		# of them.  Sadly, there is no way to tell which action belongs with which armature
 		# using the Python API in Blender, so this is a bit messy.
-		act = Blender.Armature.NLA.GetActions()[sequence.name]
 		for i in range(0, len(self.addedArmatures)):
 			arm = self.addedArmatures[i][0]			
 			act.setActive(arm)
+
+
+		# do a two pass action export if we've got anisotropic scale.
+		# Blender's pose module suffers from un-correctable
+		# gimbal lock and accuracy issues when anisotropic scale is present >:-(
+		if sequence.has_ansitropic_scale:
+			#print "Doing two pass export..."
+
+			# temporarily remove scale ipos
+			tempDict = {}
+			channelIpos = action.getAllChannelIpos()
+			for ipoName in channelIpos.keys():
+				tempDict[ipoName] = {}
+				tempDict[ipoName]['X'] = {}
+				tempDict[ipoName]['X']['vec'] = []
+				tempDict[ipoName]['X']['ht'] = []
+				tempDict[ipoName]['Y'] = {}
+				tempDict[ipoName]['Y']['vec'] = []
+				tempDict[ipoName]['Y']['ht'] = []
+				tempDict[ipoName]['Z'] = {}
+				tempDict[ipoName]['Z']['vec'] = []
+				tempDict[ipoName]['Z']['ht'] = []
+				ipo = channelIpos[ipoName]
+				# copy scale ipos to temp holding dictionary
+				for point in ipo[Blender.Ipo.PO_SCALEX].bezierPoints:
+					tempDict[ipoName]['X']['vec'].append(point.vec)
+					tempDict[ipoName]['X']['ht'].append(point.handleTypes)
+
+				for point in ipo[Blender.Ipo.PO_SCALEY].bezierPoints:
+					tempDict[ipoName]['Y']['vec'].append(point.vec)
+					tempDict[ipoName]['Y']['ht'].append(point.handleTypes)
+
+				for point in ipo[Blender.Ipo.PO_SCALEZ].bezierPoints:
+					tempDict[ipoName]['Z']['vec'].append(point.vec)
+					tempDict[ipoName]['Z']['ht'].append(point.handleTypes)
+
+				# remove scale ipos
+				try:ipo[Blender.Ipo.PO_SCALEX] = None
+				except: pass
+				try:ipo[Blender.Ipo.PO_SCALEY] = None
+				except: pass
+				try:ipo[Blender.Ipo.PO_SCALEZ] = None
+				except: pass
+
+			# loop through all of the exisitng action frames, get loc and rot
+			addScale = False
+			self.getActionFrames(numOverallFrames, interpolateInc, seqPrefs, sequence, boundsStartMat, baseTransforms, numFrameSamples, isBlend, addScale)
+
+			# restore scale IPOs
+			nf = getHighestActFrame(act)
+			channelIpos = action.getAllChannelIpos()
+			for ipoName in channelIpos.keys():
+				ipo = channelIpos[ipoName]
+
+				# re-create curves
+				ipo.addCurve('ScaleX')
+				ipo.addCurve('ScaleY')
+				ipo.addCurve('ScaleZ')
+
+				# add points
+				for point in tempDict[ipoName]['X']['vec']:
+					knot = point[1]
+					ipo[Blender.Ipo.PO_SCALEX].append((knot[0], knot[1]))
+				
+				for point in tempDict[ipoName]['X']['vec']:
+					knot = point[1]
+					ipo[Blender.Ipo.PO_SCALEY].append((knot[0], knot[1]))
+
+				for point in tempDict[ipoName]['X']['vec']:
+					knot = point[1]
+					ipo[Blender.Ipo.PO_SCALEZ].append((knot[0], knot[1]))
+
+				# fix up handles
+				for i in range(0, len(ipo[Blender.Ipo.PO_SCALEX].bezierPoints)):
+					point = ipo[Blender.Ipo.PO_SCALEX].bezierPoints[i]
+					point.handleTypes = tempDict[ipoName]['X']['ht'][i]
+					point.vec = tempDict[ipoName]['X']['vec'][i]
+				for i in range(0, len(ipo[Blender.Ipo.PO_SCALEY].bezierPoints)):
+					point = ipo[Blender.Ipo.PO_SCALEY].bezierPoints[i]
+					point.handleTypes = tempDict[ipoName]['Y']['ht'][i]
+					point.vec = tempDict[ipoName]['Y']['vec'][i]
+				for i in range(0, len(ipo[Blender.Ipo.PO_SCALEZ].bezierPoints)):
+					point = ipo[Blender.Ipo.PO_SCALEZ].bezierPoints[i]
+					point.handleTypes = tempDict[ipoName]['Z']['ht'][i]
+					point.vec = tempDict[ipoName]['Z']['vec'][i]
+				
+				# recalc scale curves
+				ipo[Blender.Ipo.PO_SCALEX].recalc()
+				ipo[Blender.Ipo.PO_SCALEY].recalc()
+				ipo[Blender.Ipo.PO_SCALEZ].recalc()
+
+
+			# loop through all of the exisitng action frames, get scales
+			addScale = True
+			self.getActionFrames(numOverallFrames, interpolateInc, seqPrefs, sequence, boundsStartMat, baseTransforms, numFrameSamples, isBlend, addScale)
+
 			
-		# loop through all of the exisitng action frames
-		for frame in range(0, numOverallFrames):
-			# Set the current frame in blender
-			#context.currentFrame(int(frame*interpolateInc))
-			curFrame = int(round(float(frame)*interpolateInc,0)) + seqPrefs['Action']['StartFrame']
-			Blender.Set('curframe', curFrame)
-			# add ground frames
-			self.addGroundFrame(sequence, curFrame, boundsStartMat)
-			# loop through each armature
-			for armIdx in range(0, len(self.addedArmatures)):
-				arm = self.addedArmatures[armIdx][0]
-				pose = arm.getPose()
-				# loop through each node for the current frame.
-				for nodeIndex in range(1, len(self.nodes)):
-					# since Armature.getPose() leaks memory in Blender 2.41, skip nodes not
-					# belonging to the current armature to avoid having to call it unnecessarily.
-					if self.nodes[nodeIndex].armIdx != armIdx: continue
-					if isBlend: 
-						baseTransform = baseTransforms[nodeIndex]
-					else:
-						baseTransform = None
-					# make sure we're not past the end of our action
-					if frame < numFrameSamples:
-						# let's pretend that everything matters, we'll remove the cruft later
-						# this prevents us from having to do a second pass through the frames.
-						loc, rot, scale = self.getPoseTransform(sequence, nodeIndex, curFrame, pose, baseTransform)
-						sequence.frames[nodeIndex].append([loc,rot,scale])
-					# if we're past the end, just duplicate the last good frame.
-					else:
-						loc, rot, scale = sequence.frames[nodeIndex][-1][0], sequence.frames[nodeIndex][-1][1], sequence.frames[nodeIndex][-1][2]
-						sequence.frames[nodeIndex].append([loc,rot,scale])
-						
-		
-		
+			
+		else:
+			#print "Doing single pass export..."
+			# loop through all of the exisitng action frames
+			addScale = False
+			self.getActionFrames(numOverallFrames, interpolateInc, seqPrefs, sequence, boundsStartMat, baseTransforms, numFrameSamples, isBlend, addScale)
+
+
 		
 		# if nothing was actually animated abandon exporting the action.
 		if not (sequence.has_loc or sequence.has_rot or sequence.has_scale):
