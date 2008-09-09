@@ -1505,9 +1505,11 @@ class BlenderShape(DtsShape):
 				try:ipo[Blender.Ipo.PO_SCALEZ] = None
 				except: pass
 
-			# loop through all of the exisitng action frames, get loc and rot
-			addScale = False
-			self.getActionFrames(numOverallFrames, interpolateInc, seqPrefs, sequence, boundsStartMat, baseTransforms, numFrameSamples, isBlend, addScale)
+			try:
+				# loop through all of the exisitng action frames, get loc and rot
+				addScale = False
+				self.getActionFrames(numOverallFrames, interpolateInc, seqPrefs, sequence, boundsStartMat, baseTransforms, numFrameSamples, isBlend, addScale)
+			except: pass
 
 			# restore scale IPOs (only if they existed in the first place)
 			nf = getHighestActFrame(act)
