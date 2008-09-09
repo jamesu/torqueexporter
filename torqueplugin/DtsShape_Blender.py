@@ -1509,16 +1509,19 @@ class BlenderShape(DtsShape):
 			addScale = False
 			self.getActionFrames(numOverallFrames, interpolateInc, seqPrefs, sequence, boundsStartMat, baseTransforms, numFrameSamples, isBlend, addScale)
 
-			# restore scale IPOs
+			# restore scale IPOs (only if they existed in the first place)
 			nf = getHighestActFrame(act)
 			channelIpos = action.getAllChannelIpos()
 			for ipoName in channelIpos.keys():
 				ipo = channelIpos[ipoName]
 
 				# re-create curves
-				ipo.addCurve('ScaleX')
-				ipo.addCurve('ScaleY')
-				ipo.addCurve('ScaleZ')
+				if len(tempDict[ipoName]['X']['vec']) > 0:
+					ipo.addCurve('ScaleX')
+				if len(tempDict[ipoName]['Y']['vec']) > 0:
+					ipo.addCurve('ScaleY')
+				if len(tempDict[ipoName]['Z']['vec']) > 0:
+					ipo.addCurve('ScaleZ')
 
 				# add points
 				for point in tempDict[ipoName]['X']['vec']:
