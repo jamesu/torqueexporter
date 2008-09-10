@@ -204,7 +204,11 @@ class SceneInfoClass:
 			self.boneNameChanges[n.armParentNI.blenderObjName][n.originalBoneName] = newName
 			self.nodes[newName] = n
 		else:
-			self.nodes[n.dtsNodeName] = n
+			self.nodes[n.dtsNodeName] = n			
+			if n.armParentNI != None:
+				try: x = self.boneNameChanges[n.armParentNI.blenderObjName]
+				except: self.boneNameChanges[n.armParentNI.blenderObjName] = {}
+				self.boneNameChanges[n.armParentNI.blenderObjName][n.originalBoneName] = n.originalBoneName
 
 
 
@@ -599,8 +603,7 @@ class SceneInfoClass:
 	# get the names of all object generated nodes
 	def getObjectNodeNames(self):
 		temp = []
-		#nodes = filter(lambda x: (x.isExportable==True and x.blenderType=='object'), self.allThings)
-		nodes = filter(lambda x: (blenderType=='object'), self.nodes.values())
+		nodes = filter(lambda x: (x.blenderType=='object'), self.nodes.values())
 		for ni in nodes:
 			temp.append(ni.dtsNodeName)
 		temp.sort()
@@ -609,8 +612,7 @@ class SceneInfoClass:
 	# get the names of all bone generated nodes
 	def getBoneNodeNames(self):
 		temp = []
-		#nodes = filter(lambda x: (x.isExportable==True and x.blenderType=='object'), self.allThings)
-		nodes = filter(lambda x: (blenderType=='bone'), self.nodes.values())
+		nodes = filter(lambda x: (x.blenderType=='bone'), self.nodes.values())
 		for ni in nodes:
 			temp.append(ni.dtsNodeName)
 		temp.sort()
