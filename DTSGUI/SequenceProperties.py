@@ -423,9 +423,10 @@ class SeqCommonControlsClass(SeqControlsClassBase):
 	## @brief Resize callback for guiRefresh
 	#  @param control The invoking GUI control object
 	def guiRefreshResize(self, control, newwidth, newheight):
-		control.x = 112
-		control.y = 25
-		control.width = 100
+		control.width = 75
+		control.x = newwidth - (control.width + 10)
+		control.y = newheight - (control.height + 10)
+		
 
 	## @brief Resize callback for guiToggle
 	#  @param control The invoking GUI control object
@@ -443,11 +444,6 @@ class SeqCommonControlsClass(SeqControlsClassBase):
 	#  @param control The invoking GUI control object
 	def guiSeqOptsContainerResize(self, control, newwidth, newheight):
 		control.x, control.y, control.height, control.width = 309,54, newheight-94,newwidth-309
-
-	## @brief Resize callback for guiSeqOptsContainerTitle
-	#  @param control The invoking GUI control object
-	#def guiSeqOptsContainerTitleResize(self, control, newwidth, newheight):
-	#	control.x, control.y, control.height, control.width = 309,newheight-70, 20,82
 
 	## @brief Resize callback for guiSeqFramesLabel
 	#  @param control The invoking GUI control object
