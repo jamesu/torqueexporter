@@ -53,7 +53,8 @@ class BlenderMesh(DtsMesh):
 		self.dVertList = [] 		# list containing lists of dts vertex indices, the outer list elements correspond to the bVertList element in the same position.
 		#self.mainMaterial = None	# For determining material ipo track to use for ObjectState visibility animation
 		ignoreDblSided = False
-		self.weightDictionary, hasWeights = self.createWeightDictionary(msh);
+		if self.isSkinned:
+			self.weightDictionary, hasWeights = self.createWeightDictionary(msh);
 		
 		# Warn if we've got a skinned mesh with no vertex groups.
 		if isSkinned and not hasWeights:
@@ -302,7 +303,6 @@ class BlenderMesh(DtsMesh):
 		
 		originalGroups = mesh.getVertGroupNames()
 		translatedGroups = DtsGlobals.SceneInfo.translateVertGroupNames(self.meshName, originalGroups, self.armTargets)
-		#for group in mesh.getVertGroupNames():
 		for i in range(0, len(originalGroups)):
 			oGroup = originalGroups[i]
 			tGroup = translatedGroups[i]
