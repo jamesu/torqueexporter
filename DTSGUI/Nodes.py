@@ -163,11 +163,11 @@ class NodeControlsClass:
 		
 	def resize(self, control, newwidth, newheight):
 		if control.name == "guiNodeListLabel":
-			control.x, control.y = 10,newheight-20
+			control.x, control.y, control.height, control.width = 10,310, 20,82
 		elif control.name == "guiNodeList":
-			#control.x, control.y, control.width, control.height = 10,70, 470,242
-			control.x, control.y = 10, 90
-			control.width, control.height = newwidth - 20, newheight-120
+			control.x = 10
+			control.y = 92
+			control.width, control.height = newwidth - 20, newheight-134
 		elif control.name == "guiMatchLabel":
 			control.x, control.y = 10,newheight-285
 		elif control.name == "guiPatternText":
@@ -190,7 +190,9 @@ class NodeControlsClass:
 			control.x, control.y, control.width = 355,newheight-315, 125
 
 		elif control.name == "guiRefresh":
-			control.x, control.y, control.width = 400,newheight-25, 75
+			control.width = 75
+			control.x = newwidth - (control.width + 10)
+			control.y = newheight - (control.height + 10)
 		
 	def resizeListButton(self, control, newwidth, newheight):
 		listWidth = self.guiNodeList.width
