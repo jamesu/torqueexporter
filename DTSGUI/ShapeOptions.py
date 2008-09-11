@@ -46,8 +46,6 @@ class ShapeOptionsControlsClass:
 		self.guiStripMeshesButton = Common_Gui.ToggleButton("guiStripMeshesButton", "Triangle Strips", "Generate triangle strips for meshes", 8, self.handleEvent, self.resize)
 		self.guiMaxStripSizeSlider = Common_Gui.NumberSlider("guiMaxStripSizeSlider", "Strip Size ", "Maximum size of generated triangle strips", 9, self.handleEvent, self.resize)
 		# --
-		self.guiScale = Common_Gui.NumberPicker("guiScale", "Export Scale", "Multiply output scale by this number", 26, self.handleEvent, self.resize)
-		
 		#self.guiClusterText = Common_Gui.SimpleText("guiClusterText", "Cluster Mesh", None, self.resize)
 		#self.guiClusterWriteDepth = Common_Gui.ToggleButton("guiClusterWriteDepth", "Write Depth ", "Always Write the Depth on Cluster meshes", 10, self.handleEvent, self.resize)
 		#self.guiClusterDepth = Common_Gui.NumberSlider("guiClusterDepth", "Depth", "Maximum depth Clusters meshes should be calculated to", 11, self.handleEvent, self.resize)
@@ -60,6 +58,9 @@ class ShapeOptionsControlsClass:
 		self.guiBillboardDim = Common_Gui.NumberPicker("guiBillboardDim", "Dim", "Dimensions of billboard images", 16, self.handleEvent, self.resize)
 		self.guiBillboardPoles = Common_Gui.ToggleButton("guiBillboardPoles", "Poles", "Take images at the poles", 17, self.handleEvent, self.resize)
 		self.guiBillboardSize = Common_Gui.NumberSlider("guiBillboardSize", "Size", "Size of billboard's detail level", 18, self.handleEvent, self.resize)
+		# --
+		self.guiMiscText = Common_Gui.SimpleText("guiMiscText", "Miscellaneous:", None, self.resize)
+		self.guiScale = Common_Gui.NumberPicker("guiScale", "Export Scale", "Multiply output scale by this number", 26, self.handleEvent, self.resize)
 		
 		# set initial states
 		try: x = Prefs['PrimType']
@@ -72,9 +73,6 @@ class ShapeOptionsControlsClass:
 		else: self.guiStripMeshesButton.state = False
 		self.guiMaxStripSizeSlider.min, self.guiMaxStripSizeSlider.max = 3, 30
 		self.guiMaxStripSizeSlider.value = Prefs['MaxStripSize']
-		self.guiScale.value = Prefs['ExportScale']
-		self.guiScale.min = 0.001
-		self.guiScale.max = 1000000.0
 		#self.guiClusterDepth.min, self.guiClusterDepth.max = 3, 30
 		#self.guiClusterDepth.value = Prefs['ClusterDepth']
 		#self.guiClusterWriteDepth.state = Prefs['AlwaysWriteDepth']
@@ -90,6 +88,10 @@ class ShapeOptionsControlsClass:
 		self.guiBillboardPoles.state = Prefs['Billboard']['IncludePoles']		
 		self.guiBillboardSize.min, self.guiBillboardSize.max = 0.0, 128.0
 		self.guiBillboardSize.value = Prefs['Billboard']['Size']
+
+		self.guiScale.value = Prefs['ExportScale']
+		self.guiScale.min = 0.001
+		self.guiScale.max = 1000000.0
 		
 		# Hiding these for now, since cluster mesh sorting is still broken.
 		#self.guiClusterText.visible = False
@@ -103,7 +105,6 @@ class ShapeOptionsControlsClass:
 		guiGeneralSubtab.addControl(self.guiTriListsButton)
 		guiGeneralSubtab.addControl(self.guiStripMeshesButton)	
 		guiGeneralSubtab.addControl(self.guiMaxStripSizeSlider)
-		guiGeneralSubtab.addControl(self.guiScale)
 		#guiGeneralSubtab.addControl(self.guiClusterText)
 		#guiGeneralSubtab.addControl(self.guiClusterDepth)
 		#guiGeneralSubtab.addControl(self.guiClusterWriteDepth)
@@ -115,7 +116,8 @@ class ShapeOptionsControlsClass:
 		guiGeneralSubtab.addControl(self.guiBillboardDim)
 		guiGeneralSubtab.addControl(self.guiBillboardPoles)
 		guiGeneralSubtab.addControl(self.guiBillboardSize)
-
+		guiGeneralSubtab.addControl(self.guiMiscText)
+		guiGeneralSubtab.addControl(self.guiScale)
 		
 	def cleanup(self):
 		'''
@@ -131,12 +133,11 @@ class ShapeOptionsControlsClass:
 		del self.guiTriListsButton
 		del self.guiStripMeshesButton
 		del self.guiMaxStripSizeSlider
-		del self.guiScale
+
 		# --
 		#del self.guiClusterText
 		#del self.guiClusterWriteDepth
 		#del self.guiClusterDepth
-		# --
 		del self.guiBillboardText
 		del self.guiBillboardButton
 		del self.guiBillboardEquator
@@ -145,7 +146,9 @@ class ShapeOptionsControlsClass:
 		del self.guiBillboardDim
 		del self.guiBillboardPoles
 		del self.guiBillboardSize
-
+		# --
+		del self.guiMiscText
+		del self.guiScale
 
 	def refreshAll(self):
 		pass
@@ -206,12 +209,6 @@ class ShapeOptionsControlsClass:
 	def resize(self, control, newwidth, newheight):
 		if control.name == "guiStripText":
 			control.x, control.y = 10,newheight-20
-		elif control.name == "guiClusterText":
-			control.x, control.y = 10,newheight-70
-		elif control.name == "guiBillboardText":
-			control.x, control.y = 10,newheight-120
-		elif control.name == "guiOutputText":
-			control.x, control.y = 10,newheight-250
 		elif control.name == "guiTriMeshesButton":
 			control.x, control.y, control.width = 102,newheight-30-control.height, 90			
 		elif control.name == "guiTriListsButton":
@@ -220,12 +217,14 @@ class ShapeOptionsControlsClass:
 			control.x, control.y, control.width = 194,newheight-30-control.height, 90
 		elif control.name == "guiMaxStripSizeSlider":
 			control.x, control.y, control.width = 286,newheight-30-control.height, 180
-		elif control.name == "guiScale":
-			control.x, control.y, control.width = 10, newheight-70-control.height, 180
+		#elif control.name == "guiClusterText":
+		#	control.x, control.y = 10,newheight-70
 		#elif control.name == "guiClusterWriteDepth":
 		#	control.x, control.y, control.width = 10,newheight-80-control.height, 80
 		#elif control.name == "guiClusterDepth":
 		#	control.x, control.y, control.width = 92,newheight-80-control.height, 180
+		elif control.name == "guiBillboardText":
+			control.x, control.y = 10,newheight-120
 		elif control.name == "guiBillboardButton":
 			control.x, control.y, control.width = 10,newheight-130-control.height, 50
 		elif control.name == "guiBillboardEquator":
@@ -240,5 +239,9 @@ class ShapeOptionsControlsClass:
 			control.x, control.y, control.width = 366,newheight-152-control.height, 100
 		elif control.name == "guiBillboardSize":
 			control.x, control.y, control.width = 164,newheight-130-control.height, 200
+		elif control.name == "guiMiscText":
+			control.x, control.y = 10,newheight-220
+		elif control.name == "guiScale":
+			control.x, control.y, control.width = 10, newheight-230-control.height, 180
 
 	
