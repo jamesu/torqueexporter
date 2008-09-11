@@ -306,7 +306,7 @@ class MaterialControlsClass:
 				self.guiMaterialReflectanceMapMenu.selectStringItem(matList[materialName]['RefMapTex'])
 				self.guiMaterialReflectanceSlider.value = matList[materialName]['reflectance'] * 100.0
 				self.guiMaterialDetailScaleSlider.value = matList[materialName]['detailScale'] * 100.0
-				self.guiMaterialOptionsTitle.label = ("DTS Material:\n %s" % materialName)
+				self.guiMaterialOptionsTitle.label = ("DTS Material:\n \'%s\'" % materialName)
 			else:
 				self.guiMaterialSWrapButton.state = False
 				self.guiMaterialTWrapButton.state = False
