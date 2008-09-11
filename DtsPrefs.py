@@ -65,7 +65,7 @@ class prefsClass(dict):
 		self['WriteShapeScript'] = False
 		self['Sequences'] = {}
 		self['Materials'] = {}
-		self['PrimType'] = 'Tris'
+		self['PrimType'] = 'TriLists'
 		self['MaxStripSize'] = 6
 		self['ClusterDepth'] = 1
 		self['AlwaysWriteDepth'] = False
