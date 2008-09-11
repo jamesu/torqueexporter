@@ -463,7 +463,9 @@ class SceneInfoClass:
 		else:
 			words = string.split(filepath, "/")
 		words = string.split(words[-1], ".")
-		return SceneInfoClass.__noext(string.join(words[0:len(words)], "."))
+		retVal = SceneInfoClass.__noext(string.join(words[0:len(words)], "."))
+		if retVal == "": retVal = "UNTITLED"
+		return retVal
 	
 	getDefaultBaseName = staticmethod(getDefaultBaseName)
 
