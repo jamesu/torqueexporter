@@ -120,6 +120,8 @@ class SeqCommonControlsClass(SeqControlsClassBase):
 		self.guiSeqOptsContainer.addControl(self.guiBlendSequence)
 		self.guiSeqOptsContainer.addControl(self.guiRefPoseTitle) # 12
 		self.guiSeqOptsContainer.addControl(self.guiRefPoseFrame) # 14
+		
+		self.refreshAll()
 
 
 
