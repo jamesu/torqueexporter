@@ -90,8 +90,6 @@ class GeneralControlsClass:
 		Note: __del__ is not guaranteed to be called for objects that still
 		exist when the interpreter exits.
 		'''
-		del self.guiShowWarnErrPopup
-		# --
 		del self.guiOutputText
 		del self.guiCustomFilename
 		del self.guiCustomFilenameSelect
