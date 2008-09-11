@@ -206,46 +206,46 @@ class MaterialControlsClass:
 			control.x = newwidth - (control.width + 10)
 			control.y = newheight - (control.height + 10)
 
-		elif control.name == "guiMaterialTransFrame":
-			control.x, control.y, control.height, control.width = 2,newheight-68, 27,322
-		elif control.name == "guiMaterialTransButton":
-			control.x, control.y, control.width = 5,newheight-65, 104
-		elif control.name == "guiMaterialAddButton":
-			control.x, control.y, control.width = 111,newheight-65, 104
-		elif control.name == "guiMaterialSubButton":
-			control.x, control.y, control.width = 217,newheight-65, 104
 		elif control.name == "guiMaterialSelfIllumButton":
 			control.x, control.y, control.width = 125,newheight-30, 95
-		elif control.name == "guiMaterialMipFrame":
-			control.x, control.y, control.height, control.width = 2,newheight-103, 27,183
-		elif control.name == "guiMaterialMipMapButton":
-			control.x, control.y, control.width = 5,newheight-100, 50
-		elif control.name == "guiMaterialMipMapZBButton":
-			control.x, control.y, control.width = 57,newheight-100, 125
-		elif control.name == "guiMaterialWrapFrame":
-			control.x, control.y, control.height, control.width = 192,newheight-103, 27,132
-		elif control.name == "guiMaterialSWrapButton":
-			control.x, control.y, control.width = 195,newheight-100, 62
-		elif control.name == "guiMaterialTWrapButton":
-			control.x, control.y, control.width = 259,newheight-100, 62
 		elif control.name == "guiMaterialIFLMatButton":
 			control.x, control.y, control.width = 227,newheight-30, 95
+		elif control.name == "guiMaterialTransFrame":
+			control.x, control.y, control.height, control.width = 2,newheight-69, 27,322
+		elif control.name == "guiMaterialTransButton":
+			control.x, control.y, control.width = 5,newheight-66, 104
+		elif control.name == "guiMaterialAddButton":
+			control.x, control.y, control.width = 111,newheight-66, 104
+		elif control.name == "guiMaterialSubButton":
+			control.x, control.y, control.width = 217,newheight-66, 104
+		elif control.name == "guiMaterialMipFrame":
+			control.x, control.y, control.height, control.width = 2,newheight-107, 27,183
+		elif control.name == "guiMaterialMipMapButton":
+			control.x, control.y, control.width = 5,newheight-104, 50
+		elif control.name == "guiMaterialMipMapZBButton":
+			control.x, control.y, control.width = 57,newheight-104, 125
+		elif control.name == "guiMaterialWrapFrame":
+			control.x, control.y, control.height, control.width = 192,newheight-107, 27,132
+		elif control.name == "guiMaterialSWrapButton":
+			control.x, control.y, control.width = 195,newheight-104, 62
+		elif control.name == "guiMaterialTWrapButton":
+			control.x, control.y, control.width = 259,newheight-104, 62
 		elif control.name == "guiMaterialDetailMapFrame":
-			control.x, control.y, control.height, control.width = 2,newheight-138, 27,322
+			control.x, control.y, control.height, control.width = 2,newheight-145, 27,322
 		elif control.name == "guiMaterialDetailMapButton":
-			control.x, control.y, control.width = 5,newheight-135, 80
+			control.x, control.y, control.width = 5,newheight-142, 80
 		elif control.name == "guiMaterialDetailMapMenu":
-			control.x, control.y, control.width = 87,newheight-135, 125
+			control.x, control.y, control.width = 87,newheight-142, 125
 		elif control.name == "guiMaterialDetailScaleSlider":
-			control.x, control.y, control.width = 214,newheight-135, 107
+			control.x, control.y, control.width = 214,newheight-142, 107
 		elif control.name == "guiMaterialEnvMappingFrame":
-			control.x, control.y, control.height, control.width = 2,newheight-173, 27,322
+			control.x, control.y, control.height, control.width = 2,newheight-183, 27,322
 		elif control.name == "guiMaterialEnvMapButton":
-			control.x, control.y, control.width = 5,newheight-170, 155
+			control.x, control.y, control.width = 5,newheight-180, 155
 		elif control.name == "guiMaterialReflectanceSlider":
-			control.x, control.y, control.width = 162,newheight-170, 159
+			control.x, control.y, control.width = 162,newheight-180, 159
 		elif control.name == "guiMaterialAdvancedFrame":
-			control.x, control.y, control.height, control.width = 5,newheight-260, 75,318
+			control.x, control.y, control.height, control.width = 5,newheight-260, 60,318
 		elif control.name == "guiMaterialShowAdvancedButton":
 			control.x, control.y, control.width = 89,newheight-210, 150
 		elif control.name == "guiMaterialRefMapButton":
