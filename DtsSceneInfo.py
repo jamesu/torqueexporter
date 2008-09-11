@@ -391,10 +391,10 @@ class SceneInfoClass:
 			
 			self.__safeAddToNodesDict(ni)
 		
-		print "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-		for ni in filter(lambda x: x.getGoodNodeParentNI()==None, self.nodes.values()):
-			self.__printTree(ni)
-		print "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		#print "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		#for ni in filter(lambda x: x.getGoodNodeParentNI()==None, self.nodes.values()):
+		#	self.__printTree(ni)
+		#print "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 
 
 		
