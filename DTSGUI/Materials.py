@@ -135,7 +135,8 @@ class MaterialControlsClass:
 		self.guiMaterialOptions.addControl(self.guiMaterialDetailScaleSlider)
 
 		# populate the Material list
-		self.populateMaterialList()
+		#self.populateMaterialList()
+		self.refreshMaterialList()
 		
 	def cleanup(self):
 		'''
@@ -179,8 +180,9 @@ class MaterialControlsClass:
 		
 
 	def refreshAll(self):
-		self.clearMaterialList()		
-		self.populateMaterialList()
+		#self.clearMaterialList()		
+		#self.populateMaterialList()
+		self.refreshMaterialList()
 
 	def guiMaterialOptionsTitleResize(self, control, newwidth, newheight):
 		control.x, control.y, control.height, control.width = 5,newheight-30, 20,82
@@ -271,66 +273,25 @@ class MaterialControlsClass:
 		guiMaterialList = self.guiMaterialList
 		guiMaterialOptions = self.guiMaterialOptions
 
-		try:matList = Prefs['Materials']
+		try:matPrefs = Prefs['Materials']
 		except:
 			Prefs['Materials'] = {}
-			matList = Prefs['Materials']	
+			matPrefs = Prefs['Materials']	
 
 
 		if control.name == "guiMaterialImportRefreshButton":
 			# import Blender materials and settings
-			self.clearMaterialList()
-			self.populateMaterialList()
+			#self.clearMaterialList()
+			#self.populateMaterialList()
+			self.refreshAll()
 			return
 
-		if guiMaterialList.itemIndex != -1:
-			materialName = guiMaterialList.controls[guiMaterialList.itemIndex].controls[0].label	
+		materialName, matPrefs = self.getSelectedMatNameAndPrefs()
+		#materialName = guiMaterialList.controls[guiMaterialList.itemIndex].controls[0].label	
 
 		if control.name == "guiMaterialList":
-			if control.itemIndex != -1:
-				guiMaterialOptions.enabled = True
-				materialName = guiMaterialList.controls[control.itemIndex].controls[0].label
-				# referesh and repopulate the material option controls
-				self.guiMaterialSWrapButton.state = matList[materialName]['SWrap']
-				self.guiMaterialTWrapButton.state = matList[materialName]['TWrap']
-				self.guiMaterialTransButton.state = matList[materialName]['Translucent']
-				self.guiMaterialAddButton.state = matList[materialName]['Additive']
-				self.guiMaterialSubButton.state = matList[materialName]['Subtractive']
-				self.guiMaterialSelfIllumButton.state = matList[materialName]['SelfIlluminating']
-				self.guiMaterialEnvMapButton.state = not matList[materialName]['NeverEnvMap']
-				self.guiMaterialMipMapButton.state = not matList[materialName]['NoMipMap']
-				self.guiMaterialMipMapZBButton.state = matList[materialName]['MipMapZeroBorder']
-				self.guiMaterialIFLMatButton.state = matList[materialName]['IFLMaterial']
-				self.guiMaterialDetailMapButton.state = matList[materialName]['DetailMapFlag']
-				self.guiMaterialBumpMapButton.state = matList[materialName]['BumpMapFlag']
-				self.guiMaterialRefMapButton.state = matList[materialName]['ReflectanceMapFlag']			
-				self.guiMaterialDetailMapMenu.selectStringItem(matList[materialName]['DetailTex'])
-				self.guiMaterialBumpMapMenu.selectStringItem(matList[materialName]['BumpMapTex'])
-				self.guiMaterialReflectanceMapMenu.selectStringItem(matList[materialName]['RefMapTex'])
-				self.guiMaterialReflectanceSlider.value = matList[materialName]['reflectance'] * 100.0
-				self.guiMaterialDetailScaleSlider.value = matList[materialName]['detailScale'] * 100.0
-				self.guiMaterialOptionsTitle.label = ("DTS Material:\n \'%s\'" % materialName)
-			else:
-				self.guiMaterialSWrapButton.state = False
-				self.guiMaterialTWrapButton.state = False
-				self.guiMaterialTransButton.state = False
-				self.guiMaterialAddButton.state = False
-				self.guiMaterialSubButton.state = False
-				self.guiMaterialSelfIllumButton.state = False
-				self.guiMaterialEnvMapButton.state = False
-				self.guiMaterialMipMapButton.state = False
-				self.guiMaterialMipMapZBButton.state = False
-				self.guiMaterialIFLMatButton.state = False
-				self.guiMaterialDetailMapButton.state = False
-				self.guiMaterialBumpMapButton.state = False
-				self.guiMaterialRefMapButton.state = False
-				self.guiMaterialDetailMapMenu.selectStringItem("")
-				self.guiMaterialBumpMapMenu.selectStringItem("")
-				self.guiMaterialReflectanceMapMenu.selectStringItem("")
-				self.guiMaterialReflectanceSlider.value = 0
-				self.guiMaterialDetailScaleSlider.value = 100
-				guiMaterialOptions.enabled = False
-				self.guiMaterialOptionsTitle.label = "DTS Material:\n None Selected"
+			self.refreshMaterialOptions(materialName, matPrefs)
+
 
 
 		if guiMaterialList.itemIndex == -1: return
@@ -379,7 +340,6 @@ class MaterialControlsClass:
 			Prefs['Materials'][materialName]['MipMapZeroBorder'] = control.state
 		elif control.name == "guiMaterialIFLMatButton":
 			Prefs['Materials'][materialName]['IFLMaterial'] = control.state
-			#IFLControls.refreshIFLMatPulldown()
 		elif control.name == "guiMaterialDetailMapButton":
 			Prefs['Materials'][materialName]['DetailMapFlag'] = control.state
 		elif control.name == "guiMaterialBumpMapButton":
@@ -431,8 +391,9 @@ class MaterialControlsClass:
 
 
 	def populateMaterialList(self):
+		self.clearMaterialList()
 		Prefs = DtsGlobals.Prefs
-		Prefs.refreshMaterialPrefs()
+		#Prefs.refreshMaterialPrefs()
 		guiMaterialList = self.guiMaterialList
 		guiMaterialOptions = self.guiMaterialOptions
 		# clear texture pulldowns
@@ -447,7 +408,7 @@ class MaterialControlsClass:
 
 
 		# autoimport blender materials
-		Prefs.refreshMaterialPrefs()
+		#Prefs.refreshMaterialPrefs()
 		materials = Prefs['Materials']
 
 
@@ -456,3 +417,102 @@ class MaterialControlsClass:
 		for mat in materials.keys():
 			self.guiMaterialList.addControl(self.createMaterialListItem(mat, startEvent))
 			startEvent += 1
+
+	def getSelectedMatNameAndPrefs(self):
+		Prefs = DtsGlobals.Prefs
+		
+		# early out if nothing was selected
+		if self.guiMaterialList.itemIndex == -1: return None, None
+		
+		# get material name
+		materialName = self.guiMaterialList.controls[self.guiMaterialList.itemIndex].controls[0].label
+		
+		# get material prefs key
+		try:matPrefs = Prefs['Materials'][materialName]
+		except: matPrefs = None
+		
+		return materialName, matPrefs
+		
+
+	def refreshMaterialOptions(self, materialName, matPrefs):			
+			if self.guiMaterialList.itemIndex != -1:
+				self.guiMaterialOptions.enabled = True
+				#materialName = self.guiMaterialList.controls[control.itemIndex].controls[0].label
+				# referesh and repopulate the material option controls
+				self.guiMaterialSWrapButton.state = matPrefs['SWrap']
+				self.guiMaterialTWrapButton.state = matPrefs['TWrap']
+				self.guiMaterialTransButton.state = matPrefs['Translucent']
+				self.guiMaterialAddButton.state = matPrefs['Additive']
+				self.guiMaterialSubButton.state = matPrefs['Subtractive']
+				self.guiMaterialSelfIllumButton.state = matPrefs['SelfIlluminating']
+				self.guiMaterialEnvMapButton.state = not matPrefs['NeverEnvMap']
+				self.guiMaterialMipMapButton.state = not matPrefs['NoMipMap']
+				self.guiMaterialMipMapZBButton.state = matPrefs['MipMapZeroBorder']
+				self.guiMaterialIFLMatButton.state = matPrefs['IFLMaterial']
+				self.guiMaterialDetailMapButton.state = matPrefs['DetailMapFlag']
+				self.guiMaterialBumpMapButton.state = matPrefs['BumpMapFlag']
+				self.guiMaterialRefMapButton.state = matPrefs['ReflectanceMapFlag']			
+				self.guiMaterialDetailMapMenu.selectStringItem(matPrefs['DetailTex'])
+				self.guiMaterialBumpMapMenu.selectStringItem(matPrefs['BumpMapTex'])
+				self.guiMaterialReflectanceMapMenu.selectStringItem(matPrefs['RefMapTex'])
+				self.guiMaterialReflectanceSlider.value = matPrefs['reflectance'] * 100.0
+				self.guiMaterialDetailScaleSlider.value = matPrefs['detailScale'] * 100.0
+				self.guiMaterialOptionsTitle.label = ("DTS Material:\n \'%s\'" % materialName)
+			else:
+				self.guiMaterialSWrapButton.state = False
+				self.guiMaterialTWrapButton.state = False
+				self.guiMaterialTransButton.state = False
+				self.guiMaterialAddButton.state = False
+				self.guiMaterialSubButton.state = False
+				self.guiMaterialSelfIllumButton.state = False
+				self.guiMaterialEnvMapButton.state = False
+				self.guiMaterialMipMapButton.state = False
+				self.guiMaterialMipMapZBButton.state = False
+				self.guiMaterialIFLMatButton.state = False
+				self.guiMaterialDetailMapButton.state = False
+				self.guiMaterialBumpMapButton.state = False
+				self.guiMaterialRefMapButton.state = False
+				self.guiMaterialDetailMapMenu.selectStringItem("")
+				self.guiMaterialBumpMapMenu.selectStringItem("")
+				self.guiMaterialReflectanceMapMenu.selectStringItem("")
+				self.guiMaterialReflectanceSlider.value = 0
+				self.guiMaterialDetailScaleSlider.value = 100
+				self.guiMaterialOptions.enabled = False
+				self.guiMaterialOptionsTitle.label = "DTS Material:\n None Selected"
+
+
+	## @brief Refreshes the items in the material list, preserving list selection if possible.
+	def refreshMaterialList(self):
+		Prefs = DtsGlobals.Prefs
+		
+		# make sure mat preferences are up to date		
+		Prefs.refreshMaterialPrefs()
+		
+		# store last sequence selection
+		matName = None
+		matPrefs = None		
+		if self.guiMaterialList.itemIndex != -1:
+			matName, matPrefs = self.getSelectedMatNameAndPrefs()
+		
+		else:
+			# no valid selection, so select the first item in the list
+			self.guiMaterialList.selectItem(0)
+			self.guiMaterialList.scrollToSelectedItem()
+			if self.guiMaterialList.callback: self.guiMaterialList.callback(self.guiMaterialList)
+			matName, matPrefs = self.getSelectedMatNameAndPrefs()
+
+		# populateSequenceList automatically clears the sequence list first.
+		self.populateMaterialList()
+
+		# restore last sequence selection
+		for itemIndex in range(0, len(self.guiMaterialList.controls)):
+			if self.guiMaterialList.controls[itemIndex].controls[0].label == matName:
+				self.guiMaterialList.selectItem(itemIndex)
+				self.guiMaterialList.scrollToSelectedItem()
+				self.refreshMaterialOptions(matName, matPrefs)
+				if self.guiMaterialList.callback: self.guiMaterialList.callback(self.guiMaterialList)
+				return
+
+		self.guiMaterialList.selectItem(0)
+		self.guiMaterialList.scrollToSelectedItem()
+		if self.guiMaterialList.callback: self.guiMaterialList.callback(self.guiMaterialList)
