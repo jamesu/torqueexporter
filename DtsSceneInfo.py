@@ -482,6 +482,7 @@ class SceneInfoClass:
 		filepath = Blender.Get("filename")
 		if "\\" in filepath: pathSeparator = "\\"
 		else: pathSeparator = "/"
+		DtsGlobals.pathSeparator = pathSeparator
 		return pathSeparator
 	
 	getPathSeparator = staticmethod(getPathSeparator)
