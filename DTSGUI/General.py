@@ -41,16 +41,19 @@ class GeneralControlsClass:
 		Prefs = DtsGlobals.Prefs
 		
 		# initialize GUI controls
-		self.guiShowWarnErrPopup = Common_Gui.ToggleButton("guiShowWarnErrPopup", "Show Error/Warning popup", "Shows a popup when errors or warnings occur during export.", 27, self.handleEvent, self.resize)
+		
 		# --
-		self.guiOutputText = Common_Gui.SimpleText("guiOutputText", "Output:", None, self.resize)
-		self.guiShapeScriptButton =  Common_Gui.ToggleButton("guiShapeScriptButton", "Write Shape Script", "Write .cs script that details the .dts and all .dsq sequences", 19, self.handleEvent, self.resize)
+		self.guiOutputText = Common_Gui.SimpleText("guiOutputText", "Output path and file name:", None, self.resize)
 		self.guiCustomFilename = Common_Gui.TextBox("guiCustomFilename", "Filename: ", "Filename to write to", 20, self.handleEvent, self.resize)
 		self.guiCustomFilenameSelect = Common_Gui.BasicButton("guiCustomFilenameSelect", "Select...", "Select a filename and destination for export", 21, self.handleEvent, self.resize)
 		self.guiCustomFilenameDefaults = Common_Gui.BasicButton("guiCustomFilenameDefaults", "Default", "Reset filename and destination to defaults", 22, self.handleEvent, self.resize)
-		self.guiTGEAMaterial = Common_Gui.ToggleButton("guiTGEAMaterial", "Write TGEA Materials", "Write materials and scripts geared for TSE", 24, self.handleEvent, self.resize)
-		self.guiLogToOutputFolder = Common_Gui.ToggleButton("guiLogToOutputFolder", "Log to Output Folder", "Write Log file to .DTS output folder", 25, self.handleEvent, self.resize)
-
+		self.guiScriptOutputText = Common_Gui.SimpleText("guiScriptOutputText", "Script output:", None, self.resize)
+		self.guiShapeScriptButton =  Common_Gui.ToggleButton("guiShapeScriptButton", "Write Shape Script", "Write .cs script that details the .dts and all .dsq sequences", 19, self.handleEvent, self.resize)
+		self.guiTGEAMaterial = Common_Gui.ToggleButton("guiTGEAMaterial", "Write TGEA Material Script", "Write materials and scripts geared for TSE", 24, self.handleEvent, self.resize)
+		self.guiLogOutputText = Common_Gui.SimpleText("guiLogOutputText", "Log file output:", None, self.resize)
+		self.guiLogToOutputFolder = Common_Gui.ToggleButton("guiLogToOutputFolder", "Write log file to output folder", "Write Log file to .DTS output folder", 25, self.handleEvent, self.resize)
+		self.guiWarnErrText = Common_Gui.SimpleText("guiWarnErrText", "Errors and Warnings:", None, self.resize)
+		self.guiShowWarnErrPopup = Common_Gui.ToggleButton("guiShowWarnErrPopup", "Show Error/Warning popup", "Shows a popup when errors or warnings occur during export.", 27, self.handleEvent, self.resize)
 		
 		# set initial states
 		self.guiShowWarnErrPopup.state = Prefs["ShowWarningErrorPopup"]
@@ -65,15 +68,18 @@ class GeneralControlsClass:
 		
 		
 		
-		# add controls to containers
-		guiGeneralSubtab.addControl(self.guiShowWarnErrPopup)
+		# add controls to containers		
 		guiGeneralSubtab.addControl(self.guiOutputText)
-		guiGeneralSubtab.addControl(self.guiShapeScriptButton)
 		guiGeneralSubtab.addControl(self.guiCustomFilename)
 		guiGeneralSubtab.addControl(self.guiCustomFilenameSelect)
 		guiGeneralSubtab.addControl(self.guiCustomFilenameDefaults)
+		guiGeneralSubtab.addControl(self.guiScriptOutputText)
+		guiGeneralSubtab.addControl(self.guiShapeScriptButton)
 		guiGeneralSubtab.addControl(self.guiTGEAMaterial)
+		guiGeneralSubtab.addControl(self.guiLogOutputText)
 		guiGeneralSubtab.addControl(self.guiLogToOutputFolder)
+		guiGeneralSubtab.addControl(self.guiWarnErrText)
+		guiGeneralSubtab.addControl(self.guiShowWarnErrPopup)
 
 		
 	def cleanup(self):
@@ -87,12 +93,16 @@ class GeneralControlsClass:
 		del self.guiShowWarnErrPopup
 		# --
 		del self.guiOutputText
-		del self.guiShapeScriptButton
 		del self.guiCustomFilename
 		del self.guiCustomFilenameSelect
 		del self.guiCustomFilenameDefaults
+		del self.guiScriptOutputText
+		del self.guiShapeScriptButton
 		del self.guiTGEAMaterial
+		del self.guiLogOutputText
 		del self.guiLogToOutputFolder
+		del self.guiShowWarnErrPopup
+		del self.guiWarnErrText
 
 
 	def refreshAll(self):
@@ -147,14 +157,20 @@ class GeneralControlsClass:
 			control.x, control.y, control.width = 382,newheight-60-control.height, 55
 		elif control.name == "guiCustomFilenameDefaults":
 			control.x, control.y, control.width = 439,newheight-60-control.height, 55
-		elif control.name == "guiTGEAMaterial":
-			control.x, control.y, control.width = 346,newheight-282-control.height, 132
+		elif control.name == "guiScriptOutputText":
+			control.x, control.y, control.width = 10,newheight-125-control.height, 220
 		elif control.name == "guiShapeScriptButton":
-			control.x, control.y, control.width = 346,newheight-260-control.height, 132
+			control.x, control.y, control.width = 10,newheight-140-control.height, 132
+		elif control.name == "guiTGEAMaterial":
+			control.x, control.y, control.width = 157,newheight-140-control.height, 182
+		elif control.name == "guiLogOutputText":
+			control.x, control.y, control.width = 10,newheight-205-control.height, 220
 		elif control.name == "guiLogToOutputFolder":
-			control.x, control.y, control.width = 346,newheight-304-control.height, 132
+			control.x, control.y, control.width = 10,newheight-220-control.height, 182
+		elif control.name == "guiWarnErrText":
+			control.x, control.y, control.width = 10,newheight-285-control.height, 220
 		elif control.name == "guiShowWarnErrPopup":
-			control.x, control.y, control.width = 10,newheight-195-control.height, 220
+			control.x, control.y, control.width = 10,newheight-300-control.height, 220
 
 	
 	def guiGeneralSelectorCallback(self, filename):
