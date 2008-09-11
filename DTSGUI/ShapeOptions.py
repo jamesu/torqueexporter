@@ -208,15 +208,15 @@ class ShapeOptionsControlsClass:
 		
 	def resize(self, control, newwidth, newheight):
 		if control.name == "guiStripText":
-			control.x, control.y = 10,newheight-20
+			control.x, control.y = 10,newheight-50
 		elif control.name == "guiTriMeshesButton":
-			control.x, control.y, control.width = 102,newheight-30-control.height, 90			
+			control.x, control.y, control.width = 102,newheight-60-control.height, 90			
 		elif control.name == "guiTriListsButton":
-			control.x, control.y, control.width = 10,newheight-30-control.height, 90
+			control.x, control.y, control.width = 10,newheight-60-control.height, 90
 		elif control.name == "guiStripMeshesButton":
-			control.x, control.y, control.width = 194,newheight-30-control.height, 90
+			control.x, control.y, control.width = 194,newheight-60-control.height, 90
 		elif control.name == "guiMaxStripSizeSlider":
-			control.x, control.y, control.width = 286,newheight-30-control.height, 180
+			control.x, control.y, control.width = 286,newheight-60-control.height, 180
 		#elif control.name == "guiClusterText":
 		#	control.x, control.y = 10,newheight-70
 		#elif control.name == "guiClusterWriteDepth":
@@ -224,24 +224,24 @@ class ShapeOptionsControlsClass:
 		#elif control.name == "guiClusterDepth":
 		#	control.x, control.y, control.width = 92,newheight-80-control.height, 180
 		elif control.name == "guiBillboardText":
-			control.x, control.y = 10,newheight-120
+			control.x, control.y = 10,newheight-150
 		elif control.name == "guiBillboardButton":
-			control.x, control.y, control.width = 10,newheight-130-control.height, 50
+			control.x, control.y, control.width = 10,newheight-160-control.height, 50
 		elif control.name == "guiBillboardEquator":
-			control.x, control.y, control.width = 62,newheight-130-control.height, 100
+			control.x, control.y, control.width = 62,newheight-160-control.height, 100
 		elif control.name == "guiBillboardPolar":
-			control.x, control.y, control.width = 62,newheight-152-control.height, 100
+			control.x, control.y, control.width = 62,newheight-182-control.height, 100
 		elif control.name == "guiBillboardPolarAngle":
-			control.x, control.y, control.width =  164,newheight-152-control.height, 200
+			control.x, control.y, control.width =  164,newheight-182-control.height, 200
 		elif control.name == "guiBillboardDim":
-			control.x, control.y, control.width = 366,newheight-130-control.height, 100
+			control.x, control.y, control.width = 366,newheight-160-control.height, 100
 		elif control.name == "guiBillboardPoles":
-			control.x, control.y, control.width = 366,newheight-152-control.height, 100
+			control.x, control.y, control.width = 366,newheight-182-control.height, 100
 		elif control.name == "guiBillboardSize":
-			control.x, control.y, control.width = 164,newheight-130-control.height, 200
+			control.x, control.y, control.width = 164,newheight-160-control.height, 200
 		elif control.name == "guiMiscText":
-			control.x, control.y = 10,newheight-220
+			control.x, control.y = 10,newheight-250
 		elif control.name == "guiScale":
-			control.x, control.y, control.width = 10, newheight-230-control.height, 180
+			control.x, control.y, control.width = 10, newheight-260-control.height, 180
 
 	
