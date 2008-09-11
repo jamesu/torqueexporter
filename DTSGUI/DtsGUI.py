@@ -303,7 +303,7 @@ def initGui():
 	# object that hands out global event id numbers
 	global GlobalEvents
 	# these objects create and own all of the actual gui controls on a tab/subtab page
-	global DetailLevelControls, SeqCommonControls, IFLControls, VisControls, ActionControls, MaterialControls, NodeControls, GeneralControls, AboutControls
+	global ShapeOptionControls, DetailLevelControls, SeqCommonControls, IFLControls, VisControls, ActionControls, MaterialControls, NodeControls, GeneralControls, AboutControls
 	# main gui container into which all other gui objects are placed
 	global guiMainContainer
 
