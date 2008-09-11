@@ -109,20 +109,26 @@ class SeqControlsClassBase:
 
 	## @brief Refreshes all controls on the panel w/ fresh data from blender and the prefs.
 	#  @note Most child classes should be able to inherit this method and use it as-is
-	def refreshAll(self):			
-		Prefs = DtsGlobals.Prefs
-		# refresh action data and repopulate the sequence list
-		Prefs.refreshSequencePrefs()
+	def refreshAll(self):
+		# refresh action data and repopulate the sequence list		
 		self.refreshSequenceList()
 
 	
 	## @brief Refreshes the items in the sequence list, preserving list selection if possible.
 	#  @note Most child classes should be able to inherit this method and use it as-is
 	def refreshSequenceList(self):
+		Prefs = DtsGlobals.Prefs
+		Prefs.refreshSequencePrefs()
 		# store last sequence selection
 		seqName = None
 		seqPrefs = None
 		if self.guiSeqList.itemIndex != -1:
+			seqName, seqPrefs = self.getSelectedSeqNameAndPrefs()
+		else:
+			# no valid selection, so select the first item in the list
+			self.guiSeqList.selectItem(0)
+			self.guiSeqList.scrollToSelectedItem()
+			if self.guiSeqList.callback: self.guiSeqList.callback(self.guiSeqList)
 			seqName, seqPrefs = self.getSelectedSeqNameAndPrefs()
 
 		# populateSequenceList automatically clears the sequence list first.
@@ -212,6 +218,29 @@ class SeqControlsClassBase:
 			elif realItem == 1:
 				seqPrefs['Cyclic'] = control.state
 
+
+
+	def guiSeqButtonItemResize(self, control, newwidth, newheight):
+		Prefs = DtsGlobals.Prefs
+		listWidth = self.guiSeqList.width - self.guiSeqList.barWidth
+		buttonWidth = 50
+		numButtons = len(self.guiSeqList.controls[0].controls)-1
+		buttonPos = []
+		for i in range(1,numButtons+1): buttonPos.append(((listWidth - 5) - (buttonWidth*i + 1)))
+		if control.name == "guiExport":
+			pos = buttonPos[2]			
+		elif control.name == "guiCyclic":
+			pos = buttonPos[1]
+		elif control.name == "guiDSQ":
+			pos = buttonPos[0]
+		
+		control.x, control.y = pos, 5
+		control.width, control.height = 50, 15
+
+
+
+
+
 	## @brief Place holder resize callback
 	#  @note Child classes should call override this method explicitly
 	#  @param control The invoking GUI control object
@@ -256,16 +285,14 @@ class SeqControlsClassBase:
 		buttonWidth = 50
 		numButtons = 0
 		if ShowButtons: numButtons = 3
-		buttonPos = []
-		for i in range(1,numButtons+1): buttonPos.append(((listWidth - 5) - (buttonWidth*i + 1)))
 		# Note on positions:
 		# It quicker to assign these here, as there is no realistic chance of scaling being required.
 		guiContainer = Common_Gui.BasicContainer("", None, None)
 		guiName = Common_Gui.SimpleText("", seqName, None, None)
 		if ShowButtons:
-			guiExport = Common_Gui.ToggleButton("guiExport", "Export", "Export Sequence", startEvent, self.handleListItemEvent, None)
-			guiCyclic = Common_Gui.ToggleButton("guiCyclic", "Cyclic", "Export Sequence as Cyclic", startEvent+1, self.handleListItemEvent, None)
-			guiDSQ = Common_Gui.ToggleButton("guiDSQ", "Dsq", "Export Sequence as DSQ", startEvent+2, self.handleListItemEvent, None)
+			guiExport = Common_Gui.ToggleButton("guiExport", "Export", "Export Sequence", startEvent, self.handleListItemEvent, self.guiSeqButtonItemResize)
+			guiCyclic = Common_Gui.ToggleButton("guiCyclic", "Cyclic", "Export Sequence as Cyclic", startEvent+1, self.handleListItemEvent, self.guiSeqButtonItemResize)
+			guiDSQ = Common_Gui.ToggleButton("guiDSQ", "Dsq", "Export Sequence as DSQ", startEvent+2, self.handleListItemEvent, self.guiSeqButtonItemResize)
 
 		guiContainer.fade_mode = 0  # flat color
 
@@ -273,12 +300,6 @@ class SeqControlsClassBase:
 		guiName.x, guiName.y = 5, 5
 		
 		if numButtons == 3:
-			guiCyclic.x, guiCyclic.y = buttonPos[0], 5
-			guiExport.x, guiExport.y = buttonPos[1], 5
-			guiDSQ.x, guiDSQ.y = buttonPos[2], 5
-			guiCyclic.width, guiCyclic.height = 50, 15
-			guiExport.width, guiExport.height = 50, 15
-			guiDSQ.width, guiDSQ.height = 50, 15
 			# Add everything
 			guiContainer.addControl(guiExport)
 			guiContainer.addControl(guiCyclic)
@@ -299,9 +320,7 @@ class SeqControlsClassBase:
 	def populateSequenceList(self):
 		self.clearSequenceList()
 		Prefs = DtsGlobals.Prefs
-		# Force a sequence list resize event, to make sure our button offsets
-		# are correct.
-		if self.guiSeqList.width == 0: return
+		#if self.guiSeqList.width == 0: return
 		# loop through all actions in the preferences
 		keys = Prefs['Sequences'].keys()
 		keys.sort(lambda x, y: cmp(x.lower(),y.lower()))
