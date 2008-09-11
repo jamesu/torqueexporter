@@ -42,6 +42,7 @@ from SequenceProperties import *
 from VisAnim import *
 from IFLAnim import *
 from Materials import *
+from ShapeOptions import *
 from DetailLevels import *
 from Nodes import *
 from General import *
@@ -373,6 +374,7 @@ def initGui():
 	
 	
 	# init controls pages, pass in containers to be used
+	ShapeOptionControls = ShapeOptionsControlsClass(shapeTabBook.getTabSheetContainer("ShapeOptions"))
 	DetailLevelControls = DetailLevelControlsClass(shapeTabBook.getTabSheetContainer("DetailLevels"))
 	NodeControls = NodeControlsClass(shapeTabBook.getTabSheetContainer("Nodes"))
 	MaterialControls = MaterialControlsClass(shapeTabBook.getTabSheetContainer("Materials"))
@@ -389,6 +391,7 @@ def initGui():
 	# associate control pages with tabs (used for refresh callbacks)
 	mainTabBook.setControlPage("General", GeneralControls)
 	mainTabBook.setControlPage("About", AboutControls)
+	shapeTabBook.setControlPage("ShapeOptions", ShapeOptionControls)
 	shapeTabBook.setControlPage("DetailLevels", DetailLevelControls)
 	shapeTabBook.setControlPage("Nodes", NodeControls)
 	shapeTabBook.setControlPage("Materials", MaterialControls)
@@ -412,6 +415,7 @@ def initGui():
 def exit_callback():
 	global DetailLevelControls, SeqCommonControls, IFLControls, ActionControls, MaterialControls, NodeControls, GeneralControls, AboutControls
 	Torque_Util.dump_setout("stdout")
+	ShapeOptionControls.cleanup()
 	DetailLevelControls.cleanup()
 	#ActionControls.clearSequenceList()
 	AboutControls.cleanup()
