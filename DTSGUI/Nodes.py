@@ -40,7 +40,7 @@ class NodeControlsClass:
 		global globalEvents
 
 		# number of items per line in the node list
-		self.itemsPerLine = 5
+		self.itemsPerLine = 4
 		
 		# initialize GUI controls
 		self.guiNodeListLabel = Common_Gui.SimpleText("guiNodeListLabel", "Nodes that should be exported :", None, self.resize)
@@ -60,7 +60,7 @@ class NodeControlsClass:
 				
 		# set initial states
 		self.guiPatternText.value = "*"
-		self.guiNumItemsSlider.value = 5
+		self.guiNumItemsSlider.value = 4
 		self.guiNumItemsSlider.min = 1
 		self.guiNumItemsSlider.max = 40
 		self.guiMatchTypePulldown.items.append("Object Nodes")
