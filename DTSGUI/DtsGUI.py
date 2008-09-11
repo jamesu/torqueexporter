@@ -358,7 +358,6 @@ def initGui():
 	shapeTabBook.addTab("Detail Levels", "DetailLevels")
 	shapeTabBook.addTab("Nodes", "Nodes")
 	shapeTabBook.addTab("Materials", "Materials")
-	shapeTabBook.addTab("Meshes", "Meshes")
 
 
 	sequencesTabBook = TabBookControl(mainTabBook.getTabSheetContainer("Sequences"), "Sequences")
@@ -378,10 +377,8 @@ def initGui():
 	DetailLevelControls = DetailLevelControlsClass(shapeTabBook.getTabSheetContainer("DetailLevels"))
 	NodeControls = NodeControlsClass(shapeTabBook.getTabSheetContainer("Nodes"))
 	MaterialControls = MaterialControlsClass(shapeTabBook.getTabSheetContainer("Materials"))
-	# todo - "Meshes" panel to control drawing order.
-	#MeshControls = MeshControlsClass(shapeTabBook.getTabSheetContainer("Meshes"))
 	SeqCommonControls = SeqCommonControlsClass(sequencesTabBook.getTabSheetContainer("CommonAll"))
-	# no more action controls, we're timeline based now.
+	# no more action controls, we're timeline based now, baby.
 	#ActionControls = ActionControlsClass(guiSeqActSubtab)
 	IFLControls = IFLControlsClass(sequencesTabBook.getTabSheetContainer("IFL"))
 	VisControls = VisControlsClass(sequencesTabBook.getTabSheetContainer("Visibility"))
@@ -395,7 +392,6 @@ def initGui():
 	shapeTabBook.setControlPage("DetailLevels", DetailLevelControls)
 	shapeTabBook.setControlPage("Nodes", NodeControls)
 	shapeTabBook.setControlPage("Materials", MaterialControls)
-	#shapeTabBook.setControlPage("Meshes", MeshControls)
 	sequencesTabBook.setControlPage("CommonAll", SeqCommonControls)
 	sequencesTabBook.setControlPage("IFL", IFLControls)
 	sequencesTabBook.setControlPage("Visibility", VisControls)
