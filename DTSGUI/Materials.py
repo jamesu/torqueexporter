@@ -45,8 +45,19 @@ class MaterialControlsClass:
 		self.guiMaterialListTitle = Common_Gui.SimpleText("guiMaterialListTitle", "U/V Textures:", None, self.resize)
 		self.guiMaterialList = Common_Gui.ListContainer("guiMaterialList", "material.list", self.handleEvent, self.resize)		
 		self.guiMaterialOptions = Common_Gui.BasicContainer("guiMaterialOptions", "", None, self.resize)
-		self.guiMaterialOptionsTitle = Common_Gui.SimpleText("guiMaterialOptionsTitle", "DTS Material: None Selected", None, self.resize)
+
+		#self.guiMaterialOptionsTitle = Common_Gui.SimpleText("guiMaterialOptionsTitle", "DTS Material: None Selected", None, self.resize)
+		self.guiMaterialOptionsTitle = Common_Gui.MultilineText("guiMaterialOptionsTitle", "DTS Material:\n None Selected", None, self.guiMaterialOptionsTitleResize)
+		self.guiMatOptsContainerTitleBox = Common_Gui.BasicFrame(resize_callback = self.guiMatOptsContainerTitleBoxResize)
+
+
+
 		self.guiMaterialTransFrame = Common_Gui.BasicFrame("guiMaterialTransFrame", "", None, 29, None, self.resize)
+		self.guiMaterialMipFrame = Common_Gui.BasicFrame("guiMaterialMipFrame", "", None, 29, None, self.resize)
+		self.guiMaterialWrapFrame = Common_Gui.BasicFrame("guiMaterialWrapFrame", "", None, 29, None, self.resize)
+		self.guiMaterialDetailMapFrame = Common_Gui.BasicFrame("guiMaterialDetailMapFrame", "", None, 29, None, self.resize)
+		self.guiMaterialEnvMappingFrame = Common_Gui.BasicFrame("guiMaterialEnvMappingFrame", "", None, 29, None, self.resize)
+		
 		self.guiMaterialAdvancedFrame = Common_Gui.BasicFrame("guiMaterialAdvancedFrame", "", None, 30, None, self.resize)
 		self.guiMaterialImportRefreshButton = Common_Gui.BasicButton("guiMaterialImportRefreshButton", "Refresh", "Import Blender materials and settings", 7, self.handleEvent, self.resize)
 		self.guiMaterialSWrapButton = Common_Gui.ToggleButton("guiMaterialSWrapButton", "SWrap", "SWrap", 9, self.handleEvent, self.resize)
@@ -67,7 +78,7 @@ class MaterialControlsClass:
 		self.guiMaterialBumpMapMenu = Common_Gui.ComboBox("guiMaterialBumpMapMenu", "Bumpmap Texture", "Select a texture from this list to use as a bump map", 24, self.handleEvent, self.resize)
 		self.guiMaterialReflectanceMapMenu = Common_Gui.ComboBox("guiMaterialReflectanceMapMenu", "Reflectance Map", "Select a texture from this list to use as a Reflectance map", 25, self.handleEvent, self.resize)
 		self.guiMaterialReflectanceSlider = Common_Gui.NumberPicker("guiMaterialReflectanceSlider", "Reflectivity %", "Material reflectivity as a percentage", 26, self.handleEvent, self.resize)
-		self.guiMaterialDetailScaleSlider = Common_Gui.NumberPicker("guiMaterialDetailScaleSlider", "Detail Scale %", "Detail map scale as a percentage of original size", 27, self.handleEvent, self.resize)	
+		self.guiMaterialDetailScaleSlider = Common_Gui.NumberPicker("guiMaterialDetailScaleSlider", "Scale %", "Detail map scale as a percentage of original size", 27, self.handleEvent, self.resize)	
 
 
 		# set initial control states and default values
@@ -94,7 +105,12 @@ class MaterialControlsClass:
 		guiMaterialsSubtab.addControl(self.guiMaterialImportRefreshButton)
 
 		self.guiMaterialOptions.addControl(self.guiMaterialOptionsTitle)
+		self.guiMaterialOptions.addControl(self.guiMatOptsContainerTitleBox)
+		
 		self.guiMaterialOptions.addControl(self.guiMaterialTransFrame)
+		self.guiMaterialOptions.addControl(self.guiMaterialMipFrame)
+		self.guiMaterialOptions.addControl(self.guiMaterialWrapFrame)
+		
 		self.guiMaterialOptions.addControl(self.guiMaterialAdvancedFrame)
 		self.guiMaterialOptions.addControl(self.guiMaterialSWrapButton)
 		self.guiMaterialOptions.addControl(self.guiMaterialTWrapButton)
@@ -102,10 +118,12 @@ class MaterialControlsClass:
 		self.guiMaterialOptions.addControl(self.guiMaterialAddButton)
 		self.guiMaterialOptions.addControl(self.guiMaterialSubButton)
 		self.guiMaterialOptions.addControl(self.guiMaterialSelfIllumButton)
+		self.guiMaterialOptions.addControl(self.guiMaterialEnvMappingFrame)
 		self.guiMaterialOptions.addControl(self.guiMaterialEnvMapButton)
 		self.guiMaterialOptions.addControl(self.guiMaterialMipMapButton)
 		self.guiMaterialOptions.addControl(self.guiMaterialMipMapZBButton)
 		self.guiMaterialOptions.addControl(self.guiMaterialIFLMatButton)
+		self.guiMaterialOptions.addControl(self.guiMaterialDetailMapFrame)
 		self.guiMaterialOptions.addControl(self.guiMaterialDetailMapButton)
 		self.guiMaterialOptions.addControl(self.guiMaterialBumpMapButton)
 		self.guiMaterialOptions.addControl(self.guiMaterialShowAdvancedButton)
@@ -131,19 +149,24 @@ class MaterialControlsClass:
 		del self.guiMaterialList
 		del self.guiMaterialOptions
 		del self.guiMaterialOptionsTitle
+		del self.guiMatOptsContainerTitleBox
 		del self.guiMaterialTransFrame
+		del self.guiMaterialMipFrame
 		del self.guiMaterialAdvancedFrame
 		del self.guiMaterialImportRefreshButton
+		del self.guiMaterialWrapFrame
 		del self.guiMaterialSWrapButton
 		del self.guiMaterialTWrapButton
 		del self.guiMaterialTransButton
 		del self.guiMaterialAddButton
 		del self.guiMaterialSubButton
 		del self.guiMaterialSelfIllumButton
+		del self.guiMaterialEnvMappingFrame
 		del self.guiMaterialEnvMapButton
 		del self.guiMaterialMipMapButton
 		del self.guiMaterialMipMapZBButton
 		del self.guiMaterialIFLMatButton
+		del self.guiMaterialDetailMapFrame
 		del self.guiMaterialDetailMapButton
 		del self.guiMaterialBumpMapButton
 		del self.guiMaterialRefMapButton
@@ -159,6 +182,11 @@ class MaterialControlsClass:
 		self.clearMaterialList()		
 		self.populateMaterialList()
 
+	def guiMaterialOptionsTitleResize(self, control, newwidth, newheight):
+		control.x, control.y, control.height, control.width = 5,newheight-30, 20,82
+
+	def guiMatOptsContainerTitleBoxResize(self, control, newwidth, newheight):
+		control.x, control.y, control.height, control.width = 3,newheight-35, 33,117
 	
 	
 	def resize(self, control, newwidth, newheight):
@@ -170,51 +198,59 @@ class MaterialControlsClass:
 		elif control.name == "guiMaterialOptionsTitle":
 			control.x, control.y, control.height, control.width = 25,310, 20,150
 		elif control.name == "guiMaterialOptions":
-			control.x, control.y, control.height, control.width = 161,0, 335,328
-		elif control.name == "guiMaterialTransFrame":
-			control.x, control.y, control.height, control.width = 8,newheight-105, 50,170
-		elif control.name == "guiMaterialAdvancedFrame":
-			control.x, control.y, control.height, control.width = 8,newheight-325, 75,315
+			control.x, control.y, control.height, control.width = 161,30, newheight - 70,328
 		elif control.name == "guiMaterialImportRefreshButton":
 			control.x, control.y, control.width = 10,newheight-330, 100
-		elif control.name == "guiMaterialSWrapButton":
-			control.x, control.y, control.width = 195,newheight-105, 60
-		elif control.name == "guiMaterialTWrapButton":
-			control.x, control.y, control.width = 257,newheight-105, 60
+		elif control.name == "guiMaterialTransFrame":
+			control.x, control.y, control.height, control.width = 2,newheight-68, 27,322
 		elif control.name == "guiMaterialTransButton":
-			control.x, control.y, control.width = 15,newheight-65, 75
+			control.x, control.y, control.width = 5,newheight-65, 104
 		elif control.name == "guiMaterialAddButton":
-			control.x, control.y, control.width = 15,newheight-95, 75
+			control.x, control.y, control.width = 111,newheight-65, 104
 		elif control.name == "guiMaterialSubButton":
-			control.x, control.y, control.width = 92,newheight-95, 75
+			control.x, control.y, control.width = 217,newheight-65, 104
 		elif control.name == "guiMaterialSelfIllumButton":
-			control.x, control.y, control.width = 195,newheight-75, 122
+			control.x, control.y, control.width = 125,newheight-30, 95
+		elif control.name == "guiMaterialMipFrame":
+			control.x, control.y, control.height, control.width = 2,newheight-103, 27,183
 		elif control.name == "guiMaterialMipMapButton":
-			control.x, control.y, control.width = 8,newheight-137, 50
+			control.x, control.y, control.width = 5,newheight-100, 50
 		elif control.name == "guiMaterialMipMapZBButton":
-			control.x, control.y, control.width = 60,newheight-137, 125
+			control.x, control.y, control.width = 57,newheight-100, 125
+		elif control.name == "guiMaterialWrapFrame":
+			control.x, control.y, control.height, control.width = 192,newheight-103, 27,132
+		elif control.name == "guiMaterialSWrapButton":
+			control.x, control.y, control.width = 195,newheight-100, 62
+		elif control.name == "guiMaterialTWrapButton":
+			control.x, control.y, control.width = 259,newheight-100, 62
 		elif control.name == "guiMaterialIFLMatButton":
-			control.x, control.y, control.width = 195,newheight-137, 122
+			control.x, control.y, control.width = 227,newheight-30, 95
+		elif control.name == "guiMaterialDetailMapFrame":
+			control.x, control.y, control.height, control.width = 2,newheight-138, 27,322
 		elif control.name == "guiMaterialDetailMapButton":
-			control.x, control.y, control.width = 8,newheight-167, 150
+			control.x, control.y, control.width = 5,newheight-135, 80
 		elif control.name == "guiMaterialDetailMapMenu":
-			control.x, control.y, control.width = 160,newheight-167, 150
+			control.x, control.y, control.width = 87,newheight-135, 125
 		elif control.name == "guiMaterialDetailScaleSlider":
-			control.x, control.y, control.width = 160,newheight-189, 150
+			control.x, control.y, control.width = 214,newheight-135, 107
+		elif control.name == "guiMaterialEnvMappingFrame":
+			control.x, control.y, control.height, control.width = 2,newheight-173, 27,322
 		elif control.name == "guiMaterialEnvMapButton":
-			control.x, control.y, control.width = 8,newheight-217, 150
+			control.x, control.y, control.width = 5,newheight-170, 155
 		elif control.name == "guiMaterialReflectanceSlider":
-			control.x, control.y, control.width = 160,newheight-217, 150
+			control.x, control.y, control.width = 162,newheight-170, 159
+		elif control.name == "guiMaterialAdvancedFrame":
+			control.x, control.y, control.height, control.width = 5,newheight-260, 75,318
 		elif control.name == "guiMaterialShowAdvancedButton":
-			control.x, control.y, control.width = 89,newheight-260, 150
+			control.x, control.y, control.width = 89,newheight-210, 150
 		elif control.name == "guiMaterialRefMapButton":
-			control.x, control.y, control.width = 15,newheight-295, 150
+			control.x, control.y, control.width = 15,newheight-235, 150
 		elif control.name == "guiMaterialReflectanceMapMenu":
-			control.x, control.y, control.width = 167,newheight-295, 150
+			control.x, control.y, control.width = 167,newheight-235, 150
 		elif control.name == "guiMaterialBumpMapButton":
-			control.x, control.y, control.width = 15,newheight-317, 150
+			control.x, control.y, control.width = 15,newheight-257, 150
 		elif control.name == "guiMaterialBumpMapMenu":
-			control.x, control.y, control.width = 167,newheight-317,150 
+			control.x, control.y, control.width = 167,newheight-257,150 
 
 
 	def createMaterialListItem(self, matName, startEvent):
@@ -270,7 +306,7 @@ class MaterialControlsClass:
 				self.guiMaterialReflectanceMapMenu.selectStringItem(matList[materialName]['RefMapTex'])
 				self.guiMaterialReflectanceSlider.value = matList[materialName]['reflectance'] * 100.0
 				self.guiMaterialDetailScaleSlider.value = matList[materialName]['detailScale'] * 100.0
-				self.guiMaterialOptionsTitle.label = ("DTS Material: %s" % materialName)
+				self.guiMaterialOptionsTitle.label = ("DTS Material:\n %s" % materialName)
 			else:
 				self.guiMaterialSWrapButton.state = False
 				self.guiMaterialTWrapButton.state = False
@@ -291,7 +327,7 @@ class MaterialControlsClass:
 				self.guiMaterialReflectanceSlider.value = 0
 				self.guiMaterialDetailScaleSlider.value = 100
 				guiMaterialOptions.enabled = False
-				self.guiMaterialOptionsTitle.label = "DTS Material: None Selected"
+				self.guiMaterialOptionsTitle.label = "DTS Material:\n None Selected"
 
 
 		if guiMaterialList.itemIndex == -1: return
