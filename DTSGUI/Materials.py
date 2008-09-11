@@ -492,8 +492,7 @@ class MaterialControlsClass:
 		matName = None
 		matPrefs = None		
 		if self.guiMaterialList.itemIndex != -1:
-			matName, matPrefs = self.getSelectedMatNameAndPrefs()
-		
+			matName, matPrefs = self.getSelectedMatNameAndPrefs()		
 		else:
 			# no valid selection, so select the first item in the list
 			self.guiMaterialList.selectItem(0)
