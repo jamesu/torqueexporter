@@ -30,12 +30,12 @@ from DtsSceneInfo import *
 '''
 ***************************************************************************************************
 *
-* Class that creates and owns the GUI controls on the General sub-panel.
+* Class that creates and owns the GUI controls on the Shape Options sub-panel.
 *
 ***************************************************************************************************
 '''
 class ShapeOptionsControlsClass:
-	def __init__(self, guiGeneralSubtab):
+	def __init__(self, guiShapeOptionsSubtab):
 		global globalEvents
 		Prefs = DtsGlobals.Prefs
 		
@@ -100,24 +100,24 @@ class ShapeOptionsControlsClass:
 		
 		
 		# add controls to containers
-		guiGeneralSubtab.addControl(self.guiStripText)
-		guiGeneralSubtab.addControl(self.guiTriMeshesButton)
-		guiGeneralSubtab.addControl(self.guiTriListsButton)
-		guiGeneralSubtab.addControl(self.guiStripMeshesButton)	
-		guiGeneralSubtab.addControl(self.guiMaxStripSizeSlider)
-		#guiGeneralSubtab.addControl(self.guiClusterText)
-		#guiGeneralSubtab.addControl(self.guiClusterDepth)
-		#guiGeneralSubtab.addControl(self.guiClusterWriteDepth)
-		guiGeneralSubtab.addControl(self.guiBillboardText)
-		guiGeneralSubtab.addControl(self.guiBillboardButton)
-		guiGeneralSubtab.addControl(self.guiBillboardEquator)
-		guiGeneralSubtab.addControl(self.guiBillboardPolar)
-		guiGeneralSubtab.addControl(self.guiBillboardPolarAngle)
-		guiGeneralSubtab.addControl(self.guiBillboardDim)
-		guiGeneralSubtab.addControl(self.guiBillboardPoles)
-		guiGeneralSubtab.addControl(self.guiBillboardSize)
-		guiGeneralSubtab.addControl(self.guiMiscText)
-		guiGeneralSubtab.addControl(self.guiScale)
+		guiShapeOptionsSubtab.addControl(self.guiStripText)
+		guiShapeOptionsSubtab.addControl(self.guiTriMeshesButton)
+		guiShapeOptionsSubtab.addControl(self.guiTriListsButton)
+		guiShapeOptionsSubtab.addControl(self.guiStripMeshesButton)	
+		guiShapeOptionsSubtab.addControl(self.guiMaxStripSizeSlider)
+		#guiShapeOptionsSubtab.addControl(self.guiClusterText)
+		#guiShapeOptionsSubtab.addControl(self.guiClusterDepth)
+		#guiShapeOptionsSubtab.addControl(self.guiClusterWriteDepth)
+		guiShapeOptionsSubtab.addControl(self.guiBillboardText)
+		guiShapeOptionsSubtab.addControl(self.guiBillboardButton)
+		guiShapeOptionsSubtab.addControl(self.guiBillboardEquator)
+		guiShapeOptionsSubtab.addControl(self.guiBillboardPolar)
+		guiShapeOptionsSubtab.addControl(self.guiBillboardPolarAngle)
+		guiShapeOptionsSubtab.addControl(self.guiBillboardDim)
+		guiShapeOptionsSubtab.addControl(self.guiBillboardPoles)
+		guiShapeOptionsSubtab.addControl(self.guiBillboardSize)
+		guiShapeOptionsSubtab.addControl(self.guiMiscText)
+		guiShapeOptionsSubtab.addControl(self.guiScale)
 		
 	def cleanup(self):
 		'''
@@ -155,7 +155,7 @@ class ShapeOptionsControlsClass:
 		
 	def handleEvent(self, control):
 		Prefs = DtsGlobals.Prefs
-		global guiGeneralSubtab
+		global guiShapeOptionsSubtab
 		if control.name == "guiTriMeshesButton":
 			Prefs['PrimType'] = "Tris"
 			self.guiTriListsButton.state = False
