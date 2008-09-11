@@ -1103,7 +1103,7 @@ class ListContainer(BasicContainer):
 			self.controls[self.itemIndex].color = [curCol[0]/255.0, curCol[1]/255.0, curCol[2]/255.0, curCol[3]/255.0]
 			if self.controls[self.itemIndex].nested:
 				for c in self.controls[self.itemIndex].controls:
-					if c.__class__ == SimpleText:
+					if c.__class__ == SimpleText or c.__class__ == SizeLimitedText or c.__class__ == MultilineText:
 							c.color = [curTextCol[0]/255.0, curTextCol[1]/255.0, curTextCol[2]/255.0, curTextCol[3]/255.0]
 		
 		if (idx >= len(self.controls)): return
@@ -1114,7 +1114,7 @@ class ListContainer(BasicContainer):
 			self.controls[idx].color = [curCol[0]/255.0, curCol[1]/255.0, curCol[2]/255.0, curCol[3]/255.0]
 			if self.controls[self.itemIndex].nested:
 				for c in self.controls[self.itemIndex].controls:
-					if c.__class__ == SimpleText:
+					if c.__class__ == SimpleText or c.__class__ == SizeLimitedText or c.__class__ == MultilineText:
 						c.color = [curTextCol[0]/255.0, curTextCol[1]/255.0, curTextCol[2]/255.0, curTextCol[3]/255.0]
 		
 
