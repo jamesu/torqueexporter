@@ -200,7 +200,6 @@ class MaterialControlsClass:
 		elif control.name == "guiMaterialOptions":
 			control.x, control.y, control.height, control.width = 161,30, newheight - 70,328
 		elif control.name == "guiMaterialImportRefreshButton":
-			#control.x, control.y, control.width = 10,newheight-330, 100
 			control.width = 75
 			control.x = newwidth - (control.width + 10)
 			control.y = newheight - (control.height + 10)
