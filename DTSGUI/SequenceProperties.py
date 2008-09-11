@@ -467,27 +467,32 @@ class SeqCommonControlsClass(SeqControlsClassBase):
 	def guiToolboxTextResize(self, control, newwidth, newheight):
 		control.x = 25
 		control.y = 35
-		control.width = 100
+		control.width = 100		
 	def guiToggleResize(self, control, newwidth, newheight):
 		control.x = 30
-		control.y = 5
+		control.y = 7
 		control.width = 100
+		control.height = 18
 	def guiAddSeqResize(self, control, newWidth, newheight):
 		control.x = 157
 		control.y = 27
 		control.width = 100
+		control.height = 18
 	def guiDelSeqResize(self, control, newWidth, newheight):
 		control.x = 157
-		control.y = 5
+		control.y = 7
 		control.width = 100
+		control.height = 18
 	def guiCreateFromActStripsResize(self, control, newWidth, newheight):
 		control.x = 282
 		control.y = 27
 		control.width = 175
+		control.height = 18
 	def guiCreateFromActionsResize(self, control, newWidth, newheight):
 		control.x = 282
-		control.y = 5
+		control.y = 7
 		control.width = 175
+		control.height = 18
 
 	## @brief Resize callback for guiSeqOptsContainer
 	#  @param control The invoking GUI control object
