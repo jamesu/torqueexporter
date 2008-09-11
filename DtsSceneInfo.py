@@ -446,8 +446,7 @@ class SceneInfoClass:
 	fileNameFromPath = staticmethod(fileNameFromPath)
 
 	# Gets base path from a full file path, with trailing slash
-	def pathPortion():
-		filepath = Blender.Get("filename")
+	def pathPortion(filepath):
 		if "\\" in filepath: sep = "\\"
 		else: sep = "/"
 		words = string.split(filepath, sep)
