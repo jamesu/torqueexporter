@@ -25,6 +25,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import Common_Gui
 import DtsGlobals
+from DTSPython import Torque_Util
 from DtsSceneInfo import *
 
 '''
@@ -54,10 +55,7 @@ class GeneralControlsClass:
 		# set initial states
 		self.guiShowWarnErrPopup.state = Prefs["ShowWarningErrorPopup"]
 		self.guiCustomFilename.length = 255
-		if "\\" in Prefs['exportBasepath']:
-			pathSep = "\\"
-		else:
-			pathSep = "/"
+		pathSep = DtsGlobals.SceneInfo.getPathSeparator()
 		self.guiCustomFilename.value = Prefs['exportBasepath'] + pathSep + Prefs['exportBasename'] + ".dts"
 		self.guiTGEAMaterial.state = Prefs['TSEMaterial']		
 		try: self.guiLogToOutputFolder.state = Prefs['LogToOutputFolder']
@@ -114,21 +112,15 @@ class GeneralControlsClass:
 				self.guiCustomFilename.value += ".dts"
 
 			if Prefs['LogToOutputFolder']:
-				Torque_Util.dump_setout( "%s%s%s.log" % (Prefs['exportBasepath'], pathSeparator, Prefs['exportBasename']) )
+				pathSep = DtsGlobals.SceneInfo.getPathSeparator()
+				Torque_Util.dump_setout( "%s%s%s.log" % (Prefs['exportBasepath'], pathSep, Prefs['exportBasename']) )
 		elif control.name == "guiCustomFilenameSelect":
-			if "\\" in Prefs['exportBasepath']:
-				pathSep = "\\"
-			else:
-				pathSep = "/"
+			pathSep = DtsGlobals.SceneInfo.getPathSeparator()
 			Blender.Window.FileSelector (self.guiGeneralSelectorCallback, 'Select destination and filename', Prefs['exportBasepath'] + pathSep + Prefs['exportBasename'])
 		elif control.name == "guiCustomFilenameDefaults":
 			Prefs['exportBasename'] = SceneInfoClass.getDefaultBaseName()
 			Prefs['exportBasepath'] = SceneInfoClass.getDefaultBasePath()
-			pathSep = "/"
-			if "\\" in Prefs['exportBasepath']:
-				pathSep = "\\"
-			else:
-				pathSep = "/"
+			pathSep = DtsGlobals.SceneInfo.getPathSeparator()
 			self.guiCustomFilename.value = Prefs['exportBasepath'] + pathSep + Prefs['exportBasename']
 			if self.guiCustomFilename.value[len(self.guiCustomFilename.value)-4:] != ".dts":
 				self.guiCustomFilename.value += ".dts"
@@ -138,27 +130,31 @@ class GeneralControlsClass:
 		elif control.name == "guiLogToOutputFolder":
 			Prefs['LogToOutputFolder'] = control.state
 			if control.state:
-				Torque_Util.dump_setout( "%s%s%s.log" % (Prefs['exportBasepath'], pathSeparator, Prefs['exportBasename']) )
+				pathSep = DtsGlobals.SceneInfo.getPathSeparator()
+				Torque_Util.dump_setout( "%s%s%s.log" % (Prefs['exportBasepath'], pathSep, Prefs['exportBasename']) )
 			else:
 				Torque_Util.dump_setout("%s.log" % Prefs['exportBasename'])
 			Prefs['exportBasename']
 
 		
 	def resize(self, control, newwidth, newheight):
-		if control.name == "guiShowWarnErrPopup":
-			control.x, control.y, control.width = 10,newheight-195-control.height, 220
-		elif control.name == "guiShapeScriptButton":
-			control.x, control.y, control.width = 346,newheight-260-control.height, 132
+		if control.name == "guiOutputText":
+			control.x, control.y, control.width = 10,newheight-45-control.height, 220
 		elif control.name == "guiCustomFilename":
-			control.x, control.y, control.width = 10,newheight-260-control.height, 220
+			#control.x, control.y, control.width = 10,newheight-60-control.height, 220
+			control.x, control.y, control.width = 10,newheight-60-control.height, 370
 		elif control.name == "guiCustomFilenameSelect":
-			control.x, control.y, control.width = 232,newheight-260-control.height, 55
+			control.x, control.y, control.width = 382,newheight-60-control.height, 55
 		elif control.name == "guiCustomFilenameDefaults":
-			control.x, control.y, control.width = 289,newheight-260-control.height, 55
+			control.x, control.y, control.width = 439,newheight-60-control.height, 55
 		elif control.name == "guiTGEAMaterial":
 			control.x, control.y, control.width = 346,newheight-282-control.height, 132
+		elif control.name == "guiShapeScriptButton":
+			control.x, control.y, control.width = 346,newheight-260-control.height, 132
 		elif control.name == "guiLogToOutputFolder":
 			control.x, control.y, control.width = 346,newheight-304-control.height, 132
+		elif control.name == "guiShowWarnErrPopup":
+			control.x, control.y, control.width = 10,newheight-195-control.height, 220
 
 	
 	def guiGeneralSelectorCallback(self, filename):
@@ -167,10 +163,7 @@ class GeneralControlsClass:
 		if filename != "":
 			Prefs['exportBasename'] = SceneInfoClass.fileNameFromPath(filename)
 			Prefs['exportBasepath'] = SceneInfoClass.pathPortion(filename)
-
-			pathSep = "/"
-			if "\\" in Prefs['exportBasepath']: pathSep = "\\"
-
+			pathSep = DtsGlobals.SceneInfo.getPathSeparator()
 			self.guiCustomFilename.value = Prefs['exportBasepath'] + pathSep + Prefs['exportBasename']
 			if self.guiCustomFilename.value[len(self.guiCustomFilename.value)-4:] != ".dts":
 				self.guiCustomFilename.value += ".dts"
