@@ -53,13 +53,17 @@ class UserCreatedSeqControlsClassBase(SeqControlsClassBase):
 
 		# initialize GUI controls
 		self.guiSeqAddToExistingTxt = Common_Gui.SimpleText("guiSeqAddToExistingTxt", "Add " + self.shortAnimationTypeString + " Animation to existing Sequence:", None, self.guiSeqAddToExistingTxtResize)
+		self.guiSeqDelFromExistingTxt = Common_Gui.SimpleText("guiSeqDelFromExistingTxt", "Del " + self.shortAnimationTypeString + " Animation from selected seq:", None, self.guiSeqDelFromExistingTxtResize)
 		self.guiSeqExistingSequences = Common_Gui.ComboBox("guiSeqExistingSequences", "Sequence", "Select a Sequence from this list to add a " + self.animationTypeString + " Animation", self.getNextEvent(), self.handleGuiSeqExistingSequencesEvent, self.guiSeqExistingSequencesResize)
-		self.guiSeqAddToExisting = Common_Gui.BasicButton("guiSeqAddToExisting", "Add " + self.animationTypeString, "Add an " + self.animationTypeString + " Animation to an existing sequence.", self.getNextEvent(), self.handleGuiSeqAddToExistingEvent, self.guiSeqAddToExistingResize)
+		self.guiSeqAddToExisting = Common_Gui.BasicButton("guiSeqAddToExisting", "Add " + self.animationTypeString, "Add an " + self.animationTypeString + " animation to an existing sequence.", self.getNextEvent(), self.handleGuiSeqAddToExistingEvent, self.guiSeqAddToExistingResize)
+		self.guiSeqDelFromExisting = Common_Gui.BasicButton("guiSeqDelFromExisting", "Remove " + self.animationTypeString + " from selected", "Delete " + self.animationTypeString + " animation from selected sequence.", self.getNextEvent(), self.handleGuiSeqDelFromExistingEvent, self.guiSeqDelFromExistingResize)
 		
 		# add controls to containers
 		tabContainer.addControl(self.guiSeqAddToExistingTxt)
+		tabContainer.addControl(self.guiSeqDelFromExistingTxt)
 		tabContainer.addControl(self.guiSeqExistingSequences)
 		tabContainer.addControl(self.guiSeqAddToExisting)
+		tabContainer.addControl(self.guiSeqDelFromExisting)
 		
 		self.guiSeqListTitle.label = self.animationTypeString +" Sequences:"
 		
@@ -77,8 +81,10 @@ class UserCreatedSeqControlsClassBase(SeqControlsClassBase):
 	def cleanup(self):
 		SeqControlsClassBase.cleanup(self)
 		del self.guiSeqAddToExistingTxt
+		del self.guiSeqDelFromExistingTxt
 		del self.guiSeqExistingSequences
 		del self.guiSeqAddToExisting
+		del self.guiSeqDelFromExisting
 
 
 
@@ -116,6 +122,8 @@ class UserCreatedSeqControlsClassBase(SeqControlsClassBase):
 		self.refreshAll()
 		self.selectSequence(seqName)
 
+	def handleGuiSeqDelFromExistingEvent(self, control):
+		pass
 
 	#######################################
 	#  Refresh and Clear methods
@@ -181,6 +189,9 @@ class UserCreatedSeqControlsClassBase(SeqControlsClassBase):
 	def guiSeqAddToExistingTxtResize(self, control, newwidth, newheight):
 		control.x, control.y, control.height, control.width = 10,38, 20,230
 
+	def guiSeqDelFromExistingTxtResize(self, control, newwidth, newheight):
+		control.x, control.y, control.height, control.width = 261,38, 20,230
+
 	## @brief Resize callback for guiSeqExistingSequences
 	#  @param control The invoking GUI control object
 	def guiSeqExistingSequencesResize(self, control, newwidth, newheight):
@@ -190,6 +201,9 @@ class UserCreatedSeqControlsClassBase(SeqControlsClassBase):
 	#  @param control The invoking GUI control object
 	def guiSeqAddToExistingResize(self, control, newwidth, newheight):
 		control.x, control.y, control.height, control.width = 157,11, 20,82
+		
+	def guiSeqDelFromExistingResize(self, control, newwidth, newheight):
+		control.x, control.y, control.height, control.width = 261,11, 20,200
 
 	## @brief Resize callback for guiSeqListTitle
 	#  @param control The invoking GUI control object
