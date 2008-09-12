@@ -76,8 +76,11 @@ class SeqControlsClassBase:
 	def getSelectedSeqNameAndPrefs(self):
 		Prefs = DtsGlobals.Prefs
 		if self.guiSeqList.itemIndex == -1: return None, None
-		seqName = self.guiSeqList.controls[self.guiSeqList.itemIndex].controls[0].label
-		seqPrefs = Prefs['Sequences'][seqName]
+		try:
+			seqName = self.guiSeqList.controls[self.guiSeqList.itemIndex].controls[0].label
+			seqPrefs = Prefs['Sequences'][seqName]
+		except:
+			return None, None
 		return seqName, seqPrefs
 
 	## @brief Selects the desired sequence in the list
