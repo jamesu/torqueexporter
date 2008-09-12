@@ -313,6 +313,9 @@ def stripPath(filepath):
 	return words[-1]
 
 
+
+# todo - move this crap to DtsGlobals :-)
+
 # if onlyIgnore is true, strips out any period separated
 # section of the string that starts with "IGNORE".
 # if onlyIgnore is false, strips out the "IGNORE" section
