@@ -29,7 +29,7 @@ import Blender
 # ***************************************************************************************************
 ## @brief Class that creates and owns the GUI controls on the "Common/All" sub-panel of the Sequences panel. 
 #
-#  This class contains event handler and resize callbacks for it's associated GUI controls, along
+#  This class contains event handler and resize callbacks for its associated GUI controls, along
 #  with implementations of refreshSequenceOptions and clearSequenceOptions specific to its
 #  controls.
 #
@@ -91,7 +91,7 @@ class SeqCommonControlsClass(SeqControlsClassBase):
 		self.guiSeqFPS.max = 255.0
 		self.guiSeqFPS.value = 25.0
 		self.guiPriority.min = 0
-		self.guiPriority.max = 64 # this seems resonable
+		self.guiPriority.max = 64 # this seems reasonable
 
 		self.guiRefPoseTitle.visible = False
 		self.guiRefPoseFrame.visible = False
