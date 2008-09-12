@@ -699,6 +699,72 @@ class SceneInfoClass:
 	
 	getSequenceInfo = staticmethod(getSequenceInfo)
 
+	# Deletes all sequence markers that match the given name
+	def delSeqMarkers(seqName):
+		markedList = Blender.Scene.GetCurrent().getTimeLine().getMarked()
+		failed = False
+		for frameNum in markedList:
+			markerNames = markedList[frameNum]
+			for markerName in markerNames:
+				if markerName[0:len(seqName)].upper() == seqName.upper():
+					if len(markerNames) != 1:
+						message = "Could not delete sequence marker \'"+markerName+"\' on frame "+str(frameNum)+" because there is more than one marker on the frame!%t|Cancel"
+						x = Blender.Draw.PupMenu(message)
+						del x
+						failed = True
+		if not failed:
+			for frameNum in markedList:
+				markerNames = markedList[frameNum]
+				for markerName in markerNames:
+					if markerName[0:len(seqName)].upper() == seqName.upper():
+						Blender.Scene.GetCurrent().getTimeLine().delete(frameNum)
+
+			message = "Sequence \'" + seqName + "\' has been removed.%t|OK"
+			x = Blender.Draw.PupMenu(message)
+			del x
+		else:
+			message = "Sequence \'" + seqName + "\' could not be removed!%t|OK"
+			x = Blender.Draw.PupMenu(message)
+			del x
+	
+	delSeqMarkers = staticmethod(delSeqMarkers)
+
+	# Renames sequence markers that match the given name
+	def renameSeqMarkers(oldName, newName):
+		markedList = Blender.Scene.GetCurrent().getTimeLine().getMarked()
+		failed = False
+		for frameNum in markedList:
+			markerNames = markedList[frameNum]
+			for markerName in markerNames:
+				if markerName[0:len(oldName)].upper() == oldName.upper():
+					if len(markerNames) != 1:
+						message = "Could not rename sequence marker \'"+markerName+"\' on frame "+str(frameNum)+" because there is more than one marker on the frame!%t|Cancel"
+						x = Blender.Draw.PupMenu(message)
+						del x
+						failed = True
+		if not failed:
+			for frameNum in markedList:
+				markerNames = markedList[frameNum]
+				for markerName in markerNames:
+					if markerName[0:len(oldName)].upper() == oldName.upper():
+						nmName = newName + markerName[len(oldName):len(markerName)]
+						Blender.Scene.GetCurrent().getTimeLine().setName(frameNum, nmName)
+
+			message = "Sequence \'" + oldName + "\' has been renamed to \'"+newName+"\'.%t|OK"
+			x = Blender.Draw.PupMenu(message)
+			del x
+			
+			# rename prefs key so we don't loose our sequence metadata,
+			# that's the whole point of this function :-)
+			DtsGlobals.Prefs.renameSequenceKey(oldName, newName)
+			
+		else:
+			message = "Sequence \'" + oldName + "\' could not be renamed!%t|OK"
+			x = Blender.Draw.PupMenu(message)
+			del x
+	
+	renameSeqMarkers = staticmethod(renameSeqMarkers)
+
 
 	#################################################
 	#  Meshes and DTS objects
