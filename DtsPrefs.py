@@ -360,39 +360,6 @@ class prefsClass(dict):
 			if not seqName in curSequences:
 				del self['Sequences'][seqName]
 
-	# Cleans up extra sequence keys that may not be used anymore (e.g. action deleted)
-	# also calls cleanVisTracks to get rid of unused visibility tracks
-	def cleanKeys():
-		global Prefs
-		# clean visibility tracks
-		cleanVisTracks()
-		# Sequences
-		for keyName in Prefs['Sequences'].keys():
-			key = getSequenceKey(keyName)
-			actionFound = False
-			try: actEnabled = key['Action']['Enabled']
-			except: actEnabled = False
-			# if action is enabled for the sequence
-			if actEnabled:
-				for actionName in Armature.NLA.GetActions().keys():
-					if actionName == keyName:
-						# we found a (hopefully) valid action
-						actionFound = True
-						break
-			# if we didn't find a valid action
-			if not actionFound:
-				key['Action']['Enabled'] = False
-				# see if any of the other sequence types are enabled
-				VisFound = False
-				IFLFound = False
-				try: IFLFound = Prefs['Sequences'][keyName]['IFL']['Enabled']
-				except: IFLFound = False
-				try: VisFound = Prefs['Sequences'][keyName]['Vis']['Enabled']
-				except: VisFound = False
-				# if no sequence type is enabled for the key, get rid of it.
-				if VisFound == False and IFLFound == False:
-					del Prefs['Sequences'][keyName]			
-
 	# Gets a sequence key, creating it if it does not exist.
 	# todo - implement
 	def getSeqKey(self, seqName):
