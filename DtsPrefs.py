@@ -516,6 +516,11 @@ class prefsClass(dict):
 		# validate resulting values
 		self.__validateSeqDurationAndFPS(seqName, seqPrefs)
 
+	# Rename a sequence prefs key
+	def renameSequenceKey(self, oldName, newName):
+		seqPrefs = self['Sequences'][oldName]
+		self['Sequences'][newName] = seqPrefs
+		del self['Sequences'][oldName]
 
 	#################################################
 	#  Visibility animations
