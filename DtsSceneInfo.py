@@ -765,6 +765,27 @@ class SceneInfoClass:
 	
 	renameSeqMarkers = staticmethod(renameSeqMarkers)
 
+	# create a sequence marker.
+	def createMarker(newMarkerName, frameNum):
+		markedList = Blender.Scene.GetCurrent().getTimeLine().getMarked()
+		failed = False
+		print markedList
+		try: markerNames = markedList[frame]
+		except: markerNames = []
+		for markerName in markerNames:
+			if markerName[0:len(newMarkerName)].upper() != newMarkerName.upper():
+				message = "Could not create sequence marker \'"+markerName+"\' on frame "+str(frameNum)+" because there is already a marker on the frame!%t|Cancel"
+				x = Blender.Draw.PupMenu(message)
+				del x
+				failed = True
+				break
+		if not failed:
+			timeline = Blender.Scene.GetCurrent().getTimeLine()
+			timeline.add(frameNum)
+			timeline.setName(frameNum, newMarkerName)
+			
+		
+	createMarker = staticmethod(createMarker)
 
 	#################################################
 	#  Meshes and DTS objects
