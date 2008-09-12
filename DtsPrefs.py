@@ -38,7 +38,7 @@ from Blender import *
 # from the GUI.  Other than the dictionary portion, this class is stateless.
 # NOTE: This should be the only place that input validation happens.
 # NOTE: If any methods in this class need to get data from blender, they should
-#  call SceneInfoClass methods to get it; they should not talk to blender directly or
+#  call SceneInfoClass methods to get it; they should not talk to blender directly if possible.
 # NOTE: The global SceneInfo object does not exist when initialization happens, so methods
 #  called in or by __init__ must only call static methods of SceneInfoClass.
 
@@ -47,6 +47,7 @@ class prefsClass(dict):
 		self.Prefs_keyname = 'TorqueExporterPlugin_%s' % prefsClass.__pythonizeFileName(SceneInfoClass.getDefaultBaseName())
 		# todo - read in prefs from text buffer here?
 		self.loadPrefs()
+		self.__updateDefunctSequenceCountdowns()
 		#self.initPrefs()
 		pass
 	
@@ -64,6 +65,7 @@ class prefsClass(dict):
 		self['DTSVersion'] = 24
 		self['WriteShapeScript'] = False
 		self['Sequences'] = {}
+		self['DefunctSequences'] = {}
 		self['Materials'] = {}
 		self['PrimType'] = 'TriLists'
 		self['MaxStripSize'] = 6
@@ -305,6 +307,33 @@ class prefsClass(dict):
 	#  Sequences
 	#################################################
 
+	# countdown to destruction
+	def __updateDefunctSequenceCountdowns(self):
+		for seqName in self['DefunctSequences'].keys():
+			seqKey = self['DefunctSequences'][seqName]
+			try: print "for sequence", seqName, "CountDown =", seqKey['CountDown']
+			except: print "Sequence", seqName, "has no CountDown key!!!!!"
+			if seqKey['CountDown'] < 1:
+				del self['DefunctSequences'][seqName]
+			else:
+				seqKey['CountDown'] -= 1	
+	
+	# get the names of defunct/deleted sequences
+	def getDefunctSequenceNames(self):
+		retVal = []
+		for seqName in self['DefunctSequences'].keys():
+			retVal.append(seqName)
+		return retVal
+	
+	# recover a defunct/deleted sequence key
+	def recoverDefunctSequenceKey(self, seqName):
+		for dsName in self['DefunctSequences'].keys():
+			dsKey = self['DefunctSequences'][dsName]
+			self['Sequences'][dsName] = dsKey
+			del self['Sequences'][dsName]['CountDown']
+			del self['DefunctSequences'][dsName]
+
+	
 	def setSeqDuration(self, seqName, duration):
 		seqKey = self['Sequences'][seqName]
 		seqKey['Duration'] = float(duration)
@@ -358,6 +387,10 @@ class prefsClass(dict):
 		prefsSequences = self['Sequences'].keys()
 		for seqName in prefsSequences:
 			if not seqName in curSequences:
+				print "Removing %s..." % seqName
+				# keep defunct sequences around for a while, just in case.
+				self['DefunctSequences'][seqName] = self['Sequences'][seqName]				
+				self['DefunctSequences'][seqName]['CountDown'] = 5
 				del self['Sequences'][seqName]
 
 	# Gets a sequence key, creating it if it does not exist.
