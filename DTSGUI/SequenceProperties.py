@@ -24,6 +24,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 '''
 
 from UserAnimBase import *
+from DtsSceneInfo import *
 import Blender
 
 # ***************************************************************************************************
@@ -201,9 +202,7 @@ class SeqCommonControlsClass(SeqControlsClassBase):
 		text = Blender.Draw.Create("NewSequence")
 		sf = Blender.Draw.Create(1)
 		ef = Blender.Draw.Create(2)
-
 		block = []
-
 		block.append(("Name: ", text, 0, 30, "The name of the new sequence"))
 		block.append(("Start Frame: ", sf, 0, 9999))
 		block.append(("End Frame: ", ef, 0, 9999))
@@ -212,41 +211,14 @@ class SeqCommonControlsClass(SeqControlsClassBase):
 
 		print "PupBlock returned", retval
 
+		# convert gui object values to regular vars
 		seqName = str(text.val)
 		startFrame = int(sf.val)
 		endFrame = int(ef.val)
-		print "text\t", text
-		print "float\t", sf
-		print "int\t", ef
 		
-		# get timeline object
-		scene = Blender.Scene.GetCurrent()
-		timeline = scene.getTimeLine()
+		# Create named markers at the specified frames.
+		SceneInfoClass.createSequenceMarkers(seqName, startFrame, endFrame)
 
-		# Make sure there aren't already markers on the specified frames, if there are, we need
-		# to abort to avoid overwriting them...sadly.
-		gtg = True
-		if startFrame >= endFrame:
-			# todo - pupblock
-			print "Start frame must be before end frame! Aborting sequence creation..."
-			gtg = False
-		if len(timeline.getMarked(startFrame)) > 0:
-			# todo - pupblock
-			print "Frame", startFrame, "is already marked! Aborting sequence creation..."
-			gtg = False
-		if len(timeline.getMarked(endFrame)) > 0:
-			# todo - pupblock
-			print "Frame", endFrame, "is already marked! Aborting sequence creation..."
-			gtg = False
-
-		# are we good to go?
-		if gtg:
-			# Create named markers at the specified frames.
-			timeline.add(startFrame)
-			timeline.setName(startFrame, seqName + ":start")
-			timeline.add(endFrame)
-			timeline.setName(endFrame, seqName + ":end")
-		
 		# must delete temp gui objects explicitly to avoid "error totblock" messages when blender exits.
 		del text
 		del sf
