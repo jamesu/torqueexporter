@@ -645,6 +645,40 @@ class SceneInfoClass:
 			return None
 	
 	__getSeqMarkerType = staticmethod(__getSeqMarkerType)
+
+	# find a named marker on the timeline
+	def findMarker(markerName):
+		markedList = Blender.Scene.GetCurrent().getTimeLine().getMarked()
+		for frameNum in markedList:
+			markerNames = markedList[frameNum]
+			for mn in markerNames:
+				if mn.upper() == markerName.upper():
+					return frameNum
+		return None
+
+	findMarker = staticmethod(findMarker)
+	
+	# returns true if the given frame number has multiple markers
+	def hasMultipleMarkers(frameNum):
+		markedList = Blender.Scene.GetCurrent().getTimeLine().getMarked()
+		retVal = False
+		try: markerNames = markedList[frameNum]
+		except: markerNames = []
+		if len(markerNames) > 1:
+			retVal = True
+		return retVal
+	
+	hasMultipleMarkers = staticmethod(hasMultipleMarkers)
+	
+	# returns True if a frame on the timeline has no markers.
+	def isNotMarked(frameNum):
+		retVal = True
+		markedList = Blender.Scene.GetCurrent().getTimeLine().getMarked()
+		try: x = markedList[frameNum]
+		except: retVal = False
+		return retVal
+		
+	isNotMarked = staticmethod(isNotMarked)
 	
 	# called by prefs refreshSequencePrefs
 	# returns a dictionary containing sequence names, start and end frames
@@ -699,93 +733,154 @@ class SceneInfoClass:
 	
 	getSequenceInfo = staticmethod(getSequenceInfo)
 
+	# deletes a named marker
+	# fails silently if the marker name does not exist.
+	# Warns user with a popup if the marker could not be deleted
+	def delMarker(markerName):
+		frameNum = SceneInfoClass.findMarker(markerName)
+		if frameNum == None: return
+		if SceneInfoClass.hasMultipleMarkers(frameNum):
+			message = "Could not delete sequence marker \'"\
+			+ markerName + "\' on frame " + str(frameNum)\
+			+ " because there is more than one marker on the frame!%t|Cancel"
+			x = Blender.Draw.PupMenu(message)
+			del x
+			return False
+		else:
+			Blender.Scene.GetCurrent().getTimeLine().delete(frameNum)
+		return True
+	
+	delMarker = staticmethod(delMarker)
+		
 	# Deletes all sequence markers that match the given name
 	def delSeqMarkers(seqName):
-		markedList = Blender.Scene.GetCurrent().getTimeLine().getMarked()
-		failed = False
-		for frameNum in markedList:
-			markerNames = markedList[frameNum]
-			for markerName in markerNames:
-				if markerName[0:len(seqName)].upper() == seqName.upper():
-					if len(markerNames) != 1:
-						message = "Could not delete sequence marker \'"+markerName+"\' on frame "+str(frameNum)+" because there is more than one marker on the frame!%t|Cancel"
-						x = Blender.Draw.PupMenu(message)
-						del x
-						failed = True
-		if not failed:
-			for frameNum in markedList:
-				markerNames = markedList[frameNum]
-				for markerName in markerNames:
-					if markerName[0:len(seqName)].upper() == seqName.upper():
-						Blender.Scene.GetCurrent().getTimeLine().delete(frameNum)
-
-			message = "Sequence \'" + seqName + "\' has been removed.%t|OK"
+		print "Removing Sequence:", seqName
+		startName = seqName + ":start"
+		endName = seqName + ":end"		
+		# see if both markers are alone on their respective frames.
+		startFrame = SceneInfoClass.findMarker(startName)
+		endFrame = SceneInfoClass.findMarker(endName)
+		smm = SceneInfoClass.hasMultipleMarkers(startFrame)
+		emm = SceneInfoClass.hasMultipleMarkers(endFrame)		
+		if smm:			
+			message = "Could not delete sequence marker \'"+startName+"\' on frame "+str(startFrame)+" because there is more than one marker on the frame!%t|OK"
 			x = Blender.Draw.PupMenu(message)
 			del x
+		if emm:
+			message = "Could not delete sequence marker \'"+endName+"\' on frame "+str(endFrame)+" because there is more than one marker on the frame!%t|OK"
+			x = Blender.Draw.PupMenu(message)
+			del x
+		
+		if not (smm or emm):
+			# delete the markers.
+			SceneInfoClass.delMarker(startName)
+			SceneInfoClass.delMarker(endName)
 		else:
-			message = "Sequence \'" + seqName + "\' could not be removed!%t|OK"
+			message = "Could not delete sequence  \'"+seqName+"\'!%t|Cancel"
 			x = Blender.Draw.PupMenu(message)
 			del x
-	
+
 	delSeqMarkers = staticmethod(delSeqMarkers)
 
+		
 	# Renames sequence markers that match the given name
 	def renameSeqMarkers(oldName, newName):
-		markedList = Blender.Scene.GetCurrent().getTimeLine().getMarked()
-		failed = False
-		for frameNum in markedList:
-			markerNames = markedList[frameNum]
-			for markerName in markerNames:
-				if markerName[0:len(oldName)].upper() == oldName.upper():
-					if len(markerNames) != 1:
-						message = "Could not rename sequence marker \'"+markerName+"\' on frame "+str(frameNum)+" because there is more than one marker on the frame!%t|Cancel"
-						x = Blender.Draw.PupMenu(message)
-						del x
-						failed = True
-		if not failed:
-			for frameNum in markedList:
-				markerNames = markedList[frameNum]
-				for markerName in markerNames:
-					if markerName[0:len(oldName)].upper() == oldName.upper():
-						nmName = newName + markerName[len(oldName):len(markerName)]
-						Blender.Scene.GetCurrent().getTimeLine().setName(frameNum, nmName)
+		print "Renaming Sequence:", oldName
+		print " to:", newName
+		startName = oldName + ":start"
+		endName = oldName + ":end"
+		newStartName = newName + ":start"
+		newEndName = newName + ":end"
+		# see if both markers are alone on their respective frames.
+		startFrame = SceneInfoClass.findMarker(startName)
+		endFrame = SceneInfoClass.findMarker(endName)
+		smm = SceneInfoClass.hasMultipleMarkers(startFrame)
+		emm = SceneInfoClass.hasMultipleMarkers(endFrame)
 
-			message = "Sequence \'" + oldName + "\' has been renamed to \'"+newName+"\'.%t|OK"
+		if smm:			
+			message = "Could not rename sequence marker \'"+startName+"\' on frame "+str(startFrame)+" because there is more than one marker on the frame!%t|OK"
 			x = Blender.Draw.PupMenu(message)
 			del x
-			
-			# rename prefs key so we don't loose our sequence metadata,
-			# that's the whole point of this function :-)
-			DtsGlobals.Prefs.renameSequenceKey(oldName, newName)
-			
+		if emm:
+			message = "Could not rename sequence marker \'"+endName+"\' on frame "+str(endFrame)+" because there is more than one marker on the frame!%t|OK"
+			x = Blender.Draw.PupMenu(message)
+			del x
+		
+		if not (smm or emm):
+			# rename the markers.
+			Blender.Scene.GetCurrent().getTimeLine().setName(startFrame, newStartName)
+			Blender.Scene.GetCurrent().getTimeLine().setName(endFrame, newEndName)
 		else:
-			message = "Sequence \'" + oldName + "\' could not be renamed!%t|OK"
+			message = "Could not rename sequence  \'"+oldName+"\'!%t|Cancel"
 			x = Blender.Draw.PupMenu(message)
 			del x
+
 	
 	renameSeqMarkers = staticmethod(renameSeqMarkers)
 
-	# create a sequence marker.
-	def createMarker(newMarkerName, frameNum):
-		markedList = Blender.Scene.GetCurrent().getTimeLine().getMarked()
-		failed = False
-		print markedList
-		try: markerNames = markedList[frame]
-		except: markerNames = []
-		for markerName in markerNames:
-			if markerName[0:len(newMarkerName)].upper() != newMarkerName.upper():
-				message = "Could not create sequence marker \'"+markerName+"\' on frame "+str(frameNum)+" because there is already a marker on the frame!%t|Cancel"
-				x = Blender.Draw.PupMenu(message)
-				del x
-				failed = True
-				break
-		if not failed:
+	# create a marker on the timeline
+	# returns true if marker was successfully created, otherwise returns false
+	def createMarker(markerName, frameNum):
+		print "createMarker called..."
+		isNotMarked = SceneInfoClass.isNotMarked(frameNum)
+		if SceneInfoClass.findMarker(markerName) == frameNum: alreadyThere = True
+		else: alreadyThere = False
+		if isNotMarked and not alreadyThere:
+			message = "Could not create sequence marker \'"+markerName+"\' on frame "+str(frameNum)+" because there is already a marker on the frame!%t|OK"
+			x = Blender.Draw.PupMenu(message)
+			del x
+			return False
+		else:
 			timeline = Blender.Scene.GetCurrent().getTimeLine()
 			timeline.add(frameNum)
-			timeline.setName(frameNum, newMarkerName)
-			
+			timeline.setName(frameNum, markerName)
+			return True
 		
 	createMarker = staticmethod(createMarker)
+
+	# returns true if the sequence was successfully created, otherwise returns false.
+	def createSequenceMarkers(seqName, startFrame, endFrame):		
+		if startFrame >= endFrame:
+			message = "Start frame must come before end frame!%t|Cancel sequence creation"
+			x = Blender.Draw.PupMenu(message)
+			del x
+			return False
+
+		startName = seqName + ":start"
+		endName = seqName + ":end"
+
+		startExists = (SceneInfoClass.findMarker(startName) != None)
+		endExists = (SceneInfoClass.findMarker(endName) != None)
+		if startExists and endExists:
+			message = "Sequence /'"+seqName+"/' already exists!%t|Cancel sequence creation"
+			x = Blender.Draw.PupMenu(message)
+			del x
+			return False
+		
+		# clean up any stray start or end frames that may already exist
+		if startExists:
+			SceneInfoClass.delMarker(startName)
+		elif endExists:
+			SceneInfoClass.delMarker(endName)
+		
+		# try to create the markers
+		ss = SceneInfoClass.createMarker(startName, startFrame)
+		es = SceneInfoClass.createMarker(endName, endFrame)
+		
+		# warn if we failed, and delete any markers that were created
+		if not (ss and es):
+			message = "Could not create sequence  \'"+seqName+"\'!%t|OK"
+			x = Blender.Draw.PupMenu(message)
+			del x
+			if ss: SceneInfoClass.delMarker(startName)
+			if es: SceneInfoClass.delMarker(endName)
+
+			return False
+		else: return True
+	
+	createSequenceMarkers = staticmethod(createSequenceMarkers)
+		
+
 
 	#################################################
 	#  Meshes and DTS objects
