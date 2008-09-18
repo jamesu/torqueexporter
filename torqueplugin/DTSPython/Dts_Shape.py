@@ -178,17 +178,17 @@ class MaterialList:
 			st.fromstring(mn)
 			st.tofile(fs)
 		for mat in self.materials:			
-			fs.write(struct.pack('I', mat.flags))			
+			fs.write(struct.pack('<I', mat.flags))			
 		for mat in self.materials:
-			fs.write(struct.pack('i', mat.reflectance))
+			fs.write(struct.pack('<i', mat.reflectance))
 		for mat in self.materials:
-			fs.write(struct.pack('i', mat.bump))
+			fs.write(struct.pack('<i', mat.bump))
 		for mat in self.materials:
-			fs.write(struct.pack('i', mat.detail))
+			fs.write(struct.pack('<i', mat.detail))
 		for mat in self.materials:
-			fs.write(struct.pack('f', mat.detailScale))
+			fs.write(struct.pack('<f', mat.detailScale))
 		for mat in self.materials:
-			fs.write(struct.pack('f', mat.reflection))
+			fs.write(struct.pack('<f', mat.reflection))
 
 
 # IFLMaterial class
