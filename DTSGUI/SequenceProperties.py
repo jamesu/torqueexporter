@@ -316,10 +316,16 @@ class SeqCommonControlsClass(SeqControlsClassBase):
 
 
 	def handleGuiCreateFromActStripsEvent(self, control):
-		pass
+		DtsGlobals.SceneInfo.markersFromActionStrips()
+		# refresh sequence data and list
+		self.refreshAll()
+
 		
 	def handleGuiCreateFromActionsEvent(self, control):
-		pass
+		DtsGlobals.SceneInfo.createFromActions()
+		# refresh sequence data and list
+		self.refreshAll()
+
 
 
 		
