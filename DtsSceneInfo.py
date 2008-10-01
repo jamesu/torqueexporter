@@ -1007,12 +1007,18 @@ class SceneInfoClass:
 	
 	# gets dts object names (unique mesh names across all detail levels, minus trailing extension)
 	def getDtsObjectNames(self):
+		retval = self.DTSObjects.keys()
+		retval.sort()
+		print "*** retval = ", retval
+		return retval
+		'''
 		uniqueNames = {}
 		for dl in self.detailLevels.values():
 			for meshNI in dl:
 				dtsObjName = meshNI.dtsObjName
 				uniqueNames[dtsObjName] = 0
 		return uniqueNames
+		'''
 
 	# test whether or not a mesh object is skinned
 	def isSkinnedMesh(o):
