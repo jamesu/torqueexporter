@@ -199,9 +199,10 @@ class SceneInfoClass:
 				dump_writeln(message)
 				
 			n.dtsNodeName = newName
-			try: x = self.boneNameChanges[n.armParentNI.blenderObjName]
-			except: self.boneNameChanges[n.armParentNI.blenderObjName] = {}
-			self.boneNameChanges[n.armParentNI.blenderObjName][n.originalBoneName] = newName
+			if n.armParentNI != None:
+				try: x = self.boneNameChanges[n.armParentNI.blenderObjName]
+				except: self.boneNameChanges[n.armParentNI.blenderObjName] = {}
+				self.boneNameChanges[n.armParentNI.blenderObjName][n.originalBoneName] = newName
 			self.nodes[newName] = n
 		else:
 			self.nodes[n.dtsNodeName] = n			
@@ -625,6 +626,20 @@ class SceneInfoClass:
 	#################################################
 
 	
+	# gets the length of an action
+	def __getActionLength(actName):
+		act = Blender.Armature.NLA.GetActions()[actName]
+		min = 65535
+		max = 1
+		for frNum in act.getFrameNumbers():
+			if frNum > max: max = int(round(frNum))
+			if frNum < min: min = int(round(frNum))
+		retVal = int(max-min)
+		print "Action length is", max
+		return max
+	
+	__getActionLength = staticmethod(__getActionLength)
+	
 	# gets the name portion of a sequence marker string
 	def __getSeqMarkerName(string):
 		strings = string.split(':')
@@ -822,6 +837,15 @@ class SceneInfoClass:
 	# returns true if marker was successfully created, otherwise returns false
 	def createMarker(markerName, frameNum):
 		print "createMarker called..."
+
+		# check to make sure the frame isn't out of range, if it is,
+		# increase the range :-)
+		context = Blender.Scene.GetCurrent().getRenderingContext()
+		eFrame = context.endFrame()
+		if frameNum > eFrame:
+			context.endFrame(frameNum)
+			Blender.Scene.GetCurrent().update(1)
+
 		isNotMarked = SceneInfoClass.isNotMarked(frameNum)
 		if SceneInfoClass.findMarker(markerName) == frameNum: alreadyThere = True
 		else: alreadyThere = False
@@ -852,7 +876,7 @@ class SceneInfoClass:
 		startExists = (SceneInfoClass.findMarker(startName) != None)
 		endExists = (SceneInfoClass.findMarker(endName) != None)
 		if startExists and endExists:
-			message = "Sequence /'"+seqName+"/' already exists!%t|Cancel sequence creation"
+			message = "Sequence \'"+seqName+"\' already exists!%t|Cancel sequence creation"
 			x = Blender.Draw.PupMenu(message)
 			del x
 			return False
@@ -879,6 +903,104 @@ class SceneInfoClass:
 		else: return True
 	
 	createSequenceMarkers = staticmethod(createSequenceMarkers)
+		
+
+	# gets the action strips for all objects in the scene
+	# and returns a list of tuples in the form [(stripName, startFrame, endFrame), ...]
+	def getAllActionStrips(self):
+		# get all exportable objects
+		objNodeNames = self.getObjectNodeNames()
+		bObjs = []
+		for objNodeName in objNodeNames:
+			bObjs.append(self.nodes[objNodeName].getBlenderObj())
+		# get all action strips
+		aStrips = []
+		for bObj in bObjs:
+			strips = bObj.actionStrips
+			for strip in strips:
+				aStrips.append(strip)
+		
+		# build a temp dictionary of tupples for all strips
+		allStrips = {}
+		for strip in aStrips:
+			stripName = strip.action.name
+			#print "stripName=", stripName
+			startFrame = int(round(strip.stripStart))
+			endFrame = int(round(strip.stripEnd))
+			if startFrame < endFrame:
+				# just take the last one that we found.
+				allStrips[stripName] = (startFrame, endFrame)
+		
+		# build retval
+		retVal = []
+		for stripName in allStrips.keys():
+			startFrame, endFrame = allStrips[stripName]
+			retVal.append((stripName, startFrame, endFrame))
+		
+		print retVal
+		return retVal
+			
+	# create sequence markers from action strips
+	def markersFromActionStrips(self):
+		stripTuples = self.getAllActionStrips()
+		for t in stripTuples:
+			stripName, startFrame, endFrame = t
+			# create the markers
+			SceneInfoClass.createSequenceMarkers(stripName, startFrame, endFrame)
+			
+	# create action strips from actions
+	def actionStripsFromActions(self):
+		# get a list of all actions
+		actions = Blender.Armature.NLA.GetActions()
+
+		# no way to tell "what's what" using the python API, so
+		# we just create the action strips for every armature in the scene
+		# and hope to God that there aren't any "object actions" present.
+		
+		bObjs = []
+		objNodeNames = self.getObjectNodeNames()
+		nextFrame = 2
+		for objNodeName in objNodeNames:
+			bObjs.append(self.nodes[objNodeName].getBlenderObj())
+		for action in actions.values():
+			# calculate strip parameters
+			sf = nextFrame
+			ef = sf + self.__getActionLength(action.name)
+			nextFrame = ef + 1			
+			
+			print "strip=", action.name
+			print "sf=",sf
+			print "ef=",ef
+			for bObj in bObjs:
+				if bObj.getType() != 'Armature': continue
+				objStrips = bObj.actionStrips
+				objStrips.append(action)
+				strip = objStrips[len(objStrips)-1]
+				strip.stripEnd = ef
+				strip.stripStart = sf
+				bObj.enableNLAOverride = True
+				#strip.mode = Blender.Armature.NLA.Modes.MODE_ADD
+				#strip.resetStripSize()
+				#strip.resetActionLimits()
+				#print "strip.flag =", strip.flag
+				#strip.flag |= strip.flag & Blender.Armature.NLA.Flags.ACTIVE
+				
+				print "  stripStart=", strip.stripStart
+				print "  stripEnd=", strip.stripEnd
+		
+		# refresh everything.
+		Blender.Scene.GetCurrent().update(1)
+		
+
+				
+				
+
+	
+	# create sequence markers from actions, first converting actions to action strips
+	def createFromActions(self):
+		# todo - bail if action strips already exist
+		self.actionStripsFromActions()
+		self.markersFromActionStrips()
 		
 
 
