@@ -162,8 +162,10 @@ class DetailLevelControlsClass:
 			newName = Prefs.getTextPortion(dlName)
 			newName += str(control.value)
 			if newName != dlName:
-				Prefs.renameDetailLevel(dlName, newName)
-				self.guiDetailLevelsList.controls[calcIdx].controls[0].label = newName
+				if Prefs.renameDetailLevel(dlName, newName):
+					self.guiDetailLevelsList.controls[calcIdx].controls[0].label = newName
+				else:
+					control.value = int(Prefs.getTrailingNumber(dlName))
 				
 	#######################################
 	#  Refresh and Clear methods
