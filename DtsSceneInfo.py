@@ -967,10 +967,6 @@ class SceneInfoClass:
 			sf = nextFrame
 			ef = sf + self.__getActionLength(action.name)
 			nextFrame = ef + 1			
-			
-			print "strip=", action.name
-			print "sf=",sf
-			print "ef=",ef
 			for bObj in bObjs:
 				if bObj.getType() != 'Armature': continue
 				objStrips = bObj.actionStrips
@@ -979,21 +975,9 @@ class SceneInfoClass:
 				strip.stripEnd = ef
 				strip.stripStart = sf
 				bObj.enableNLAOverride = True
-				#strip.mode = Blender.Armature.NLA.Modes.MODE_ADD
-				#strip.resetStripSize()
-				#strip.resetActionLimits()
-				#print "strip.flag =", strip.flag
-				#strip.flag |= strip.flag & Blender.Armature.NLA.Flags.ACTIVE
-				
-				print "  stripStart=", strip.stripStart
-				print "  stripEnd=", strip.stripEnd
 		
 		# refresh everything.
 		Blender.Scene.GetCurrent().update(1)
-		
-
-				
-				
 
 	
 	# create sequence markers from actions, first converting actions to action strips
