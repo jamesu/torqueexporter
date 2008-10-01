@@ -1316,7 +1316,7 @@ class BlenderShape(DtsShape):
 		sequence.matters_vis = [False]*len(self.objects)
 
 		# includes last frame
-		numVisFrames = int((startFrame - endFrame) + 1)
+		#numVisFrames = int((startFrame - endFrame) + 1)
 
 		# Just do it.
 		for i in range(0, len(self.objects)):
@@ -1353,9 +1353,10 @@ class BlenderShape(DtsShape):
 				val = IPOCurve[int(fr)]
 				if val > 1.0: val = 1.0
 				elif val < 0.0: val = 0.0
-				# Make sure we're still in the user define frame range.
+				# Make sure we're still in the user defined frame range.
 				if fr <= endFrame:
 					self.objectstates.append(ObjectState(val,0,0))
+					print "appending vis frame with val of:", val
 				# If we're past the user defined frame range, pad out object states
 				# with copies of the good last frame state.
 				else:
@@ -1363,6 +1364,7 @@ class BlenderShape(DtsShape):
 					if val > 1.0: val = 1.0
 					elif val < 0.0: val = 0.0
 					self.objectstates.append(ObjectState(val,0,0))
+					print "appending vis frame with val of:", val
 							
 		sequence.has_vis = True
 		return sequence
