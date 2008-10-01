@@ -303,10 +303,11 @@ class VisControlsClass(UserCreatedSeqControlsClassBase):
 		self.guiIpoChannel.enabled = True
 		self.guiIpoObject.enabled = True
 		# update label
-		if type == "Object":
+		if IpoType == "Object":
 			self.guiIpoObjectTxt.label = "IPO Object:"
-		elif type == "Material":
+		elif IpoType == "Material":
 			self.guiIpoObjectTxt.label = "IPO Material:"
+
 
 	## @brief Clears all 3 Ipo selection menus
 	def clearIpoControls(self):
