@@ -186,9 +186,11 @@ class prefsClass(dict):
 			message = "A detail level with size of "+str(prefsClass.getTrailingNumber(newName))+" already exists.%t|Cancel"
 			x = Blender.Draw.PupMenu(message)
 			del x
+			return False
 		else:
 			self['DetailLevels'][newName] = self['DetailLevels'][oldName]
 			del self['DetailLevels'][oldName]
+			return True
 
 	# returns the detail level name that a given layer is assigned to, or none if not assigned
 	def getLayerAssignment(self, layerNum):
@@ -538,8 +540,13 @@ class prefsClass(dict):
 		seqKey['Vis']['Tracks'][objName]['IPOChannel'] = 'LocZ'
 		seqKey['Vis']['Tracks'][objName]['IPOObject'] = None
 
+	# deletes the visibility track from the given sequence for the given object
 	def deleteVisTrackKey(self, objName, seqName):
 		del self['Sequences'][seqName]['Vis']['Tracks'][objName]
+
+	# disable the visibility animation for the given sequence
+	def disableVisAnim(self, seqName):
+		self['Sequences'][seqName]['Vis']['Enabled'] = False
 
 	# Cleans up unused and invalid visibility tracks
 	def cleanVisTracks(self):
@@ -586,7 +593,10 @@ class prefsClass(dict):
 	
 	# delete the IFL animation from a sequence
 	def delIFLAnim(self, seqName):
-		del self['Sequences'][seqName]['IFL']
+		seq = self['Sequences'][seqName]
+		seq['IFL'] = {}
+		seq['IFL']['Enabled'] = False
+		#del self['Sequences'][seqName]['IFL']
 
 	
 	# changes the name of the ifl material and renames the image frames in an ifl animation
