@@ -227,6 +227,7 @@ class SeqCommonControlsClass(SeqControlsClassBase):
 		
 		# refresh
 		self.refreshAll()
+		Blender.Window.RedrawAll()
 
 	def handleGuiDelSeqEvent(self, control):
 		seqName, seqPrefs = self.getSelectedSeqNameAndPrefs()
@@ -249,6 +250,7 @@ class SeqCommonControlsClass(SeqControlsClassBase):
 		
 		# refresh sequence data and list
 		self.refreshAll()
+		Blender.Window.RedrawAll()
 	
 	def handleGuiRenameSeqEvent(self, control):
 		seqName, seqPrefs = self.getSelectedSeqNameAndPrefs()		
@@ -273,6 +275,7 @@ class SeqCommonControlsClass(SeqControlsClassBase):
 		
 		# refresh sequence data and list
 		self.refreshAll()
+		Blender.Window.RedrawAll()
 
 		
 	def handleGuiRecoverSeqEvent(self, control):
@@ -313,18 +316,21 @@ class SeqCommonControlsClass(SeqControlsClassBase):
 		
 		# refresh sequence data and list
 		self.refreshAll()
+		Blender.Window.RedrawAll()
 
 
 	def handleGuiCreateFromActStripsEvent(self, control):
 		DtsGlobals.SceneInfo.markersFromActionStrips()
 		# refresh sequence data and list
 		self.refreshAll()
+		Blender.Window.RedrawAll()
 
 		
 	def handleGuiCreateFromActionsEvent(self, control):
 		DtsGlobals.SceneInfo.createFromActions()
 		# refresh sequence data and list
 		self.refreshAll()
+		Blender.Window.RedrawAll()
 
 
 
