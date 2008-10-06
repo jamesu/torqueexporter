@@ -407,13 +407,14 @@ class DtsPoseUtilClass:
 	# rotation.
 	# TESTED
 	def getOrphanNodeRotLS(self, nodeName, poses):
+		print "getOrphanNodeRotLS called for node:", nodeName
 		node = self.nodes[nodeName]
 		# get the bone's rest rotation in worldspace
 		bRestRot = node.restRotWS
 		# get the bone's worldspace rotation
 		bCurRot = node.getNodeRotWS(poses)
 		# get the differnce between the two, worldspace factors out
-		bRotDelta = (bRestRot.inverse() * bCurRot).inverse()
+		bRotDelta = (bCurRot * bRestRot.inverse()).inverse()
 		return bRotDelta
 
 
