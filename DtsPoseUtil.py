@@ -37,12 +37,51 @@ import new
 import gc
 
 gc.enable()
+
+
+def getRotProbe():
+	try:
+		probe = Blender.Object.Get('DTSExpRotProbe')
+	except:
+		probe = Blender.Object.New('Empty', 'DTSExpRotProbe')
+	try:
+		constraint = probe.constraints[0]
+	except:
+		probe.constraints.append(Blender.Constraint.Type.COPYROT)
+		constraint = probe.constraints[0]
+	return probe
+
+def probeBoneRot(armName, boneName):
+	# get the probe
+	probe = getRotProbe()
+	# set the probe target
+	probe.constraints[0][Blender.Constraint.Settings.TARGET] = Blender.Object.Get(armName)
+	probe.constraints[0][Blender.Constraint.Settings.BONE] = boneName
+	# get the rotation of the probe
+	mat = probe.getMatrix('worldspace')
+	rot = toTorqueQuat(mat.rotationPart().toQuat()).inverse()
+	return rot
+
+def probeObjectRot(objName):
+	# get the probe
+	probe = getRotProbe()
+	# set the probe target
+	probe.constraints[0][Blender.Constraint.Settings.BONE] = ''
+	probe.constraints[0][Blender.Constraint.Settings.TARGET] = Blender.Object.Get(objName)
+	# get the rotation of the probe
+	mat = probe.getMatrix('worldspace')
+	rot = toTorqueQuat(mat.rotationPart().toQuat()).inverse()
+	return rot
+
+
+
 #-------------------------------------------------------------------------------------------------
 def initWSTransformData(self, initPose=None):
 	if self.blenderType == "object":
 		mat = self.getBlenderObj().getMatrix('worldspace')
 		# Note: Blender quaternions must be inverted since torque uses column vectors
-		self.restRotWS = toTorqueQuat(mat.rotationPart().toQuat().inverse())
+		#self.restRotWS = toTorqueQuat(mat.rotationPart().toQuat().inverse())
+		self.restRotWS = probeObjectRot(self.blenderObjName)
 		self.restPosWS = toTorqueVec(mat.translationPart())
 		self.restScale = self.__getNodeRestScale(initPose)
 
@@ -132,11 +171,12 @@ def __calcBoneRestPosWS(self, bMat):
 # todo - what happens if parent armature node is collapsed
 def __calcBoneRestRotWS(self, bMat):
 	# get the armature's rotation		
-	armRot = self.armParentNI.restRotWS
+	#armRot = self.armParentNI.restRotWS
 	# get the bone's rotation in armaturespace
-	bRot = toTorqueQuat(bMat.rotationPart().toQuat().inverse())
+	#bRot = toTorqueQuat(bMat.rotationPart().toQuat().inverse())	
 	# rotate out of armature space
-	bRot = (bRot * armRot)
+	#bRot = (bRot * armRot)
+	bRot = probeBoneRot(self.armParentNI.blenderObjName, self.originalBoneName)
 	return bRot
 
 def __getNodeRestScale(self, poses):
@@ -166,11 +206,12 @@ def __getBoneLocWS(self, poses):
 # determine the rotation of any bone in worldspace
 # TESTED
 def __getBoneRotWS(self, poses):
-	pose = poses[self.armParentNI.blenderObjName]
+	#pose = poses[self.armParentNI.blenderObjName]
 	# get the armature's rotation
-	armRot = self.armParentNI.getNodeRotWS(poses)
+	#armRot = self.armParentNI.getNodeRotWS(poses)
 	# get the pose rotation and rotate into worldspace
-	bRot = ( toTorqueQuat(pose.bones[self.originalBoneName].poseMatrix.rotationPart().toQuat().inverse()) * armRot)
+	#bRot = ( toTorqueQuat(pose.bones[self.originalBoneName].poseMatrix.rotationPart().toQuat().inverse()) * armRot)
+	bRot = probeBoneRot(self.armParentNI.blenderObjName, self.originalBoneName)
 	return bRot
 
 
@@ -192,7 +233,8 @@ def __getObjectLocWS(self):
 # determine the rotation of an object node in worldspace
 # TESTED
 def __getObjectRotWS(self):
-	bRot = toTorqueQuat(Blender.Object.Get(self.blenderObjName).getMatrix('worldspace').rotationPart().toQuat()).inverse()
+	#bRot = toTorqueQuat(Blender.Object.Get(self.blenderObjName).getMatrix('worldspace').rotationPart().toQuat()).inverse()
+	bRot = probeObjectRot(self.blenderObjName)
 	return bRot
 
 # !!!! New
