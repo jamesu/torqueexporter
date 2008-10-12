@@ -38,106 +38,8 @@ import gc
 
 gc.enable()
 #-------------------------------------------------------------------------------------------------
-def initWSTransformData(self, initPose=None):
-	if self.blenderType == "object":
-		mat = self.getBlenderObj().getMatrix('worldspace')
-		# Note: Blender quaternions must be inverted since torque uses column vectors
-		self.restRotWS = toTorqueQuat(mat.rotationPart().toQuat().inverse())
-		self.restPosWS = toTorqueVec(mat.translationPart())
-		self.restScale = self.__getNodeRestScale(initPose)
-
-	elif self.blenderType == "bone":			
-		bone = self.getBlenderObj().getData().bones[self.originalBoneName]
-		bMat = bone.matrix['ARMATURESPACE']
-		self.restPosWS = self.__calcBoneRestPosWS(bMat)
-		self.restRotWS = self.__calcBoneRestRotWS(bMat)
-		self.restScale = self.__getNodeRestScale(initPose)
-
-def initPSTransformData(self, initPose=None):
-	if self.blenderType == "object":
-		self.defPosPS = self.__calcNodeDefPosPS(self.dtsNodeName)
-		self.defRotPS = self.__calcNodeDefRotPS(self.dtsNodeName)
-
-	elif self.blenderType == "bone":			
-		bone = self.getBlenderObj().getData().bones[self.originalBoneName]
-		self.defPosPS = self.__calcNodeDefPosPS(bone.name)
-		self.defRotPS = self.__calcNodeDefRotPS(bone.name)
-
-
-# methods used to calculate static node tranform data
-# ***********************
-# these next four functions should not be called by any other functions, only in init
-
-# Determine a node's default position for the current pose in the parent node's space.
-# This is where the node should be if it has not been explicitly moved or
-# effected by a constraint.
-# 
-def __calcNodeDefPosPS(self, nodeName):
-	# early out if we've got no parent
-	if self.getGoodNodeParentNI() == None:
-		offsetPS = self.restPosWS
-		return offsetPS			
-	# get the node's default position in worldspace
-	nodeLocWS = self.restPosWS
-	# get the parent node's default position in worldspace
-	parentnodeLocWS = self.getGoodNodeParentNI().restPosWS
-	parentnodeRotWS = self.getGoodNodeParentNI().restRotWS
-	# subtract out the parent node's position, this gives us the offset of the child in worldspace
-	offsetWS = nodeLocWS - parentnodeLocWS
-	# scale the offset by armature's scale
-	# todo - this wasn't doing anything?
-	# rotate the offset into the parent node's default local space		
-	offsetPS = parentnodeRotWS.inverse().apply(offsetWS)
-	return offsetPS
-
-# determine a node's default rotation in parent space
-# This is what the node's rotation should be, relative to the parent node,
-# if it has not been directly rotated or affected by a constraint.
-# 
-def __calcNodeDefRotPS(self, nodeName):
-	# early out if we've got no parent
-	if self.getGoodNodeParentNI() == None:
-		bDefRotPS = self.restRotWS
-		return bDefRotPS			
-	# get the node's default rotation in worldspace
-	nodeRotWS = self.restRotWS
-	# get the parent node's default rotation in worldspace
-	parentNodeRotWS = self.getGoodNodeParentNI().restRotWS
-	# get the difference
-	bDefRotPS = nodeRotWS * parentNodeRotWS.inverse()
-	return bDefRotPS
-
-
-# --------- Worldspace getters ----------------
-
-# determine a bone's rest position in worldspace
-#
-# todo - what happens if parent armature node is collapsed?
-def __calcBoneRestPosWS(self, bMat):
-	# get the armature's rotation
-	armRot = self.armParentNI.restRotWS
-	# get the bone's location in armaturespace
-	bLoc = toTorqueVec(bMat.translationPart())
-	# rotate out of armature space
-	bLoc = armRot.apply(bLoc)
-	# add on armature's scale
-	armSize = [1,1,1]
-	bLoc = Vector( bLoc[0] * armSize[0], bLoc[1] * armSize[1], bLoc[2] * armSize[2] )
-	# add on armature's location
-	bLoc = bLoc + self.armParentNI.restPosWS
-	return bLoc
-
-# determine a bone's rest rotation in worldspace
-#
-# todo - what happens if parent armature node is collapsed
-def __calcBoneRestRotWS(self, bMat):
-	# get the armature's rotation		
-	armRot = self.armParentNI.restRotWS
-	# get the bone's rotation in armaturespace
-	bRot = toTorqueQuat(bMat.rotationPart().toQuat().inverse())
-	# rotate out of armature space
-	bRot = (bRot * armRot)
-	return bRot
+def initRestScaleData(self, initPoses=None):
+	self.restScale = self.__getNodeRestScale(initPoses)
 
 def __getNodeRestScale(self, poses):
 	if self.blenderType == "object":
@@ -175,7 +77,8 @@ def __getBoneRotWS(self, poses):
 
 
 
-# !!!! New
+# determine the scale of any bone (relative to local axies)
+# TESTED
 def __getBoneScale(self, poses):
 	pose = poses[self.armParentNI.blenderObjName]
 	bScale = toTorqueVec(pose.bones[self.originalBoneName].size)
@@ -185,17 +88,18 @@ def __getBoneScale(self, poses):
 
 # determine the location of an object node in worldspace
 # TESTED
-def __getObjectLocWS(self):
+def __getObjectLocWS(self, poses=None):
 	bLoc = toTorqueVec(Blender.Object.Get(self.blenderObjName).getMatrix('worldspace').translationPart())
 	return bLoc
 
 # determine the rotation of an object node in worldspace
 # TESTED
-def __getObjectRotWS(self):
+def __getObjectRotWS(self, poses=None):
 	bRot = toTorqueQuat(Blender.Object.Get(self.blenderObjName).getMatrix('worldspace').rotationPart().toQuat()).inverse()
 	return bRot
 
-# !!!! New
+# determine the scale of any object (relative to local axies)
+# TESTED
 def __getObjectScale(self):
 	bLoc = toTorqueVec([Blender.Object.Get(self.blenderObjName).SizeX,\
 	                    Blender.Object.Get(self.blenderObjName).SizeY,\
@@ -203,7 +107,7 @@ def __getObjectScale(self):
 	return bLoc
 
 
-
+'''
 def getNodeLocWS(self, poses):
 	if self.blenderType == "object":
 		retVal = self.__getObjectLocWS()
@@ -217,34 +121,32 @@ def getNodeRotWS(self, poses):
 	elif self.blenderType == "bone":
 		retVal = self.__getBoneRotWS(poses)
 	return retVal
+'''
 
-def getNodeScale(self, poses):
+def getNodeScale(self, poses, delta=True):
 	if self.blenderType == "object":
 		retVal = self.__getObjectScale()
 	elif self.blenderType == "bone":
 		retVal = self.__getBoneScale(poses)
-	retVal = Vector(retVal[0]/self.restScale[0], retVal[1]/self.restScale[1], retVal[2]/self.restScale[2])
+	if delta:
+		#print self.restScale
+		retVal = Vector(retVal[0]/self.restScale[0], retVal[1]/self.restScale[1], retVal[2]/self.restScale[2])
 	return retVal
+
+# bind test methods dynamically :-)
+def bindTestMethods(self):
+	if self.blenderType == "object":
+		self.getNodeLocWS = self.__getObjectLocWS
+		self.getNodeRotWS = self.__getObjectRotWS
+	elif self.blenderType == "bone":
+		self.getNodeLocWS = self.__getBoneLocWS
+		self.getNodeRotWS = self.__getBoneRotWS
 
 
 # binds the above methods to the nodeInfo class imported from DtsSceneInfo.py.
 def bindDynamicMethods():
-	new.instancemethod(initWSTransformData, None, initWSTransformData)
-	nodeInfoClass.__dict__['initWSTransformData'] = initWSTransformData
-	new.instancemethod(initPSTransformData, None, initPSTransformData)
-	nodeInfoClass.__dict__['initPSTransformData'] = initPSTransformData
-	new.instancemethod(__calcNodeDefPosPS, None, nodeInfoClass)
-	nodeInfoClass.__dict__['__calcNodeDefPosPS'] = __calcNodeDefPosPS
-	new.instancemethod(__calcNodeDefRotPS, None, nodeInfoClass)
-	nodeInfoClass.__dict__['__calcNodeDefRotPS'] = __calcNodeDefRotPS
-	new.instancemethod(__calcBoneRestPosWS, None, nodeInfoClass)
-	nodeInfoClass.__dict__['__calcBoneRestPosWS'] = __calcBoneRestPosWS
-	new.instancemethod(__calcBoneRestRotWS, None, nodeInfoClass)
-	nodeInfoClass.__dict__['__calcBoneRestRotWS'] = __calcBoneRestRotWS
-
 	new.instancemethod(__getNodeRestScale, None, nodeInfoClass)
 	nodeInfoClass.__dict__['__getNodeRestScale'] = __getNodeRestScale
-	
 	new.instancemethod(__getBoneLocWS, None, nodeInfoClass)
 	nodeInfoClass.__dict__['__getBoneLocWS'] = __getBoneLocWS
 	new.instancemethod(__getBoneRotWS, None, nodeInfoClass)
@@ -257,31 +159,269 @@ def bindDynamicMethods():
 	nodeInfoClass.__dict__['__getObjectRotWS'] = __getObjectRotWS
 	new.instancemethod(__getObjectScale, None, nodeInfoClass)
 	nodeInfoClass.__dict__['__getObjectScale'] = __getObjectScale
-	new.instancemethod(getNodeLocWS, None, nodeInfoClass)
-	nodeInfoClass.__dict__['getNodeLocWS'] = getNodeLocWS
-	new.instancemethod(getNodeRotWS, None, nodeInfoClass)
-	nodeInfoClass.__dict__['getNodeRotWS'] = getNodeRotWS
+	#new.instancemethod(getNodeLocWS, None, nodeInfoClass)
+	#nodeInfoClass.__dict__['getNodeLocWS'] = getNodeLocWS
+	#new.instancemethod(getNodeRotWS, None, nodeInfoClass)
+	#nodeInfoClass.__dict__['getNodeRotWS'] = getNodeRotWS
 	new.instancemethod(getNodeScale, None, nodeInfoClass)
 	nodeInfoClass.__dict__['getNodeScale'] = getNodeScale
+	new.instancemethod(bindTestMethods, None, nodeInfoClass)
+	nodeInfoClass.__dict__['bindTestMethods'] = bindTestMethods
+	new.instancemethod(initRestScaleData, None, nodeInfoClass)
+	nodeInfoClass.__dict__['initRestScaleData'] = initRestScaleData
 
 
-# --------- Class that stores all static data internally so we only have to get it once ----------
-class DtsPoseUtilClass:
-	'''
+
+# -------------------------------------------------------------------------------------
+# stand-alone functions (for now)
+# These functions represent an extreme workaround to the problem of blender matrices
+# that are pre-gimbal-locked when non-uniform scaling of objects or bones is present.
+# This is obviously not the prefered solution, as it could potentially lead to data
+# loss, but, the problem is so pervasive that no other solution currently seems possible.
+# 
+
+# find Ipo objects with non-defualt (1,1,1) scales.
+
+
+def getScaledIpoNames():
+	retVal = []
+	ipos = Blender.Ipo.Get()
+	for ipo in ipos:		
+		ipoName = ipo.name
+		
+		# determine IPO type
+		if Blender.Ipo.PO_SCALEX in ipo.curveConsts.values():
+			curveConsts = [Blender.Ipo.PO_SCALEX, Blender.Ipo.PO_SCALEY, Blender.Ipo.PO_SCALEZ]
+		elif Blender.Ipo.OB_SCALEX in ipo.curveConsts.values():
+			curveConsts = [Blender.Ipo.OB_SCALEX, Blender.Ipo.OB_SCALEY, Blender.Ipo.OB_SCALEZ]
+		else:
+			# ipo is not of interest
+			continue
+
+		# we've got an object or pose IPO
+		
+		# calc range that we need to check
+		lowest = 1000000 # one million frames should be enough for anyone :-)
+		highest = -1000000
+		for i in range(0, len(curveConsts)):
+			if ipo[curveConsts[i]] == None: continue
+			startPoint = ipo[curveConsts[i]].bezierPoints[0].pt[0]
+			endPoint = ipo[curveConsts[i]].bezierPoints[len(ipo[curveConsts[i]].bezierPoints)-1].pt[0]
+			if startPoint < lowest: lowest = startPoint
+			if endPoint > highest: highest = endPoint
+			
+		# check every frame in range		
+		for fr in range(int(round(lowest)), int(round(highest)+2)):
+
+			try: curveValX = ipo[curveConsts[0]][fr]
+			except: curveValX = None
+			try: curveValY = ipo[curveConsts[1]][fr]
+			except: curveValY = None
+			try: curveValZ = ipo[curveConsts[2]][fr]
+			except: curveValZ = None
+			
+			if curveValX == None: curveValX = 1.0
+			if curveValY == None: curveValY = 1.0
+			if curveValZ == None: curveValZ = 1.0
+			scaleVec = Vector(curveValX, curveValY, curveValZ)
+
+			if scaleVec.eqDelta(Vector(1.0,1.0,1.0), 0.001):
+				continue
+			else:
+				# we've got a non-default scale so
+				# store off the name of the IPO
+				if not ipoName in retVal: retVal.append(ipoName)
+				break
+
+	return retVal
+
+		
+
+# save scales from every pose and object ipo in the scene
+# returns a nested dict containing all values needed to recreate the
+# original curves.
+def saveIpoScales(scaledIpoNames):
+	savedScales = {}
+	for ipoName in scaledIpoNames:		
+		savedScales[ipoName] = {}
+		savedScales[ipoName]['X'] = {}
+		savedScales[ipoName]['X']['vec'] = []
+		savedScales[ipoName]['X']['ht'] = []
+		savedScales[ipoName]['Y'] = {}
+		savedScales[ipoName]['Y']['vec'] = []
+		savedScales[ipoName]['Y']['ht'] = []
+		savedScales[ipoName]['Z'] = {}
+		savedScales[ipoName]['Z']['vec'] = []
+		savedScales[ipoName]['Z']['ht'] = []
+		
+		ipo = Blender.Ipo.Get(ipoName)
+		
+		# determine ipo type
+		if Blender.Ipo.PO_SCALEX in ipo.curveConsts.values():
+			savedScales[ipoName]['type'] = 'object'
+			curveConsts = [Blender.Ipo.PO_SCALEX, Blender.Ipo.PO_SCALEY, Blender.Ipo.PO_SCALEZ]
+		elif Blender.Ipo.OB_SCALEX in ipo.curveConsts.values():
+			savedScales[ipoName]['type'] = 'pose'
+			curveConsts = [Blender.Ipo.OB_SCALEX, Blender.Ipo.OB_SCALEY, Blender.Ipo.OB_SCALEZ]
+		else:
+			# panic and bail
+			print "This should never happen! Possible data loss!"
+			# todo - bail
+
+		# save off knot points and handle types
+		if ipo[curveConsts[0]] != None:
+			savedScales[ipoName]['extendType'] = ipo[curveConsts[0]].extend
+			savedScales[ipoName]['interpolationMode'] = ipo[curveConsts[0]].interpolation
+			for point in ipo[curveConsts[0]].bezierPoints:
+				savedScales[ipoName]['X']['vec'].append(point.vec)
+				savedScales[ipoName]['X']['ht'].append(point.handleTypes)
+
+		if ipo[curveConsts[1]] != None:
+			savedScales[ipoName]['extendType'] = ipo[curveConsts[1]].extend
+			savedScales[ipoName]['interpolationMode'] = ipo[curveConsts[1]].interpolation
+			for point in ipo[curveConsts[1]].bezierPoints:
+				savedScales[ipoName]['Y']['vec'].append(point.vec)
+				savedScales[ipoName]['Y']['ht'].append(point.handleTypes)
+				print "point.handleTypes =", point.handleTypes
+
+		if ipo[curveConsts[2]] != None:
+			savedScales[ipoName]['extendType'] = ipo[curveConsts[2]].extend
+			savedScales[ipoName]['interpolationMode'] = ipo[curveConsts[2]].interpolation
+			for point in ipo[curveConsts[2]].bezierPoints:
+				savedScales[ipoName]['Z']['vec'].append(point.vec)
+				savedScales[ipoName]['Z']['ht'].append(point.handleTypes)		
+	return savedScales
+
+
+
+# removes all scale keys/channels from all IPOs in the scene.
+def removeIpoScales(scaledIpoNames):
+
+	for ipoName in scaledIpoNames:
+		ipo = Blender.Ipo.Get(ipoName)
+		# determine ipo type
+		if Blender.Ipo.PO_SCALEX in ipo.curveConsts.values():
+			curveConsts = [Blender.Ipo.PO_SCALEX, Blender.Ipo.PO_SCALEY, Blender.Ipo.PO_SCALEZ]
+		elif Blender.Ipo.OB_SCALEX in ipo.curveConsts.values():
+			curveConsts = [Blender.Ipo.OB_SCALEX, Blender.Ipo.OB_SCALEY, Blender.Ipo.OB_SCALEZ]	
+		# remove scale ipos
+		try:ipo[curveConsts[0]] = None
+		except: pass
+		try:ipo[curveConsts[1]] = None
+		except: pass
+		try:ipo[curveConsts[2]] = None
+		except: pass
 	
-	DtsPoseUtilClass
+	# loop through each object in the scene and clear its scale if it uses an IPO in our list
+	for ob in Blender.Scene.GetCurrent().objects:
+		if ob.ipo != None:
+			if ob.ipo.name in scaledIpoNames:
+				ob.SizeX = 1.0
+				ob.SizeY = 1.0
+				ob.SizeZ = 1.0
 	
-	todo - description	
-	
-	
-	'''
-	def __init__(self, prefs):
-		gc.enable()
-		# bind dynamic methods to nodeInfoClass
-		bindDynamicMethods()
+	# clear bone scales as well
+	for armOb in filter(lambda x: x.type == 'Armature', Blender.Object.Get()):
+		tempPose = armOb.getPose()
+		for poseBone in tempPose.bones.values():
+			# reset the bone's transform
+			poseBone.quat = bMath.Quaternion().identity()
+			poseBone.size = bMath.Vector(1.0, 1.0, 1.0)
+			poseBone.loc = bMath.Vector(0.0, 0.0, 0.0)
+		# update the pose.
+		tempPose.update()
+
+
+
+
+# restores all scale keys/channels that were previously saved and removed
+def restoreIpoScales(ipoScales):
+
+	for ipoName in ipoScales.keys():
+		
+		ipo = Blender.Ipo.Get(ipoName)
+		# determine type
+		ipoType = ipoScales[ipoName]['type']
+		if ipoType == 'object':
+			curveConsts = [Blender.Ipo.OB_SCALEX, Blender.Ipo.OB_SCALEY, Blender.Ipo.OB_SCALEZ]
+			curveNames = ['ScaleX', 'ScaleY', 'ScaleZ']
+		elif ipoType == 'pose':
+			curveConsts = [Blender.Ipo.PO_SCALEX, Blender.Ipo.PO_SCALEY, Blender.Ipo.PO_SCALEZ]
+			curveNames = ['SizeX', 'SizeY', 'SizeZ']
+			
+		# re-create curves
+		if len(ipoScales[ipoName]['X']['vec']) > 0:
+			ipo.addCurve(curveNames[0])
+			ipo[curveConsts[0]].extend = ipoScales[ipoName]['extendType']
+			ipo[curveConsts[0]].interpolation = ipoScales[ipoName]['interpolationMode']
+		if len(ipoScales[ipoName]['Y']['vec']) > 0:
+			ipo.addCurve(curveNames[1])
+			ipo[curveConsts[1]].extend = ipoScales[ipoName]['extendType']
+			ipo[curveConsts[1]].interpolation = ipoScales[ipoName]['interpolationMode']
+		if len(ipoScales[ipoName]['Z']['vec']) > 0:
+			ipo.addCurve(curveNames[2])
+			ipo[curveConsts[2]].extend = ipoScales[ipoName]['extendType']
+			ipo[curveConsts[2]].interpolation = ipoScales[ipoName]['interpolationMode']
+
+		# add points
+		i = 0
+		for point in ipoScales[ipoName]['X']['vec']:
+			knot = point[1]
+			ipo[curveConsts[0]].append((knot[0], knot[1]))
+			point = ipo[curveConsts[0]].bezierPoints[len(ipo[curveConsts[0]].bezierPoints)-1]
+			point.handleTypes = ipoScales[ipoName]['X']['ht'][i]
+			point.vec = ipoScales[ipoName]['X']['vec'][i]
+			i += 1
+		i = 0
+		for point in ipoScales[ipoName]['Y']['vec']:
+			knot = point[1]
+			ipo[curveConsts[1]].append((knot[0], knot[1]))
+			point = ipo[curveConsts[1]].bezierPoints[len(ipo[curveConsts[1]].bezierPoints)-1]
+			point.handleTypes = ipoScales[ipoName]['Y']['ht'][i]
+			point.vec = ipoScales[ipoName]['Y']['vec'][i]
+			i += 1
+		i = 0
+		for point in ipoScales[ipoName]['Z']['vec']:
+			knot = point[1]
+			ipo[curveConsts[2]].append((knot[0], knot[1]))
+			point = ipo[curveConsts[2]].bezierPoints[len(ipo[curveConsts[2]].bezierPoints)-1]
+			point.handleTypes = ipoScales[ipoName]['Z']['ht'][i]
+			point.vec = ipoScales[ipoName]['Z']['vec'][i]
+			i += 1
+		
+		# recalc scale curves		
+		try: ipo[curveConsts[0]].recalc()
+		except: pass
+		try: ipo[curveConsts[1]].recalc()
+		except: pass
+		try: ipo[curveConsts[2]].recalc()
+		except: pass
+
+
+
+# -------------------------------------------------------------------------------------
+
+# --------- Class that dumps node transform data for any given frame ----------
+#
+# What do we need from this class?
+#
+# 1. gets base transforms for all nodes; total transformations in parent space.  for
+#    use in setting up default dts node positions
+# 2. gets delta transforms from a given set of base transforms (for use in blend animations)
+# 3. 
+#
+class NodeTransformUtil:
+	def __init__(self):
 		# get dictionaries
 		self.nodes = DtsGlobals.SceneInfo.nodes
 		self.armatures = DtsGlobals.SceneInfo.armatures
+
+		# bind dynamic methods to nodeInfoClass
+		bindDynamicMethods()
+
+		# bind test methods - todo - rename these
+		for ni in self.nodes.values():
+			ni.bindTestMethods()
 
 		# get poses for all armatures in the scene
 		armPoses = {}
@@ -289,245 +429,207 @@ class DtsPoseUtilClass:
 			arm = armNI.getBlenderObj()
 			armPoses[arm.name] = arm.getPose()
 
-		self.__initTransforms(armPoses)
-		
-		#print "-------------------------------------"
-		#for nic in filter(lambda x: x.getGoodNodeParentNI()==None, self.nodes.values()):
-		#	self.__printTree(nic, 0)
-		#print "-------------------------------------"
+		# init default scales - need these first, chicken and egg.
+		for ni in self.nodes.values():
+			ni.initRestScaleData(armPoses)
+
+
+
+	# ******************
+	# test
+	def dumpReferenceFrameTransforms(self, orderedNodeList, refFrame, twoPass=True):
+		# dump world space transforms, use raw scale values
+		transformsWS = self.dumpNodeTransformsWS(orderedNodeList, refFrame, refFrame+1, twoPass, False)
+		# get parent space tranforms without correcting scaled offsets (bake scale into offsets)
+		transformsPS = self.worldSpaceToParentSpace(orderedNodeList, transformsWS, refFrame, refFrame+1, False)
+
+		return transformsPS[0]
+
+	def dumpFrameTransforms(self, orderedNodeList, startFrame, endFrame, twoPass=True):
+		# dump world space transforms, use delta scale values
+		transformsWS = self.dumpNodeTransformsWS(orderedNodeList, startFrame, endFrame, twoPass, True)
+		# get parent space tranforms, correcting scaled offsets
+		transformsPS = self.worldSpaceToParentSpace(orderedNodeList, transformsWS, startFrame, endFrame, True)
+
+		return transformsPS
 	
-	def __initTransforms(self, armPoses):
-		# first init armatures
-		for node in self.armatures.values():
-			node.initWSTransformData(armPoses)
 
-		# start with nodes at the root of the tree
-		for node in filter(lambda x: x.getGoodNodeParentNI() == None, self.nodes.values()):
-			node.initWSTransformData(armPoses)
-			# add child trees
-			self.__walkTreeInitTransforms(None, armPoses)
-			# finally init PS transform data
-			node.initPSTransformData(armPoses)
+	# ******************
+
+	# Dump raw blender worldspace matrices for all nodes in the orderedNodeList.
+	# Returns a nested list containing a list node matrices for each frame in
+	# the specified order
+	# DESIGNED FOR SPEED
+	def dumpNodeTransformsWS(self, orderedNodeList, startFrame, endFrame, twoPass=True, wantDeltaScale=True):
+		#print "wantDeltaScale=",wantDeltaScale
+		transforms = []
 		
+		# build lists so we don't have to keep doing it.
+		orderedNIList = []
+		for nname in orderedNodeList:
+			orderedNIList.append(self.nodes[nname])
+		
+		if twoPass:
+			# 1st pass - get loc and scale for the given nodes on every frame in the specified range
+			for fr in range(startFrame, endFrame):
+				
+				# new frame
+				transforms.append([])
+				frameTransforms = transforms[-1]
 
-	def __walkTreeInitTransforms(self, node, armPoses):
-		for node in filter(lambda x: x.getGoodNodeParentNI() == node, self.nodes.values()):
-			node.initWSTransformData(armPoses)
-			# add child trees
-			self.__walkTreeInitTransforms(node, armPoses)
-			# finally init PS transform data
-			node.initPSTransformData(armPoses)
+				# set the current frame
+				Blender.Set('curframe',fr)
 
+				# get poses for all armatures in the scene
+				armPoses = {}
+				for armNI in self.armatures.values():
+					arm = armNI.getBlenderObj()
+					armPoses[arm.name] = arm.getPose()
 
-	# for debugging
-	def __printTree(self, ni, indent=0):
-		pad = ""
-		for i in range(0, indent):
-			pad += " "
-		print pad+"|"
-		print pad+"Node:", ni.dtsNodeName
-		try:
-			nn = ni.getGoodNodeParentNI().dtsNodeName
-			print pad+"Parent:", nn
-		except: print pad+"No Parent."
-		indent += 3
-		for nic in filter(lambda x: x.getGoodNodeParentNI()==ni, self.nodes.values()):
-			self.__printTree(nic, indent)
+				# get loc and scale for each node
+				for ni in orderedNIList:
+					frameTransforms.append([ni.getNodeLocWS(armPoses), ni.getNodeScale(armPoses, wantDeltaScale)])
+					
+
+			# save and clear scale IPOs
+			# get the names of IPOs with scale keys
+			scaledIpoNames = getScaledIpoNames()
+			# store scale IPOs
+			savedScales = saveIpoScales(scaledIpoNames)
+			# remove the scale IPOs
+			removeIpoScales(scaledIpoNames)
 			
 
-	# --------- Localspace getters ----------------
+			# 2nd pass - get rot for the given nodes on every frame in the specified range
+			# 1st pass - get loc and scale for the given nodes on every frame in the specified range
+			for fr in range(startFrame, endFrame):
+				
+				# get existing frame
+				frameTransforms = transforms[fr - startFrame]
 
+				# set the current frame
+				if Blender.Get('curframe') == fr: Blender.Set('curframe',fr+1)
+				Blender.Set('curframe',fr)
 
-	# *****
-	# This is our only exposed public method.
-	def getNodeLocRotScaleLS(self, nodeName, poses):
-		loc = None
-		rot = None
-		if self.nodes[nodeName].getGoodNodeParentNI() == None:
-			loc = self.getOrphanNodeLocLS(nodeName, poses)
-			rot = self.getOrphanNodeRotLS(nodeName, poses)			
+				# get poses for all armatures in the scene
+				armPoses = {}
+				for armNI in self.armatures.values():
+					arm = armNI.getBlenderObj()
+					armPoses[arm.name] = arm.getPose()
+
+				# get rot for each node
+				i = 0
+				for ni in orderedNIList:
+					frameTransforms[i].append(ni.getNodeRotWS(armPoses))
+					i += 1
+
+			# restore scale IPOs
+			restoreIpoScales(savedScales)
+			
 		else:
-			loc = self.getNodeLocLS(nodeName, poses)
-			rot = self.getNodeRotLS(nodeName, poses)
-		scale = self.nodes[nodeName].getNodeScale(poses)
-		return loc, rot, scale
-	# *****
+			# one pass - get loc, scale, and rot for the given nodes on every frame in the specified range
+			for fr in range(startFrame, endFrame):
+				
+				# new frame
+				transforms.append([])
+				frameTransforms = transforms[-1]
+
+				# set the current frame
+				Blender.Set('curframe',fr)
+
+				# get poses for all armatures in the scene
+				armPoses = {}
+				for armNI in self.armatures.values():
+					arm = armNI.getBlenderObj()
+					armPoses[arm.name] = arm.getPose()
+
+				# get loc and scale for each node
+				for ni in orderedNIList:
+					frameTransforms.append([ni.getNodeLocWS(armPoses), ni.getNodeScale(armPoses, wantDeltaScale), ni.getNodeRotWS(armPoses)])
+
+		return transforms
 	
-	# -----  everything below this point is private (pretend it is, anyway)
-	
-	# TESTED
-	def getNodeLocLS(self, nodeName, poses):
-		node = self.nodes[nodeName]
-		parent = node.getGoodNodeParentNI()
-		if parent == None: raise ValueError
-		# get the bone's location in parent space
-		whereIsBonePS = self.getNodePosPS(nodeName, poses)
-		# get the bone's default location in parent space
-		# ( This is where the bone should be if it has not been explicitly moved or
-		# effected by a constraint.)
-		whereShouldNodeBePS = node.defPosPS
-		# subtract out the position that the bone will end up in due to FK transforms
-		# from the parent bone, as these are already taken care of due to the nodes being
-		# in the parent's local space.
-		whereIsBonePS = whereIsBonePS - whereShouldNodeBePS
-		return whereIsBonePS
-
-	# Get the rotation from rest of a connected bone in the bone's local space.
-	# TESTED
-	def getNodeRotLS(self, nodeName, poses):
-		node = self.nodes[nodeName]
-		parent = node.getGoodNodeParentNI()
-		if parent == None: raise ValueError
-		# get the default rotation of the bone in parent space, this
-		# is what the bone's rotation should be if it has not been
-		# explicitly rotated or affected by a constraint.
-		bDefRotPS = node.defRotPS.inverse()
-		# get the current rotation of the bone in parent space.
-		bCurRotPS = self.getNodeRotPS(nodeName, poses)
-		bRotLS = bCurRotPS.inverse() * bDefRotPS
-		return bRotLS.inverse()
-
-
-	# orphan bone translations are defined in worldspace
-	# relative to the default postion of the bone.
-	# TESTED
-	def getOrphanNodeLocLS(self, nodeName, poses):
-		node = self.nodes[nodeName]
-		# get the rest position of the bone
-		bRestPos = node.restPosWS
-		# get the bone's current position
-		bCurPos = node.getNodeLocWS(poses)
-		# subtract the rest postion from the current position to get
-		# the bone's local movement
-		bMovement = bCurPos - bRestPos
-		return bMovement
-
-	# get the difference between an orphan bone's rest rotation
-	# and it's current rotation; this is the bone's localspace
-	# rotation.
-	# TESTED
-	def getOrphanNodeRotLS(self, nodeName, poses):
-		node = self.nodes[nodeName]
-		# get the bone's rest rotation in worldspace
-		bRestRot = node.restRotWS
-		# get the bone's worldspace rotation
-		bCurRot = node.getNodeRotWS(poses)
-		# get the differnce between the two, worldspace factors out
-		bRotDelta = (bCurRot * bRestRot.inverse()).inverse()
-		return bRotDelta
-
-
-	# --------- Parentspace getters ----------------
-
-	# determine the position of the bone in parentSpace
-	# (absolute parent space position, not relative to default position of the bone)
-	# TESTED
-	def getNodePosPS(self, nodeName, poses):
-		node = self.nodes[nodeName]
-		parent = node.getGoodNodeParentNI()
-		if parent == None: raise ValueError
-		# find the parent's location in worldspace
-		whereIsParentWS = parent.getNodeLocWS(poses)
-		# find the child's location in worldspace
-		whereIsChildWS = node.getNodeLocWS(poses)
-		# subtract out the parent's location
-		offsetFromParent = whereIsChildWS - whereIsParentWS
-		# remove scale from the offset, as best we can.
-		offsetScaleRemoved = self.correctScaledOffset(offsetFromParent, node, poses)
-		# determine the transform needed to get to the same point in the parent's space.
-		whereIsBonePS = parent.getNodeRotWS(poses).inverse().apply(offsetScaleRemoved)
-		return whereIsBonePS
-
-	# walk back up the node tree and build a list of scales and transforms for each bone
-	# that has it's scale explicitly set to a non (1,1,1) value.  We then rotate the passed in
-	# offset into each space and apply the corresponding inverted scale.  The end result is
-	# an offset that has all scale and most importantly, worldspace skew effects removed.
-	def correctScaledOffset(self, offsetIn, node, poses):
-		# inverse scales
-		scaleListLS = []
-		# rotations (not inverse)
-		rotListWS = []
-
-		# set initial parent
-		parent = node.parentNI
-		# go backwards through the hierarchy and build a list of scale and rotation operations (both inverse)
-		while parent != None:
-			rot = parent.getNodeRotWS(poses)
-			scaleRaw = parent.getNodeScale(poses)
-			scaleInv = Vector(1.0/scaleRaw[0], 1.0/scaleRaw[1], 1.0/scaleRaw[2])
-			# check to see if all members are within delta of one, if so, don't
-			# even bother adding them to the list since it'll only throw off accuracy
-			if scaleRaw.eqDelta( Vector(1.0,1.0,1.0), 0.008 ):				
-				parent = parent.parentNI
-				continue
-			scaleListLS.append(scaleInv)
-			rotListWS.append(rot)
-			parent = parent.parentNI
-			
-		# reverse both lists so inverse scales are applied in correct order
-		# note - this *does* matter since scales are applied in parent space
-		scaleListLS.reverse()
-		rotListWS.reverse()
+	# Convert worldspace loc and rot transforms to parent space
+	def worldSpaceToParentSpace(self, orderedNodeList, transformsWS, startFrame, endFrame, correctScaledTransforms=True):
 		
-		# apply the inverse scales in the correct space
-		offsetAccum = offsetIn		
-		for i in range(0, len(scaleListLS)):
-			scaleInv = scaleListLS[i]
-			rot = rotListWS[i]
+		transformsPS = []
+
+		# build lists so we don't have to keep doing it.
+		orderedNIList = []
+		i = 0
+		for nname in orderedNodeList:
+			orderedNIList.append(self.nodes[nname])
+			self.nodes[nname].tempIdx = i
+			i += 1
+			
+		# breadcrumb parent stack, saves on hierarchy lookups
+		parentStacks = []
+		for ni in orderedNIList:
+			parentStacks.append([])			
+			pNI = ni.getGoodNodeParentNI()
+			while pNI != None:
+				parentStacks[-1].append(pNI.tempIdx)
+				pNI = pNI.getGoodNodeParentNI()
+			parentStacks[-1].reverse()
+		
+		# go through all frames and convert to parent space.
+		for fr in range(startFrame, endFrame):
+			# get WS frame transforms
+			frameTransformsWS = transformsWS[fr - startFrame]
+			
+			# new frame
+			transformsPS.append([])
+			frameTransformsPS = transformsPS[-1]
+			
+			# convert transforms one node at a time
+			i = 0 
+			for ni in orderedNIList:
+				locWS = frameTransformsWS[i][0]
+				scale = frameTransformsWS[i][1]
+				rotWS = frameTransformsWS[i][2]				
+				pNI = ni.getGoodNodeParentNI()
+				if pNI == None:
+					# use worldspace loc and rot as-is
+					frameTransformsPS.append([locWS, scale, rotWS])
+				else:
+					pLocWS = frameTransformsWS[pNI.tempIdx][0]
+					pRotWS = frameTransformsWS[pNI.tempIdx][2]
+					if correctScaledTransforms: locPS = pRotWS.inverse().apply(self.correctScaledOffset(locWS - pLocWS, parentStacks[i], frameTransformsWS))
+					else: locPS = pRotWS.inverse().apply(locWS - pLocWS)					
+					rotPS = rotWS * pRotWS.inverse()
+					frameTransformsPS.append([locPS, scale, rotPS])
+				i += 1
+
+		return transformsPS
+	
+	
+
+	# -------------------------------------------------------------------
+	# functions below this point are private, for internal use only
+	def correctScaledOffset(self, offsetIn, parentStack, frameTransformsWS):
+
+		offsetAccum = offsetIn
+		for pIdx in parentStack:
+			scale = frameTransformsWS[pIdx][1]			
+			# this early out is a big win!
+			if scale.eqDelta(Vector(1.0, 1.0, 1.0), 0.02): continue
+			# get parent rotation and inverse rotation
+			rot = frameTransformsWS[pIdx][2]
 			rotInv = rot.inverse()
 			# rotate the offset into parent bone's space 
-			offsetAccum = rot.apply(offsetAccum)
-			# remove the parent bone's scale from the offset.
-			offsetAccum = Vector(offsetAccum[0] * scaleInv[0], offsetAccum[1] * scaleInv[1], offsetAccum[2] * scaleInv[2])
-			# rotate back into worldspace for next iteration :-)
 			offsetAccum = rotInv.apply(offsetAccum)
-
-		# return the calculated offset		
-		offsetOut = offsetAccum
-		return offsetOut
+			# remove the parent bone's scale from the offset.
+			offsetAccum = Vector(offsetAccum[0] * (1.0/scale[0]), offsetAccum[1] * (1.0/scale[1]), offsetAccum[2] * (1.0/scale[2]))
+			# rotate back into worldspace for next iteration :-)
+			offsetAccum = rot.apply(offsetAccum)
+		
+		return offsetAccum
 		
 
-	# Get a non-orphan Node's rotation in parent space
-	# TESTED
-	def getNodeRotPS(self, nodeName, poses):
-		node = self.nodes[nodeName]
-		parent = node.getGoodNodeParentNI()
-		if parent == None: raise ValueError
-		# get the node's rotation in worldspace
-		nodeRotWS = node.getNodeRotWS(poses)
-		# get the parent node's rotation in worldspace
-		parentNodeRotWS = parent.getNodeRotWS(poses)
-		# get the difference
-		bRotPS = nodeRotWS * parentNodeRotWS.inverse()
-		return bRotPS.inverse()
 
 
 
-
-
-
-		
-	def toTorqueVec(self, v):
-		return Vector(v[0], v[1], v[2])
-
-	def toBlenderVec(self, v):
-		return bMath.Vector(v[0], v[1], v[2])
-
-	def toTorqueQuat(self, q):
-		q = q.inverse().normalize()
-		return Quaternion(q[1],q[2],q[3],q[0])
-
-	def toBlenderQuat(self, q):
-		q = q.inverse().normalize()		
-		return bMath.Quaternion(q[3],q[0],q[1],q[2])
-
-	
-
-
-# --------- test functions ----------------
-
-
-
+# --------- Utility functions -------------
 def toTorqueVec(v):
 	return Vector(v[0], v[1], v[2])
 	
@@ -542,7 +644,7 @@ def toBlenderQuat(q):
 	return bMath.Quaternion(q[3],q[0],q[1],q[2])
 
 
-
+# --------- test functions ----------------
 def putEmptyAt(loc):
 	scene = Blender.Scene.GetCurrent()
 	loc = toBlenderVec(loc)
