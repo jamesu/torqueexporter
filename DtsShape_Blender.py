@@ -102,11 +102,16 @@ class BlenderShape(DtsShape):
 		self.externalSequences = []
 		self.scriptMaterials = []
 		
+		# temp container that holds the raw rest transforms, including default scale
+		self.restTransforms = None
+		
 		# set rest frame before initializing poseUtil
 		Blender.Set('curframe', prefs['RestFrame'])
+
 		# this object is the interface through which we interact with the
 		# pose module and the blender armature system.		
-		self.poseUtil = DtsPoseUtil.DtsPoseUtilClass(prefs)
+		#self.poseUtil = DtsPoseUtil.DtsPoseUtilClass(prefs)
+		self.transformUtil = DtsPoseUtil.NodeTransformUtil()
 		
 		# extra book keeping for armature modifier warning (see long note/explanation in Dts_Blender.py)
 		self.badArmatures = []
@@ -141,6 +146,7 @@ class BlenderShape(DtsShape):
 	# Adds a mesh to a dts object
 	def addMesh(self, o, masterObject):
 		hasArmatureDeform = False
+		armParentDeform = False
 		# Check for armature modifier
 		for mod in o.modifiers:
 			if mod.type == Blender.Modifier.Types.ARMATURE:
@@ -149,6 +155,7 @@ class BlenderShape(DtsShape):
 		try:
 			if o.parentType == Blender.Object.ParentTypes['ARMATURE']:
 				hasArmatureDeform = True
+				armParentDeform = True
 		except: pass
 		# does the object have geometry?
 
@@ -157,7 +164,10 @@ class BlenderShape(DtsShape):
 		except AttributeError: hasMultiRes = False
 
 		if len(o.modifiers) != 0 or hasMultiRes:
-			hasModifiers = True
+			if len(o.modifiers) == 1 and not armParentDeform:
+				hasModifiers = False
+			else:
+				hasModifiers = True
 		else:
 			hasModifiers = False
 
@@ -177,11 +187,62 @@ class BlenderShape(DtsShape):
 				temp_obj.link(mesh_data)
 			except: 
 				#todo - warn when we couldn't get mesh data?
-				pass			
+				pass
 
+		elif hasArmatureDeform and not hasModifiers:
+			originalMesh = o.getData(False,True)
+			
+			# get vertex weight info
+			influences = {}
+			for v in originalMesh.verts:
+				influences[v.index] = originalMesh.getVertexInfluences(v.index)
+
+			groups = originalMesh.getVertGroupNames()
+
+			
+			# -----------------------------
+			# apply armature modifier
+			try:
+				temp_obj = Blender.Object.Get("DTSExpObj_Tmp")
+			except:
+				temp_obj = Blender.Object.New("Mesh", "DTSExpObj_Tmp")
+			try:
+				mesh_data = Blender.Mesh.Get("DTSExpMshObj_Tmp")
+			except:
+				mesh_data = Blender.Mesh.New("DTSExpMshObj_Tmp")
+			# try to get the raw display data
+			try:
+				mesh_data.getFromObject(o)
+				temp_obj.link(mesh_data)
+			except: 
+				#todo - warn when we couldn't get mesh data?
+				pass			
+			# -----------------------------
+			
+			# remove any existing groups if we are recycling a datablock
+			
+			if len(mesh_data.getVertGroupNames()) != 0:
+				for group in mesh_data.getVertGroupNames():
+					mesh_data.removeVertsFromGroup(group)
+			mesh_data.update()
+			
+
+			# add vertex weights back in			
+			existingNames = mesh_data.getVertGroupNames()
+			for group in groups:
+				if not group in existingNames:
+					mesh_data.addVertGroup(group)
+				
+			for vIdx in influences.keys():
+				for inf in influences[vIdx]:
+					group, weight = inf
+					mesh_data.assignVertsToGroup(group, [vIdx], weight, Blender.Mesh.AssignModes.ADD)
+
+			
+			
 		# if we have armature deformation, or don't have any modifiers, get the mesh data the old fashon way
 		else:
-			mesh_data = o.getData(False,True);
+			mesh_data = o.getData(False,True)
 			temp_obj = None
 
 
@@ -296,6 +357,9 @@ class BlenderShape(DtsShape):
 	# Adds all meshes, detail levels, and dts objects to the shape.
 	# this should be called after nodes are added.
 	def addAllDetailLevels(self, dtsObjects, sortedDetailLevels):
+		# set current frame to rest frame
+		Blender.Set('curframe', self.preferences['RestFrame'])
+		
 		dtsObjList = dtsObjects.keys()
 		# add each detail level
 		for dlName in sortedDetailLevels:
@@ -599,19 +663,41 @@ class BlenderShape(DtsShape):
 		for arm in filter(lambda x: x.getType()=='Armature', Blender.Object.Get()):
 			self.addedArmatures.append(arm)
 		# get a list of ordered nodes by walking the poseUtil node tree.
-		nodeList = []
-		for nodeInfo in filter(lambda x: x.getGoodNodeParentNI() == None, self.poseUtil.nodes.values()):
+		
+		# add nodes in order
+		for nodeInfo in filter(lambda x: x.getGoodNodeParentNI() == None, self.transformUtil.nodes.values()):
 			self.addNodeTree(nodeInfo)
-	
-	# adds a node tree recursively.
-	# called by addAllNodes, not to be called externally.
+
+		# build an ordered list of node names
+		orderedNodeList = []
+		for nodeIndex in range(1, len(self.nodes)):
+                	orderedNodeList.append(self.sTable.get(self.nodes[nodeIndex].name))
+			
+		# dump node transforms for the rest frame
+		# TODO - off by one error in NodeTranform Util?
+		Blender.Set('curframe', 1)
+		self.restTransforms = self.transformUtil.dumpReferenceFrameTransforms(orderedNodeList, self.preferences['RestFrame'],True)
+
+		# Set up default translations and rotations for nodes.
+		i = 0
+		for nname in orderedNodeList:
+			pos = self.restTransforms[i][0]
+			rot = self.restTransforms[i][2]
+			self.defaultTranslations.append(pos)
+			self.defaultRotations.append(rot)
+			i += 1
+
+		
+
+	# adds a node tree to the ordered node list recursively.
+	# called by buildOrderedNodeList, not to be called externally.
 	def addNodeTree(self, nodeInfo, parentNodeIndex = -1):
 		if not nodeInfo.isBanned():
 			n = Node(self.sTable.addString(nodeInfo.dtsNodeName), parentNodeIndex)
-			pos = nodeInfo.defPosPS
-			rot = nodeInfo.defRotPS
-			self.defaultTranslations.append(pos)
-			self.defaultRotations.append(rot)
+			#pos = nodeInfo.defPosPS
+			#rot = nodeInfo.defRotPS
+			#self.defaultTranslations.append(pos)
+			#self.defaultRotations.append(rot)
 			try: n.armName = nodeInfo.armParentNI.dtsNodeName
 			except: n.armName = None
 			n.obj = nodeInfo.getBlenderObj()
@@ -620,10 +706,10 @@ class BlenderShape(DtsShape):
 			self.subshapes[0].numNodes += 1
 		else:
 			nodeIndex = parentNodeIndex
-		for nodeInfo in filter(lambda x: x.getGoodNodeParentNI() == nodeInfo, self.poseUtil.nodes.values()):
+		for nodeInfo in filter(lambda x: x.getGoodNodeParentNI() == nodeInfo, self.transformUtil.nodes.values()):
 			self.addNodeTree(nodeInfo, nodeIndex)
-		
-		
+
+	'''
 	# These three helper methods are used by getPoseTransform. They should probably be moved elsewhere.
 	def isRotated(self, quat):
 		delta = 0.0001
@@ -681,9 +767,9 @@ class BlenderShape(DtsShape):
 						sequence.has_ground = False # <- nope, no ground frames.
 						Torque_Util.dump_writeErr("Error: Could not get ground frames %d" % sequence.numGroundFrames)
 						Torque_Util.dump_writeln("  You must have an object named Bounds in your scene to export ground frames.")
+	'''
 
-
-	
+	'''	
 	# grab the pose transform of whatever frame we're currently at.  Frame must be set before calling this method.
 	def getPoseTransform(self, sequence, nodeIndex, frame_idx, poses, baseTransform=None, getRawValues=False):
 
@@ -850,9 +936,11 @@ class BlenderShape(DtsShape):
 		
 		del tempSequence
 		return baseTransforms
-		
+	'''
 	# Adds a generic sequence
 	def addSequence(self, seqName, seqPrefs, scene = None, action=None):
+
+
 
 		numFrameSamples = self.preferences.getSeqNumFrames(seqName)
 
@@ -901,10 +989,16 @@ class BlenderShape(DtsShape):
 		sequence.duration = seqPrefs['Duration']
 		
 		sequence.priority = seqPrefs['Priority']
+
+
 	
 		lastFrameRemoved = False
 		if ActionIsValid:
+			startTime = Blender.sys.time()
 			sequence, lastFrameRemoved = self.addNodeSeq(sequence, action, numFrameSamples, scene, seqPrefs)
+			endTime = Blender.sys.time()
+			print "Sequence export finished in:", str(endTime-startTime)		
+
 			# if we had to remove the last frame from a cyclic action, and the original action
 			# frame samples was the same as the overall number of frames for the sequence, adjust
 			# the overall sequence length.
@@ -916,6 +1010,9 @@ class BlenderShape(DtsShape):
 			sequence = self.addSequenceIFL(sequence, getNumIFLFrames(seqName, seqPrefs), seqPrefs)
 			
 		self.sequences.append(sequence)
+
+
+
 		
 		return sequence
 	
@@ -940,56 +1037,9 @@ class BlenderShape(DtsShape):
 		'''
 		
 
-		# Lets start off with the basic sequence
-		'''
-		sequence = Sequence(self.sTable.addString(action.getName()))
-		sequence.name = action.getName()
-		sequence.numTriggers = 0
-		sequence.firstTrigger = -1
-
-
-		# Make set of blank ipos and matters for current node
-		#sequence.ipo = []
-		sequence.frames = []
-		for n in self.nodes:
-			#sequence.ipo.append(0)
-			sequence.matters_translation.append(False)
-			sequence.matters_rotation.append(False)
-			sequence.matters_scale.append(False)
-			sequence.frames.append(0)
-
-		# Assign temp flags
-		sequence.has_loc = False
-		sequence.has_rot = False
-		sequence.has_scale = False
-		'''
-		
-		'''
-		# Figure out which nodes have IPO curves.  Need this to determine the number of keyframes; and
-		# possibly to force export of some channels where nothing actually moves but the user requires
-		# the transforms to be keyed in place for some reason.
-		nodeFound = False
-		nodeIndex = None
-		channels = action.getAllChannelIpos()
-		for channel_name in channels:
-			if channels[channel_name] == None or channels[channel_name].getNcurves() == 0: continue
-			nodeIndex = self.getNodeIndex(channel_name)
-			# Determine if this node is in the shape
-			if nodeIndex == None: continue
-			# Print informative sequence name if we found a node in the shape (first time only)
-			if not nodeFound:
-				Torque_Util.dump_writeln("   Action %s used, dumping..." % action.getName())
-			nodeFound = True
-			# Print informative track message
-			Torque_Util.dump_writeln("      Track: %s (node %d)" % (channel_name,nodeIndex))
-		del channels
-		'''
-
 		# Get a list of armatures that need to be checked in order to issue
 		# warnings regarding armature modifiers (see long note in Dts_Blender.py)
 		checkArmatureNIs = DtsGlobals.SceneInfo.getArmaturesOfConcern()
-		
-
 
 		# Add sequence flags
 		if seqPrefs['Blend']:
@@ -1007,17 +1057,6 @@ class BlenderShape(DtsShape):
 		#sequence.numKeyFrames = getNumFrames(action.getAllChannelIpos().values(), False)
 		sequence.numKeyFrames = numOverallFrames
 		
-		'''
-		# Calculate the raw number of action frames, from start frame to end frame, inclusive.
-		rawActFrames = (seqPrefs['Action']['EndFrame'] - seqPrefs['Action']['StartFrame']) + 1
-
-		# calc the interpolation increment
-		try: interpolateInc = float(rawActFrames-1.0) / float(seqPrefs['Action']['FrameSamples']-1.0)
-		except: interpolateInc = 1.0
-		
-		# make sure it's not less than 1
-		if interpolateInc < 1.0: interpolateInc = 1.0
-		'''
 		interpolateInc = 1
 
 		Torque_Util.dump_writeln("      Frames: %d " % numOverallFrames)
@@ -1027,8 +1066,6 @@ class BlenderShape(DtsShape):
 		else: sequence.firstGroundFrame = -1
 		
 		# this is the number of real action frames we are exporting.
-		#numFrameSamples = seqPrefs['Action']['FrameSamples']+1
-		#numFrameSamples = seqPrefs['FrameSamples']
 		numFrameSamples = numOverallFrames
 		
 		removeLast = False
@@ -1066,12 +1103,14 @@ class BlenderShape(DtsShape):
 			#	arm = self.addedArmatures[i]
 			#	refPoseAct.setActive(arm)
 			# Set the current frame in blender
-			Blender.Set('curframe', useFrame)
+			#Blender.Set('curframe', useFrame)
+			pass
+
 
 		# For normal animations, loop through each node and reset it's transforms.
 		# This avoids transforms carrying over from other action animations.
 		else:			
-			# need to cycle through ALL bones and reset the transforms.
+			# need to cycle through ALL bones and reset the transforms.			
 			for armOb in Blender.Object.Get():
 				if (armOb.getType() != 'Armature'): continue
 				tempPose = armOb.getPose()
@@ -1092,6 +1131,75 @@ class BlenderShape(DtsShape):
 		for nodeIndex in range(1, len(self.nodes)):
 			sequence.frames[nodeIndex] = []
 		
+		
+		
+
+		# **************************************************************************
+		# test code
+
+
+		# build ordered node list.
+		orderedNodeList = []
+		for nodeIndex in range(1, len(self.nodes)):
+                	orderedNodeList.append(self.sTable.get(self.nodes[nodeIndex].name))
+		
+		# get transforms for every frame in a big nested list.	
+		transforms = self.transformUtil.dumpFrameTransforms(orderedNodeList, seqPrefs['StartFrame'], seqPrefs['EndFrame'], True)
+		
+		# loop through each frame and transcribe transforms
+		for frameTransforms in transforms:
+			for nodeIndex in range(1, len(self.nodes)):
+				if isBlend:
+					baseTransform = baseTransforms[nodeIndex]
+				else:
+					baseTransform = None
+
+				loc, scale, rot = frameTransforms[nodeIndex-1]
+				sequence.frames[nodeIndex].append([loc,rot,scale])
+
+
+
+		# calculate matters
+		for nodeIndex in range(1, len(self.nodes)):
+			# get root transforms
+			rootLoc = self.defaultTranslations[nodeIndex]
+			rootRot = self.defaultRotations[nodeIndex]
+			
+			for fr in range(0, len(transforms)):
+				# check deltas from base transforms
+				if sequence.matters_translation[nodeIndex] == False:
+					if not rootLoc.eqDelta(transforms[fr][nodeIndex-1][0], 0.02):
+						#print "LOC detected:"
+						#print " rootLoc=", rootLoc
+						#print " loc    =", transforms[fr][nodeIndex-1][0]
+						sequence.matters_translation[nodeIndex] = True
+						sequence.has_loc = True
+				if sequence.matters_rotation[nodeIndex] == False:
+					if not rootRot.eqDelta(transforms[fr][nodeIndex-1][2], 0.02):
+						#print "ROT detected:"
+						#print " rootRot=", rootRot
+						#print " rot    =", transforms[fr][nodeIndex-1][2]
+						sequence.matters_rotation[nodeIndex] = True
+						sequence.has_rot = True
+				if sequence.matters_scale[nodeIndex] == False:
+					if not Vector(1.0, 1.0, 1.0).eqDelta(transforms[fr][nodeIndex-1][1], 0.02):
+						#print "Scale detected:"
+						#print " deltaScale=", transforms[fr][nodeIndex-1][1]
+						sequence.matters_scale[nodeIndex] = True
+						sequence.has_scale = True
+
+					
+		
+		#print len(transforms)	
+		#return sequence, False
+		
+		# **************************************************************************
+		
+
+
+		
+		'''
+
 		# loop through all of the exisitng action frames
 		for frame in range(0, numOverallFrames):
 			
@@ -1101,15 +1209,17 @@ class BlenderShape(DtsShape):
 			# add ground frames
 			self.addGroundFrame(sequence, curFrame, boundsStartMat)
 
+			
 			# This check relates to problems with armature modifiers,
 			# see long note in Dts_Blender.py.
-			for ni in checkArmatureNIs:
-				#transVec, quatRot, scaleVec = self.poseUtil.getNodeLocRotScaleLS(bonename, pose)
-				deltaRot = ni.restRotWS.inverse() * ni.getNodeRotWS(None)
-				deltaPos = ni.restPosWS - ni.getNodeLocWS(None)
-				if self.isTranslated(deltaPos) or self.isRotated(deltaRot):
-					if not ni in self.badArmatures:
-						self.badArmatures.append(ni)
+			#for ni in checkArmatureNIs:
+			#	#transVec, quatRot, scaleVec = self.poseUtil.getNodeLocRotScaleLS(bonename, pose)
+			#	deltaRot = ni.restRotWS.inverse() * ni.getNodeRotWS(None)
+			#	deltaPos = ni.restPosWS - ni.getNodeLocWS(None)
+			#	if self.isTranslated(deltaPos) or self.isRotated(deltaRot):
+			#		if not ni in self.badArmatures:
+			#			self.badArmatures.append(ni)
+			
 			
 			# get poses for all armatures in the scene
 			armPoses = {}
@@ -1119,7 +1229,7 @@ class BlenderShape(DtsShape):
 			
 			pose = None
 			lastGoodPose = None
-			# add object node frames
+			# add node frames
 			for nodeIndex in range(1, len(self.nodes)):
 				try:
 					pose = armPoses[ self.nodes[nodeIndex].armName ]
@@ -1131,18 +1241,12 @@ class BlenderShape(DtsShape):
 					baseTransform = baseTransforms[nodeIndex]
 				else:
 					baseTransform = None
-				# make sure we're not past the end of our action
-				if frame < numFrameSamples:
-					# let's pretend that everything matters, we'll remove the cruft later
-					# this prevents us from having to do a second pass through the frames.
-					loc, rot, scale = self.getPoseTransform(sequence, nodeIndex, curFrame, armPoses, baseTransform)
-					sequence.frames[nodeIndex].append([loc,rot,scale])
-				# if we're past the end, just duplicate the last good frame.
-				else:
-					loc, rot, scale = sequence.frames[nodeIndex][-1][0], sequence.frames[nodeIndex][-1][1], sequence.frames[nodeIndex][-1][2]
-					sequence.frames[nodeIndex].append([loc,rot,scale])
-			
-		
+				# let's pretend that everything matters, we'll remove the cruft later
+				# this prevents us from having to do a second pass through the frames.
+				loc, rot, scale = self.getPoseTransform(sequence, nodeIndex, curFrame, armPoses, baseTransform)
+				sequence.frames[nodeIndex].append([loc,rot,scale])
+		'''		
+
 		# if nothing was actually animated abandon exporting the action.
 		if not (sequence.has_loc or sequence.has_rot or sequence.has_scale):
 			Torque_Util.dump_writeWarning("Warning: Action has no keyframes, aborting export for this animation.")
