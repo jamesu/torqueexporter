@@ -282,7 +282,7 @@ def saveIpoScales(scaledIpoNames):
 			for point in ipo[curveConsts[1]].bezierPoints:
 				savedScales[ipoName]['Y']['vec'].append(point.vec)
 				savedScales[ipoName]['Y']['ht'].append(point.handleTypes)
-				print "point.handleTypes =", point.handleTypes
+
 
 		if ipo[curveConsts[2]] != None:
 			savedScales[ipoName]['extendType'] = ipo[curveConsts[2]].extend
