@@ -105,12 +105,11 @@ class BlenderShape(DtsShape):
 		# temp container that holds the raw rest transforms, including default scale
 		self.restTransforms = None
 		
-		# set rest frame before initializing poseUtil
+		# set rest frame before initializing transformUtil
 		Blender.Set('curframe', prefs['RestFrame'])
 
-		# this object is the interface through which we interact with the
-		# pose module and the blender armature system.		
-		#self.poseUtil = DtsPoseUtil.DtsPoseUtilClass(prefs)
+		# this object is the interface through which we get blender tranform data
+		# for object and bone nodes
 		self.transformUtil = DtsPoseUtil.NodeTransformUtil()
 		
 		# extra book keeping for armature modifier warning (see long note/explanation in Dts_Blender.py)
@@ -189,6 +188,7 @@ class BlenderShape(DtsShape):
 				#todo - warn when we couldn't get mesh data?
 				pass
 
+		# TODO - check for other cases, what happens on the final else block?
 		elif hasArmatureDeform and not hasModifiers:
 			originalMesh = o.getData(False,True)
 			
@@ -237,7 +237,6 @@ class BlenderShape(DtsShape):
 				for inf in influences[vIdx]:
 					group, weight = inf
 					mesh_data.assignVertsToGroup(group, [vIdx], weight, Blender.Mesh.AssignModes.ADD)
-
 			
 			
 		# if we have armature deformation, or don't have any modifiers, get the mesh data the old fashon way
@@ -334,13 +333,10 @@ class BlenderShape(DtsShape):
 		try: x = self.preferences['PrimType']
 		except KeyError: self.preferences['PrimType'] = "Tris"
 		tmsh = BlenderMesh(self, o.name, mesh_data, 0, 1.0, mat, False, True)
-		#tmsh = BlenderMesh( self, o.name, mesh_data, -1, 1.0, mat, hasArmatureDeform, False, (self.preferences['PrimType'] == "TriLists" or self.preferences['PrimType'] == "TriStrips") )
-
 
 		# Increment polycount metric
 		polyCount = tmsh.getPolyCount()
 		masterObject.tempMeshes.append(tmsh)
-		
 
 		# clean up temporary objects
 		try:Blender.Scene.GetCurrent().objects.unlink(Blender.Object.Get("DTSExpObj_Tmp"))
@@ -430,7 +426,6 @@ class BlenderShape(DtsShape):
 			
 
 			# Store constructed detail level info into shape
-			#self.detaillevels.append(DetailLevel(self.addName(detailName), 0, self.numBaseDetails-1, calcSize, -1, -1, polyCount))
 			self.detaillevels.append(DetailLevel(self.addName(detailName), 0, self.numBaseDetails-1, size, -1, -1, polyCount))
 			# --------------------------------------------
 	
