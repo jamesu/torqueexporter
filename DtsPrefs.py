@@ -723,8 +723,14 @@ class prefsClass(dict):
 	# gets current dts material data from blender and updates preferencees
 	def refreshMaterialPrefs(self):
 		SceneInfo = DtsGlobals.SceneInfo
-		SceneInfo.refreshAll()
+		#SceneInfo.refreshAll()
+		
+		startTime = Blender.sys.time()
 		imageList = SceneInfo.getDtsMaterials()
+		endTime = Blender.sys.time()
+		print "SceneInfo.getDtsMaterials() finished in:", str(endTime - startTime)
+		
+
 		materials = self['Materials']
 
 		# remove unused materials from the prefs
