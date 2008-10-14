@@ -503,28 +503,44 @@ class SceneInfoClass:
 	#  Images and materials
 	#################################################
 
+	imageExts = ['jpg', 'jpeg', 'gif', 'png', 
+		     'tif', 'tiff', 'mpg', 'mpeg',
+		     'tga', 'pcx', 'xcf', 'pix',
+		     'eps', 'fit', 'fits', 'jpe',
+		     'ico', 'pgm', 'psd', 'ps',
+		     'ppm', 'bmp', 'pcc', 'xbm',
+		     'xpm', 'xwd', 'bitmap']
+
 
 	# Strip image names of trailing extension
 	def stripImageExtension(imagename, filename=""):
-		imageExts = ['jpg', 'jpeg', 'gif', 'png', 
-			     'tif', 'tiff', 'mpg', 'mpeg',
-			     'tga', 'pcx', 'xcf', 'pix',
-			     'eps', 'fit', 'fits', 'jpe',
-			     'ico', 'pgm', 'psd', 'ps',
-			     'ppm', 'bmp', 'pcc', 'xbm',
-			     'xpm', 'xwd', 'bitmap']
+		
+		imageExts = SceneInfoClass.imageExts		
 		temp = ""
+		
+		# strip the path from the filename
 		if filename != "": filename = stripPath(filename)
+		
+		# determine whether to use the image name or file name
 		if len(imagename) < len(filename) and imagename == filename[0:len(imagename)]:
 			temp = string.split(filename,".")
 		else:
 			temp = string.split(imagename,".")
+		
+		# early out if there's only one segment (no extension)
 		if len(temp)==1: return temp[0]
-		retVal = ""
-		for i in range(0, len(temp)):
+		
+		# add on the first segment.
+		retVal = temp[0] + "."		
+		
+		# add each segment, ignoring any segment that matches an image extension
+		for i in range(1, len(temp)):
 			if not temp[i].lower() in imageExts:
 				retVal += (temp[i] + ".")
-		retVal = retVal[0:len(retVal)-1] # remove trailing "."
+		
+		# remove trailing "."
+		retVal = retVal[0:len(retVal)-1] 
+		
 		return retVal
 
 	stripImageExtension = staticmethod(stripImageExtension)
@@ -534,49 +550,44 @@ class SceneInfoClass:
 		# loop through all faces of all meshes in visible detail levels and compile a list
 		# of unique images that are UV mapped to the faces.
 		imageList = []	
+		#i = 0
 		for ni in self.meshExportList:
 			obj = ni.getBlenderObj()
 			if obj.getType() != "Mesh": continue
 			objData = obj.getData()
-			for face in objData.faces:					
-				try: x = face.image
-				except IndexError: x = None
-				# If we don't Have an image assigned to the face
-				if x == None:						
-					try: x = objData.materials[face.mat]
-					except IndexError: x = None
-					# is there a material index assigned?
-					if x != None:
-						#  add the material name to the imagelist
-						imageName = SceneInfoClass.stripImageExtension(objData.materials[face.mat].name)
-						if not (imageName in imageList):
-							imageList.append(imageName)
+			for face in objData.faces:
+				matName = SceneInfoClass.getFaceDtsMatName(face, objData)
+				if matName != None: imageList.append(matName)
+				#i += 1
+		#print "Processed", i, "faces."
+		retVal = list(set(imageList))		
+		print retVal
+		return retVal
 
-				# Otherwise we do have an image assigned to the face, so add it to the imageList.
-				else:
-					imageName = SceneInfoClass.stripImageExtension(face.image.getName(), face.image.getFilename())
-					if not (imageName in imageList):
-						imageList.append(imageName)
-
-
-
-		return imageList
 	
 	# gets a dts material name for a given Blender mesh primitive
 	def getFaceDtsMatName(face, msh):
 		imageName = None
-		try: imageName = SceneInfoClass.stripImageExtension(face.image.getName(), face.image.getFilename())
-		#except AttributeError:
-		except (ValueError, AttributeError):
+		try: image = face.image
+		except ValueError: image = None
+		#print "image =", image
+		if image == None:
 			# there isn't an image assigned to the face...
 			# do we have a material index?
-			try: mat = msh.materials[face.mat]
-			except IndexError: mat = None
-			if mat != None:
+			if face.mat != None:
+				print "face.mat = ", face.mat
+				try: mat = msh.materials[face.mat]
+				except: return None
 				# we have a material index, so get the name of the material
 				imageName = SceneInfoClass.stripImageExtension(mat.name)
+				#imageName = mat.name
+				return imageName
 
-		return imageName
+		else:
+			# we have an image
+			imageName = SceneInfoClass.stripImageExtension(face.image.getName(), face.image.getFilename())
+			#imageName = face.image.getName()
+			return imageName
 		
 	getFaceDtsMatName = staticmethod(getFaceDtsMatName)
 	
