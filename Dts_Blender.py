@@ -318,20 +318,26 @@ def handleScene(issueWarnings=False):
 	#createActionKeys()
 	
 	SceneInfo.refreshAll(issueWarnings)
-	Prefs.refreshSequencePrefs()
-	Prefs.refreshMaterialPrefs()	
+	#Prefs.refreshSequencePrefs()
+	#Prefs.refreshMaterialPrefs()	
 
 def export():
 	SceneInfo = DtsGlobals.SceneInfo
 	Prefs = DtsGlobals.Prefs
+	
+	# refresh prefs
+	
 	Torque_Util.dump_writeln("Exporting...")
 	print "Exporting..."
 	# switch out of edit mode if we are in edit mode
 	Window.EditMode(0)
+
+	# refresh all data.
 	handleScene(True)
-	#importMaterialList()
-	#refreshActionData()
+	Prefs.refreshSequencePrefs()
+	Prefs.refreshMaterialPrefs()	
 	Prefs.savePrefs()
+	
 	
 	cur_progress = Common_Gui.Progress()
 
@@ -440,7 +446,7 @@ def entryPoint(a):
 			p.strip_dirs().print_callers('__getitem__', 20)
 	elif a == 'normal' or (a == None):
 		# Process scene and load configuration gui
-		handleScene()
+		#handleScene()
 		initGui()
 	
 
