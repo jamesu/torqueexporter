@@ -171,8 +171,8 @@ def doExport(progressBar):
 				progressBar.update()
 
 				# Pull the triggers
-				if len(seqKey['Triggers']) != 0:
-					Shape.addSequenceTriggers(sequence, seqKey['Triggers'], getSeqNumFrames(seqName, seqKey))
+				#if len(seqKey['Triggers']) != 0:
+				#	Shape.addSequenceTriggers(sequence, seqKey['Triggers'], getSeqNumFrames(seqName, seqKey))
 				progressBar.update()
 				progressBar.update()						
 
