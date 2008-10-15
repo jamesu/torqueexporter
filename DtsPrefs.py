@@ -380,9 +380,16 @@ class prefsClass(dict):
 			key['StartFrame'] = seq[0]
 			key['EndFrame'] = seq[1]
 
-
 			# adjust duration or fps according to which is locked
 			self.__updateSeqDurationAndFPS(seqName)
+			
+			# refresh sequence triggers
+			if len(seq) > 2:
+				print "***   sequence", seqName, "has triggers!! ", len(seq)
+				for trig in seq[2:len(seq)]:
+					print "    Trig=", trig
+					key['Triggers'].append(trig)
+					print key
 		
 		# find any old sequences that no longer exist and get rid of them
 		curSequences = seqInfo.keys()
@@ -394,6 +401,8 @@ class prefsClass(dict):
 				self['DefunctSequences'][seqName] = self['Sequences'][seqName]				
 				self['DefunctSequences'][seqName]['CountDown'] = 5
 				del self['Sequences'][seqName]
+		
+		
 
 	# Gets a sequence key, creating it if it does not exist.
 	# todo - implement
