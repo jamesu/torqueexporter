@@ -754,7 +754,34 @@ class SceneInfoClass:
 		for seqName in sequences.keys():
 			if sequences[seqName][1] - sequences[seqName][0] < 1:
 				del sequences[seqName]
-					
+
+		# look for animation triggers within each frame range
+		print "looking for triggers..."
+		for seqName in sequences.keys():
+			startFrame, endFrame = sequences[seqName][0], sequences[seqName][1]
+			#print "Looking for triggers in sequence:", seqName
+			# check all frames in range
+			for fr in range(startFrame, endFrame + 1):				
+				try: markerNames = markedList[fr]
+				except: continue
+				for markerName in markerNames:
+					#print "  Checking marker:", markerName
+					# is it a trigger marker?
+					if markerName[0:7].lower() == "trigger":
+						#print "  found trigger marker"
+						# parse out the trigger info
+						settings = markerName.split(':')
+						# do we have the correct number of segments?
+						if len(settings) == 3:
+							# todo - warn when trigger names are invalid?
+							try: trigNum = int(settings[1])
+							except: continue
+							if settings[2].lower() == "on": trigState = True
+							elif settigns[2].lower() == "off": trigState = False
+							else: continue						
+							sequences[seqName].append([trigNum, int(round(fr-startFrame)), trigState])
+							#print "  found trigger on frame", fr, "with settings:", trigNum, ",", trigState
+
 		return sequences
 	
 	getSequenceInfo = staticmethod(getSequenceInfo)
