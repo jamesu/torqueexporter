@@ -111,6 +111,9 @@ class NodeControlsClass:
 
 	
 	def refreshAll(self):
+		SceneInfo = DtsGlobals.SceneInfo
+		SceneInfo.refreshAll()
+		self.populateNodeGrid()
 		pass
 
 	def handleEvent(self, control):
@@ -127,7 +130,7 @@ class NodeControlsClass:
 				newPat += '$'
 			for name in SceneInfo.getAllNodeNames():
 				name = name.upper()
-				if re.match(newPat, name) != None:				
+				if re.match(newPat, name) != None:
 					if control.name == "guiPatternOn":
 						for i in range(len(Prefs['BannedNodes'])-1, -1, -1):
 							boneName = Prefs['BannedNodes'][i].upper()
@@ -137,7 +140,8 @@ class NodeControlsClass:
 						Prefs['BannedNodes'].append(name)
 			self.populateNodeGrid()
 		elif control.name == "guiRefresh":
-			self.populateNodeGrid()
+			#self.populateNodeGrid()
+			self.refreshAll()
 		elif control.name == "guiNumItemsSlider":
 			self.itemsPerLine = control.value
 			self.populateNodeGrid()
