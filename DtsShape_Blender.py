@@ -1003,11 +1003,16 @@ class BlenderShape(DtsShape):
 			sequence = self.addSequenceVisibility( sequence, numFrameSamples, seqPrefs, int(seqPrefs['StartFrame']), int(seqPrefs['EndFrame']))
 		if IFLIsValid:
 			sequence = self.addSequenceIFL(sequence, getNumIFLFrames(seqName, seqPrefs), seqPrefs)
+
 			
 		self.sequences.append(sequence)
 
-
-
+		# add triggers
+		print "You are here..."
+		print "** = ", seqPrefs
+		if len(seqPrefs['Triggers']) != 0:
+			print "Adding triggers to sequence..."
+			self.addSequenceTriggers(sequence, seqPrefs['Triggers'], numFrameSamples)
 		
 		return sequence
 	
@@ -1339,6 +1344,7 @@ class BlenderShape(DtsShape):
 
 	
 	def addSequenceTriggers(self, sequence, unsortedTriggers, nFrames):
+		print "addSequenceTriggers called!!!"
 		if sequence.firstTrigger == -1:
 			sequence.firstTrigger = len(self.triggers)
 		
@@ -1371,7 +1377,7 @@ class BlenderShape(DtsShape):
 			# [ state(1-32), position(0-1.0), on(True/False) ]
 			if triggers[i][1] <= 1: realPos = 0.0
 			else: realPos = float(triggers[i][1]-1) / (nFrames-1)
-			
+			print "realPos=", realPos
 			self.triggers.append(Trigger(triggers[i][0], triggers[i][2], realPos, triggerState[i]))
 		del triggerState
 		sequence.numTriggers += len(triggers)
