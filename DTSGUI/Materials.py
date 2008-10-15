@@ -136,7 +136,7 @@ class MaterialControlsClass:
 
 		# populate the Material list
 		#self.populateMaterialList()
-		self.refreshMaterialList()
+		#self.refreshMaterialList()
 		
 	def cleanup(self):
 		'''
@@ -484,8 +484,10 @@ class MaterialControlsClass:
 	## @brief Refreshes the items in the material list, preserving list selection if possible.
 	def refreshMaterialList(self):
 		Prefs = DtsGlobals.Prefs
+		SceneInfo = DtsGlobals.SceneInfo
 		
 		# make sure mat preferences are up to date		
+		SceneInfo.refreshAll()
 		Prefs.refreshMaterialPrefs()
 		
 		# store last sequence selection
