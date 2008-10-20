@@ -44,7 +44,7 @@ def getAllSceneObjectNames(IPOType):
 	scene = Blender.Scene.GetCurrent()
 	retVal = []
 	if IPOType == "Object":
-		allObjs = Blender.Object.Get()
+		allObjs = Blender.Scene.GetCurrent().objects
 		for obj in allObjs:
 			retVal.append(obj.name)
 	elif IPOType == "Material":
