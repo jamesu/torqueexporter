@@ -937,14 +937,6 @@ class BlenderShape(DtsShape):
 		for nodeIndex in range(1, len(self.nodes)):
 			sequence.frames[nodeIndex] = []
 		
-		
-		
-
-		# **************************************************************************
-		# test code
-
-
-		
 		# get transforms for every frame in a big nested list.	
 		transforms = self.transformUtil.dumpFrameTransforms(orderedNodeList, seqPrefs['StartFrame'], seqPrefs['EndFrame'], True)
 
@@ -1004,63 +996,6 @@ class BlenderShape(DtsShape):
 
 					
 		
-		#print len(transforms)	
-		#return sequence, False
-		
-		# **************************************************************************
-		
-
-
-		
-		'''
-
-		# loop through all of the exisitng action frames
-		for frame in range(0, numOverallFrames):
-			
-			# Set the current frame in blender
-			curFrame = int(round(float(frame)*interpolateInc,0)) + seqPrefs['StartFrame']
-			Blender.Set('curframe', curFrame)
-			# add ground frames
-			self.addGroundFrame(sequence, curFrame, boundsStartMat)
-
-			
-			# This check relates to problems with armature modifiers,
-			# see long note in Dts_Blender.py.
-			#for ni in checkArmatureNIs:
-			#	#transVec, quatRot, scaleVec = self.poseUtil.getNodeLocRotScaleLS(bonename, pose)
-			#	deltaRot = ni.restRotWS.inverse() * ni.getNodeRotWS(None)
-			#	deltaPos = ni.restPosWS - ni.getNodeLocWS(None)
-			#	if self.isTranslated(deltaPos) or self.isRotated(deltaRot):
-			#		if not ni in self.badArmatures:
-			#			self.badArmatures.append(ni)
-			
-			
-			# get poses for all armatures in the scene
-			armPoses = {}
-			for armIdx in range(0, len(self.addedArmatures)):
-				arm = self.addedArmatures[armIdx]
-				armPoses[arm.name] = arm.getPose()
-			
-			pose = None
-			lastGoodPose = None
-			# add node frames
-			for nodeIndex in range(1, len(self.nodes)):
-				try:
-					pose = armPoses[ self.nodes[nodeIndex].armName ]
-					lastGoodPose = pose
-				except:
-					pose = lastGoodPose
-
-				if isBlend:
-					baseTransform = baseTransforms[nodeIndex]
-				else:
-					baseTransform = None
-				# let's pretend that everything matters, we'll remove the cruft later
-				# this prevents us from having to do a second pass through the frames.
-				loc, rot, scale = self.getPoseTransform(sequence, nodeIndex, curFrame, armPoses, baseTransform)
-				sequence.frames[nodeIndex].append([loc,rot,scale])
-		'''		
-
 		# if nothing was actually animated abandon exporting the action.
 		if not (sequence.has_loc or sequence.has_rot or sequence.has_scale):
 			Torque_Util.dump_writeWarning("Warning: Action has no keyframes, aborting export for this animation.")
