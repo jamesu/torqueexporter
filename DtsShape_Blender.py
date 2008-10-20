@@ -655,7 +655,7 @@ class BlenderShape(DtsShape):
 	def addAllNodes(self):
 		# strike a pose
 		#poses = {}
-		for arm in filter(lambda x: x.getType()=='Armature', Blender.Object.Get()):
+		for arm in filter(lambda x: x.getType()=='Armature', Blender.Scene.GetCurrent().objects):
 			self.addedArmatures.append(arm)
 		# get a list of ordered nodes by walking the poseUtil node tree.
 		
@@ -895,7 +895,7 @@ class BlenderShape(DtsShape):
 
 		# loop through each node and reset it's transforms.  This avoids transforms carrying over from
 		# other animations. Need to cycle through _ALL_ bones and reset the transforms.
-		for armOb in Blender.Object.Get():
+		for armOb in Blender.Scene.GetCurrent().objects:
 			if (armOb.getType() != 'Armature') or (armOb.name == "DTS-EXP-GHOST-OB"): continue
 			tempPose = armOb.getPose()
 			#for bonename in armOb.getData().bones.keys():
@@ -989,10 +989,10 @@ class BlenderShape(DtsShape):
 	
 		lastFrameRemoved = False
 		if ActionIsValid:
-			startTime = Blender.sys.time()
+			#startTime = Blender.sys.time()
 			sequence, lastFrameRemoved = self.addNodeSeq(sequence, action, numFrameSamples, scene, seqPrefs)
-			endTime = Blender.sys.time()
-			print "Sequence export finished in:", str(endTime-startTime)		
+			#endTime = Blender.sys.time()
+			#print "Sequence export finished in:", str(endTime-startTime)		
 
 			# if we had to remove the last frame from a cyclic action, and the original action
 			# frame samples was the same as the overall number of frames for the sequence, adjust
@@ -1008,10 +1008,7 @@ class BlenderShape(DtsShape):
 		self.sequences.append(sequence)
 
 		# add triggers
-		print "You are here..."
-		print "** = ", seqPrefs
 		if len(seqPrefs['Triggers']) != 0:
-			print "Adding triggers to sequence..."
 			self.addSequenceTriggers(sequence, seqPrefs['Triggers'], numFrameSamples)
 		
 		return sequence
@@ -1036,6 +1033,11 @@ class BlenderShape(DtsShape):
 		NOTE: this function needs to be called AFTER all calls to addArmature/addNode, for obvious reasons.
 		'''
 		
+		# build ordered node list.
+		orderedNodeList = []
+		for nodeIndex in range(1, len(self.nodes)):
+                	orderedNodeList.append(self.sTable.get(self.nodes[nodeIndex].name))
+
 
 		# Get a list of armatures that need to be checked in order to issue
 		# warnings regarding armature modifiers (see long note in Dts_Blender.py)
@@ -1072,12 +1074,14 @@ class BlenderShape(DtsShape):
 		baseTransforms = []
 		useAction = None
 		useFrame = None
+		
+		
 		if isBlend:
 			# Need to build a list of node transforms to use as the
 			# base transforms for nodes in our blend animation.
  			#useAction = seqPrefs['Action']['BlendRefPoseAction']
-			useFrame = seqPrefs['BlendRefPoseFrame']
-			baseTransforms = self.buildBaseTransforms(sequence, action, useAction, useFrame, scene)
+			refFrame = seqPrefs['BlendRefPoseFrame']
+			baseTransforms = self.transformUtil.dumpReferenceFrameTransforms(orderedNodeList, refFrame)			
 			if baseTransforms == None:
 				Torque_Util.dump_writeln("Error getting base Transforms!!!!!")
 
@@ -1111,7 +1115,7 @@ class BlenderShape(DtsShape):
 		# This avoids transforms carrying over from other action animations.
 		else:			
 			# need to cycle through ALL bones and reset the transforms.			
-			for armOb in Blender.Object.Get():
+			for armOb in Blender.Scene.GetCurrent().objects:
 				if (armOb.getType() != 'Armature'): continue
 				tempPose = armOb.getPose()
 				armDb = armOb.getData()
@@ -1138,19 +1142,21 @@ class BlenderShape(DtsShape):
 		# test code
 
 
-		# build ordered node list.
-		orderedNodeList = []
-		for nodeIndex in range(1, len(self.nodes)):
-                	orderedNodeList.append(self.sTable.get(self.nodes[nodeIndex].name))
 		
 		# get transforms for every frame in a big nested list.	
 		transforms = self.transformUtil.dumpFrameTransforms(orderedNodeList, seqPrefs['StartFrame'], seqPrefs['EndFrame'], True)
+
+
+		# if this is a blend animation, calculate deltas
+		if isBlend and baseTransforms != None:
+			transforms = self.transformUtil.getDeltasFromRef(baseTransforms, transforms)
 		
 		# loop through each frame and transcribe transforms
 		for frameTransforms in transforms:
 			for nodeIndex in range(1, len(self.nodes)):
 				if isBlend:
-					baseTransform = baseTransforms[nodeIndex]
+					#print "nodeIndex=", nodeIndex
+					baseTransform = baseTransforms[nodeIndex-1]
 				else:
 					baseTransform = None
 
@@ -1158,12 +1164,15 @@ class BlenderShape(DtsShape):
 				sequence.frames[nodeIndex].append([loc,rot,scale])
 
 
-
 		# calculate matters
 		for nodeIndex in range(1, len(self.nodes)):
 			# get root transforms
-			rootLoc = self.defaultTranslations[nodeIndex]
-			rootRot = self.defaultRotations[nodeIndex]
+			if not isBlend:
+				rootLoc = self.defaultTranslations[nodeIndex]
+				rootRot = self.defaultRotations[nodeIndex]
+			else:
+				rootLoc = Vector(0.0, 0.0, 0.0)
+				rootRot = Quaternion(0.0, 0.0, 0.0, 1.0)
 			
 			for fr in range(0, len(transforms)):
 				# check deltas from base transforms
