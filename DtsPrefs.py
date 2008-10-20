@@ -385,6 +385,8 @@ class prefsClass(dict):
 			
 			# refresh sequence triggers
 			if len(seq) > 2:
+				# clear current triggers
+				key['Triggers'] = []
 				print "***   sequence", seqName, "has triggers!! ", len(seq)
 				for trig in seq[2:len(seq)]:
 					print "    Trig=", trig
