@@ -313,8 +313,6 @@ class prefsClass(dict):
 	def __updateDefunctSequenceCountdowns(self):
 		for seqName in self['DefunctSequences'].keys():
 			seqKey = self['DefunctSequences'][seqName]
-			try: print "for sequence", seqName, "CountDown =", seqKey['CountDown']
-			except: print "Sequence", seqName, "has no CountDown key!!!!!"
 			if seqKey['CountDown'] < 1:
 				del self['DefunctSequences'][seqName]
 			else:
@@ -387,18 +385,16 @@ class prefsClass(dict):
 			if len(seq) > 2:
 				# clear current triggers
 				key['Triggers'] = []
-				print "***   sequence", seqName, "has triggers!! ", len(seq)
 				for trig in seq[2:len(seq)]:
-					print "    Trig=", trig
 					key['Triggers'].append(trig)
-					print key
+
 		
 		# find any old sequences that no longer exist and get rid of them
 		curSequences = seqInfo.keys()
 		prefsSequences = self['Sequences'].keys()
 		for seqName in prefsSequences:
 			if not seqName in curSequences:
-				print "Removing %s..." % seqName
+				#print "Removing sequence %s..." % seqName
 				# keep defunct sequences around for a while, just in case.
 				self['DefunctSequences'][seqName] = self['Sequences'][seqName]				
 				self['DefunctSequences'][seqName]['CountDown'] = 5
@@ -736,10 +732,10 @@ class prefsClass(dict):
 		SceneInfo = DtsGlobals.SceneInfo
 		#SceneInfo.refreshAll()
 		
-		startTime = Blender.sys.time()
+		#startTime = Blender.sys.time()
 		imageList = SceneInfo.getDtsMaterials()
-		endTime = Blender.sys.time()
-		print "SceneInfo.getDtsMaterials() finished in:", str(endTime - startTime)
+		#endTime = Blender.sys.time()
+		#print "SceneInfo.getDtsMaterials() finished in:", str(endTime - startTime)
 		
 
 		materials = self['Materials']
