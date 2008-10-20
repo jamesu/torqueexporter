@@ -262,7 +262,7 @@ class SceneInfoClass:
 				self.__addBoneTree(obj, n, bone, armDb, n, tempBones)
 
 		# add child trees
-		for child in filter(lambda x: x.parent==obj, Blender.Object.Get()):
+		for child in filter(lambda x: x.parent==obj, Blender.Scene.GetCurrent().objects):
 			parentBoneName = child.getParentBoneName()
 			if (obj.getType() == 'Armature') and (parentBoneName != None):					
 				parentNode = tempBones[parentBoneName]
@@ -298,10 +298,10 @@ class SceneInfoClass:
 			
 
 	def __populateData(self):
-		startTime = Blender.sys.time()
+		#startTime = Blender.sys.time()
 		
 		# go through each Blender object and bone and add subtrees (construct allThings list)
-		for obj in filter(lambda x: x.parent==None, Blender.Object.Get()):
+		for obj in filter(lambda x: x.parent==None, Blender.Scene.GetCurrent().objects):
 			if obj.parent == None:
 				self.__addTree(obj, None)
 		
@@ -427,8 +427,8 @@ class SceneInfoClass:
 
 		# ----------------
 		'''
-		endTime = Blender.sys.time()
-		print "__populateData finished in", endTime - startTime
+		#endTime = Blender.sys.time()
+		#print "__populateData finished in", endTime - startTime
 
 
 	#################################################
@@ -550,7 +550,7 @@ class SceneInfoClass:
 		# loop through all faces of all meshes in visible detail levels and compile a list
 		# of unique images that are UV mapped to the faces.
 		imageList = []	
-		#i = 0
+
 		for ni in self.meshExportList:
 			obj = ni.getBlenderObj()
 			if obj.getType() != "Mesh": continue
@@ -558,10 +558,8 @@ class SceneInfoClass:
 			for face in objData.faces:
 				matName = SceneInfoClass.getFaceDtsMatName(face, objData)
 				if matName != None: imageList.append(matName)
-				#i += 1
-		#print "Processed", i, "faces."
+
 		retVal = list(set(imageList))		
-		print retVal
 		return retVal
 
 	
@@ -570,12 +568,10 @@ class SceneInfoClass:
 		imageName = None
 		try: image = face.image
 		except ValueError: image = None
-		#print "image =", image
 		if image == None:
 			# there isn't an image assigned to the face...
 			# do we have a material index?
 			if face.mat != None:
-				print "face.mat = ", face.mat
 				try: mat = msh.materials[face.mat]
 				except: return None
 				# we have a material index, so get the name of the material
@@ -646,7 +642,6 @@ class SceneInfoClass:
 			if frNum > max: max = int(round(frNum))
 			if frNum < min: min = int(round(frNum))
 		retVal = int(max-min)
-		print "Action length is", max
 		return max
 	
 	__getActionLength = staticmethod(__getActionLength)
@@ -756,19 +751,15 @@ class SceneInfoClass:
 				del sequences[seqName]
 
 		# look for animation triggers within each frame range
-		print "looking for triggers..."
 		for seqName in sequences.keys():
 			startFrame, endFrame = sequences[seqName][0], sequences[seqName][1]
-			#print "Looking for triggers in sequence:", seqName
 			# check all frames in range
 			for fr in range(startFrame, endFrame + 1):				
 				try: markerNames = markedList[fr]
 				except: continue
 				for markerName in markerNames:
-					#print "  Checking marker:", markerName
 					# is it a trigger marker?
 					if markerName[0:7].lower() == "trigger":
-						#print "  found trigger marker"
 						# parse out the trigger info
 						settings = markerName.split(':')
 						# do we have the correct number of segments?
@@ -780,7 +771,6 @@ class SceneInfoClass:
 							elif settigns[2].lower() == "off": trigState = False
 							else: continue						
 							sequences[seqName].append([trigNum, int(round(fr-startFrame)), trigState])
-							#print "  found trigger on frame", fr, "with settings:", trigNum, ",", trigState
 
 		return sequences
 	
@@ -807,7 +797,6 @@ class SceneInfoClass:
 		
 	# Deletes all sequence markers that match the given name
 	def delSeqMarkers(seqName):
-		print "Removing Sequence:", seqName
 		startName = seqName + ":start"
 		endName = seqName + ":end"		
 		# see if both markers are alone on their respective frames.
@@ -838,8 +827,6 @@ class SceneInfoClass:
 		
 	# Renames sequence markers that match the given name
 	def renameSeqMarkers(oldName, newName):
-		print "Renaming Sequence:", oldName
-		print " to:", newName
 		startName = oldName + ":start"
 		endName = oldName + ":end"
 		newStartName = newName + ":start"
@@ -874,8 +861,6 @@ class SceneInfoClass:
 	# create a marker on the timeline
 	# returns true if marker was successfully created, otherwise returns false
 	def createMarker(markerName, frameNum):
-		print "createMarker called..."
-
 		# check to make sure the frame isn't out of range, if it is,
 		# increase the range :-)
 		context = Blender.Scene.GetCurrent().getRenderingContext()
@@ -954,6 +939,7 @@ class SceneInfoClass:
 		# get all action strips
 		aStrips = []
 		for bObj in bObjs:
+			if bObj == None: continue
 			strips = bObj.actionStrips
 			for strip in strips:
 				aStrips.append(strip)
@@ -962,7 +948,6 @@ class SceneInfoClass:
 		allStrips = {}
 		for strip in aStrips:
 			stripName = strip.action.name
-			#print "stripName=", stripName
 			startFrame = int(round(strip.stripStart))
 			endFrame = int(round(strip.stripEnd))
 			if startFrame < endFrame:
@@ -975,7 +960,6 @@ class SceneInfoClass:
 			startFrame, endFrame = allStrips[stripName]
 			retVal.append((stripName, startFrame, endFrame))
 		
-		print retVal
 		return retVal
 			
 	# create sequence markers from action strips
@@ -1047,7 +1031,6 @@ class SceneInfoClass:
 	def getDtsObjectNames(self):
 		retval = self.DTSObjects.keys()
 		retval.sort()
-		print "*** retval = ", retval
 		return retval
 		'''
 		uniqueNames = {}
@@ -1090,6 +1073,9 @@ class SceneInfoClass:
 
 
 
+	#def checkVertGroupNames(self, meshName, names, armNIList):
+	
+	
 	def translateVertGroupNames(self, meshName, names, armNIList):
 		# issue warnings if mesh is multi-skinned and bone matching vgroup
 		# name exists in more than one of the target armatures
@@ -1117,6 +1103,7 @@ class SceneInfoClass:
 				
 		return output
 			
+	
 
 	#################################################
 	#  Misc
@@ -1125,7 +1112,7 @@ class SceneInfoClass:
 
 	# Gets the children of an object
 	def getChildren(self, obj):
-		return filter(lambda x: x.parent==obj, Blender.Object.Get())
+		return filter(lambda x: x.parent==obj, Blender.Scene.GetCurrent().objects)
 
 	# Gets all the children of an object (recursive)
 	def getAllChildren(self, obj):
