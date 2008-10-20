@@ -704,20 +704,6 @@ class BlenderShape(DtsShape):
 		for nodeInfo in filter(lambda x: x.getGoodNodeParentNI() == nodeInfo, self.transformUtil.nodes.values()):
 			self.addNodeTree(nodeInfo, nodeIndex)
 
-	'''
-	# These three helper methods are used by getPoseTransform. They should probably be moved elsewhere.
-	def isRotated(self, quat):
-		delta = 0.0001
-		return not ((quat[0] < delta) and (quat[0] > -delta) and (quat[1] < delta) and (quat[1] > -delta) and (quat[2] < delta) and (quat[2] > -delta))
-	
-	def isTranslated(self, vec):
-		delta = 0.00001
-		return not ((vec[0] < delta) and (vec[0] > -delta) and (vec[1] < delta) and (vec[1] > -delta) and (vec[2] < delta) and (vec[2] > -delta))
-	
-	def isScaled(self, vec):
-		delta = 0.00001
-		return not ((vec[0] < 1.0 + delta) and (vec[0] > 1.0 - delta) and (vec[1] < 1.0 + delta) and (vec[1] > 1.0 - delta) and (vec[2] < 1.0 + delta) and (vec[2] > 1.0 - delta))
-
 	
 	# adds a ground frame to a sequence
 	def addGroundFrame(self, sequence, frame_idx, boundsStartMat):
@@ -736,202 +722,22 @@ class BlenderShape(DtsShape):
 					# We are ready, lets stomp!
 					try:						
 						bound_obj = Blender.Object.Get("Bounds")
-						bound_parent = bound_obj.getParent()
-						if bound_parent != None and bound_parent.getType() == 'Armature':
-							pose = bound_parent.getPose()
-							pos = self.poseUtil.getBoneLocWS(bound_parent.getName(), bound_obj.parentbonename, pose)
-							pos = pos - self.poseUtil.getBoneRestPosWS(bound_parent.name, bound_obj.parentbonename)
-							rot = self.poseUtil.getBoneRotWS(bound_parent.getName(), bound_obj.parentbonename, pose)
-							rot = self.poseUtil.getBoneRestRotWS(bound_parent.name, bound_obj.parentbonename).inverse() * rot
-							self.groundTranslations.append(pos)
-							self.groundRotations.append(rot)
-						else:
-							bound_obj = Blender.Object.Get("Bounds")							
-							matf = self.collapseBlenderTransform(bound_obj)
-							pos = Vector(matf.get(3,0),matf.get(3,1),matf.get(3,2))
-							pos = pos - Vector(boundsStartMat.get(3,0),boundsStartMat.get(3,1),boundsStartMat.get(3,2))
-							matf = boundsStartMat.inverse() * matf 
-							rot = Quaternion().fromMatrix(matf).inverse()
-							self.groundTranslations.append(pos)
-							self.groundRotations.append(rot)							
+						matf = self.collapseBlenderTransform(bound_obj)
+						pos = Vector(matf.get(3,0),matf.get(3,1),matf.get(3,2))
+						pos = pos - Vector(boundsStartMat.get(3,0),boundsStartMat.get(3,1),boundsStartMat.get(3,2))
+						matf = boundsStartMat.inverse() * matf
+						rot = Quaternion().fromMatrix(matf).inverse()
+						self.groundTranslations.append(pos)
+						self.groundRotations.append(rot)							
 							
 						sequence.numGroundFrames += 1
 					except ValueError:
 						# record the error state so we don't repeat ourselves.
 						self.GroundFrameError = True
 						sequence.has_ground = False # <- nope, no ground frames.
-						Torque_Util.dump_writeErr("Error: Could not get ground frames %d" % sequence.numGroundFrames)
+						Torque_Util.dump_writeErr("Error: Could not get ground frames for sequence %s." % sequence.name)
 						Torque_Util.dump_writeln("  You must have an object named Bounds in your scene to export ground frames.")
-	'''
 
-	'''	
-	# grab the pose transform of whatever frame we're currently at.  Frame must be set before calling this method.
-	def getPoseTransform(self, sequence, nodeIndex, frame_idx, poses, baseTransform=None, getRawValues=False):
-
-		loc, rot, scale = None, None, None
-		#try: armName = self.addedArmatures[self.nodes[nodeIndex].armIdx][0].name
-		#except: armName = None
-
-		# duration should already be calculated at this point.
-		# Convert time units from Blender's frame (starting at 1) to second
-		# (using sequence FPS)
-		#time = float(frame_idx - 1) / sequence.fps
-		#if sequence.duration < time:
-		#	sequence.duration = time
-
-		# some temp variables to make life easier
-		node = self.nodes[nodeIndex]
-		parentNode = self.nodes[node.parent]
-		bonename = self.sTable.get(node.name)
-		parentname = self.sTable.get(parentNode.name)
-		
-
-		
-		# Get our values from the poseUtil interface		
-		transVec, quatRot, scaleVec = self.poseUtil.getNodeLocRotScaleLS(bonename, poses)
-
-
-		# We dump out every transform regardless of whether it matters or not.  This avoids having to
-		# make multiple passes through the frames to determine what's animated.  Unused tracks and channels
-		# are cleaned up later.
-		if baseTransform != None:
-			# Blended animation, so find the difference between
-			# frames and store this
-
-			# process translation
-			transVec = transVec - baseTransform[0]
-			# rotate the translation into the bone's local space.
-			transVec = self.defaultRotations[nodeIndex].inverse().apply(transVec)
-			if self.isTranslated(transVec):
-				sequence.matters_translation[nodeIndex] = True
-				sequence.has_loc = True				
-			loc = transVec
-
-
-			# process rotation
-			# Get the difference between the current rotation and the base
-			# rotation.
-			btqt = baseTransform[1]
-			quatRot = (btqt.inverse() * quatRot).inverse()
-			if self.isRotated(quatRot):
-				sequence.matters_rotation[nodeIndex] = True
-				sequence.has_rot = True
-			rot = quatRot
-
-			# process scale
-			scale = Vector(scaleVec[0], scaleVec[1], scaleVec[2])
-			# Get difference between this scale and base scale by division
-			scale[0] /= baseTransform[2][0]
-			scale[1] /= baseTransform[2][1]
-			scale[2] /= baseTransform[2][2]
-			if self.isScaled(scale):
-				sequence.matters_scale[nodeIndex] = True
-				sequence.has_scale = True
-
-		else:
-			# Standard animations, so store total translations
-
-			# process translation
-			if getRawValues:
-				loc = transVec				
-			else:
-				if self.isTranslated(transVec):
-					sequence.matters_translation[nodeIndex] = True
-					sequence.has_loc = True				
-				loc = transVec
-				loc += self.defaultTranslations[nodeIndex]
-
-			# process rotation
-			if getRawValues:
-				rot = quatRot
-			else:
-				if self.isRotated(quatRot):
-					sequence.matters_rotation[nodeIndex] = True
-					sequence.has_rot = True
-				rot = quatRot.inverse() * self.defaultRotations[nodeIndex]
-				
-			# process scale.
-			if getRawValues:
-				scale = Vector(scaleVec[0], scaleVec[1], scaleVec[2])
-			else:
-				if self.isScaled(scaleVec):
-					sequence.matters_scale[nodeIndex] = True
-					sequence.has_scale = True			
-				scale = Vector(scaleVec[0], scaleVec[1], scaleVec[2])
-			
-		return loc, rot, scale
-
-
-	# Builds a base transform for blend animations using the
-	# designated action and frame #. 
-	def buildBaseTransforms(self, blendSequence, blendAction, useActionName, useFrame, scene):
-		useAction = Blender.Armature.NLA.GetActions()[useActionName]
-		
-		# Need to create a temporary sequence and build a list
-		# of node transforms to use as the base transforms for nodes
-		# in our blend animation.
-		tempSequence = Sequence()
-		tempSequence.name = useActionName
-		tempSequence.numTriggers = 0
-		tempSequence.firstTrigger = -1
-		tempSequence.has_ground = False
-		tempSequence.fps = float(useFrame-1)
-		if tempSequence.fps < 1.0: tempSequence.fps = 1.0
-		tempSequence.duration = 0
-
-		baseTransforms = []
-		# Make set of blank ipos and matters for each node
-		tempSequence.ipo = []
-		tempSequence.frames = []
-		for n in self.nodes:
-			tempSequence.matters_translation.append(True)
-			tempSequence.matters_rotation.append(True)
-			tempSequence.matters_scale.append(True)
-			# and a blank transform
-			baseTransforms.append(0)
-			
-		
-		tempSequence.numKeyFrames = 10000 # one brazilion
-
-		# loop through each node and reset it's transforms.  This avoids transforms carrying over from
-		# other animations. Need to cycle through _ALL_ bones and reset the transforms.
-		for armOb in Blender.Scene.GetCurrent().objects:
-			if (armOb.getType() != 'Armature') or (armOb.name == "DTS-EXP-GHOST-OB"): continue
-			tempPose = armOb.getPose()
-			#for bonename in armOb.getData().bones.keys():
-			for bonename in self.poseUtil.armBones[armOb.name].keys():
-				# reset the bone's transform
-				tempPose.bones[bonename].quat = bMath.Quaternion().identity()
-				tempPose.bones[bonename].size = bMath.Vector(1.0, 1.0, 1.0)
-				tempPose.bones[bonename].loc = bMath.Vector(0.0, 0.0, 0.0)
-			# update the pose.
-			tempPose.update()
-
-		# now set the active action and move to the desired frame
-		for i in range(0, len(self.addedArmatures)):
-			arm = self.addedArmatures[i]
-			useAction.setActive(arm)
-
-		# Set the current frame in blender
-		Blender.Set('curframe', useFrame)
-		
-		for armIdx in range(0, len(self.addedArmatures)):
-			arm = self.addedArmatures[armIdx]
-			pose = arm.getPose()
-			# build our transform for each node		
-			for nodeIndex in range(1, len(self.nodes)):
-				# since Armature.getPose() leaks memory in Blender 2.41, skip nodes not
-				# belonging to the current armature to avoid having to call it unnecessarily.
-				if self.nodes[nodeIndex].armIdx != armIdx: continue
-				curveMap = None
-				tempSequence.matters_translation[nodeIndex] = True
-				tempSequence.matters_rotation[nodeIndex] = True
-				tempSequence.matters_scale[nodeIndex] = True
-				baseTransforms[nodeIndex] = self.getPoseTransform(tempSequence, nodeIndex, useFrame, pose, None, True)
-		
-		del tempSequence
-		return baseTransforms
-	'''
 	# Adds a generic sequence
 	def addSequence(self, seqName, seqPrefs, scene = None, action=None):
 
@@ -1013,6 +819,8 @@ class BlenderShape(DtsShape):
 		
 		return sequence
 	
+	
+	
 	# Import an action
 	def addNodeSeq(self, sequence, action, numOverallFrames, scene, seqPrefs):
 		'''
@@ -1090,7 +898,7 @@ class BlenderShape(DtsShape):
 		# *** special processing for the first frame:
 		# store off the default position of the bounds box
 		try:
-			Blender.Set('curframe', 1)
+			Blender.Set('curframe', self.preferences['RestFrame'])
 			bound_obj = Blender.Object.Get("Bounds")
 			boundsStartMat = self.collapseBlenderTransform(bound_obj)
 		except ValueError:
@@ -1100,14 +908,8 @@ class BlenderShape(DtsShape):
 		# transforms.  Otherwise, we won't be able to tell reliably which bones have actually moved
 		# during the blend sequence.
 		if isBlend:
-			# get our blend ref pose action
-			#refPoseAct = Blender.Armature.NLA.GetActions()[useAction]
-			# now set the active action and move to the desired frame
-			#for i in range(0, len(self.addedArmatures)):
-			#	arm = self.addedArmatures[i]
-			#	refPoseAct.setActive(arm)
 			# Set the current frame in blender
-			#Blender.Set('curframe', useFrame)
+			
 			pass
 
 
@@ -1163,7 +965,10 @@ class BlenderShape(DtsShape):
 				loc, scale, rot = frameTransforms[nodeIndex-1]
 				sequence.frames[nodeIndex].append([loc,rot,scale])
 
-
+		# add ground frames
+		for frame in range(0, numOverallFrames):
+			self.addGroundFrame(sequence, frame, boundsStartMat)
+			
 		# calculate matters
 		for nodeIndex in range(1, len(self.nodes)):
 			# get root transforms
