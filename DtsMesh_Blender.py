@@ -305,9 +305,11 @@ class BlenderMesh(DtsMesh):
 		translatedGroups = DtsGlobals.SceneInfo.translateVertGroupNames(self.meshName, originalGroups, self.armTargets)
 		for i in range(0, len(originalGroups)):
 			oGroup = originalGroups[i]
-			tGroup = translatedGroups[i]
+			
 			# ignore groups that have no corresponding bone.
+			# don't warn, because vgroups have purposes other than skinning...
 			if not (oGroup in boneList): continue
+			tGroup = translatedGroups[i]
 			try:
 				for vert in mesh.getVertsFromGroup(oGroup, 1):
 					index, weight = vert[0], vert[1]
@@ -424,9 +426,9 @@ class BlenderMesh(DtsMesh):
 					else: self.vweight.append(weight / total)
 
 			# prevent unweighted verts from flying off in random directions
-			if len(influences) == 0 or total <= 0.000001:
+			if len(influences) == 0 or total <= 0.0001:
 				self.vindex.append(vindex)
-				self.bindex.append(self.getVertexBone(rootBone))
+				self.bindex.append(self.getVertexBone(0))
 				self.vweight.append(1.0)
 			
 		
