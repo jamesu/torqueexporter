@@ -134,7 +134,7 @@ def doExport(progressBar):
 		actions = Armature.NLA.GetActions()
 
 		# check the armatures to see if any are locked in rest position
-		for armOb in Blender.Object.Get():
+		for armOb in Blender.Scene.GetCurrent().objects:
 			if (armOb.getType() != 'Armature'): continue
 			if armOb.getData().restPosition:
 				# this popup was too long and annoying, let the standard warning/error popup handle it.
