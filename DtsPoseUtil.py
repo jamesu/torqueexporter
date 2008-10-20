@@ -134,7 +134,7 @@ def getNodeScale(self, poses, delta=True):
 	return retVal
 
 # bind test methods dynamically :-)
-def bindTestMethods(self):
+def bindLocRotMethods(self):
 	if self.blenderType == "object":
 		self.getNodeLocWS = self.__getObjectLocWS
 		self.getNodeRotWS = self.__getObjectRotWS
@@ -165,8 +165,8 @@ def bindDynamicMethods():
 	#nodeInfoClass.__dict__['getNodeRotWS'] = getNodeRotWS
 	new.instancemethod(getNodeScale, None, nodeInfoClass)
 	nodeInfoClass.__dict__['getNodeScale'] = getNodeScale
-	new.instancemethod(bindTestMethods, None, nodeInfoClass)
-	nodeInfoClass.__dict__['bindTestMethods'] = bindTestMethods
+	new.instancemethod(bindLocRotMethods, None, nodeInfoClass)
+	nodeInfoClass.__dict__['bindLocRotMethods'] = bindLocRotMethods
 	new.instancemethod(initRestScaleData, None, nodeInfoClass)
 	nodeInfoClass.__dict__['initRestScaleData'] = initRestScaleData
 
@@ -321,7 +321,7 @@ def removeIpoScales(scaledIpoNames):
 				ob.SizeZ = 1.0
 	
 	# clear bone scales as well
-	for armOb in filter(lambda x: x.type == 'Armature', Blender.Object.Get()):
+	for armOb in filter(lambda x: x.type == 'Armature', Blender.Scene.GetCurrent().objects):
 		tempPose = armOb.getPose()
 		for poseBone in tempPose.bones.values():
 			# reset the bone's transform
@@ -421,7 +421,7 @@ class NodeTransformUtil:
 
 		# bind test methods - todo - rename these
 		for ni in self.nodes.values():
-			ni.bindTestMethods()
+			ni.bindLocRotMethods()
 
 		# get poses for all armatures in the scene
 		armPoses = {}
@@ -445,6 +445,16 @@ class NodeTransformUtil:
 
 		return transformsPS[0]
 
+	'''
+	def dumpBlendRefFrameTransforms(self, orderedNodeList, refFrame, twoPass=True):
+		# dump world space transforms, use raw scale values
+		transformsWS = self.dumpNodeTransformsWS(orderedNodeList, refFrame, refFrame+1, twoPass, True)
+		# get parent space tranforms without correcting scaled offsets (bake scale into offsets)
+		transformsPS = self.worldSpaceToParentSpace(orderedNodeList, transformsWS, refFrame, refFrame+1, True)
+
+		return transformsPS[0]
+	'''	
+
 	def dumpFrameTransforms(self, orderedNodeList, startFrame, endFrame, twoPass=True):
 		# dump world space transforms, use delta scale values
 		transformsWS = self.dumpNodeTransformsWS(orderedNodeList, startFrame, endFrame, twoPass, True)
@@ -452,7 +462,45 @@ class NodeTransformUtil:
 		transformsPS = self.worldSpaceToParentSpace(orderedNodeList, transformsWS, startFrame, endFrame, True)
 
 		return transformsPS
-	
+
+	# used to get deltas for Torque blend animations
+	def getDeltasFromRef(self, refTransforms, transformsPS):
+		# loop through node transforms for each frame
+		for frameTransforms in transformsPS:
+			# loop through each node tranform and convert to deltas from reference frame
+			for i in range(0, len(frameTransforms)):
+				nodeTransforms = frameTransforms[i]
+				nodeRefTransforms = refTransforms[i]
+				# loc, rot, and scale for the frame
+				loc = nodeTransforms[0]
+				scale = nodeTransforms[1]
+				rot = nodeTransforms[2]
+				
+				# reference loc, rot, and scale for the frame
+				refLoc = nodeRefTransforms[0]
+				refScale = nodeRefTransforms[1]
+				refRot = nodeRefTransforms[2]
+
+				# loc
+				nodeTransforms[0][0] = loc[0] - refLoc[0]
+				nodeTransforms[0][1] = loc[1] - refLoc[1]
+				nodeTransforms[0][2] = loc[2] - refLoc[2]				
+				# loc for blend animations is relative to the default transform of the node
+				frameTransforms[i][0] = refRot.inverse().apply(nodeTransforms[0])
+
+				# scale
+				try:    frameTransforms[i][1][0] = scale[0] / refScale[0]
+				except: frameTransforms[i][1][0] = 0.0
+				try:    frameTransforms[i][1][1] = scale[1] / refScale[1]
+				except: frameTransforms[i][1][1] = 0.0
+				try:    frameTransforms[i][1][2] = scale[2] / refScale[2]
+				except: frameTransforms[i][1][2] = 0.0
+
+				# rot
+				frameTransforms[i][2] = rot * refTransforms[i][2].inverse()
+		
+		return transformsPS
+
 
 	# ******************
 
