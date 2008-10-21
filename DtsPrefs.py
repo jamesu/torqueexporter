@@ -253,6 +253,7 @@ class prefsClass(dict):
 			fullName = dlName + str(size)			
 		# go up by 2x
 		while fullName in self['DetailLevels'].keys() and size < 1024:
+			if size == 0: size = 1
 			size *= 2
 			fullName = dlName + str(size)
 		# if we still don't have a valid number, just start again from one
