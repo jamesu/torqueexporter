@@ -415,7 +415,7 @@ class prefsClass(dict):
 	def getSeqNumFrames(self, seqName):
 		seqKey = self['Sequences'][seqName]
 		seqStart = seqKey['StartFrame']
-		seqEnd = seqKey['EndFrame']
+		seqEnd = seqKey['EndFrame']+1
 		return seqEnd - seqStart
 	
 	def getSeqDuration(self, seqName):
