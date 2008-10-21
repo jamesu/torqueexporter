@@ -76,7 +76,7 @@ AboutControls = None
 
 
 # Global control event table.  Containers have their own event tables for child controls
-globalEvents = Common_Gui.EventTable(1)
+globalEvents = None
 
 
 
@@ -298,6 +298,9 @@ def guiHeaderResize(control, newwidth, newheight):
 def initGui():
 	# -------------------------------
 	# Globals
+	global globalEvents
+	globalEvents = Common_Gui.EventTable(1)
+	
 
 	global Version
 	# object that hands out global event id numbers
