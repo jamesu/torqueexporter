@@ -439,9 +439,9 @@ class NodeTransformUtil:
 	# test
 	def dumpReferenceFrameTransforms(self, orderedNodeList, refFrame, twoPass=True):
 		# dump world space transforms, use raw scale values
-		transformsWS = self.dumpNodeTransformsWS(orderedNodeList, refFrame, refFrame+1, twoPass, False)
+		transformsWS = self.dumpNodeTransformsWS(orderedNodeList, refFrame, refFrame, twoPass, False)
 		# get parent space tranforms without correcting scaled offsets (bake scale into offsets)
-		transformsPS = self.worldSpaceToParentSpace(orderedNodeList, transformsWS, refFrame, refFrame+1, False)
+		transformsPS = self.worldSpaceToParentSpace(orderedNodeList, transformsWS, refFrame, refFrame, False)
 
 		return transformsPS[0]
 
@@ -519,7 +519,7 @@ class NodeTransformUtil:
 		
 		if twoPass:
 			# 1st pass - get loc and scale for the given nodes on every frame in the specified range
-			for fr in range(startFrame, endFrame):
+			for fr in range(startFrame, endFrame+1):
 				
 				# new frame
 				transforms.append([])
@@ -550,7 +550,7 @@ class NodeTransformUtil:
 
 			# 2nd pass - get rot for the given nodes on every frame in the specified range
 			# 1st pass - get loc and scale for the given nodes on every frame in the specified range
-			for fr in range(startFrame, endFrame):
+			for fr in range(startFrame, endFrame+1):
 				
 				# get existing frame
 				frameTransforms = transforms[fr - startFrame]
@@ -576,7 +576,7 @@ class NodeTransformUtil:
 			
 		else:
 			# one pass - get loc, scale, and rot for the given nodes on every frame in the specified range
-			for fr in range(startFrame, endFrame):
+			for fr in range(startFrame, endFrame+1):
 				
 				# new frame
 				transforms.append([])
@@ -621,7 +621,7 @@ class NodeTransformUtil:
 			parentStacks[-1].reverse()
 		
 		# go through all frames and convert to parent space.
-		for fr in range(startFrame, endFrame):
+		for fr in range(startFrame, endFrame+1):
 			# get WS frame transforms
 			frameTransformsWS = transformsWS[fr - startFrame]
 			
