@@ -209,6 +209,14 @@ class SeqCommonControlsClass(SeqControlsClassBase):
 
 		retval = Blender.Draw.PupBlock("Create Sequence", block)
 
+		# if the add operation was canceled
+		if retval == 0:
+			del text
+			del sf
+			del ef
+			del retval
+			return
+
 		print "PupBlock returned", retval
 
 		# convert gui object values to regular vars
@@ -256,7 +264,25 @@ class SeqCommonControlsClass(SeqControlsClassBase):
 		seqName, seqPrefs = self.getSelectedSeqNameAndPrefs()		
 		
 		# todo - rename dialog
-		newName = 'TestName'
+		text = Blender.Draw.Create("")
+		block = []
+		block.append(("Name: ", text, 0, 30, "The name of the new sequence"))		
+		retval = Blender.Draw.PupBlock("Rename Sequence: " + seqName, block)
+		newName = str(text.val)
+		
+		# if the rename was canceled
+		if retval == 0:
+			del retval
+			return
+		
+		# if the user didn't enter a sequence name
+		if newName == "":
+			message = "Could not rename sequence \'" + seqName +"\' (no sequence name was entered)%t|Cancel"
+			x = Blender.Draw.PupMenu(message)
+			del x
+			del retval
+			return
+
 		
 		# no valid sequence selected
 		if seqName == None:
