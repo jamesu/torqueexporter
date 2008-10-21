@@ -216,7 +216,7 @@ class DetailLevelControlsClass:
 		guiSize = Common_Gui.NumberPicker("guiSize", "Min Pixel Size:", "Height in pixels at which detail level begins to display", startEvent, self.handleListItemEvent, None)
 		guiSize.value = Prefs.getTrailingNumber(dlName)
 		if DLType == 'Detail':
-			guiSize.min = 1
+			guiSize.min = 0
 			guiSize.max = 1024
 		elif DLType == 'Collision' or DLType == 'LOSCollision':
 			guiSize.min = -1
