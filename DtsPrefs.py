@@ -201,11 +201,11 @@ class prefsClass(dict):
 
 	# gets the highest LOD visibility number
 	def getHighestLODSize(self, DLType='Detail'):
-		largest = 0
+		largest = -1
 		for dlName in filter(lambda x: x[0:len(DLType)].lower() == DLType.lower(),  self['DetailLevels'].keys()):
 			size = abs(prefsClass.getTrailingNumber(dlName))
 			if size > largest: largest = size
-		if largest == 0: largest = None
+		if largest == -1: largest = None
 		return largest
 
 	def getSortedDLNames(self):
@@ -225,6 +225,8 @@ class prefsClass(dict):
 		elif dlName == 'Collision': self.addCollisionDetailLevel()
 		elif dlName == 'LOSCollision': self.addLosCollisionDetailLevel()
 
+	
+	# todo - fix this, numbers are nonsensical in some cases.
 	def addVisibleDetailLevel(self, size=None, layers=None):
 		dlName = 'Detail'
 		# ---------------		
