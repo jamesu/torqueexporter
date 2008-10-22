@@ -981,7 +981,9 @@ class BlenderShape(DtsShape):
 						sequence.matters_translation[nodeIndex] = True
 						sequence.has_loc = True
 				if sequence.matters_rotation[nodeIndex] == False:
-					if not rootRot.eqDelta(transforms[fr][nodeIndex-1][2], 0.02):
+					#print "angle between quats is:", rootRot.angleBetween(transforms[fr][nodeIndex-1][2])
+					#if not rootRot.eqDelta(transforms[fr][nodeIndex-1][2], 0.02):
+					if rootRot.angleBetween(transforms[fr][nodeIndex-1][2]) > 0.008:
 						#print "ROT detected:"
 						#print " rootRot=", rootRot
 						#print " rot    =", transforms[fr][nodeIndex-1][2]
