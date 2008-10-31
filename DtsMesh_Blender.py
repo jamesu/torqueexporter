@@ -42,10 +42,23 @@ from DtsSceneInfo import *
 #-------------------------------------------------------------------------------------------------
 
 class BlenderMesh(DtsMesh):
-	def __init__(self, shape, meshName, msh,  rootBone, scaleFactor, matrix, isSkinned=False, armTargets=None,  isCollision=False, useLists = False):
+	def __init__(self, shape, meshName, msh,  rootBone, scaleFactor, matrix, meshScale, isSkinned=False, armTargets=None,  isCollision=False, useLists = False):
+
 		DtsMesh.__init__(self)		
+
 		# store off the transpose of the inverse of the object's 3x3 submatrix so we don't have to recalculate it every time we need it.
 		self.tpinvmat = Torque_Math.Matrix3x3(matrix).transpose().inverse()
+
+		# store off inverse mesh scale so we don't have to recalculate it every time we need it.
+		try:xI = 1.0 / meshScale[0]
+		except: xI = 1.0
+		try: yI = 1.0 / meshScale[1]
+		except: yI = 1.0
+		try: zI = 1.0 / meshScale[2]
+		except: zI = 1.0
+		self.mshScaleInv = Torque_Math.Vector(xI, yI, zI)
+		self.hasAnisoScale = not self.mshScaleInv.eqDelta(Torque_Math.Vector(yI, zI, xI), 0.01)
+
 		self.isSkinned = isSkinned
 		self.armTargets = armTargets
 		self.meshName = meshName
@@ -342,11 +355,18 @@ class BlenderMesh(DtsMesh):
 		# Compute vert normals
 		vert = msh.verts[face.v[faceIndex].index]
 		if face.smooth:
-			#normal = matrix.passVector(Vector(vert.no[0], vert.no[1], vert.no[2]))
-			normal = self.tpinvmat.passVector([vert.no[0], vert.no[1], vert.no[2]])
+			normal = matrix.passVector(Vector(vert.no[0], vert.no[1], vert.no[2]))
+			# Alberto is full of it
+			#normal = self.tpinvmat.passVector([vert.no[0], vert.no[1], vert.no[2]])
 		else:
-			#normal = matrix.passVector(Vector(face.no[0], face.no[1], face.no[2]))
-			normal = self.tpinvmat.passVector([face.no[0], face.no[1], face.no[2]])
+			normal = matrix.passVector(Vector(face.no[0], face.no[1], face.no[2]))
+			# Alberto is full of it
+			#normal = self.tpinvmat.passVector([face.no[0], face.no[1], face.no[2]])
+		
+		if self.hasAnisoScale:
+			# correct (anisotropic) scaled normals
+			normal = Torque_Math.Vector(normal[0] * self.mshScaleInv[0], normal[1] * self.mshScaleInv[1], normal[2] * self.mshScaleInv[2])
+			
 		normal.normalize()
 		
 		# See if the vertex/texture/normal combo already exists..
