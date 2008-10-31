@@ -280,71 +280,18 @@ class BlenderShape(DtsShape):
 
 	# todo - combine with addMesh and paramatize
 	def addCollisionMesh(self, o, masterObject):
-		hasArmatureDeform = False
-		if False:
-			# Check for armature modifier
-			for mod in o.modifiers:
-				if mod.type == Blender.Modifier.Types.ARMATURE:					
-					hasArmatureDeform = True
-			# Check for an armature parent
-			try:
-				if o.parentType == Blender.Object.ParentTypes['ARMATURE']:
-					hasArmatureDeform = True
-			except: pass
-		
-
-		# do we even have any modifiers?  If not, we can skip copying the display data.
-		try: hasMultiRes = o.getData(False,True).multires
-		except AttributeError: hasMultiRes = False
-
-		if len(o.modifiers) != 0 or hasMultiRes:
-			hasModifiers = True
-		else:
-			hasModifiers = False
-
-		# Otherwise, get the final display data, as affected by modifers.
-		if ((not hasArmatureDeform) and hasModifiers) or (o.getType() in ['Surf', 'Text', 'MBall']):
-			try:
-				temp_obj = Blender.Object.Get("DTSExpObj_Tmp")
-			except:
-				temp_obj = Blender.Object.New("Mesh", "DTSExpObj_Tmp")
-			try:
-				mesh_data = Blender.Mesh.Get("DTSExpMshObj_Tmp")
-			except:
-				mesh_data = Blender.Mesh.New("DTSExpMshObj_Tmp")
-			# try to get the raw display data
-			try:
-				mesh_data.getFromObject(o)
-				temp_obj.link(mesh_data)
-			except: 
-				#todo - warn when we couldn't get mesh data?
-				pass			
-
-		# if we have armature deformation, or don't have any modifiers, get the mesh data the old fashon way
-		else:
-			mesh_data = o.getData(False,True);
-			temp_obj = None
-
+		mesh_data = o.getData();
 
 		# Get Object's Matrix
 		mat = self.collapseBlenderTransform(o)
 
 		# Import Mesh, process flags
-		try: x = self.preferences['PrimType']
-		except KeyError: self.preferences['PrimType'] = "Tris"
-		tmsh = BlenderMesh(self, o.name, mesh_data, 0, 1.0, mat, False, True)
+		tmsh = BlenderMesh(self, o.name, mesh_data, -1, 1.0, mat, False, None, True)
 
 		# Increment polycount metric
 		polyCount = tmsh.getPolyCount()
 		masterObject.tempMeshes.append(tmsh)
 
-		# clean up temporary objects
-		try:Blender.Scene.GetCurrent().objects.unlink(Blender.Object.Get("DTSExpObj_Tmp"))
-		except: pass
-
-		del mesh_data
-		del temp_obj
-		
 		return polyCount
 
 		
