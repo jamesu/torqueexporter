@@ -255,7 +255,7 @@ class BlenderShape(DtsShape):
 		# Import Mesh, process flags
 		try: x = self.preferences['PrimType']
 		except KeyError: self.preferences['PrimType'] = "Tris"
-		tmsh = BlenderMesh( self, o.name, mesh_data, -1, 1.0, mat, hasArmatureDeform, armTargets, False, (self.preferences['PrimType'] == "TriLists" or self.preferences['PrimType'] == "TriStrips") )
+		tmsh = BlenderMesh( self, o.name, mesh_data, -1, 1.0, mat, o.size, hasArmatureDeform, armTargets, False, (self.preferences['PrimType'] == "TriLists" or self.preferences['PrimType'] == "TriStrips") )
 
 		# todo - fix mesh flags
 		#if len(names) > 1: tmsh.setBlenderMeshFlags(names[1:])
@@ -287,7 +287,7 @@ class BlenderShape(DtsShape):
 		mat = self.collapseBlenderTransform(o)
 
 		# Import Mesh, process flags
-		tmsh = BlenderMesh(self, o.name, mesh_data, -1, 1.0, mat, False, None, True)
+		tmsh = BlenderMesh(self, o.name, mesh_data, -1, 1.0, mat, o.size, False, None, True)
 
 		# Increment polycount metric
 		polyCount = tmsh.getPolyCount()
