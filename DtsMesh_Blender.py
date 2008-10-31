@@ -42,7 +42,7 @@ from DtsSceneInfo import *
 #-------------------------------------------------------------------------------------------------
 
 class BlenderMesh(DtsMesh):
-	def __init__(self, shape, meshName, msh,  rootBone, scaleFactor, matrix, isSkinned=False, armTargets=None,  isCollision=False, useLists = False):		
+	def __init__(self, shape, meshName, msh,  rootBone, scaleFactor, matrix, isSkinned=False, armTargets=None,  isCollision=False, useLists = False):
 		DtsMesh.__init__(self)		
 		# store off the transpose of the inverse of the object's 3x3 submatrix so we don't have to recalculate it every time we need it.
 		self.tpinvmat = Torque_Math.Matrix3x3(matrix).transpose().inverse()
