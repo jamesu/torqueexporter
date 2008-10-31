@@ -163,15 +163,13 @@ class BlenderShape(DtsShape):
 		except AttributeError: hasMultiRes = False
 
 		if len(o.modifiers) != 0 or hasMultiRes:
-			if len(o.modifiers) == 1 and not armParentDeform:
-				hasModifiers = False
-			else:
-				hasModifiers = True
+			hasModifiers = True
 		else:
 			hasModifiers = False
 
 		# Otherwise, get the final display data, as affected by modifers.
 		if ((not hasArmatureDeform) and hasModifiers) or (o.getType() in ['Surf', 'Text', 'MBall']):
+			#print "mesh:", o.name, "has modifers but not armature deform or is not a true mesh."
 			try:
 				temp_obj = Blender.Object.Get("DTSExpObj_Tmp")
 			except:
@@ -190,6 +188,7 @@ class BlenderShape(DtsShape):
 
 		# TODO - check for other cases, what happens on the final else block?
 		elif hasArmatureDeform and not hasModifiers:
+			#print "mesh:", o.name, "has armature deform but no modifiers."
 			originalMesh = o.getData(False,True)
 			
 			# get vertex weight info
@@ -241,12 +240,14 @@ class BlenderShape(DtsShape):
 			
 		# if we have armature deformation, or don't have any modifiers, get the mesh data the old fashon way
 		else:
+			#print "mesh:", o.name, "has no modifiers and no armature deform"
 			mesh_data = o.getData(False,True)
 			temp_obj = None
 
 
 		# Get Object's Matrix
 		mat = self.collapseBlenderTransform(o)
+		#print "mat = \n", str(mat)
 
 		# Get armatures targets if mesh is skinned
 		armTargets = DtsGlobals.SceneInfo.getSkinArmTargets(o)
