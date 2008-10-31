@@ -909,6 +909,14 @@ else:
 				dat[4],  dat[5],  dat[6],
 				dat[8],  dat[9],  dat[10]]
 			else: raise "Error: Matrix3x3 initialized with incorrect data!"
+
+		def __str__(self):
+			retVal = ""
+			retVal += ""  + `self.members[0]` + ", " + `self.members[1]` + ", " + `self.members[2]` + "\n"
+			retVal += ""  + `self.members[3]` + ", " + `self.members[4]` + ", " + `self.members[5]` + "\n"
+			retVal += ""  + `self.members[6]` + ", " + `self.members[7]` + ", " + `self.members[8]`
+			return retVal
+
 		def __del__(self):
 			del self.members
 		def setData(self, dat):
@@ -997,6 +1005,15 @@ else:
 				dat[4],  dat[5],  dat[6],  dat[7],
 				dat[8],  dat[9],  dat[10], dat[11],
 				dat[12], dat[13], dat[14], dat[15]]
+
+		def __str__(self):
+			retVal = ""
+			retVal += ""  + `self.members[0]` + ", " + `self.members[1]` + ", " + `self.members[2]` + ", " + `self.members[3]` + "\n"
+			retVal += ""  + `self.members[4]` + ", " + `self.members[5]` + ", " + `self.members[6]` + ", " + `self.members[7]` + "\n"
+			retVal += ""  + `self.members[8]` + ", " + `self.members[9]` + ", " + `self.members[10]` + ", " + `self.members[11]` + "\n"
+			retVal += ""  + `self.members[12]` + ", " + `self.members[13]` + ", " + `self.members[14]` + ", " + `self.members[15]`
+			return retVal
+
 		def __del__(self):
 			del self.members
 		def setData(self, dat):
