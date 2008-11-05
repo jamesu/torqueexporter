@@ -357,7 +357,7 @@ def initGui():
 	
 	shapeTabBook = TabBookControl(mainTabBook.getTabSheetContainer("Shape"), "Shape")
 	
-	shapeTabBook.addTab("Options", "ShapeOptions")
+	shapeTabBook.addTab("Shape Options", "ShapeOptions")
 	shapeTabBook.addTab("Detail Levels", "DetailLevels")
 	shapeTabBook.addTab("Nodes", "Nodes")
 	shapeTabBook.addTab("Materials", "Materials")
