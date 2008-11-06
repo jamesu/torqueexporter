@@ -250,7 +250,9 @@ class SeqControlsClassBase:
 	#  @param newwidth The new width of the GUI control in pixels.
 	#  @param newheight The new height of the GUI control in pixels.
 	def guiSeqListResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 10,28, newheight - 68,230
+		pass
+		#control.x, control.y, control.height, control.width = 10,28, newheight - 68,230
+
 	## @brief Place holder resize callback
 	#  @note Child classes should call override this method explicitly
 	#  @param control The invoking GUI control object
