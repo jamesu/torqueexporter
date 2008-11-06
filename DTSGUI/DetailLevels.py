@@ -182,15 +182,15 @@ class DetailLevelControlsClass:
 		
 	# resize events
 	def guiDetailLevelsListTitleResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 10,275, 20,150
+		control.x, control.y, control.height, control.width = 10,270, 20,150
 	def guiDetailLevelsListResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 10,30, newheight - 100, newwidth - 20
+		control.x, control.y, control.height, control.width = 10,45, newheight - 120, newwidth - 20
 	def guiDetailLevelsAddButtonResize(self, control, newwidth, newheight):
 		control.x, control.y, control.height, control.width = 10,295, 20,50
 	def guiDetailLevelsTypeMenuResize(self, control, newwidth, newheight):
 		control.x, control.y, control.height, control.width = 62,295, 20,150
 	def guiDetailLevelsDelButtonResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 10,5, 20,180
+		control.x, control.y, control.height, control.width = 10,15, 20,180
 
 
 
