@@ -52,15 +52,15 @@ class UserCreatedSeqControlsClassBase(SeqControlsClassBase):
 		except: self.shortAnimationTypeString = "Unk" # :-)
 
 		# initialize GUI controls
-		self.guiSeqAddToExistingTxt = Common_Gui.SimpleText("guiSeqAddToExistingTxt", "Add " + self.shortAnimationTypeString + " Animation to existing Sequence:", None, self.guiSeqAddToExistingTxtResize)
-		self.guiSeqDelFromExistingTxt = Common_Gui.SimpleText("guiSeqDelFromExistingTxt", "Del " + self.shortAnimationTypeString + " Animation from selected seq:", None, self.guiSeqDelFromExistingTxtResize)
+		self.guiSeqAddToExistingTxt = Common_Gui.SimpleText("guiSeqAddToExistingTxt", "Add " + self.shortAnimationTypeString + " anim to existing sequence:", None, self.guiSeqAddToExistingTxtResize)
+		#self.guiSeqDelFromExistingTxt = Common_Gui.SimpleText("guiSeqDelFromExistingTxt", "Del " + self.shortAnimationTypeString + " Animation from selected seq:", None, self.guiSeqDelFromExistingTxtResize)
 		self.guiSeqExistingSequences = Common_Gui.ComboBox("guiSeqExistingSequences", "Sequence", "Select a Sequence from this list to add a " + self.animationTypeString + " Animation", self.getNextEvent(), self.handleGuiSeqExistingSequencesEvent, self.guiSeqExistingSequencesResize)
 		self.guiSeqAddToExisting = Common_Gui.BasicButton("guiSeqAddToExisting", "Add " + self.animationTypeString, "Add an " + self.animationTypeString + " animation to an existing sequence.", self.getNextEvent(), self.handleGuiSeqAddToExistingEvent, self.guiSeqAddToExistingResize)
-		self.guiSeqDelFromExisting = Common_Gui.BasicButton("guiSeqDelFromExisting", "Remove " + self.animationTypeString + " from selected", "Delete " + self.animationTypeString + " animation from selected sequence.", self.getNextEvent(), self.handleGuiSeqDelFromExistingEvent, self.guiSeqDelFromExistingResize)
+		self.guiSeqDelFromExisting = Common_Gui.BasicButton("guiSeqDelFromExisting", "Remove " + self.animationTypeString + " anim from selected sequence", "Delete " + self.animationTypeString + " animation from selected sequence.", self.getNextEvent(), self.handleGuiSeqDelFromExistingEvent, self.guiSeqDelFromExistingResize)
 		
 		# add controls to containers
 		tabContainer.addControl(self.guiSeqAddToExistingTxt)
-		tabContainer.addControl(self.guiSeqDelFromExistingTxt)
+		#tabContainer.addControl(self.guiSeqDelFromExistingTxt)
 		tabContainer.addControl(self.guiSeqExistingSequences)
 		tabContainer.addControl(self.guiSeqAddToExisting)
 		tabContainer.addControl(self.guiSeqDelFromExisting)
@@ -81,7 +81,7 @@ class UserCreatedSeqControlsClassBase(SeqControlsClassBase):
 	def cleanup(self):
 		SeqControlsClassBase.cleanup(self)
 		del self.guiSeqAddToExistingTxt
-		del self.guiSeqDelFromExistingTxt
+		#del self.guiSeqDelFromExistingTxt
 		del self.guiSeqExistingSequences
 		del self.guiSeqAddToExisting
 		del self.guiSeqDelFromExisting
@@ -181,36 +181,63 @@ class UserCreatedSeqControlsClassBase(SeqControlsClassBase):
 	## @brief Resize callback for guiSeqList
 	#  @param control The invoking GUI control object
 	def guiSeqListResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 10,52, newheight - 92,145
+		#control.x, control.y, control.height, control.width = 10,52, newheight - 92,145
+		control.x = 10
+		control.y = 32
+		control.height = newheight - 94
+		control.width = 145
+
+	## @brief Resize callback for guiSeqListTitle
+	#  @param control The invoking GUI control object
+	def guiSeqListTitleResize(self, control, newwidth, newheight):			
+		control.x, control.y, control.height, control.width = 10,newheight-57, 20,82
 
 
 	## @brief Resize callback for guiSeqAddToExistingTxt
 	#  @param control The invoking GUI control object
 	def guiSeqAddToExistingTxtResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 10,38, 20,230
-
-	def guiSeqDelFromExistingTxtResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 261,38, 20,230
+		#control.x, control.y, control.height, control.width = 10,38, 20,230
+		control.width = 145
+		control.height = 20
+		control.x = 10
+		control.y = newheight - control.height - 12
+		
 
 	## @brief Resize callback for guiSeqExistingSequences
 	#  @param control The invoking GUI control object
 	def guiSeqExistingSequencesResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 10,11, 20,145
-
+		#control.x, control.y, control.height, control.width = 10,11, 20,145
+		control.width = 145
+		control.height = 20
+		control.x = 210
+		control.y = newheight - control.height - 17
+		
 	## @brief Resize callback for guiSeqAddToExisting
 	#  @param control The invoking GUI control object
 	def guiSeqAddToExistingResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 157,11, 20,82
+		#control.x, control.y, control.height, control.width = 157,11, 20,82
+		control.width = 90
+		control.height = 20
+		control.x = 358
+		control.y = newheight - control.height - 17
+
+
+	#def guiSeqDelFromExistingTxtResize(self, control, newwidth, newheight):
+	#	control.x, control.y, control.height, control.width = 261,38, 20,230
+
+
 		
 	def guiSeqDelFromExistingResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 261,11, 20,200
+		#control.x, control.y, control.height, control.width = 261,11, 20,200
+		control.x = 10
+		control.y = 7
+		control.height = 19
+		control.width = 285
+		
 
-	## @brief Resize callback for guiSeqListTitle
-	#  @param control The invoking GUI control object
-	def guiSeqListTitleResize(self, control, newwidth, newheight):			
-		control.x, control.y, control.height, control.width = 10,310, 20,82
 
 	## @brief Resize callback for guiSeqOptsContainer
 	#  @param control The invoking GUI control object
 	def guiSeqOptsContainerResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 155,52, newheight-92,newwidth-155
+		#control.x, control.y, control.height, control.width = 155,32, newheight-92,newwidth-145
+		control.x, control.y, control.height, control.width = 155,32, newheight-94,newwidth-165
