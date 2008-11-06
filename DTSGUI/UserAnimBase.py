@@ -24,6 +24,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 '''
 
 from SequenceBase import *
+import Blender
 
 # ***************************************************************************************************
 ## @brief Base Class For sequence control sub-panel classes.
