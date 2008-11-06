@@ -413,10 +413,10 @@ class IFLControlsClass(UserCreatedSeqControlsClassBase):
 		control.x, control.y, control.height, control.width = 196,10, 153,newwidth - 206
 	
 	def guiFrameSelectedBoxLabelResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 3,newheight-35, 33,107
+		control.x, control.y, control.height, control.width = 5,newheight-35, 33,107
 
-	def guiFramesListContainerTitleResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 5,newheight-30, 20,82
+	#def guiFramesListContainerTitleResize(self, control, newwidth, newheight):
+	#	control.x, control.y, control.height, control.width = 5,newheight-30, 20,82
 
 	## @brief Resize callback for guiFramesListSelectedTxt
 	#  @param control The invoking GUI control object

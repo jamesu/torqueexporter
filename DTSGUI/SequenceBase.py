@@ -284,7 +284,7 @@ class SeqControlsClassBase:
 
 	def guiSeqSelectedBoxLabelResize(self, control, newwidth, newheight):
 		#print "resizing test box label"
-		control.x, control.y, control.height, control.width = 3,newheight-35, 33,117
+		control.x, control.y, control.height, control.width = 5,newheight-35, 33,117
 
 	## @brief Creates a sequence list item and it's associated GUI controls.
 	#  @note If a child class needs to display a "DSQ" button, it should call 

@@ -191,7 +191,7 @@ class MaterialControlsClass:
 	#	control.x, control.y, control.height, control.width = 5,newheight-30, 20,82
 
 	def guiMatSelectedBoxLabelResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 3,newheight-35, 33,117
+		control.x, control.y, control.height, control.width = 5,newheight-35, 33,117
 	
 	
 	def resize(self, control, newwidth, newheight):
@@ -210,7 +210,7 @@ class MaterialControlsClass:
 		#	control.y = newheight - (control.height + 10)
 
 		elif control.name == "guiMaterialSelfIllumButton":
-			control.x, control.y, control.width = 125,newheight-30, 95
+			control.x, control.y, control.width = 127,newheight-30, 95
 		elif control.name == "guiMaterialIFLMatButton":
 			control.x, control.y, control.width = 227,newheight-30, 95
 		elif control.name == "guiMaterialTransFrame":

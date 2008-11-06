@@ -481,7 +481,7 @@ class VisControlsClass(UserCreatedSeqControlsClassBase):
 		control.x, control.y, control.height, control.width = 186,10, 173,newwidth - 196
 	
 	def guiTrackSelectedBoxLabelResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 3,newheight-35, 33,107
+		control.x, control.y, control.height, control.width = 5,newheight-35, 33,107
 
 	#def guiTrackListContainerTitleResize(self, control, newwidth, newheight):
 	#	control.x, control.y, control.height, control.width = 5,newheight-30, 20,82
