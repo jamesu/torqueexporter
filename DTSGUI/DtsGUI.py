@@ -74,6 +74,9 @@ NodeControls = None
 GeneralControls = None
 AboutControls = None
 
+mainTabBook = None
+shapeTabBook = None
+sequencesTabBook = None
 
 # Global control event table.  Containers have their own event tables for child controls
 globalEvents = None
@@ -261,16 +264,23 @@ class TabBookControl:
 
 
 
-
 	
 		
 	
 
 # Callback for export button
 def guiBaseCallback(control):
+	global mainTabBook, shapeTabBook, sequencesTabBook
 	if control.name == "guiExportButton":
 		export()
-		return
+	elif control.name == "guiRefreshButton":
+		# restore panel states from prefs,
+		# refreshes as a side effect :-)
+		mainTabBook.restoreLastActivePanel()
+		shapeTabBook.restoreLastActivePanel()
+		sequencesTabBook.restoreLastActivePanel()
+
+		
 		
 
 # Resize callback for all global gui controls
@@ -284,6 +294,9 @@ def guiBaseResize(control, newwidth, newheight):
 	elif control.name == "guiExportButton":
 		control.x, control.y = newwidth-74, newheight - 27
 		control.width, control.height = 70, 23
+	elif control.name == "guiRefreshButton":
+		control.x, control.y = newwidth-73, newheight - 56
+		control.width, control.height = 65, 19
 
 # Resize callback for gui header	
 def guiHeaderResize(control, newwidth, newheight):
@@ -309,7 +322,8 @@ def initGui():
 	global ShapeOptionControls, DetailLevelControls, SeqCommonControls, IFLControls, VisControls, ActionControls, MaterialControls, NodeControls, GeneralControls, AboutControls
 	# main gui container into which all other gui objects are placed
 	global guiMainContainer
-
+	# global tab books
+	global mainTabBook, shapeTabBook, sequencesTabBook
 
 	# -------------------------------
 	# Initialize GUI system
@@ -322,6 +336,7 @@ def initGui():
 
 	# export button
 	guiExportButton = Common_Gui.BasicButton("guiExportButton", "Export", "Export .dts shape", globalEvents.getNewID("Export"), guiBaseCallback, guiBaseResize)
+	guiRefreshButton = Common_Gui.BasicButton("guiRefreshButton", "Refresh", "Refresh current page", globalEvents.getNewID("Refresh"), guiBaseCallback, guiBaseResize)
 
 	# Header controls
 	guiHeaderText = Common_Gui.SimpleText("guiHeaderText", "Torque Exporter Plugin", None, guiHeaderResize)
@@ -343,6 +358,7 @@ def initGui():
 	guiHeaderBar.addControl(guiHeaderText)
 	guiHeaderBar.addControl(guiVersionText)
 	guiMainContainer.addControl(guiExportButton)
+	guiMainContainer.addControl(guiRefreshButton)
 	Common_Gui.addGuiControl(guiHeaderBar)
 	Common_Gui.addGuiControl(guiMainContainer)
 	
