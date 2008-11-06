@@ -191,56 +191,51 @@ class TabBookControl:
 		for tab in self.tabs:
 			if Prefs['LastActivePanel'] == tab.tabName \
 			or Prefs['LastActiveSubPanel'] == tab.tabName:
-				print "refershing tab:", tab.tabName
+				#print "refershing tab:", tab.tabName
 				if tab.controlPage != None:
 					tab.controlPage.refreshAll()
 			
 	def restoreLastActivePanel(self):
 		Prefs = DtsGlobals.Prefs
-		
-		print "restoring last active panel..."
-		print Prefs['LastActivePanel']
-		print Prefs['LastActiveSubPanel']
-		
 		found = False
 		for tab in self.tabs:
 			
 			# no parent tab
 			if self.parentTabName == None:
-				print "no parent tab"
+				#print "no parent tab"
 				# if current tab was the last active panel
 				if Prefs['LastActivePanel'] == tab.tabName:
-					print "current tab was the last active panel"
+					#print "current tab was the last active panel"
 					# call the refreshAll method if it exists
 					if tab.controlPage != None:
 						tab.controlPage.refreshAll()
 					self.showTabPage(tab)
 				# if current tab was not the last active panel
 				else:
-					print "current tab was not the last active panel"
+					#print "current tab was not the last active panel"
 					self.hideTabPage(tab)
 			
 			#  parent tab was the last active panel
 			elif self.parentTabName == Prefs['LastActivePanel']:
-				print "parent tab was last active panel"
+				#print "parent tab was last active panel"
 				# if this tab was the last active subpanel
 				if Prefs['LastActiveSubPanel'] == tab.tabName:
-					print "current tab was the last active supanel"
+					#print "current tab was the last active supanel"
 					# call the refreshAll method if it exists
 					if tab.controlPage != None:
 						tab.controlPage.refreshAll()
 					self.showTabPage(tab)
 				# if this tab was not the last active subpanel
 				else:
-					print "current tab was not the last active supanel"
+					#print "current tab was not the last active supanel"
 					self.hideTabPage(tab)
 					
 			# parent tab was not the last active panel
 			else:
-				print "parent tab was not the last active panel"
+				#print "parent tab was not the last active panel"
 				# if an explicit default tab was not set up
 				if self.defaultTab == None:
-					print "no explicit default tab exists."
+					#print "no explicit default tab exists."
 					# call the refreshAll method if it exists
 					if self.tabs[0].controlPage != None:
 						self.tabs[0].controlPage.refreshAll()
@@ -248,17 +243,17 @@ class TabBookControl:
 					self.showTabPage(self.tabs[0])
 				# if an explicitly set default tab exists
 				else:	
-					print "an explicit default tab exists"
+					#print "an explicit default tab exists"
 					# if the current tab is the default tab
 					if tab.tabName == self.defaultTab:
-						print "the current tab is the default tab"
+						#print "the current tab is the default tab"
 						# call the refreshAll method if it exists
 						if tab.controlPage != None:
 							tab.controlPage.refreshAll()
 						self.showTabPage(tab)
 					# if the current tab is not the default
 					else:				
-						print "the current tab is not the default tab"
+						#print "the current tab is not the default tab"
 						self.hideTabPage(tab)
 
 	def resize(self, control, newwidth, newheight):
@@ -307,17 +302,13 @@ def guiBaseCallback(control):
 	if control.name == "guiExportButton":
 		export()
 	elif control.name == "guiRefreshButton":
-		# restore panel states from prefs,
-		# refreshes as a side effect :-)
-		print "**********************************"
-		print "mainTabBook.lastActiveTab =", mainTabBook.lastActiveTab.tabName
 		if mainTabBook.lastActiveTab.tabName == "Shape":
 			shapeTabBook.refreshActivePanel()
 		elif mainTabBook.lastActiveTab.tabName == "Sequences":
 			sequencesTabBook.refreshActivePanel()
 		else:
 			mainTabBook.refreshActivePanel()
-		print "**********************************"
+
 
 		
 		
