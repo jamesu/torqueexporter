@@ -59,7 +59,7 @@ class MaterialControlsClass:
 		self.guiMaterialEnvMappingFrame = Common_Gui.BasicFrame("guiMaterialEnvMappingFrame", "", None, 29, None, self.resize)
 		
 		self.guiMaterialAdvancedFrame = Common_Gui.BasicFrame("guiMaterialAdvancedFrame", "", None, 30, None, self.resize)
-		self.guiMaterialImportRefreshButton = Common_Gui.BasicButton("guiMaterialImportRefreshButton", "Refresh", "Import Blender materials and settings", 7, self.handleEvent, self.resize)
+		#self.guiMaterialImportRefreshButton = Common_Gui.BasicButton("guiMaterialImportRefreshButton", "Refresh", "Import Blender materials and settings", 7, self.handleEvent, self.resize)
 		self.guiMaterialSWrapButton = Common_Gui.ToggleButton("guiMaterialSWrapButton", "SWrap", "SWrap", 9, self.handleEvent, self.resize)
 		self.guiMaterialTWrapButton = Common_Gui.ToggleButton("guiMaterialTWrapButton", "TWrap", "TWrap", 10, self.handleEvent, self.resize)
 		self.guiMaterialTransButton = Common_Gui.ToggleButton("guiMaterialTransButton", "Translucent", "Translucent", 11, self.handleEvent, self.resize)
@@ -102,7 +102,7 @@ class MaterialControlsClass:
 		guiMaterialsSubtab.addControl(self.guiMaterialListTitle)
 		guiMaterialsSubtab.addControl(self.guiMaterialList)
 		guiMaterialsSubtab.addControl(self.guiMaterialOptions)
-		guiMaterialsSubtab.addControl(self.guiMaterialImportRefreshButton)
+		#guiMaterialsSubtab.addControl(self.guiMaterialImportRefreshButton)
 
 		self.guiMaterialOptions.addControl(self.guiMaterialOptionsTitle)
 		self.guiMaterialOptions.addControl(self.guiMatOptsContainerTitleBox)
@@ -154,7 +154,7 @@ class MaterialControlsClass:
 		del self.guiMaterialTransFrame
 		del self.guiMaterialMipFrame
 		del self.guiMaterialAdvancedFrame
-		del self.guiMaterialImportRefreshButton
+		#del self.guiMaterialImportRefreshButton
 		del self.guiMaterialWrapFrame
 		del self.guiMaterialSWrapButton
 		del self.guiMaterialTWrapButton
@@ -201,10 +201,10 @@ class MaterialControlsClass:
 			control.x, control.y, control.height, control.width = 25,310, 20,150
 		elif control.name == "guiMaterialOptions":
 			control.x, control.y, control.height, control.width = 161,30, newheight - 70,328
-		elif control.name == "guiMaterialImportRefreshButton":
-			control.width = 75
-			control.x = newwidth - (control.width + 10)
-			control.y = newheight - (control.height + 10)
+		#elif control.name == "guiMaterialImportRefreshButton":
+		#	control.width = 75
+		#	control.x = newwidth - (control.width + 10)
+		#	control.y = newheight - (control.height + 10)
 
 		elif control.name == "guiMaterialSelfIllumButton":
 			control.x, control.y, control.width = 125,newheight-30, 95
@@ -279,12 +279,12 @@ class MaterialControlsClass:
 			matPrefs = Prefs['Materials']	
 
 
-		if control.name == "guiMaterialImportRefreshButton":
-			# import Blender materials and settings
-			#self.clearMaterialList()
-			#self.populateMaterialList()
-			self.refreshAll()
-			return
+		#if control.name == "guiMaterialImportRefreshButton":
+		#	# import Blender materials and settings
+		#	#self.clearMaterialList()
+		#	#self.populateMaterialList()
+		#	self.refreshAll()
+		#	return
 
 		materialName, matPrefs = self.getSelectedMatNameAndPrefs()
 		#materialName = guiMaterialList.controls[guiMaterialList.itemIndex].controls[0].label	
