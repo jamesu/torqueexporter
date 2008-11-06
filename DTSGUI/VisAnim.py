@@ -462,10 +462,11 @@ class VisControlsClass(UserCreatedSeqControlsClassBase):
 	## @brief Resize callback for guiVisTrackList
 	#  @param control The invoking GUI control object
 	def guiVisTrackListResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 20,10, 173,175
+		control.x, control.y, control.height, control.width = 10,10, 173,175
 
 	def guiVisTrackListContainerResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 196,10, 173,newwidth - 196
+		#control.x, control.y, control.height, control.width = 186,10, 173,newwidth - 196
+		control.x, control.y, control.height, control.width = 186,10, 173,newwidth - 196
 	
 	def guiTrackListContainerTitleBoxResize(self, control, newwidth, newheight):
 		control.x, control.y, control.height, control.width = 3,newheight-35, 33,107
