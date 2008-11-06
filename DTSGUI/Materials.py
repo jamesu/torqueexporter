@@ -47,8 +47,9 @@ class MaterialControlsClass:
 		self.guiMaterialOptions = Common_Gui.BasicContainer("guiMaterialOptions", "", None, self.resize)
 
 		#self.guiMaterialOptionsTitle = Common_Gui.SimpleText("guiMaterialOptionsTitle", "DTS Material: None Selected", None, self.resize)
-		self.guiMaterialOptionsTitle = Common_Gui.MultilineText("guiMaterialOptionsTitle", "DTS Material:\n None Selected", None, self.guiMaterialOptionsTitleResize)
-		self.guiMatOptsContainerTitleBox = Common_Gui.BasicFrame(resize_callback = self.guiMatOptsContainerTitleBoxResize)
+		#self.guiMaterialOptionsTitle = Common_Gui.MultilineText("guiMaterialOptionsTitle", "DTS Material:\n None Selected", None, self.guiMaterialOptionsTitleResize)
+		#self.guiMatOptsContainerTitleBox = Common_Gui.BasicFrame(resize_callback = self.guiMatOptsContainerTitleBoxResize)
+		self.guiMatSelectedBoxLabel = Common_Gui.BoxSelectionLabel("guiMatSelectedBoxLabel", "DTS Material:\n None Selected", None, self.guiMatSelectedBoxLabelResize)
 
 
 
@@ -104,8 +105,9 @@ class MaterialControlsClass:
 		guiMaterialsSubtab.addControl(self.guiMaterialOptions)
 		#guiMaterialsSubtab.addControl(self.guiMaterialImportRefreshButton)
 
-		self.guiMaterialOptions.addControl(self.guiMaterialOptionsTitle)
-		self.guiMaterialOptions.addControl(self.guiMatOptsContainerTitleBox)
+		#self.guiMaterialOptions.addControl(self.guiMaterialOptionsTitle)
+		#self.guiMaterialOptions.addControl(self.guiMatOptsContainerTitleBox)
+		self.guiMaterialOptions.addControl(self.guiMatSelectedBoxLabel)
 		
 		self.guiMaterialOptions.addControl(self.guiMaterialTransFrame)
 		self.guiMaterialOptions.addControl(self.guiMaterialMipFrame)
@@ -149,8 +151,9 @@ class MaterialControlsClass:
 		del self.guiMaterialListTitle
 		del self.guiMaterialList
 		del self.guiMaterialOptions
-		del self.guiMaterialOptionsTitle
-		del self.guiMatOptsContainerTitleBox
+		#del self.guiMaterialOptionsTitle
+		#del self.guiMatOptsContainerTitleBox
+		del self.guiMatSelectedBoxLabel
 		del self.guiMaterialTransFrame
 		del self.guiMaterialMipFrame
 		del self.guiMaterialAdvancedFrame
@@ -184,10 +187,10 @@ class MaterialControlsClass:
 		#self.populateMaterialList()
 		self.refreshMaterialList()
 
-	def guiMaterialOptionsTitleResize(self, control, newwidth, newheight):
-		control.x, control.y, control.height, control.width = 5,newheight-30, 20,82
+	#def guiMaterialOptionsTitleResize(self, control, newwidth, newheight):
+	#	control.x, control.y, control.height, control.width = 5,newheight-30, 20,82
 
-	def guiMatOptsContainerTitleBoxResize(self, control, newwidth, newheight):
+	def guiMatSelectedBoxLabelResize(self, control, newwidth, newheight):
 		control.x, control.y, control.height, control.width = 3,newheight-35, 33,117
 	
 	
@@ -197,8 +200,8 @@ class MaterialControlsClass:
 			control.x, control.y, control.height, control.width = 10,310, 20,150
 		elif control.name == "guiMaterialList":
 			control.x, control.y, control.height, control.width = 10,30, newheight - 70,150
-		elif control.name == "guiMaterialOptionsTitle":
-			control.x, control.y, control.height, control.width = 25,310, 20,150
+		#elif control.name == "guiMaterialOptionsTitle":
+		#	control.x, control.y, control.height, control.width = 25,310, 20,150
 		elif control.name == "guiMaterialOptions":
 			control.x, control.y, control.height, control.width = 161,30, newheight - 70,328
 		#elif control.name == "guiMaterialImportRefreshButton":
@@ -457,7 +460,7 @@ class MaterialControlsClass:
 				self.guiMaterialReflectanceMapMenu.selectStringItem(matPrefs['RefMapTex'])
 				self.guiMaterialReflectanceSlider.value = matPrefs['reflectance'] * 100.0
 				self.guiMaterialDetailScaleSlider.value = matPrefs['detailScale'] * 100.0
-				self.guiMaterialOptionsTitle.label = ("DTS Material:\n \'%s\'" % materialName)
+				self.guiMatSelectedBoxLabel.text = ("DTS Material:\n \'%s\'" % materialName)
 			else:
 				self.guiMaterialSWrapButton.state = False
 				self.guiMaterialTWrapButton.state = False
@@ -478,7 +481,7 @@ class MaterialControlsClass:
 				self.guiMaterialReflectanceSlider.value = 0
 				self.guiMaterialDetailScaleSlider.value = 100
 				self.guiMaterialOptions.enabled = False
-				self.guiMaterialOptionsTitle.label = "DTS Material:\n None Selected"
+				self.guiMatSelectedBoxLabel.text = "DTS Material:\n None Selected"
 
 
 	## @brief Refreshes the items in the material list, preserving list selection if possible.

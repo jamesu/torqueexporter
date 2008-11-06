@@ -469,7 +469,8 @@ class SeqCommonControlsClass(SeqControlsClassBase):
 	def refreshSequenceOptions(self, seqName, seqPrefs):
 		Prefs = DtsGlobals.Prefs
 		self.clearSequenceOptions()
-		self.guiSeqOptsContainerTitle.label = "Selected Sequence:\n '%s'" % seqName
+		#self.guiSeqOptsContainerTitle.label = "Selected Sequence:\n '%s'" % seqName
+		self.guiSeqSelectedBoxLabel.text = "Selected Sequence:\n '%s'" % seqName
 
 		maxNumFrames = Prefs.getSeqNumFrames(seqName)
 
@@ -529,7 +530,8 @@ class SeqCommonControlsClass(SeqControlsClassBase):
 	#  @note This method should be called when no sequence list item is currently selected.
 	def clearSequenceOptions(self):
 		self.guiSeqOptsContainer.enabled = False
-		self.guiSeqOptsContainerTitle.label = "Selected Sequence:\n None Selected"
+		#self.guiSeqOptsContainerTitle.label = "Selected Sequence:\n None Selected"
+		self.guiSeqSelectedBoxLabel.text = "Selected Sequence:\n None Selected"
 		for control in self.guiSeqOptsContainer.controls:
 			control.tooltip = "No sequence is selected"
 		self.guiSeqDuration.value = 0.0
