@@ -178,7 +178,8 @@ class BasicFrame(BasicControl):
 		BasicControl.__init__(self, name, text, tooltip, evt, callback, resize_callback)
 		self.width = 100
 		self.height = 20
-		self.borderColor = [0.0,0.0,0.0,0.0]
+		#self.borderColor = [0.0,0.0,0.0,0.0]
+		self.borderColor = [0.5,0.5,0.5,0.0]
 		
 	def onDraw(self, offset):
 		real_x = offset[0] + self.x
@@ -187,7 +188,8 @@ class BasicFrame(BasicControl):
 		BGL.glBegin(BGL.GL_LINES)
 
 		# cheap 3d effect
-		BGL.glColor4f(0.5,0.5,0.5, self.borderColor[3])
+		BGL.glColor4f(0.75,0.75,0.75, self.borderColor[3])
+		#BGL.glColor4f(self.borderColor[0] * 0.5,self.borderColor[1] * 0.5,self.borderColor[2] * 0.5, self.borderColor[3])
 		# Left up
 		BGL.glVertex2i(real_x+1,real_y)
 		BGL.glVertex2i(real_x+1,real_y+self.height)
@@ -218,121 +220,6 @@ class BasicFrame(BasicControl):
 		
 		BGL.glEnd()
 
-class BarGraph(BasicControl):
-	def __init__(self, name=None, text=None, numBars=1, tooltip=None, evt=None, callback=None, resize_callback=None):
-		BasicControl.__init__(self, name, text, tooltip, evt, callback, resize_callback)
-		self.width = 100
-		self.height = 20
-		self.borderColor = [0.0,0.0,0.0,0.0]
-		self.numBars = numBars
-		self.barText = []
-		self.barVals = []
-		self.barColors = []
-		for i in range(0, numBars):
-			self.barText.append("")
-			self.barVals.append(1.0)
-			self.barColors.append((0.0,0.0,0.0))
-		
-	def setBarText(self, barNum, text):
-		self.barText[barNum] = text
-
-	# Input values must be normalized (between 0 and 1)
-	def setBarValue(self, barNum, value):
-		self.barVals[barNum] = value
-		
-	def setBarColor(self, barNum, color=(0.0,0.0,0.0)):
-		self.barColors[barNum] = color
-
-	def onDraw(self, offset):
-		real_x = offset[0] + self.x
-		real_y = offset[1] + self.y
-		
-		# draw background
-		BGL.glColor3f(0.6627, 0.6627, 0.6627)
-		BGL.glRecti(real_x+1, real_y+1, (real_x + self.width - 1), (real_y + self.height - 1))
-
-		# draw colored bars
-		barHeight = self.height / self.numBars		
-		for i in range(0, self.numBars):
-			r, g, b = self.barColors[i]
-			BGL.glColor3f(r, g, b)
-			barWidth = int((self.barVals[i] * self.width)-1)
-			if barWidth < 0: barWidth = 0
-			barLeft = int(real_x)
-			barRight = int(barWidth + real_x)
-			barTop = int(real_y + (i * barHeight) + barHeight)
-			barBottom = int(real_y + (i * barHeight))
-			BGL.glRecti(barLeft, barBottom, barRight, barTop)
-		
-		BGL.glColor3f(0.0, 0.0, 0.0)
-		
-		# Draw border
-		BGL.glBegin(BGL.GL_LINES)
-		BGL.glColor4f(self.borderColor[0],self.borderColor[1],self.borderColor[2], self.borderColor[3])
-		# Left up
-		BGL.glVertex2i(real_x,real_y)
-		BGL.glVertex2i(real_x,real_y+self.height)
-		# Top right
-		BGL.glVertex2i(real_x,real_y+self.height)
-		BGL.glVertex2i(real_x+self.width-1,real_y+self.height)
-		# Right down
-		BGL.glVertex2i(real_x+self.width,real_y+self.height)
-		BGL.glVertex2i(real_x+self.width,real_y)
-		# Bottom left
-		BGL.glVertex2i(real_x+self.width,real_y)
-		BGL.glVertex2i(real_x,real_y)
-
-		barHeight = self.height / self.numBars		
-
-		BGL.glColor3f(0.62745, 0.62745, 0.62745)
-		# Draw bar "lanes" from bottom to top
-		for i in range(1, self.numBars):
-			barWidth = int(self.width)
-			barLeft = int(real_x)
-			barRight = int(barWidth + real_x)
-			barBottom = int(real_y + (i * barHeight))
-			# Bottom left
-			BGL.glVertex2i(barLeft,barBottom)
-			BGL.glVertex2i(barRight,barBottom)
-		
-		BGL.glColor3f(0.0, 0.0, 0.0)
-		# Draw bar outlines from bottom to top
-		for i in range(0, self.numBars):
-			barWidth = int(self.barVals[i] * self.width)
-			barLeft = int(real_x)
-			barRight = int(barWidth + real_x)
-			barTop = int(real_y + (i * barHeight) + barHeight)
-			barBottom = int(real_y + (i * barHeight))
-			
-			BGL.glBegin(BGL.GL_LINES)
-			BGL.glColor4f(self.borderColor[0],self.borderColor[1],self.borderColor[2], self.borderColor[3])
-			# Left up
-			BGL.glVertex2i(barLeft,barBottom)
-			BGL.glVertex2i(barLeft,barTop)
-			# Top right
-			BGL.glVertex2i(barLeft,barTop)
-			BGL.glVertex2i(barRight,barTop)
-			# Right down
-			BGL.glVertex2i(barRight,barTop)
-			BGL.glVertex2i(barRight,barBottom)
-			# Bottom left
-			BGL.glVertex2i(barRight,barBottom)
-			BGL.glVertex2i(barLeft,barBottom)
-		
-		BGL.glColor3f(0.0, 0.0, 0.0)
-		BGL.glEnd()
-		
-		
-		# Draw bar text
-		barHeight = self.height / self.numBars		
-		for i in range(0, self.numBars):
-			text_x = int(real_x + 5)
-			text_y = int(real_y + (i * barHeight) + 4)
-			BGL.glRasterPos2i(text_x, text_y)
-			width = Draw.Text(self.barText[i], 'normal')
-
-		
-		
 
 
 class BasicButton(BasicControl):
@@ -1321,6 +1208,121 @@ class BasicGrid(BasicContainer):
 			c.height = self.minimumChildHeight
 			curY += 1
 			
+
+
+'''
+	Custom Gui Classes
+'''
+#-------------------------------------------------------------------------------------------------
+
+# class that represents a box containing a text label
+# which displays a list selection
+class BoxSelectionLabel(BasicControl):
+	def __init__(self, name=None, text=None, tooltip=None, resize_callback=None):
+		BasicControl.__init__(self, name, text, tooltip, None, None, resize_callback)
+		self.width = 100
+		self.height = 20
+		self.text = text
+		self.borderColor = [0.0,0.0,0.0,0.5]
+		#self.borderColor = [0.5,0.5,0.5,0.0]
+		curTextCol = curTheme.get('buts').text
+		self.color = [curTextCol[0]/255.0,curTextCol[1]/255.0,curTextCol[2]/255.0, 1.0]
+		self.size = "normal"
+		
+	def onDraw(self, offset):
+		real_x = offset[0] + self.x
+		real_y = offset[1] + self.y
+
+		BGL.glBegin(BGL.GL_LINES)
+
+		# cheap 3d effect
+		#BGL.glColor4f(0.5,0.5,0.5, self.borderColor[3])
+		#BGL.glColor4f(0.75,0.75,0.75, self.borderColor[3])
+		BGL.glColor4f(0.5,0.5,0.5, 0.5)
+		# Left up
+		#BGL.glVertex2i(real_x+1,real_y)
+		#BGL.glVertex2i(real_x+1,real_y+self.height)
+
+		BGL.glVertex2i(real_x+1,real_y)
+		BGL.glVertex2i(real_x+1,real_y+self.height-12)
+		#
+		BGL.glVertex2i(real_x+1,real_y+self.height-12)
+		BGL.glVertex2i(real_x-3,real_y+self.height-8)
+		#
+		BGL.glVertex2i(real_x-3,real_y+self.height-8)
+		BGL.glVertex2i(real_x+1,real_y+self.height-4)
+		#
+		BGL.glVertex2i(real_x+1,real_y+self.height-4)
+		BGL.glVertex2i(real_x+1,real_y+self.height)
+
+		# Top right
+		BGL.glVertex2i(real_x,real_y+self.height-1)
+		BGL.glVertex2i(real_x+self.width-1,real_y+self.height-1)
+		# Right down
+		BGL.glVertex2i(real_x+self.width+1,real_y+self.height-2)
+		BGL.glVertex2i(real_x+self.width+1,real_y+1)
+		# Bottom left
+		BGL.glVertex2i(real_x+self.width+1,real_y-1)
+		BGL.glVertex2i(real_x+1,real_y-1)
+
+		# Draw border
+		BGL.glColor4f(self.borderColor[0],self.borderColor[1],self.borderColor[2], self.borderColor[3])
+		# Left up
+		BGL.glVertex2i(real_x,real_y)
+		BGL.glVertex2i(real_x,real_y+self.height-12)
+		#
+		BGL.glVertex2i(real_x,real_y+self.height-12)
+		BGL.glVertex2i(real_x-4,real_y+self.height-8)
+		#
+		BGL.glVertex2i(real_x-4,real_y+self.height-8)
+		BGL.glVertex2i(real_x,real_y+self.height-4)
+		#
+		BGL.glVertex2i(real_x,real_y+self.height-4)
+		BGL.glVertex2i(real_x,real_y+self.height)
+		# Top right
+		BGL.glVertex2i(real_x,real_y+self.height)
+		BGL.glVertex2i(real_x+self.width,real_y+self.height)
+		# Right down
+		BGL.glVertex2i(real_x+self.width,real_y+self.height)
+		BGL.glVertex2i(real_x+self.width,real_y)
+		# Bottom left
+		BGL.glVertex2i(real_x+self.width,real_y)
+		BGL.glVertex2i(real_x,real_y)
+		
+		BGL.glEnd()
+
+		line1 = self.text.split('\n')[0]
+		try: line2 = self.text.split('\n')[1]
+		except: line2 = ""
+		# draw first line of text
+		# Evil hack: pretend we are drawing quad's, setting the color there
+		BGL.glBegin(BGL.GL_QUADS)
+		BGL.glColor4f(self.color[0], self.color[1], self.color[2], self.color[3])
+		BGL.glEnd()
+		BGL.glRasterPos2i(offset[0]+self.x+2, offset[1]+self.y+20)
+		self.data = Draw.Text(line1, self.size)
+		# draw second line of text
+		if line2.lower().strip() == "none selected" or line2.lower().strip() == "\'none selected\'" or line2.lower().strip() == "\"none selected\"":
+			BGL.glBegin(BGL.GL_QUADS)
+			BGL.glColor4f(0.5, 0.5, 0.5, 0.0)
+			BGL.glEnd()
+			BGL.glRasterPos2i(offset[0]+self.x+3, offset[1]+self.y+4)
+			self.data = Draw.Text(line2, self.size)
+			BGL.glBegin(BGL.GL_QUADS)
+			BGL.glColor4f(1.0, 0.0, 0.0, 0.0)
+			BGL.glEnd()
+		else:
+			BGL.glBegin(BGL.GL_QUADS)
+			BGL.glColor4f(0.5, 0.5, 0.5, 0.0)
+			BGL.glEnd()
+			BGL.glRasterPos2i(offset[0]+self.x+3, offset[1]+self.y+4)
+			self.data = Draw.Text(line2, self.size)
+			BGL.glBegin(BGL.GL_QUADS)
+			BGL.glColor4f(0.0, 0.4, 0.0, 0.0)
+			BGL.glEnd()
+
+		BGL.glRasterPos2i(offset[0]+self.x+2, offset[1]+self.y+5)
+		self.data = Draw.Text(line2, self.size)
 
 
 class BoneListContainer(ListContainer):
