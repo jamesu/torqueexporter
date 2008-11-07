@@ -232,8 +232,13 @@ class VisControlsClass(UserCreatedSeqControlsClassBase):
 	def handleGuiSeqDelFromExistingEvent(self, control):
 		Prefs = DtsGlobals.Prefs
 		seqName, seqPrefs = self.getSelectedSeqNameAndPrefs()
-		Prefs.disableVisAnim(seqName)
-		self.refreshAll()
+		if seqName != None:
+			Prefs.disableVisAnim(seqName)
+			self.refreshAll()
+		else:
+			message = "No sequence was selected.%t|Cancel"
+			x = Blender.Draw.PupMenu(message)
+			del x
 
 
 	#######################################

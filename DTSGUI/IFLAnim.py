@@ -201,8 +201,14 @@ class IFLControlsClass(UserCreatedSeqControlsClassBase):
 	def handleGuiSeqDelFromExistingEvent(self, control):
 		Prefs = DtsGlobals.Prefs
 		seqName, seqPrefs = self.getSelectedSeqNameAndPrefs()
-		Prefs.delIFLAnim(seqName)
-		self.refreshAll()
+		if seqName != None:
+			Prefs.delIFLAnim(seqName)		
+			self.refreshAll()
+		else:
+			message = "No sequence was selected.%t|Cancel"
+			x = Blender.Draw.PupMenu(message)
+			del x
+
 	#######################################
 	#  Refresh and Clear methods
 	#######################################
