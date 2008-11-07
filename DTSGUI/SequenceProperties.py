@@ -654,7 +654,6 @@ class SeqCommonControlsClass(SeqControlsClassBase):
 		control.x = 8
 		control.y = 33
 
-
 	## @brief Resize callback for guiRefPoseFrame
 	#  @param control The invoking GUI control object
 	def guiRefPoseFrameResize(self, control, newwidth, newheight):

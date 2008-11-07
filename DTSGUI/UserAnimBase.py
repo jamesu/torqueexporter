@@ -65,7 +65,7 @@ class UserCreatedSeqControlsClassBase(SeqControlsClassBase):
 		self.guiSeqListTitle.label = self.animationTypeString +" Sequences:"
 		
 		## @brief a list of possible animation types to be used as keys for sequence prefs
-		#  @note: need to update this when new sequence types are added in the future
+		#  @note: need to update this if new sequence types are added in the future
 		self.sequenceTypes = ["IFL", "Vis"]
 
 	## @brief Cleans up Blender GUI objects before the interpreter exits;
@@ -188,9 +188,6 @@ class UserCreatedSeqControlsClassBase(SeqControlsClassBase):
 	def guiSeqListTitleResize(self, control, newwidth, newheight):			
 		control.x, control.y, control.height, control.width = 10,newheight-57, 20,82
 
-
-		
-
 	## @brief Resize callback for guiSeqExistingSequences
 	#  @param control The invoking GUI control object
 	def guiSeqExistingSequencesResize(self, control, newwidth, newheight):
@@ -214,7 +211,6 @@ class UserCreatedSeqControlsClassBase(SeqControlsClassBase):
 		control.y = 7
 		control.height = 19
 		control.width = 285
-		
 
 	## @brief Resize callback for guiSeqOptsContainer
 	#  @param control The invoking GUI control object
