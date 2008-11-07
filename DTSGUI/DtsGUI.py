@@ -415,9 +415,10 @@ def initGui():
 
 	sequencesTabBook = TabBookControl(mainTabBook.getTabSheetContainer("Sequences"), "Sequences")
 	
-	sequencesTabBook.addTab("Sequence Properties", "CommonAll")
-	sequencesTabBook.addTab("Visibility Animations", "Visibility")
-	sequencesTabBook.addTab("IFL Animations", "IFL")
+	sequencesTabBook.addTab("Seq Options", "SequenceOptions")
+	sequencesTabBook.addTab("Seq Properties", "CommonAll")
+	sequencesTabBook.addTab("Vis Anims", "Visibility")
+	sequencesTabBook.addTab("IFL Anims", "IFL")
 	
 
 
