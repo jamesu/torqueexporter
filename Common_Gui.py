@@ -189,7 +189,6 @@ class BasicFrame(BasicControl):
 
 		# cheap 3d effect
 		BGL.glColor4f(0.75,0.75,0.75, self.borderColor[3])
-		#BGL.glColor4f(self.borderColor[0] * 0.5,self.borderColor[1] * 0.5,self.borderColor[2] * 0.5, self.borderColor[3])
 		# Left up
 		BGL.glVertex2i(real_x+1,real_y)
 		BGL.glVertex2i(real_x+1,real_y+self.height)
@@ -477,7 +476,6 @@ class SimpleText(BasicControl):
 		self.enabled = False
 		
 		curTextCol = curTheme.get('buts').text
-		#self.color = [curTextCol[0]/255.0,curTextCol[1]/255.0,curTextCol[2]/255.0,curTextCol[3]/255.0]
 		self.color = [curTextCol[0]/255.0,curTextCol[1]/255.0,curTextCol[2]/255.0, 1.0]
 		self.label = label
 		self.size = "normal"
@@ -608,9 +606,6 @@ class BasicContainer(BasicControl):
 		return False
 
 	def onDraw(self, offset):
-		#BGL.glRasterPos2i(offset[0]+self.x, offset[1]+self.y)
-		#BGL.glColor4f(self.color[0], self.color[1], self.color[2], self.color[3])
-		
 		# Draw Box to distinguish container
 		real_x = offset[0] + self.x
 		real_y = offset[1] + self.y
@@ -1069,7 +1064,6 @@ class ListContainer(BasicContainer):
 			BGL.glRecti(real_x+self.width-self.barWidth, real_y+self.thumbPosition-self.thumbHeight, real_x+self.width, real_y+self.thumbPosition)
 			BGL.glColor4f(self.color[0],self.color[1],self.color[2], self.color[3])
 			#print "!!"+str(self.scrollPosition)
-			#BGL.glRecti(real_x+self.width-self.barWidth, real_y+self.thumbPosition-self.thumbHeight, real_x+self.width, real_y+self.thumbPosition)
 			BGL.glRecti(real_x+self.width-self.barWidth + 2, real_y+self.thumbPosition-self.thumbHeight + 1, real_x+self.width - 1, real_y+self.thumbPosition - 1)
 
 		else:
@@ -1081,7 +1075,6 @@ class ListContainer(BasicContainer):
 		for control in self.getVisibleControls():
 			control.y = curY
 			orgColor = control.color[:]
-			#if idx != self.itemIndex:
 			if control.fade_mode == 0:
 				if ((idx+self.scrollPosition) & 1) == 0:
 					control.color = [ orgColor [0] - 0.05, orgColor [1] - 0.05,
@@ -1104,7 +1097,6 @@ class ListContainer(BasicContainer):
 		if self.borderColor != None:
 			BGL.glBegin(BGL.GL_LINES)
 			BGL.glColor4f(self.borderColor[0] - 0.2,self.borderColor[1] - 0.2, self.borderColor[2] - 0.2, self.borderColor[3])
-			#BGL.glColor4f(self.borderColor[0],self.borderColor[1],self.borderColor[2], self.borderColor[3])
 			# Left up
 			BGL.glVertex2d(real_x,real_y)
 			BGL.glVertex2d(real_x,real_y+self.height)
@@ -1236,13 +1228,9 @@ class BoxSelectionLabel(BasicControl):
 		BGL.glBegin(BGL.GL_LINES)
 
 		# cheap 3d effect
-		#BGL.glColor4f(0.5,0.5,0.5, self.borderColor[3])
-		#BGL.glColor4f(0.75,0.75,0.75, self.borderColor[3])
 		BGL.glColor4f(0.5,0.5,0.5, 0.5)
+		
 		# Left up
-		#BGL.glVertex2i(real_x+1,real_y)
-		#BGL.glVertex2i(real_x+1,real_y+self.height)
-
 		BGL.glVertex2i(real_x+1,real_y)
 		BGL.glVertex2i(real_x+1,real_y+self.height-12)
 		#
@@ -1267,6 +1255,7 @@ class BoxSelectionLabel(BasicControl):
 
 		# Draw border
 		BGL.glColor4f(self.borderColor[0],self.borderColor[1],self.borderColor[2], self.borderColor[3])
+		
 		# Left up
 		BGL.glVertex2i(real_x,real_y)
 		BGL.glVertex2i(real_x,real_y+self.height-12)
@@ -1279,6 +1268,7 @@ class BoxSelectionLabel(BasicControl):
 		#
 		BGL.glVertex2i(real_x,real_y+self.height-4)
 		BGL.glVertex2i(real_x,real_y+self.height)
+		
 		# Top right
 		BGL.glVertex2i(real_x,real_y+self.height)
 		BGL.glVertex2i(real_x+self.width,real_y+self.height)
