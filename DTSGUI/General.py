@@ -149,7 +149,6 @@ class GeneralControlsClass:
 		if control.name == "guiOutputText":
 			control.x, control.y, control.width = 10,newheight-45-control.height, 220
 		elif control.name == "guiCustomFilename":
-			#control.x, control.y, control.width = 10,newheight-60-control.height, 220
 			control.x, control.y, control.width = 10,newheight-60-control.height, 370
 		elif control.name == "guiCustomFilenameSelect":
 			control.x, control.y, control.width = 382,newheight-60-control.height, 55

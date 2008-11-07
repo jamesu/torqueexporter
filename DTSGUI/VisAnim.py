@@ -104,9 +104,6 @@ class VisControlsClass(UserCreatedSeqControlsClassBase):
 		self.guiIpoChannel = Common_Gui.ComboBox("guiIpoChannel", "IPO Channel", "Select the IPO curve to use for Visibility Animation", self.getNextEvent(), self.handleGuiIpoChannelEvent, self.guiIpoChannelResize)
 		self.guiIpoObjectTxt = Common_Gui.SimpleText("guiIpoObjectTxt", "IPO Object:", None, self.guiIpoObjectTxtResize)
 		self.guiIpoObject = Common_Gui.ComboBox("guiIpoObject", "IPO Object", "Select the object whose IPO curve will be used for Visibility Animation", self.getNextEvent(), self.handleGuiIpoObjectEvent, self.guiIpoObjectResize)
-
-		#self.guiTrackListContainerTitle = Common_Gui.MultilineText("guiTrackListContainerTitle", "Selected object:\n None Selected", None, self.guiTrackListContainerTitleResize)
-		#self.guiTrackListContainerTitleBox = Common_Gui.BasicFrame(resize_callback = self.guiTrackListContainerTitleBoxResize)
 		self.guiTrackSelectedBoxLabel = Common_Gui.BoxSelectionLabel("guiTrackSelectedBoxLabel", "Selected object:\n None Selected", None, self.guiTrackSelectedBoxLabelResize)
 
 
@@ -119,8 +116,6 @@ class VisControlsClass(UserCreatedSeqControlsClassBase):
 		self.guiSeqOptsContainer.addControl(self.guiVisTrackList)
 		self.guiSeqOptsContainer.addControl(self.guiVisTrackList)
 		self.guiSeqOptsContainer.addControl(self.guiVisTrackListContainer)
-		#self.guiVisTrackListContainer.addControl(self.guiTrackListContainerTitle)
-		#self.guiVisTrackListContainer.addControl(self.guiTrackListContainerTitleBox)
 		self.guiVisTrackListContainer.addControl(self.guiTrackSelectedBoxLabel)
 		self.guiVisTrackListContainer.addControl(self.guiIpoTypeTxt)
 		self.guiVisTrackListContainer.addControl(self.guiIpoChannelTxt)
@@ -151,8 +146,6 @@ class VisControlsClass(UserCreatedSeqControlsClassBase):
 		del self.guiIpoChannel
 		del self.guiIpoObjectTxt
 		del self.guiIpoObject
-		#del self.guiTrackListContainerTitle
-		#del self.guiTrackListContainerTitleBox
 		del self.guiTrackSelectedBoxLabel
 
 
@@ -220,6 +213,7 @@ class VisControlsClass(UserCreatedSeqControlsClassBase):
 	def handleGuiVisTrackListItemEvent(self, control):
 		Prefs = DtsGlobals.Prefs
 		seqName, seqPrefs = self.getSelectedSeqNameAndPrefs()
+		# todo - hrmm...
 		#objName = self.getVisTrackListSelectedItem()
 		objName = self.guiVisTrackList.controls[control.evt - 80].controls[0].label
 		if control.state:
@@ -256,7 +250,6 @@ class VisControlsClass(UserCreatedSeqControlsClassBase):
 	def refreshSequenceOptions(self, seqName, seqPrefs):
 		self.guiSeqOptsContainer.enabled = True
 		self.refreshVisTrackList(seqName)
-		#self.guiSeqOptsContainerTitle.label = ("Selected Sequence:\n %s" % seqName)
 		self.guiSeqSelectedBoxLabel.text = ("Selected Sequence:\n %s" % seqName)
 		# restore last vis track list selection
 		found = False
@@ -280,7 +273,6 @@ class VisControlsClass(UserCreatedSeqControlsClassBase):
 	def clearSequenceOptions(self):
 		self.guiSeqOptsContainer.enabled = False
 		self.clearVisTrackList()
-		#self.guiSeqOptsContainerTitle.label = "Selected Sequence:\n None Selected"
 		self.guiSeqSelectedBoxLabel.text = "Selected Sequence:\n None Selected"
 		self.clearIpoControls()
 
@@ -424,10 +416,6 @@ class VisControlsClass(UserCreatedSeqControlsClassBase):
 		seq['Vis'] = {}
 		seq['Vis']['Enabled'] = True
 		seq['Vis']['Tracks'] = {}
-		# add sequence to GUI sequence list		
-		#self.guiSeqList.addControl(self.createSequenceListItem(seqName))
-		# refresh the Image frames list
-		#self.populateVisTrackList(seqName)
 		# re-populate the sequence list
 		self.refreshSequenceList()
 		# Select the new sequence.
@@ -477,14 +465,10 @@ class VisControlsClass(UserCreatedSeqControlsClassBase):
 		control.x, control.y, control.height, control.width = 10,10, 173,175
 
 	def guiVisTrackListContainerResize(self, control, newwidth, newheight):
-		#control.x, control.y, control.height, control.width = 186,10, 173,newwidth - 196
 		control.x, control.y, control.height, control.width = 186,10, 173,newwidth - 196
 	
 	def guiTrackSelectedBoxLabelResize(self, control, newwidth, newheight):
 		control.x, control.y, control.height, control.width = 5,newheight-35, 33,107
-
-	#def guiTrackListContainerTitleResize(self, control, newwidth, newheight):
-	#	control.x, control.y, control.height, control.width = 5,newheight-30, 20,82
 
 	## @brief Resize callback for guiIpoTypeTxt
 	#  @param control The invoking GUI control object

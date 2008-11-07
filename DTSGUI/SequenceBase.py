@@ -40,10 +40,7 @@ class SeqControlsClassBase:
 		# initialize GUI controls
 		self.guiSeqList = Common_Gui.ListContainer("guiSeqList", "sequence.list", self.handleListEvent, self.guiSeqListResize)
 		self.guiSeqListTitle = Common_Gui.SimpleText("guiSeqListTitle", "All Sequences:", None, self.guiSeqListTitleResize)
-		#self.guiSeqOptsContainerTitle = Common_Gui.MultilineText("guiSeqOptsContainerTitle", "Selected Sequence:\n None Selected", None, self.guiSeqOptsContainerTitleResize)
-		#self.guiSeqOptsContainerTitleBox = Common_Gui.BasicFrame(resize_callback = self.guiSeqOptsContainerTitleBoxResize)
 		self.guiSeqOptsContainer = Common_Gui.BasicContainer("guiSeqOptsContainer", "guiSeqOptsContainer", None, self.guiSeqOptsContainerResize)
-		
 		self.guiSeqSelectedBoxLabel = Common_Gui.BoxSelectionLabel("guiSeqSelectedBoxLabel", "Selected Sequence:\n None Selected", None, self.guiSeqSelectedBoxLabelResize)
 		
 		# set initial states
@@ -54,14 +51,10 @@ class SeqControlsClassBase:
 		
 
 		# add controls to containers
-		#self.guiSeqOptsContainer.addControl(self.guiSeqOptsContainerTitle)
-		#self.guiSeqOptsContainer.addControl(self.guiSeqOptsContainerTitleBox)
-		
-		self.guiSeqOptsContainer.addControl(self.guiSeqSelectedBoxLabel)
-		
-		tabContainer.addControl(self.guiSeqOptsContainer)
 		tabContainer.addControl(self.guiSeqList)
 		tabContainer.addControl(self.guiSeqListTitle)
+		tabContainer.addControl(self.guiSeqOptsContainer)
+		self.guiSeqOptsContainer.addControl(self.guiSeqSelectedBoxLabel)
 	
 		## Need to set this explicitly in child classes
 		#  @note valid values are: "All", "Action", "IFL", "Vis" and eventually "TexUV" and "Morph"
@@ -111,9 +104,7 @@ class SeqControlsClassBase:
 	def cleanup(self):
 		del self.guiSeqList
 		del self.guiSeqListTitle
-		#del self.guiSeqOptsContainerTitle
 		del self.guiSeqOptsContainer
-		
 		del self.guiSeqSelectedBoxLabel
 
 
@@ -182,7 +173,6 @@ class SeqControlsClassBase:
 		if control.itemIndex != -1:
 			seqName, seqPrefs = self.getSelectedSeqNameAndPrefs()
 			self.refreshSequenceOptions(seqName, seqPrefs)
-			#self.guiSeqOptsContainerTitle.label = "Selected Sequence:\n '%s'" % seqName
 			self.guiSeqSelectedBoxLabel.text = "Selected Sequence:\n '%s'" % seqName
 			self.guiSeqOptsContainer.enabled = True
 		else:
@@ -211,7 +201,6 @@ class SeqControlsClassBase:
 		# isn't selected.
 		seqName = self.guiSeqList.controls[calcIdx].controls[0].label
 		seqPrefs = Prefs['Sequences'][seqName]
-		#seqName, seqPrefs = self.getSelectedSeqNameAndPrefs()
 		realItem = control.evt - 40 - (calcIdx*evtOffset)
 
 		# no validation needed on these, so it's OK to set the prefs directly.
@@ -258,8 +247,8 @@ class SeqControlsClassBase:
 	#  @param newwidth The new width of the GUI control in pixels.
 	#  @param newheight The new height of the GUI control in pixels.
 	def guiSeqListResize(self, control, newwidth, newheight):
+		print "Parent guiSeqListResize called.  You probably forgot to implement it in your new child class :-)"
 		pass
-		#control.x, control.y, control.height, control.width = 10,28, newheight - 68,230
 
 	## @brief Place holder resize callback
 	#  @note Child classes should call override this method explicitly
@@ -276,14 +265,8 @@ class SeqControlsClassBase:
 	def guiSeqOptsContainerResize(self, control, newwidth, newheight):
 		control.x, control.y, control.height, control.width = 241,0, 334,249
 
-	#def guiSeqOptsContainerTitleResize(self, control, newwidth, newheight):
-	#	control.x, control.y, control.height, control.width = 5,newheight-30, 20,82
-
-	#def guiSeqOptsContainerTitleBoxResize(self, control, newwidth, newheight):
-	#	control.x, control.y, control.height, control.width = 3,newheight-35, 33,117
 
 	def guiSeqSelectedBoxLabelResize(self, control, newwidth, newheight):
-		#print "resizing test box label"
 		control.x, control.y, control.height, control.width = 5,newheight-35, 33,117
 
 	## @brief Creates a sequence list item and it's associated GUI controls.
@@ -337,7 +320,6 @@ class SeqControlsClassBase:
 	def populateSequenceList(self):
 		self.clearSequenceList()
 		Prefs = DtsGlobals.Prefs
-		#if self.guiSeqList.width == 0: return
 		# loop through all actions in the preferences
 		keys = Prefs['Sequences'].keys()
 		keys.sort(lambda x, y: cmp(x.lower(),y.lower()))

@@ -56,8 +56,6 @@ class NodeControlsClass:
 		self.guiTypeOn = Common_Gui.BasicButton("guiTypeOn", "On", "Turn on export of nodes matching type", 11, self.handleEvent, self.resize)
 		self.guiTypeOff = Common_Gui.BasicButton("guiTypeOff", "Off", "Turn off export of nodes matching pattern", 12, self.handleEvent, self.resize)
 
-		#self.guiRefresh = Common_Gui.BasicButton("guiRefresh", "Refresh", "Refresh bones list", 15, self.handleEvent, self.resize)
-				
 		# set initial states
 		self.guiPatternText.value = "*"
 		self.guiNumItemsSlider.value = 4
@@ -80,7 +78,6 @@ class NodeControlsClass:
 		guiNodeListSubtab.addControl(self.guiMatchTypePulldown)
 		guiNodeListSubtab.addControl(self.guiTypeOn)
 		guiNodeListSubtab.addControl(self.guiTypeOff)
-		#guiNodeListSubtab.addControl(self.guiRefresh)
 		
 		# populate node grid
 		self.populateNodeGrid()
@@ -106,8 +103,6 @@ class NodeControlsClass:
 		del self.guiMatchTypePulldown
 		del self.guiTypeOn
 		del self.guiTypeOff
-		#del self.guiRefresh
-
 
 	
 	def refreshAll(self):
@@ -139,9 +134,6 @@ class NodeControlsClass:
 					elif control.name == "guiPatternOff":
 						Prefs['BannedNodes'].append(name)
 			self.populateNodeGrid()
-		#elif control.name == "guiRefresh":
-		#	#self.populateNodeGrid()
-		#	self.refreshAll()
 		elif control.name == "guiNumItemsSlider":
 			self.itemsPerLine = control.value
 			self.populateNodeGrid()
@@ -193,10 +185,6 @@ class NodeControlsClass:
 		elif control.name == "guiNumItemsSlider":
 			control.x, control.y, control.width = 355,newheight-315, 125
 
-		#elif control.name == "guiRefresh":
-		#	control.width = 75
-		#	control.x = newwidth - (control.width + 10)
-		#	control.y = newheight - (control.height + 10)
 		
 	def resizeListButton(self, control, newwidth, newheight):
 		listWidth = self.guiNodeList.width

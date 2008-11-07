@@ -300,12 +300,13 @@ class TabBookControl:
 		
 	
 
-# Callback for export button
+# Callback for export and refresh buttons
 def guiBaseCallback(control):
 	global mainTabBook, shapeTabBook, sequencesTabBook
 	if control.name == "guiExportButton":
 		export()
 	elif control.name == "guiRefreshButton":
+		# important - this needs to be changed if tab structure is changed significantly, kinda ugly :-(
 		if mainTabBook.lastActiveTab.tabName == "Shape":
 			shapeTabBook.refreshActivePanel()
 		elif mainTabBook.lastActiveTab.tabName == "Sequences":
@@ -432,8 +433,6 @@ def initGui():
 	NodeControls = NodeControlsClass(shapeTabBook.getTabSheetContainer("Nodes"))
 	MaterialControls = MaterialControlsClass(shapeTabBook.getTabSheetContainer("Materials"))
 	SeqCommonControls = SeqCommonControlsClass(sequencesTabBook.getTabSheetContainer("CommonAll"))
-	# no more action controls, we're timeline based now, baby.
-	#ActionControls = ActionControlsClass(guiSeqActSubtab)
 	IFLControls = IFLControlsClass(sequencesTabBook.getTabSheetContainer("IFL"))
 	VisControls = VisControlsClass(sequencesTabBook.getTabSheetContainer("Visibility"))
 	GeneralControls = GeneralControlsClass(mainTabBook.getTabSheetContainer("General"))
@@ -467,11 +466,9 @@ def exit_callback():
 	Torque_Util.dump_setout("stdout")
 	ShapeOptionControls.cleanup()
 	DetailLevelControls.cleanup()
-	#ActionControls.clearSequenceList()
 	AboutControls.cleanup()
 	GeneralControls.cleanup()
 	NodeControls.cleanup()
-	#ActionControls.cleanup()
 	IFLControls.cleanup()	
 	VisControls.cleanup()
 	MaterialControls.cleanup()	

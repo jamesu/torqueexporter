@@ -53,7 +53,6 @@ class SeqCommonControlsClass(SeqControlsClassBase):
 		self.seqFilter = "All"
 		
 		# initialize GUI controls		
-		#self.guiRefresh = Common_Gui.BasicButton("guiRefresh", "Refresh", "Refresh list of sequences", self.getNextEvent(), self.handleGuiRefreshEvent, self.guiRefreshResize)
 		self.guiSeqFramesLabel =  Common_Gui.TextDisplayBox("guiSeqFramesLabel", "Frames:  ", None, self.guiSeqFramesLabelResize)
 		self.guiSeqDuration = Common_Gui.NumberPicker("guiSeqDuration", "Seconds: ", "The animation plays for this number of seconds", self.getNextEvent(), self.handleGuiSeqDurationEvent, self.guiSeqDurationResize)
 		self.guiSeqDurationLock = Common_Gui.ToggleButton("guiSeqDurationLock", "Lock", "Lock Sequence Duration (changes in frame count don't affect playback time)", self.getNextEvent(), self.handleGuiSeqDurationLockEvent, self.guiSeqDurationLockResize)
@@ -67,10 +66,6 @@ class SeqCommonControlsClass(SeqControlsClassBase):
 		self.guiRefPoseTitle = Common_Gui.SimpleText("guiRefPoseTitle", "Ref Pose for ", None, self.guiRefPoseTitleResize)
 		self.guiRefPoseFrame = Common_Gui.NumberPicker("guiRefPoseFrame", "Frame", "Frame to use for reference pose", self.getNextEvent(), self.handleGuiRefPoseFrameEvent, self.guiRefPoseFrameResize)
 
-		# sequence toolbox controls
-		#self.guiToolboxFrame = Common_Gui.BasicFrame("guiToolboxFrame", "", None, 29, None, self.guiToolboxFrameResize)
-		#self.guiToolboxText = Common_Gui.SimpleText("guiToolboxText", "Sequence Toolbox", None, self.guiToolboxTextResize)
-		
 		self.guiAddSeq = Common_Gui.BasicButton("guiAddSeq", "Add new...", "Define a new sequence", self.getNextEvent(), self.handleGuiAddSeqEvent, self.guiAddSeqResize)
 		
 		self.guiRecoverSeq = Common_Gui.BasicButton("guiRenameSeq", "Recover deleted...", "Recover deleted sequence markers and settings", self.getNextEvent(), self.handleGuiRecoverSeqEvent, self.guiRecoverSeqResize)
@@ -85,7 +80,6 @@ class SeqCommonControlsClass(SeqControlsClassBase):
 		# set initial states
 		self.guiToggle.state = False
 		self.guiSeqOptsContainer.enabled = False
-		#self.guiSeqOptsContainer.fade_mode = 5
 		self.guiSeqOptsContainer.borderColor = None
 		self.guiSeqList.fade_mode = 0
 		self.guiSeqDuration.min = 0.00392  # minimum duration = 1/255 of a second
@@ -103,10 +97,6 @@ class SeqCommonControlsClass(SeqControlsClassBase):
 		
 
 		# add controls to containers
-		
-		#tabContainer.addControl(self.guiRefresh)		
-		#tabContainer.addControl(self.guiToolboxFrame)
-		#tabContainer.addControl(self.guiToolboxText)
 		tabContainer.addControl(self.guiToggle)
 		tabContainer.addControl(self.guiAddSeq)
 		tabContainer.addControl(self.guiDelSeq)
@@ -142,10 +132,6 @@ class SeqCommonControlsClass(SeqControlsClassBase):
 	def cleanup(self):		
 		SeqControlsClassBase.cleanup(self)
 		
-		#del self.guiRefresh
-		
-		#del self.guiToolboxFrame
-		#del self.guiToolboxText
 		del self.guiToggle
 		del self.guiAddSeq
 		del self.guiDelSeq
@@ -469,15 +455,12 @@ class SeqCommonControlsClass(SeqControlsClassBase):
 	def refreshSequenceOptions(self, seqName, seqPrefs):
 		Prefs = DtsGlobals.Prefs
 		self.clearSequenceOptions()
-		#self.guiSeqOptsContainerTitle.label = "Selected Sequence:\n '%s'" % seqName
 		self.guiSeqSelectedBoxLabel.text = "Selected Sequence:\n '%s'" % seqName
 
 		maxNumFrames = Prefs.getSeqNumFrames(seqName)
 
 		# Update gui control states
 		self.guiSeqOptsContainer.enabled = True
-
-		#updateSeqDurationAndFPS(seqName, seqPrefs)
 
 		self.guiSeqFramesLabel.label = "Frames:  " + str(maxNumFrames)
 
@@ -530,7 +513,6 @@ class SeqCommonControlsClass(SeqControlsClassBase):
 	#  @note This method should be called when no sequence list item is currently selected.
 	def clearSequenceOptions(self):
 		self.guiSeqOptsContainer.enabled = False
-		#self.guiSeqOptsContainerTitle.label = "Selected Sequence:\n None Selected"
 		self.guiSeqSelectedBoxLabel.text = "Selected Sequence:\n None Selected"
 		for control in self.guiSeqOptsContainer.controls:
 			control.tooltip = "No sequence is selected"
@@ -551,7 +533,6 @@ class SeqCommonControlsClass(SeqControlsClassBase):
 	#  @param control The invoking GUI control object
 	def guiSeqListResize(self, control, newwidth, newheight):
 		control.x = 10
-		#control.y = 24
 		control.y = 32
 		control.height = newheight - 94
 		control.width = 299
@@ -559,23 +540,6 @@ class SeqCommonControlsClass(SeqControlsClassBase):
 	#  @param control The invoking GUI control object
 	def guiSeqListTitleResize(self, control, newwidth, newheight):
 		control.x, control.y, control.height, control.width = 10, newheight - 57, 20,82
-	## @brief Resize callback for guiRefresh
-	#  @param control The invoking GUI control object
-	#def guiRefreshResize(self, control, newwidth, newheight):
-	#	control.width = 66
-	#	control.x = newwidth - control.width
-	#	#control.y = newheight - control.height - 46
-	#	control.y = newheight + 5
-	#def guiToolboxFrameResize(self, control, newwidth, newheight):
-	#	control.x = 10
-	#	control.y = 4
-	#	control.width = 420
-	#	control.height = 44
-	#def guiToolboxTextResize(self, control, newwidth, newheight):
-	#	control.x = 20
-	#	control.y = 35
-	#	control.width = 100		
-
 	def guiAddSeqResize(self, control, newwidth, newheight):
 		control.width = 75
 		control.height = 20
@@ -589,16 +553,13 @@ class SeqCommonControlsClass(SeqControlsClassBase):
 	def guiCreateFromActionsResize(self, control, newwidth, newheight):
 		control.width = 125
 		control.height = 20
-		#control.x = 141
 		control.x = newwidth - control.width - 163
 		control.y = newheight - control.height - 17
 	def guiCreateFromActStripsResize(self, control, newwidth, newheight):
 		control.width = 150
 		control.height = 20
-		#control.x = 270
 		control.x = newwidth - control.width - 10
 		control.y = newheight - control.height - 17
-
 	def guiToggleResize(self, control, newwidth, newheight):
 		control.x = 10
 		control.y = 7
@@ -620,8 +581,6 @@ class SeqCommonControlsClass(SeqControlsClassBase):
 	## @brief Resize callback for guiSeqOptsContainer
 	#  @param control The invoking GUI control object
 	def guiSeqOptsContainerResize(self, control, newwidth, newheight):
-		#control.x, control.y, control.height, control.width = 309,24, newheight-94,newwidth-309
-		#control.x, control.y, control.height, control.width = 309,24, newheight-94,newwidth-319
 		control.x, control.y, control.height, control.width = 309,32, newheight-94,newwidth-319
 
 	## @brief Resize callback for guiSeqFramesLabel

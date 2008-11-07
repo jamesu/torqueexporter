@@ -46,13 +46,7 @@ class MaterialControlsClass:
 		self.guiMaterialList = Common_Gui.ListContainer("guiMaterialList", "material.list", self.handleEvent, self.resize)		
 		self.guiMaterialOptions = Common_Gui.BasicContainer("guiMaterialOptions", "", None, self.resize)
 
-		#self.guiMaterialOptionsTitle = Common_Gui.SimpleText("guiMaterialOptionsTitle", "DTS Material: None Selected", None, self.resize)
-		#self.guiMaterialOptionsTitle = Common_Gui.MultilineText("guiMaterialOptionsTitle", "DTS Material:\n None Selected", None, self.guiMaterialOptionsTitleResize)
-		#self.guiMatOptsContainerTitleBox = Common_Gui.BasicFrame(resize_callback = self.guiMatOptsContainerTitleBoxResize)
 		self.guiMatSelectedBoxLabel = Common_Gui.BoxSelectionLabel("guiMatSelectedBoxLabel", "DTS Material:\n None Selected", None, self.guiMatSelectedBoxLabelResize)
-
-
-
 		self.guiMaterialTransFrame = Common_Gui.BasicFrame("guiMaterialTransFrame", "", None, 29, None, self.resize)
 		self.guiMaterialMipFrame = Common_Gui.BasicFrame("guiMaterialMipFrame", "", None, 29, None, self.resize)
 		self.guiMaterialWrapFrame = Common_Gui.BasicFrame("guiMaterialWrapFrame", "", None, 29, None, self.resize)
@@ -60,7 +54,6 @@ class MaterialControlsClass:
 		self.guiMaterialEnvMappingFrame = Common_Gui.BasicFrame("guiMaterialEnvMappingFrame", "", None, 29, None, self.resize)
 		
 		self.guiMaterialAdvancedFrame = Common_Gui.BasicFrame("guiMaterialAdvancedFrame", "", None, 30, None, self.resize)
-		#self.guiMaterialImportRefreshButton = Common_Gui.BasicButton("guiMaterialImportRefreshButton", "Refresh", "Import Blender materials and settings", 7, self.handleEvent, self.resize)
 		self.guiMaterialSWrapButton = Common_Gui.ToggleButton("guiMaterialSWrapButton", "SWrap", "SWrap", 9, self.handleEvent, self.resize)
 		self.guiMaterialTWrapButton = Common_Gui.ToggleButton("guiMaterialTWrapButton", "TWrap", "TWrap", 10, self.handleEvent, self.resize)
 		self.guiMaterialTransButton = Common_Gui.ToggleButton("guiMaterialTransButton", "Translucent", "Translucent", 11, self.handleEvent, self.resize)
@@ -96,19 +89,15 @@ class MaterialControlsClass:
 		self.guiMaterialBumpMapMenu.visible = False
 		self.guiMaterialReflectanceMapMenu.visible = False
 		self.guiMaterialOptions.enabled = False
-		#guiMaterialsTab.borderColor = [0,0,0,0]
 		
 		
 		# add controls to their respective containers
 		guiMaterialsSubtab.addControl(self.guiMaterialListTitle)
 		guiMaterialsSubtab.addControl(self.guiMaterialList)
 		guiMaterialsSubtab.addControl(self.guiMaterialOptions)
-		#guiMaterialsSubtab.addControl(self.guiMaterialImportRefreshButton)
 
-		#self.guiMaterialOptions.addControl(self.guiMaterialOptionsTitle)
-		#self.guiMaterialOptions.addControl(self.guiMatOptsContainerTitleBox)
 		self.guiMaterialOptions.addControl(self.guiMatSelectedBoxLabel)
-		
+	
 		self.guiMaterialOptions.addControl(self.guiMaterialTransFrame)
 		self.guiMaterialOptions.addControl(self.guiMaterialMipFrame)
 		self.guiMaterialOptions.addControl(self.guiMaterialWrapFrame)
@@ -136,10 +125,6 @@ class MaterialControlsClass:
 		self.guiMaterialOptions.addControl(self.guiMaterialReflectanceSlider)
 		self.guiMaterialOptions.addControl(self.guiMaterialDetailScaleSlider)
 
-		# populate the Material list
-		#self.populateMaterialList()
-		#self.refreshMaterialList()
-		
 	def cleanup(self):
 		'''
 		Must destroy any GUI objects that are referenced in a non-global scope
@@ -151,13 +136,10 @@ class MaterialControlsClass:
 		del self.guiMaterialListTitle
 		del self.guiMaterialList
 		del self.guiMaterialOptions
-		#del self.guiMaterialOptionsTitle
-		#del self.guiMatOptsContainerTitleBox
 		del self.guiMatSelectedBoxLabel
 		del self.guiMaterialTransFrame
 		del self.guiMaterialMipFrame
 		del self.guiMaterialAdvancedFrame
-		#del self.guiMaterialImportRefreshButton
 		del self.guiMaterialWrapFrame
 		del self.guiMaterialSWrapButton
 		del self.guiMaterialTWrapButton
@@ -183,12 +165,7 @@ class MaterialControlsClass:
 		
 
 	def refreshAll(self):
-		#self.clearMaterialList()		
-		#self.populateMaterialList()
 		self.refreshMaterialList()
-
-	#def guiMaterialOptionsTitleResize(self, control, newwidth, newheight):
-	#	control.x, control.y, control.height, control.width = 5,newheight-30, 20,82
 
 	def guiMatSelectedBoxLabelResize(self, control, newwidth, newheight):
 		control.x, control.y, control.height, control.width = 5,newheight-35, 33,117
@@ -200,15 +177,8 @@ class MaterialControlsClass:
 			control.x, control.y, control.height, control.width = 10,310, 20,150
 		elif control.name == "guiMaterialList":
 			control.x, control.y, control.height, control.width = 10,30, newheight - 70,150
-		#elif control.name == "guiMaterialOptionsTitle":
-		#	control.x, control.y, control.height, control.width = 25,310, 20,150
 		elif control.name == "guiMaterialOptions":
 			control.x, control.y, control.height, control.width = 161,30, newheight - 70,328
-		#elif control.name == "guiMaterialImportRefreshButton":
-		#	control.width = 75
-		#	control.x = newwidth - (control.width + 10)
-		#	control.y = newheight - (control.height + 10)
-
 		elif control.name == "guiMaterialSelfIllumButton":
 			control.x, control.y, control.width = 127,newheight-30, 95
 		elif control.name == "guiMaterialIFLMatButton":
@@ -281,17 +251,7 @@ class MaterialControlsClass:
 			Prefs['Materials'] = {}
 			matPrefs = Prefs['Materials']	
 
-
-		#if control.name == "guiMaterialImportRefreshButton":
-		#	# import Blender materials and settings
-		#	#self.clearMaterialList()
-		#	#self.populateMaterialList()
-		#	self.refreshAll()
-		#	return
-
 		materialName, matPrefs = self.getSelectedMatNameAndPrefs()
-		#materialName = guiMaterialList.controls[guiMaterialList.itemIndex].controls[0].label	
-
 		if control.name == "guiMaterialList":
 			self.refreshMaterialOptions(materialName, matPrefs)
 
@@ -396,7 +356,6 @@ class MaterialControlsClass:
 	def populateMaterialList(self):
 		self.clearMaterialList()
 		Prefs = DtsGlobals.Prefs
-		#Prefs.refreshMaterialPrefs()
 		guiMaterialList = self.guiMaterialList
 		guiMaterialOptions = self.guiMaterialOptions
 		# clear texture pulldowns
@@ -411,7 +370,6 @@ class MaterialControlsClass:
 
 
 		# autoimport blender materials
-		#Prefs.refreshMaterialPrefs()
 		materials = Prefs['Materials']
 
 
@@ -440,7 +398,6 @@ class MaterialControlsClass:
 	def refreshMaterialOptions(self, materialName, matPrefs):			
 			if self.guiMaterialList.itemIndex != -1:
 				self.guiMaterialOptions.enabled = True
-				#materialName = self.guiMaterialList.controls[control.itemIndex].controls[0].label
 				# referesh and repopulate the material option controls
 				self.guiMaterialSWrapButton.state = matPrefs['SWrap']
 				self.guiMaterialTWrapButton.state = matPrefs['TWrap']

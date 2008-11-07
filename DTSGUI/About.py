@@ -47,7 +47,7 @@ class AboutControlsClass:
 		"GUI code written with assistance from Xen and Xavier Amado.\n" +
 		"Additional thanks goes to the testers.\n" +
 		"\n" +
-		"Visit GarageGames at http://www.garagegames.com", None, self.resize)
+		"Visit GarageGames at http://www.garagegames.com", None, self.guiAboutTextResize)
 		
 		# add controls to containers
 		guiAboutSubtab.addControl(self.guiAboutText)
@@ -65,10 +65,9 @@ class AboutControlsClass:
 	def refreshAll(self):
 		pass
 		
-	def resize(self, control, newwidth, newheight):
-		if control.name == "guiAboutText":
-			control.x = 10
-			control.y = 120
+	def guiAboutTextResize(self, control, newwidth, newheight):
+		control.x = 10
+		control.y = 120
 
 	
 	# other event callbacks and helper methods go here.

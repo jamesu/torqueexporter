@@ -77,8 +77,12 @@ class DetailLevelControlsClass:
 		# Note: __del__ is not guaranteed to be called for objects that still
 		# exist when the interpreter exits.
 		
-		# todo - clean up objects
-		pass
+		del self.guiDetailLevelsListTitle
+		del self.guiDetailLevelsList
+		del self.guiDetailLevelsAddButton
+		del self.guiDetailLevelsTypeMenu
+		del self.guiDetailLevelsDelButton
+
 
 		
 
@@ -223,7 +227,6 @@ class DetailLevelControlsClass:
 			guiSize.max = -1
 			guiSize.enabled = False
 
-		#getTextPortion(dlName)
 		startEvent += 1
 
 		# create layer buttons
@@ -304,14 +307,11 @@ class DetailLevelControlsClass:
 	def populateDLList(self):
 		Prefs = DtsGlobals.Prefs
 		self.clearDLList()
-		# Force a  list resize event, to make sure our button offsets
-		# are correct.
-		#if self.guiDetailLevelsList.width == 0: return
-		# loop through all detail levels in the preferences
 		Prefs = DtsGlobals.Prefs
 		keys = Prefs['DetailLevels'].keys()
 		keys.sort(lambda x, y: cmp(prefsClass.getTrailingNumber(x),prefsClass.getTrailingNumber(y)))
 		keys.reverse()
+		# loop through all detail levels in the preferences
 		for dlName in keys:			
 			self.guiDetailLevelsList.addControl(self.createDLListItem(dlName))
 
