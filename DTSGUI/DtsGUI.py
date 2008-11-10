@@ -410,18 +410,18 @@ def initGui():
 	
 	shapeTabBook = TabBookControl(mainTabBook.getTabSheetContainer("Shape"), "Shape")
 	
-	shapeTabBook.addTab("Shape Options", "ShapeOptions")
 	shapeTabBook.addTab("Detail Levels", "DetailLevels")
 	shapeTabBook.addTab("Nodes", "Nodes")
 	shapeTabBook.addTab("Materials", "Materials")
+	shapeTabBook.addTab("Shape Options", "ShapeOptions")
 
 
 	sequencesTabBook = TabBookControl(mainTabBook.getTabSheetContainer("Sequences"), "Sequences")
 	
-	sequencesTabBook.addTab("Seq Options", "SequenceOptions")
 	sequencesTabBook.addTab("Seq Properties", "CommonAll")
 	sequencesTabBook.addTab("Vis Anims", "Visibility")
 	sequencesTabBook.addTab("IFL Anims", "IFL")
+	sequencesTabBook.addTab("Seq Options", "SequenceOptions")
 	
 
 
