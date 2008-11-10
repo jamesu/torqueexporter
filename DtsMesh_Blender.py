@@ -457,10 +457,10 @@ class BlenderMesh(DtsMesh):
 	def setBlenderMeshFlags(self, names):
 		# Look through elements in names
 		for n in names:
-			if n == "BB":				
+			if n.lower() == "bb" or n.lower() == "billboard":
 				self.flags |= DtsMesh.Billboard
-			elif n == "BBZ":
+			elif n.lower() == "bbz" or n.lower() == "billboardz":
 				self.flags |= DtsMesh.Billboard | DtsMesh.BillboardZ
-			elif n == "SORT":
+			elif n.lower() == "sort":
 				self.mtype = self.T_Sorted
 
