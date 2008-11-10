@@ -39,6 +39,7 @@ from Dts_Blender import export
 
 # import GUI control pages
 from SequenceProperties import *
+from SequenceOptions import *
 from VisAnim import *
 from IFLAnim import *
 from Materials import *
@@ -69,6 +70,7 @@ SceneInfo = DtsGlobals.SceneInfo
 guiSequenceTab, guiGeneralTab, guiNodesTab, guiAboutTab, guiTabBar, guiHeaderTab = None, None, None, None, None, None
 
 DetailLevelControls = None
+SequenceOptionControls = None
 SeqCommonControls = None
 IFLControls = None
 VisControls = None
@@ -354,7 +356,7 @@ def initGui():
 	# object that hands out global event id numbers
 	global GlobalEvents
 	# these objects create and own all of the actual gui controls on a tab/subtab page
-	global ShapeOptionControls, DetailLevelControls, SeqCommonControls, IFLControls, VisControls, ActionControls, MaterialControls, NodeControls, GeneralControls, AboutControls
+	global ShapeOptionControls, DetailLevelControls, SequenceOptionControls, SeqCommonControls, IFLControls, VisControls, ActionControls, MaterialControls, NodeControls, GeneralControls, AboutControls
 	# main gui container into which all other gui objects are placed
 	global guiMainContainer
 	# global tab books
@@ -432,6 +434,7 @@ def initGui():
 	DetailLevelControls = DetailLevelControlsClass(shapeTabBook.getTabSheetContainer("DetailLevels"))
 	NodeControls = NodeControlsClass(shapeTabBook.getTabSheetContainer("Nodes"))
 	MaterialControls = MaterialControlsClass(shapeTabBook.getTabSheetContainer("Materials"))
+	SequenceOptionControls = SequenceOptionsControlsClass(sequencesTabBook.getTabSheetContainer("SequenceOptions"))
 	SeqCommonControls = SeqCommonControlsClass(sequencesTabBook.getTabSheetContainer("CommonAll"))
 	IFLControls = IFLControlsClass(sequencesTabBook.getTabSheetContainer("IFL"))
 	VisControls = VisControlsClass(sequencesTabBook.getTabSheetContainer("Visibility"))
@@ -446,6 +449,7 @@ def initGui():
 	shapeTabBook.setControlPage("Nodes", NodeControls)
 	shapeTabBook.setControlPage("Materials", MaterialControls)
 	sequencesTabBook.setControlPage("CommonAll", SeqCommonControls)
+	sequencesTabBook.setControlPage("SequenceOptions", SequenceOptionControls)
 	sequencesTabBook.setControlPage("IFL", IFLControls)
 	sequencesTabBook.setControlPage("Visibility", VisControls)
 	
@@ -469,6 +473,7 @@ def exit_callback():
 	AboutControls.cleanup()
 	GeneralControls.cleanup()
 	NodeControls.cleanup()
+	SequenceOptionControls.cleanup()
 	IFLControls.cleanup()	
 	VisControls.cleanup()
 	MaterialControls.cleanup()	
