@@ -257,8 +257,16 @@ class BlenderShape(DtsShape):
 		except KeyError: self.preferences['PrimType'] = "Tris"
 		tmsh = BlenderMesh( self, o.name, mesh_data, -1, 1.0, mat, o.size, hasArmatureDeform, armTargets, False, (self.preferences['PrimType'] == "TriLists" or self.preferences['PrimType'] == "TriStrips") )
 
-		# todo - fix mesh flags
-		#if len(names) > 1: tmsh.setBlenderMeshFlags(names[1:])
+		# Add mesh flags based on blender object game properties.
+		if len(o.game_properties) > 0:
+			propNames = []
+			for prop in o.game_properties:
+				if (prop.getType().lower() == "bool" and prop.getData() == True)\
+				or (prop.getType().lower() == "int" and prop.getData() != 0)\
+				or (prop.getType().lower() == "float" and prop.getData() != 0.0)\
+				or (prop.getType().lower() == "string" and prop.getData().lower() =="true"):
+					propNames.append(prop.getName())
+			tmsh.setBlenderMeshFlags(propNames)
 
 		# If we ended up being a Sorted Mesh, sort the faces
 		if tmsh.mtype == tmsh.T_Sorted:
