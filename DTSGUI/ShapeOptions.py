@@ -40,28 +40,28 @@ class ShapeOptionsControlsClass:
 		Prefs = DtsGlobals.Prefs
 		
 		# initialize GUI controls
-		self.guiStripText = Common_Gui.SimpleText("guiStripText", "Geometry type:", None, self.resize)
-		self.guiTriMeshesButton = Common_Gui.ToggleButton("guiTriMeshesButton", "Triangles", "Generate individual triangles for meshes", 6, self.handleEvent, self.resize)
-		self.guiTriListsButton = Common_Gui.ToggleButton("guiTriListsButton", "Triangle Lists", "Generate triangle lists for meshes", 7, self.handleEvent, self.resize)
-		self.guiStripMeshesButton = Common_Gui.ToggleButton("guiStripMeshesButton", "Triangle Strips", "Generate triangle strips for meshes", 8, self.handleEvent, self.resize)
-		self.guiMaxStripSizeSlider = Common_Gui.NumberSlider("guiMaxStripSizeSlider", "Strip Size ", "Maximum size of generated triangle strips", 9, self.handleEvent, self.resize)
+		self.guiStripText = Common_Gui.SimpleText("guiStripText", "Geometry type:", None, self.guiStripTextResize)
+		self.guiTriMeshesButton = Common_Gui.ToggleButton("guiTriMeshesButton", "Triangles", "Generate individual triangles for meshes", 6, self.handleEvent, self.guiTriMeshesButtonResize)
+		self.guiTriListsButton = Common_Gui.ToggleButton("guiTriListsButton", "Triangle Lists", "Generate triangle lists for meshes", 7, self.handleEvent, self.guiTriListsButtonResize)
+		self.guiStripMeshesButton = Common_Gui.ToggleButton("guiStripMeshesButton", "Triangle Strips", "Generate triangle strips for meshes", 8, self.handleEvent, self.guiStripMeshesButtonResize)
+		self.guiMaxStripSizeSlider = Common_Gui.NumberSlider("guiMaxStripSizeSlider", "Strip Size ", "Maximum size of generated triangle strips", 9, self.handleEvent, self.guiMaxStripSizeSliderResize)
 		# --
 		# might get around to fixing this someday, probably not though, since it's not even implemented in TGEA (depricated)
 		#self.guiClusterText = Common_Gui.SimpleText("guiClusterText", "Cluster Mesh", None, self.resize)
 		#self.guiClusterWriteDepth = Common_Gui.ToggleButton("guiClusterWriteDepth", "Write Depth ", "Always Write the Depth on Cluster meshes", 10, self.handleEvent, self.resize)
 		#self.guiClusterDepth = Common_Gui.NumberSlider("guiClusterDepth", "Depth", "Maximum depth Clusters meshes should be calculated to", 11, self.handleEvent, self.resize)
 		# --
-		self.guiBillboardText = Common_Gui.SimpleText("guiBillboardText", "Auto-Billboard LOD:", None, self.resize)
-		self.guiBillboardButton = Common_Gui.ToggleButton("guiBillboardButton", "Enable", "Add a billboard detail level to the shape", 12, self.handleEvent, self.resize)
-		self.guiBillboardEquator = Common_Gui.NumberPicker("guiBillboardEquator", "Equator", "Number of images around the equator", 13, self.handleEvent, self.resize)
-		self.guiBillboardPolar = Common_Gui.NumberPicker("guiBillboardPolar", "Polar", "Number of images around the polar", 14, self.handleEvent, self.resize)
-		self.guiBillboardPolarAngle = Common_Gui.NumberSlider("guiBillboardPolarAngle", "Polar Angle", "Angle to take polar images at", 15, self.handleEvent, self.resize)
-		self.guiBillboardDim = Common_Gui.NumberPicker("guiBillboardDim", "Dim", "Dimensions of billboard images", 16, self.handleEvent, self.resize)
-		self.guiBillboardPoles = Common_Gui.ToggleButton("guiBillboardPoles", "Poles", "Take images at the poles", 17, self.handleEvent, self.resize)
-		self.guiBillboardSize = Common_Gui.NumberSlider("guiBillboardSize", "Size", "Size of billboard's detail level", 18, self.handleEvent, self.resize)
+		self.guiBillboardText = Common_Gui.SimpleText("guiBillboardText", "Auto-Billboard LOD:", None, self.guiBillboardTextResize)
+		self.guiBillboardButton = Common_Gui.ToggleButton("guiBillboardButton", "Enable", "Add a billboard detail level to the shape", 12, self.handleEvent, self.guiBillboardButtonResize)
+		self.guiBillboardEquator = Common_Gui.NumberPicker("guiBillboardEquator", "Equator", "Number of images around the equator", 13, self.handleEvent, self.guiBillboardEquatorResize)
+		self.guiBillboardPolar = Common_Gui.NumberPicker("guiBillboardPolar", "Polar", "Number of images around the polar", 14, self.handleEvent, self.guiBillboardPolarResize)
+		self.guiBillboardPolarAngle = Common_Gui.NumberSlider("guiBillboardPolarAngle", "Polar Angle", "Angle to take polar images at", 15, self.handleEvent, self.guiBillboardPolarAngleResize)
+		self.guiBillboardDim = Common_Gui.NumberPicker("guiBillboardDim", "Dim", "Dimensions of billboard images", 16, self.handleEvent, self.guiBillboardDimResize)
+		self.guiBillboardPoles = Common_Gui.ToggleButton("guiBillboardPoles", "Poles", "Take images at the poles", 17, self.handleEvent, self.guiBillboardPolesResize)
+		self.guiBillboardSize = Common_Gui.NumberSlider("guiBillboardSize", "Size", "Size of billboard's detail level", 18, self.handleEvent, self.guiBillboardSizeResize)
 		# --
-		self.guiMiscText = Common_Gui.SimpleText("guiMiscText", "Miscellaneous:", None, self.resize)
-		self.guiScale = Common_Gui.NumberPicker("guiScale", "Export Scale", "Multiply output scale by this number", 26, self.handleEvent, self.resize)
+		self.guiMiscText = Common_Gui.SimpleText("guiMiscText", "Miscellaneous:", None, self.guiMiscTextResize)
+		self.guiScale = Common_Gui.NumberPicker("guiScale", "Export Scale", "Multiply output scale by this number", 26, self.handleEvent, self.guiScaleResize)
 		
 		# set initial states
 		try: x = Prefs['PrimType']
@@ -207,42 +207,43 @@ class ShapeOptionsControlsClass:
 			Prefs['Billboard']['Size'] = control.value
 
 		
-	def resize(self, control, newwidth, newheight):
-		if control.name == "guiStripText":
-			control.x, control.y = 10,newheight-50
-		elif control.name == "guiTriMeshesButton":
-			control.x, control.y, control.width = 102,newheight-60-control.height, 90			
-		elif control.name == "guiTriListsButton":
-			control.x, control.y, control.width = 10,newheight-60-control.height, 90
-		elif control.name == "guiStripMeshesButton":
-			control.x, control.y, control.width = 194,newheight-60-control.height, 90
-		elif control.name == "guiMaxStripSizeSlider":
-			control.x, control.y, control.width = 286,newheight-60-control.height, 180
-		#elif control.name == "guiClusterText":
-		#	control.x, control.y = 10,newheight-70
-		#elif control.name == "guiClusterWriteDepth":
-		#	control.x, control.y, control.width = 10,newheight-80-control.height, 80
-		#elif control.name == "guiClusterDepth":
-		#	control.x, control.y, control.width = 92,newheight-80-control.height, 180
-		elif control.name == "guiBillboardText":
-			control.x, control.y = 10,newheight-150
-		elif control.name == "guiBillboardButton":
-			control.x, control.y, control.width = 10,newheight-160-control.height, 50
-		elif control.name == "guiBillboardEquator":
-			control.x, control.y, control.width = 62,newheight-160-control.height, 100
-		elif control.name == "guiBillboardPolar":
-			control.x, control.y, control.width = 62,newheight-182-control.height, 100
-		elif control.name == "guiBillboardPolarAngle":
-			control.x, control.y, control.width =  164,newheight-182-control.height, 200
-		elif control.name == "guiBillboardDim":
-			control.x, control.y, control.width = 366,newheight-160-control.height, 100
-		elif control.name == "guiBillboardPoles":
-			control.x, control.y, control.width = 366,newheight-182-control.height, 100
-		elif control.name == "guiBillboardSize":
-			control.x, control.y, control.width = 164,newheight-160-control.height, 200
-		elif control.name == "guiMiscText":
-			control.x, control.y = 10,newheight-250
-		elif control.name == "guiScale":
-			control.x, control.y, control.width = 10, newheight-260-control.height, 180
+
+
+	def guiStripTextResize(self, control, newwidth, newheight):
+		control.x, control.y = 10,newheight-50
+	def guiTriMeshesButtonResize(self, control, newwidth, newheight):
+		control.x, control.y, control.width = 102,newheight-60-control.height, 90			
+	def guiTriListsButtonResize(self, control, newwidth, newheight):
+		control.x, control.y, control.width = 10,newheight-60-control.height, 90
+	def guiStripMeshesButtonResize(self, control, newwidth, newheight):
+		control.x, control.y, control.width = 194,newheight-60-control.height, 90
+	def guiMaxStripSizeSliderResize(self, control, newwidth, newheight):
+		control.x, control.y, control.width = 286,newheight-60-control.height, 180
+	#def guiClusterTextResize(self, control, newwidth, newheight):
+	#	control.x, control.y = 10,newheight-70
+	#def guiClusterWriteDepthResize(self, control, newwidth, newheight):
+	#	control.x, control.y, control.width = 10,newheight-80-control.height, 80
+	#def guiClusterDepthResize(self, control, newwidth, newheight):
+	#	control.x, control.y, control.width = 92,newheight-80-control.height, 180
+	def guiBillboardTextResize(self, control, newwidth, newheight):
+		control.x, control.y = 10,newheight-150
+	def guiBillboardButtonResize(self, control, newwidth, newheight):
+		control.x, control.y, control.width = 10,newheight-160-control.height, 50
+	def guiBillboardEquatorResize(self, control, newwidth, newheight):
+		control.x, control.y, control.width = 62,newheight-160-control.height, 100
+	def guiBillboardPolarResize(self, control, newwidth, newheight):
+		control.x, control.y, control.width = 62,newheight-182-control.height, 100
+	def guiBillboardPolarAngleResize(self, control, newwidth, newheight):
+		control.x, control.y, control.width =  164,newheight-182-control.height, 200
+	def guiBillboardDimResize(self, control, newwidth, newheight):
+		control.x, control.y, control.width = 366,newheight-160-control.height, 100
+	def guiBillboardPolesResize(self, control, newwidth, newheight):
+		control.x, control.y, control.width = 366,newheight-182-control.height, 100
+	def guiBillboardSizeResize(self, control, newwidth, newheight):
+		control.x, control.y, control.width = 164,newheight-160-control.height, 200
+	def guiMiscTextResize(self, control, newwidth, newheight):
+		control.x, control.y = 10,newheight-250
+	def guiScaleResize(self, control, newwidth, newheight):
+		control.x, control.y, control.width = 10, newheight-260-control.height, 180
 
 	
