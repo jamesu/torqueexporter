@@ -25,6 +25,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import Common_Gui
 import DtsGlobals
+import math
 from DtsSceneInfo import *
 
 '''
@@ -41,27 +42,27 @@ class ShapeOptionsControlsClass:
 		
 		# initialize GUI controls
 		self.guiStripText = Common_Gui.SimpleText("guiStripText", "Geometry type:", None, self.guiStripTextResize)
-		self.guiTriMeshesButton = Common_Gui.ToggleButton("guiTriMeshesButton", "Triangles", "Generate individual triangles for meshes", 6, self.handleEvent, self.guiTriMeshesButtonResize)
-		self.guiTriListsButton = Common_Gui.ToggleButton("guiTriListsButton", "Triangle Lists", "Generate triangle lists for meshes", 7, self.handleEvent, self.guiTriListsButtonResize)
-		self.guiStripMeshesButton = Common_Gui.ToggleButton("guiStripMeshesButton", "Triangle Strips", "Generate triangle strips for meshes", 8, self.handleEvent, self.guiStripMeshesButtonResize)
-		self.guiMaxStripSizeSlider = Common_Gui.NumberSlider("guiMaxStripSizeSlider", "Strip Size ", "Maximum size of generated triangle strips", 9, self.handleEvent, self.guiMaxStripSizeSliderResize)
+		self.guiTriMeshesButton = Common_Gui.ToggleButton("guiTriMeshesButton", "Triangles", "Generate individual triangles for meshes", 6, self.handleGuiTriMeshesButtonEvent, self.guiTriMeshesButtonResize)
+		self.guiTriListsButton = Common_Gui.ToggleButton("guiTriListsButton", "Triangle Lists", "Generate triangle lists for meshes", 7, self.handleGuiTriListsButtonEvent, self.guiTriListsButtonResize)
+		self.guiStripMeshesButton = Common_Gui.ToggleButton("guiStripMeshesButton", "Triangle Strips", "Generate triangle strips for meshes", 8, self.handleGuiStripMeshesButtonEvent, self.guiStripMeshesButtonResize)
+		self.guiMaxStripSizeSlider = Common_Gui.NumberSlider("guiMaxStripSizeSlider", "Strip Size ", "Maximum size of generated triangle strips", 9, self.handleGuiMaxStripSizeSliderEvent, self.guiMaxStripSizeSliderResize)
 		# --
 		# might get around to fixing this someday, probably not though, since it's not even implemented in TGEA (depricated)
-		#self.guiClusterText = Common_Gui.SimpleText("guiClusterText", "Cluster Mesh", None, self.resize)
-		#self.guiClusterWriteDepth = Common_Gui.ToggleButton("guiClusterWriteDepth", "Write Depth ", "Always Write the Depth on Cluster meshes", 10, self.handleEvent, self.resize)
-		#self.guiClusterDepth = Common_Gui.NumberSlider("guiClusterDepth", "Depth", "Maximum depth Clusters meshes should be calculated to", 11, self.handleEvent, self.resize)
+		#self.guiClusterText = Common_Gui.SimpleText("guiClusterText", "Cluster Mesh", None, self.guiClusterTextResize)
+		#self.guiClusterWriteDepth = Common_Gui.ToggleButton("guiClusterWriteDepth", "Write Depth ", "Always Write the Depth on Cluster meshes", 10, self.handleGuiClusterWriteDepthEvent, self.guiClusterWriteDepthResize)
+		#self.guiClusterDepth = Common_Gui.NumberSlider("guiClusterDepth", "Depth", "Maximum depth Clusters meshes should be calculated to", 11, self.handleGuiClusterDepthEvent, self.guiClusterDepthResize)
 		# --
 		self.guiBillboardText = Common_Gui.SimpleText("guiBillboardText", "Auto-Billboard LOD:", None, self.guiBillboardTextResize)
-		self.guiBillboardButton = Common_Gui.ToggleButton("guiBillboardButton", "Enable", "Add a billboard detail level to the shape", 12, self.handleEvent, self.guiBillboardButtonResize)
-		self.guiBillboardEquator = Common_Gui.NumberPicker("guiBillboardEquator", "Equator", "Number of images around the equator", 13, self.handleEvent, self.guiBillboardEquatorResize)
-		self.guiBillboardPolar = Common_Gui.NumberPicker("guiBillboardPolar", "Polar", "Number of images around the polar", 14, self.handleEvent, self.guiBillboardPolarResize)
-		self.guiBillboardPolarAngle = Common_Gui.NumberSlider("guiBillboardPolarAngle", "Polar Angle", "Angle to take polar images at", 15, self.handleEvent, self.guiBillboardPolarAngleResize)
-		self.guiBillboardDim = Common_Gui.NumberPicker("guiBillboardDim", "Dim", "Dimensions of billboard images", 16, self.handleEvent, self.guiBillboardDimResize)
-		self.guiBillboardPoles = Common_Gui.ToggleButton("guiBillboardPoles", "Poles", "Take images at the poles", 17, self.handleEvent, self.guiBillboardPolesResize)
-		self.guiBillboardSize = Common_Gui.NumberSlider("guiBillboardSize", "Size", "Size of billboard's detail level", 18, self.handleEvent, self.guiBillboardSizeResize)
+		self.guiBillboardButton = Common_Gui.ToggleButton("guiBillboardButton", "Enable", "Add a billboard detail level to the shape", 12, self.handleGuiBillboardButtonEvent, self.guiBillboardButtonResize)
+		self.guiBillboardEquator = Common_Gui.NumberPicker("guiBillboardEquator", "Equator", "Number of images around the equator", 13, self.handleGuiBillboardEquatorEvent, self.guiBillboardEquatorResize)
+		self.guiBillboardPolar = Common_Gui.NumberPicker("guiBillboardPolar", "Polar", "Number of images around the polar", 14, self.handleGuiBillboardPolarEvent, self.guiBillboardPolarResize)
+		self.guiBillboardPolarAngle = Common_Gui.NumberSlider("guiBillboardPolarAngle", "Polar Angle", "Angle to take polar images at", 15, self.handleGuiBillboardPolarAngleEvent, self.guiBillboardPolarAngleResize)
+		self.guiBillboardDim = Common_Gui.NumberPicker("guiBillboardDim", "Dim", "Dimensions of billboard images", 16, self.handleGuiBillboardDimEvent, self.guiBillboardDimResize)
+		self.guiBillboardPoles = Common_Gui.ToggleButton("guiBillboardPoles", "Poles", "Take images at the poles", 17, self.handleGuiBillboardPolesEvent, self.guiBillboardPolesResize)
+		self.guiBillboardSize = Common_Gui.NumberSlider("guiBillboardSize", "Size", "Size of billboard's detail level", 18, self.handleGuiBillboardSizeEvent, self.guiBillboardSizeResize)
 		# --
 		self.guiMiscText = Common_Gui.SimpleText("guiMiscText", "Miscellaneous:", None, self.guiMiscTextResize)
-		self.guiScale = Common_Gui.NumberPicker("guiScale", "Export Scale", "Multiply output scale by this number", 26, self.handleEvent, self.guiScaleResize)
+		self.guiScale = Common_Gui.NumberPicker("guiScale", "Export Scale", "Multiply output scale by this number", 26, self.handleGuiScaleEvent, self.guiScaleResize)
 		
 		# set initial states
 		try: x = Prefs['PrimType']
@@ -154,57 +155,68 @@ class ShapeOptionsControlsClass:
 	def refreshAll(self):
 		pass
 		
-	def handleEvent(self, control):
+	def handleGuiTriMeshesButtonEvent(self, control):
 		Prefs = DtsGlobals.Prefs
-		global guiShapeOptionsSubtab
-		if control.name == "guiTriMeshesButton":
-			Prefs['PrimType'] = "Tris"
-			self.guiTriListsButton.state = False
-			self.guiStripMeshesButton.state = False
-			self.guiTriMeshesButton.state = True
-		elif control.name == "guiTriListsButton":
-			Prefs['PrimType'] = "TriLists"
-			self.guiTriListsButton.state = True
-			self.guiStripMeshesButton.state = False
-			self.guiTriMeshesButton.state = False
-		elif control.name == "guiStripMeshesButton":
-			Prefs['PrimType'] = "TriStrips"
-			self.guiTriListsButton.state = False
-			self.guiStripMeshesButton.state = True
-			self.guiTriMeshesButton.state = False
-		elif control.name == "guiMaxStripSizeSlider":
-			Prefs['MaxStripSize'] = control.value
-		elif control.name == "guiScale":
-			Prefs['ExportScale'] = control.value
-		#elif control.name == "guiClusterWriteDepth":
-		#	Prefs['AlwaysWriteDepth'] = control.state
-		#elif control.name == "guiClusterDepth":
-		#	Prefs['ClusterDepth'] = control.value
-		elif control.name == "guiBillboardButton":
-			Prefs['Billboard']['Enabled'] = control.state
-		elif control.name == "guiBillboardEquator":
-			Prefs['Billboard']['Equator'] = control.value
-		elif control.name == "guiBillboardPolar":
-			Prefs['Billboard']['Polar'] = control.value
-		elif control.name == "guiBillboardPolarAngle":
-			Prefs['Billboard']['PolarAngle'] = control.value
-		elif control.name == "guiBillboardDim":
-			val = int(control.value)
-			# need to constrain this to be a power of 2
-			# it would be easier just to use a combo box, but this is more fun.
-			# did the value go up or down?
-			if control.value > Prefs['Billboard']['Dim']:
-				# we go up
-				val = int(2**math.ceil(math.log(control.value,2)))
-			elif control.value < Prefs['Billboard']['Dim']:
-				# we go down
-				val = int(2**math.floor(math.log(control.value,2)))
-			control.value = val
-			Prefs['Billboard']['Dim'] = control.value
-		elif control.name == "guiBillboardPoles":
-			Prefs['Billboard']['IncludePoles'] = control.state
-		elif control.name == "guiBillboardSize":
-			Prefs['Billboard']['Size'] = control.value
+		Prefs['PrimType'] = "Tris"
+		self.guiTriListsButton.state = False
+		self.guiStripMeshesButton.state = False
+		self.guiTriMeshesButton.state = True
+	def handleGuiTriListsButtonEvent(self, control):
+		Prefs = DtsGlobals.Prefs
+		Prefs['PrimType'] = "TriLists"
+		self.guiTriListsButton.state = True
+		self.guiStripMeshesButton.state = False
+		self.guiTriMeshesButton.state = False
+	def handleGuiStripMeshesButtonEvent(self, control):
+		Prefs = DtsGlobals.Prefs
+		Prefs['PrimType'] = "TriStrips"
+		self.guiTriListsButton.state = False
+		self.guiStripMeshesButton.state = True
+		self.guiTriMeshesButton.state = False
+	def handleGuiMaxStripSizeSliderEvent(self, control):
+		Prefs = DtsGlobals.Prefs
+		Prefs['MaxStripSize'] = control.value
+	def handleGuiScaleEvent(self, control):
+		Prefs = DtsGlobals.Prefs
+		Prefs['ExportScale'] = control.value
+	#def handleGuiClusterWriteDepthEvent(self, control):
+	#	Prefs = DtsGlobals.Prefs
+	#	Prefs['AlwaysWriteDepth'] = control.state
+	#def handleGuiClusterDepthEvent(self, control):
+	#	Prefs = DtsGlobals.Prefs
+	#	Prefs['ClusterDepth'] = control.value
+	def handleGuiBillboardButtonEvent(self, control):
+		Prefs = DtsGlobals.Prefs
+		Prefs['Billboard']['Enabled'] = control.state
+	def handleGuiBillboardEquatorEvent(self, control):
+		Prefs = DtsGlobals.Prefs
+		Prefs['Billboard']['Equator'] = control.value
+	def handleGuiBillboardPolarEvent(self, control):
+		Prefs = DtsGlobals.Prefs
+		Prefs['Billboard']['Polar'] = control.value
+	def handleGuiBillboardPolarAngleEvent(self, control):
+		Prefs = DtsGlobals.Prefs
+		Prefs['Billboard']['PolarAngle'] = control.value
+	def handleGuiBillboardDimEvent(self, control):
+		Prefs = DtsGlobals.Prefs
+		val = int(control.value)
+		# need to constrain this to be a power of 2
+		# it would be easier just to use a combo box, but this is more fun.
+		# did the value go up or down?
+		if control.value > Prefs['Billboard']['Dim']:
+			# we go up
+			val = int(2**math.ceil(math.log(control.value,2)))
+		elif control.value < Prefs['Billboard']['Dim']:
+			# we go down
+			val = int(2**math.floor(math.log(control.value,2)))
+		control.value = val
+		Prefs['Billboard']['Dim'] = control.value
+	def handleGuiBillboardPolesEvent(self, control):
+		Prefs = DtsGlobals.Prefs
+		Prefs['Billboard']['IncludePoles'] = control.state
+	def handleGuiBillboardSizeEvent(self, control):
+		Prefs = DtsGlobals.Prefs
+		Prefs['Billboard']['Size'] = control.value
 
 		
 
