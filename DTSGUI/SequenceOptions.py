@@ -55,6 +55,15 @@ class SequenceOptionsControlsClass:
 		                                                                +"that you make frequent backups of your work!!!", None, self.guiTwoPassTextResize)
 
 
+		# set up default states
+		if Prefs['SequenceExportTwoPassMode']:
+			self.guiSinglePassButton.state = False
+			self.guiTwoPassButton.state = True
+		else:
+			self.guiSinglePassButton.state = True
+			self.guiTwoPassButton.state = False
+		
+		
 		
 		# add controls to containers
 		guiShapeOptionsSubtab.addControl(self.guiAnimExportModeText)
@@ -84,11 +93,16 @@ class SequenceOptionsControlsClass:
 	
 	def handleGuiSinglePassButtonEvent(self, control):
 		Prefs = DtsGlobals.Prefs
-		pass
+		Prefs['SequenceExportTwoPassMode'] = False
+		self.guiSinglePassButton.state = True
+		self.guiTwoPassButton.state = False
 
 	def handleGuiTwoPassButtonEvent(self, control):
 		Prefs = DtsGlobals.Prefs
-		pass
+		# todo - confirmation dialog
+		Prefs['SequenceExportTwoPassMode'] = True
+		self.guiSinglePassButton.state = False
+		self.guiTwoPassButton.state = True
 	
 	
 
