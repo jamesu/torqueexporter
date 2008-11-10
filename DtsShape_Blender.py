@@ -618,8 +618,8 @@ class BlenderShape(DtsShape):
 			
 		# dump node transforms for the rest frame
 		# TODO - off by one error in NodeTranform Util?
-		Blender.Set('curframe', 1)
-		self.restTransforms = self.transformUtil.dumpReferenceFrameTransforms(orderedNodeList, self.preferences['RestFrame'],True)
+		Blender.Set('curframe', self.preferences['RestFrame'])
+		self.restTransforms = self.transformUtil.dumpReferenceFrameTransforms(orderedNodeList, self.preferences['RestFrame'], self.preferences['SequenceExportTwoPassMode'])
 
 		# Set up default translations and rotations for nodes.
 		i = 0
@@ -837,7 +837,7 @@ class BlenderShape(DtsShape):
 			# base transforms for nodes in our blend animation.
  			#useAction = seqPrefs['Action']['BlendRefPoseAction']
 			refFrame = seqPrefs['BlendRefPoseFrame']
-			baseTransforms = self.transformUtil.dumpReferenceFrameTransforms(orderedNodeList, refFrame)			
+			baseTransforms = self.transformUtil.dumpReferenceFrameTransforms(orderedNodeList, refFrame, self.preferences['SequenceExportTwoPassMode'])			
 			if baseTransforms == None:
 				Torque_Util.dump_writeln("Error getting base Transforms!!!!!")
 
@@ -886,7 +886,7 @@ class BlenderShape(DtsShape):
 			sequence.frames[nodeIndex] = []
 		
 		# get transforms for every frame in a big nested list.	
-		transforms = self.transformUtil.dumpFrameTransforms(orderedNodeList, seqPrefs['StartFrame'], seqPrefs['EndFrame'], True)
+		transforms = self.transformUtil.dumpFrameTransforms(orderedNodeList, seqPrefs['StartFrame'], seqPrefs['EndFrame'], self.preferences['SequenceExportTwoPassMode'])
 
 
 		# if this is a blend animation, calculate deltas
