@@ -310,8 +310,9 @@ class BlenderShape(DtsShape):
 	# this should be called after nodes are added.
 	def addAllDetailLevels(self, dtsObjects, sortedDetailLevels):
 		# set current frame to rest frame
-		Blender.Set('curframe', self.preferences['RestFrame'])
-		
+		restFrame = self.preferences['RestFrame']
+		if Blender.Get('curframe') == restFrame: Blender.Set('curframe',restFrame+1)
+		Blender.Set('curframe', restFrame)		
 		dtsObjList = dtsObjects.keys()
 		# add each detail level
 		for dlName in sortedDetailLevels:
