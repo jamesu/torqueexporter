@@ -35,6 +35,7 @@ from DtsSceneInfo import *
 
 import new
 import gc
+import math as pMath
 
 gc.enable()
 #-------------------------------------------------------------------------------------------------
@@ -411,7 +412,8 @@ def restoreIpoScales(ipoScales):
 # 3. 
 #
 class NodeTransformUtil:
-	def __init__(self):
+	def __init__(self, exportScale = 1.0):
+		print "initializing NodeTransformUtil..."
 		# get dictionaries
 		self.nodes = DtsGlobals.SceneInfo.nodes
 		self.armatures = DtsGlobals.SceneInfo.armatures
@@ -432,6 +434,12 @@ class NodeTransformUtil:
 		# init default scales - need these first, chicken and egg.
 		for ni in self.nodes.values():
 			ni.initRestScaleData(armPoses)
+		
+		self.exportScale = exportScale
+		if pMath.fabs(exportScale - 1.0) < 0.001:
+			self.useExportScale = False
+		else:
+			self.useExportScale = True
 
 
 
@@ -606,6 +614,9 @@ class NodeTransformUtil:
 				for ni in orderedNIList:
 					frameTransforms.append([ni.getNodeLocWS(armPoses), ni.getNodeScale(armPoses, wantDeltaScale), ni.getNodeRotWS(armPoses)])
 
+		if self.useExportScale:
+			transforms = self.applyExportScale(transforms)
+			
 		return transforms
 	
 	# Convert worldspace loc and rot transforms to parent space
@@ -684,8 +695,17 @@ class NodeTransformUtil:
 		return offsetAccum
 		
 
-
-
+	# apply export scale factor to offsets
+	def applyExportScale(self, transforms):
+		print "applyExportScale called..."
+		exportScale = self.exportScale
+		for frameTransforms in transforms:
+			for nodeTransforms in frameTransforms:
+				nodeTransforms[0][0] = nodeTransforms[0][0] * exportScale
+				nodeTransforms[0][1] = nodeTransforms[0][1] * exportScale
+				nodeTransforms[0][2] = nodeTransforms[0][2] * exportScale
+		return transforms
+		
 
 # --------- Utility functions -------------
 def toTorqueVec(v):
