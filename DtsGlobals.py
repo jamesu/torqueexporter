@@ -31,7 +31,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   Blender Dts Classes for Python
 '''
 
-Version = "0.97 (NLA DEV)"
+Version = "0.97 Beta1"
 Prefs = None
 SceneInfo = None
 Prefs_keyname = ""
