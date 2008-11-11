@@ -110,7 +110,7 @@ class BlenderShape(DtsShape):
 
 		# this object is the interface through which we get blender tranform data
 		# for object and bone nodes
-		self.transformUtil = DtsPoseUtil.NodeTransformUtil()
+		self.transformUtil = DtsPoseUtil.NodeTransformUtil(self.preferences['ExportScale'])
 		
 		# extra book keeping for armature modifier warning (see long note/explanation in Dts_Blender.py)
 		self.badArmatures = []
