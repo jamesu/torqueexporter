@@ -94,6 +94,7 @@ class SeqCommonControlsClass(SeqControlsClassBase):
 		self.guiRefPoseTitle.visible = False
 		self.guiRefPoseFrame.visible = False
 		self.guiRefPoseFrame.min = 1
+		self.guiRefPoseFrame.max = 65535
 		
 
 		# add controls to containers
@@ -413,13 +414,6 @@ class SeqCommonControlsClass(SeqControlsClassBase):
 		if seqPrefs['Blend'] == True:
 			self.guiRefPoseTitle.visible = True
 			self.guiRefPoseFrame.visible = True
-			# todo - should not talk to blender directly, ask SceneInfo instead.
-			# reset max to raw number of frames in ref pose action
-			try:
-				action = Blender.Armature.NLA.GetActions()[seqPrefs['BlendRefPoseAction']]				
-				maxNumFrames = DtsShape_Blender.getHighestActFrame(action)
-			except: maxNumFrames = 1
-			self.guiRefPoseFrame.max = maxNumFrames
 		else:
 			self.guiRefPoseTitle.visible = False
 			self.guiRefPoseFrame.visible = False
@@ -486,8 +480,6 @@ class SeqCommonControlsClass(SeqControlsClassBase):
 
 		self.guiRefPoseTitle.label = "Ref pose for '%s'" % seqName
 		self.guiRefPoseFrame.min = 1
-
-		self.guiRefPoseFrame.max = maxNumFrames
 		self.guiRefPoseFrame.value = seqPrefs['BlendRefPoseFrame']
 		self.guiGroundFrameSamples.value = seqPrefs['NumGroundFrames']
 		self.guiGroundFrameSamples.max = maxNumFrames
