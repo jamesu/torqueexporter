@@ -261,8 +261,8 @@ class DetailLevelControlsClass:
 			guiLayerButton[i].height = buttonWidth
 			buttonPos += buttonWidth
 
-		buttonsStartX = 340
-		buttonsStartY = 5
+		buttonsStartX = 395
+		buttonsStartY = 15
 		buttonPos = buttonsStartX
 		for i in range(5,10):
 			guiLayerButton[i].x, guiLayerButton[i].y = buttonPos, buttonsStartY
@@ -270,8 +270,8 @@ class DetailLevelControlsClass:
 			guiLayerButton[i].height = buttonWidth
 			buttonPos += buttonWidth
 
-		buttonsStartX = 395
-		buttonsStartY = 15
+		buttonsStartX = 340
+		buttonsStartY = 5
 		buttonPos = buttonsStartX
 		for i in range(10,15):
 			guiLayerButton[i].x, guiLayerButton[i].y = buttonPos, buttonsStartY
