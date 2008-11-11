@@ -846,7 +846,7 @@ class BlenderShape(DtsShape):
 			# base transforms for nodes in our blend animation.
  			#useAction = seqPrefs['Action']['BlendRefPoseAction']
 			refFrame = seqPrefs['BlendRefPoseFrame']
-			baseTransforms = self.transformUtil.dumpReferenceFrameTransforms(orderedNodeList, refFrame, self.preferences['SequenceExportTwoPassMode'])			
+			baseTransforms = self.transformUtil.dumpBlendRefFrameTransforms(orderedNodeList, refFrame, self.preferences['SequenceExportTwoPassMode'])			
 			if baseTransforms == None:
 				Torque_Util.dump_writeln("Error getting base Transforms!!!!!")
 
@@ -895,8 +895,10 @@ class BlenderShape(DtsShape):
 			sequence.frames[nodeIndex] = []
 		
 		# get transforms for every frame in a big nested list.	
-		transforms = self.transformUtil.dumpFrameTransforms(orderedNodeList, seqPrefs['StartFrame'], seqPrefs['EndFrame'], self.preferences['SequenceExportTwoPassMode'])
-
+		if isBlend:
+			transforms = self.transformUtil.dumpBlendFrameTransforms(orderedNodeList, seqPrefs['StartFrame'], seqPrefs['EndFrame'], self.preferences['SequenceExportTwoPassMode'])
+		else:
+			transforms = self.transformUtil.dumpFrameTransforms(orderedNodeList, seqPrefs['StartFrame'], seqPrefs['EndFrame'], self.preferences['SequenceExportTwoPassMode'])
 
 		# if this is a blend animation, calculate deltas
 		if isBlend and baseTransforms != None:

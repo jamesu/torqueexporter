@@ -445,16 +445,17 @@ class NodeTransformUtil:
 
 		return transformsPS[0]
 
-	'''
+
 	def dumpBlendRefFrameTransforms(self, orderedNodeList, refFrame, twoPass=True):
 		# dump world space transforms, use raw scale values
-		transformsWS = self.dumpNodeTransformsWS(orderedNodeList, refFrame, refFrame+1, twoPass, True)
+		transformsWS = self.dumpNodeTransformsWS(orderedNodeList, refFrame, refFrame, twoPass, False)
 		# get parent space tranforms without correcting scaled offsets (bake scale into offsets)
-		transformsPS = self.worldSpaceToParentSpace(orderedNodeList, transformsWS, refFrame, refFrame+1, True)
+		transformsPS = self.worldSpaceToParentSpace(orderedNodeList, transformsWS, refFrame, refFrame, True)
 
 		return transformsPS[0]
-	'''	
 
+
+	# used for regular animations (non-blend)
 	def dumpFrameTransforms(self, orderedNodeList, startFrame, endFrame, twoPass=True):
 		# dump world space transforms, use delta scale values
 		transformsWS = self.dumpNodeTransformsWS(orderedNodeList, startFrame, endFrame, twoPass, True)
@@ -462,6 +463,16 @@ class NodeTransformUtil:
 		transformsPS = self.worldSpaceToParentSpace(orderedNodeList, transformsWS, startFrame, endFrame, True)
 
 		return transformsPS
+
+	# used for blend animations
+	def dumpBlendFrameTransforms(self, orderedNodeList, startFrame, endFrame, twoPass=True):
+		# dump world space transforms, use delta scale values
+		transformsWS = self.dumpNodeTransformsWS(orderedNodeList, startFrame, endFrame, twoPass, False)
+		# get parent space tranforms, correcting scaled offsets
+		transformsPS = self.worldSpaceToParentSpace(orderedNodeList, transformsWS, startFrame, endFrame, True)
+
+		return transformsPS
+		
 
 	# used to get deltas for Torque blend animations
 	def getDeltasFromRef(self, refTransforms, transformsPS):
@@ -655,7 +666,6 @@ class NodeTransformUtil:
 	# -------------------------------------------------------------------
 	# functions below this point are private, for internal use only
 	def correctScaledOffset(self, offsetIn, parentStack, frameTransformsWS):
-
 		offsetAccum = offsetIn
 		for pIdx in parentStack:
 			scale = frameTransformsWS[pIdx][1]			
