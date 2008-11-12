@@ -409,7 +409,6 @@ def restoreIpoScales(ipoScales):
 # --------- Class that dumps node transform data for any/all frames ----------
 class NodeTransformUtil:
 	def __init__(self, exportScale = 1.0):
-		print "initializing NodeTransformUtil..."
 		# get dictionaries
 		self.nodes = DtsGlobals.SceneInfo.nodes
 		self.armatures = DtsGlobals.SceneInfo.armatures
@@ -461,7 +460,8 @@ class NodeTransformUtil:
 	# **
 	def dumpBlendRefFrameTransforms(self, orderedNodeList, refFrame, twoPass=True):
 		# dump world space transforms, use raw scale values
-		transformsWS = self.dumpNodeTransformsWS(orderedNodeList, refFrame, refFrame, twoPass, False)
+		#transformsWS = self.dumpNodeTransformsWS(orderedNodeList, refFrame, refFrame, twoPass, False)
+		transformsWS = self.dumpNodeTransformsWS(orderedNodeList, refFrame, refFrame, twoPass, True)
 		# get parent space tranforms without correcting scaled offsets (bake scale into offsets)
 		transformsPS = self.worldSpaceToParentSpace(orderedNodeList, transformsWS, refFrame, refFrame, True)
 
@@ -470,7 +470,8 @@ class NodeTransformUtil:
 	# used for blend animations
 	def dumpBlendFrameTransforms(self, orderedNodeList, startFrame, endFrame, twoPass=True):
 		# dump world space transforms, use raw scale values
-		transformsWS = self.dumpNodeTransformsWS(orderedNodeList, startFrame, endFrame, twoPass, False)
+		#transformsWS = self.dumpNodeTransformsWS(orderedNodeList, startFrame, endFrame, twoPass, False)
+		transformsWS = self.dumpNodeTransformsWS(orderedNodeList, startFrame, endFrame, twoPass, True)
 		# get parent space tranforms, correcting scaled offsets
 		transformsPS = self.worldSpaceToParentSpace(orderedNodeList, transformsWS, startFrame, endFrame, True)
 
@@ -478,7 +479,23 @@ class NodeTransformUtil:
 	# **
 
 	# used to get deltas for Torque blend animations
-	def getDeltasFromRef(self, refTransforms, transformsPS):
+	def getDeltasFromRef(self, refTransforms, transformsPS, orderedNodeList):
+
+		# build lists so we don't have to keep doing it.
+		orderedNIList = []
+		for nname in orderedNodeList:
+			orderedNIList.append(self.nodes[nname])
+
+		# breadcrumb parent stack, saves on hierarchy lookups
+		parentStacks = []
+		for ni in orderedNIList:
+			parentStacks.append([])			
+			pNI = ni.getGoodNodeParentNI()
+			while pNI != None:
+				parentStacks[-1].append(pNI.tempIdx)
+				pNI = pNI.getGoodNodeParentNI()
+			parentStacks[-1].reverse()
+
 		# loop through node transforms for each frame
 		for frameTransforms in transformsPS:
 			# loop through each node tranform and convert to deltas from reference frame
@@ -512,6 +529,14 @@ class NodeTransformUtil:
 
 				# rot
 				frameTransforms[i][2] = rot * refTransforms[i][2].inverse()
+
+		# correct scaled offsets for each frame
+		'''
+		for frameTransforms in transformsPS:
+			for i in range(0, len(frameTransforms)):
+				nodeTransforms = frameTransforms[i]				
+				nodeTransforms[0] = self.correctScaledOffset(nodeTransforms[0], parentStacks[i], frameTransforms)
+		'''
 		
 		return transformsPS
 	# ******************

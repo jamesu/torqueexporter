@@ -898,7 +898,7 @@ class BlenderShape(DtsShape):
 
 		# if this is a blend animation, calculate deltas
 		if isBlend and baseTransforms != None:
-			transforms = self.transformUtil.getDeltasFromRef(baseTransforms, transforms)
+			transforms = self.transformUtil.getDeltasFromRef(baseTransforms, transforms, orderedNodeList)
 		
 		# loop through each frame and transcribe transforms
 		for frameTransforms in transforms:
