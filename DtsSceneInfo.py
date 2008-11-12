@@ -295,6 +295,16 @@ class SceneInfoClass:
 		indent += 3
 		for nic in filter(lambda x: x.getGoodNodeParentNI()==ni, self.nodes.values()):
 			self.__printTree(nic, indent)
+
+	# adds parent stacks to armature nodes for later lookup (used when tranforming bones from
+	# armature space to world space)
+	def __addArmatureParentStacks(self):
+		for armNI in self.armatures.values():
+			armNI.parentStack = []
+			armNIParent = armNI.parentNI
+			while armNIParent != None:
+				armNI.parentStack.append(armNIParent)
+				armNIParent = armNIParent.parentNI
 			
 
 	def __populateData(self):
@@ -391,6 +401,10 @@ class SceneInfoClass:
 				if highest != ni: continue
 			
 			self.__safeAddToNodesDict(ni)
+		
+		
+		# create armature parent stacks for use in DtsPoseUtil
+		self.__addArmatureParentStacks()
 		
 		#print "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 		#for ni in filter(lambda x: x.getGoodNodeParentNI()==None, self.nodes.values()):
