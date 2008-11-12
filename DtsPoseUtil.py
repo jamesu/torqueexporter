@@ -1,7 +1,7 @@
 '''
-poseUtil.py
+DtsPoseUtil.py
 
-Copyright (c) 2006 Joseph Greenawalt(jsgreenawalt@gmail.com)
+Copyright (c) 2006-2009 Joseph Greenawalt(jsgreenawalt@gmail.com)
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
@@ -60,11 +60,31 @@ def __getBoneLocWS(self, poses):
 	# get the pose location
 	bTrans = armRot.apply(toTorqueVec(pose.bones[self.originalBoneName].poseMatrix.translationPart()))
 	# Scale by armature's scale
-	armSize = toTorqueVec([1,1,1])
-	bTrans = Vector(bTrans.members[0] * armSize.members[0], bTrans.members[1] * armSize.members[1], bTrans.members[2]  * armSize.members[2])
+	bTrans = self.__fixBoneOffset(bTrans, self.armParentNI, poses)
 	# add on armature pivot to translate into worldspace
 	bTrans = bTrans + self.armParentNI.getNodeLocWS(poses)
 	return bTrans
+	
+def __fixBoneOffset(self, bOffset, armNI, poses):
+	offsetAccum = bOffset
+	for parentNI in armNI.parentStack:
+		scale = parentNI.getNodeScale(poses, False)
+		# this early out is a big win!
+		if scale.eqDelta(Vector(1.0, 1.0, 1.0), 0.02): continue
+		# get parent rotation and inverse rotation
+		rot = parentNI.getNodeRotWS(poses)
+		rotInv = rot.inverse()
+		# rotate the offset into parent bone's space 
+		offsetAccum = rotInv.apply(offsetAccum)
+		# apply the parent node's scale to the offset.
+		offsetAccum = Vector(offsetAccum[0] * scale[0], offsetAccum[1] * scale[1], offsetAccum[2] * scale[2])
+		# rotate back into worldspace for next iteration :-)
+		offsetAccum = rot.apply(offsetAccum)
+	# finally, add the armature's own scale
+	armScale = armNI.getNodeScale(poses, False)
+	offsetAccum = Vector(offsetAccum.members[0] * armScale.members[0], offsetAccum.members[1] * armScale.members[1], offsetAccum.members[2]  * armScale.members[2])
+	return offsetAccum
+
 
 # determine the rotation of any bone in worldspace
 # TESTED
@@ -108,22 +128,6 @@ def __getObjectScale(self):
 	return bLoc
 
 
-'''
-def getNodeLocWS(self, poses):
-	if self.blenderType == "object":
-		retVal = self.__getObjectLocWS()
-	elif self.blenderType == "bone":
-		retVal = self.__getBoneLocWS(poses)
-	return retVal
-
-def getNodeRotWS(self, poses):
-	if self.blenderType == "object":
-		retVal = self.__getObjectRotWS()
-	elif self.blenderType == "bone":
-		retVal = self.__getBoneRotWS(poses)
-	return retVal
-'''
-
 def getNodeScale(self, poses, delta=True):
 	if self.blenderType == "object":
 		retVal = self.__getObjectScale()
@@ -134,7 +138,7 @@ def getNodeScale(self, poses, delta=True):
 		retVal = Vector(retVal[0]/self.restScale[0], retVal[1]/self.restScale[1], retVal[2]/self.restScale[2])
 	return retVal
 
-# bind test methods dynamically :-)
+# bind loc/rot methods dynamically based on node type
 def bindLocRotMethods(self):
 	if self.blenderType == "object":
 		self.getNodeLocWS = self.__getObjectLocWS
@@ -160,16 +164,16 @@ def bindDynamicMethods():
 	nodeInfoClass.__dict__['__getObjectRotWS'] = __getObjectRotWS
 	new.instancemethod(__getObjectScale, None, nodeInfoClass)
 	nodeInfoClass.__dict__['__getObjectScale'] = __getObjectScale
-	#new.instancemethod(getNodeLocWS, None, nodeInfoClass)
-	#nodeInfoClass.__dict__['getNodeLocWS'] = getNodeLocWS
-	#new.instancemethod(getNodeRotWS, None, nodeInfoClass)
-	#nodeInfoClass.__dict__['getNodeRotWS'] = getNodeRotWS
 	new.instancemethod(getNodeScale, None, nodeInfoClass)
 	nodeInfoClass.__dict__['getNodeScale'] = getNodeScale
 	new.instancemethod(bindLocRotMethods, None, nodeInfoClass)
 	nodeInfoClass.__dict__['bindLocRotMethods'] = bindLocRotMethods
 	new.instancemethod(initRestScaleData, None, nodeInfoClass)
 	nodeInfoClass.__dict__['initRestScaleData'] = initRestScaleData
+	
+	new.instancemethod(__fixBoneOffset, None, nodeInfoClass)
+	nodeInfoClass.__dict__['__fixBoneOffset'] = __fixBoneOffset
+	#__fixBoneOffset
 
 
 
@@ -402,15 +406,7 @@ def restoreIpoScales(ipoScales):
 
 # -------------------------------------------------------------------------------------
 
-# --------- Class that dumps node transform data for any given frame ----------
-#
-# What do we need from this class?
-#
-# 1. gets base transforms for all nodes; total transformations in parent space.  for
-#    use in setting up default dts node positions
-# 2. gets delta transforms from a given set of base transforms (for use in blend animations)
-# 3. 
-#
+# --------- Class that dumps node transform data for any/all frames ----------
 class NodeTransformUtil:
 	def __init__(self, exportScale = 1.0):
 		print "initializing NodeTransformUtil..."
@@ -444,7 +440,6 @@ class NodeTransformUtil:
 
 
 	# ******************
-	# test
 	def dumpReferenceFrameTransforms(self, orderedNodeList, refFrame, twoPass=True):
 		# dump world space transforms, use raw scale values
 		transformsWS = self.dumpNodeTransformsWS(orderedNodeList, refFrame, refFrame, twoPass, False)
@@ -474,7 +469,7 @@ class NodeTransformUtil:
 
 	# used for blend animations
 	def dumpBlendFrameTransforms(self, orderedNodeList, startFrame, endFrame, twoPass=True):
-		# dump world space transforms, use delta scale values
+		# dump world space transforms, use raw scale values
 		transformsWS = self.dumpNodeTransformsWS(orderedNodeList, startFrame, endFrame, twoPass, False)
 		# get parent space tranforms, correcting scaled offsets
 		transformsPS = self.worldSpaceToParentSpace(orderedNodeList, transformsWS, startFrame, endFrame, True)
@@ -519,8 +514,6 @@ class NodeTransformUtil:
 				frameTransforms[i][2] = rot * refTransforms[i][2].inverse()
 		
 		return transformsPS
-
-
 	# ******************
 
 	# Dump raw blender worldspace matrices for all nodes in the orderedNodeList.
@@ -697,7 +690,6 @@ class NodeTransformUtil:
 
 	# apply export scale factor to offsets
 	def applyExportScale(self, transforms):
-		print "applyExportScale called..."
 		exportScale = self.exportScale
 		for frameTransforms in transforms:
 			for nodeTransforms in frameTransforms:
@@ -749,29 +741,3 @@ def setEmptyRot(rot):
 	empty.setMatrix(rot)
 	scene.update(1)
 	Blender.Window.RedrawAll()
-
-
-
-
-
-# *** entry point for getBoneLoc/Rot WS testing ***
-if __name__ == "__main__":
-	arm = Blender.Object.Get('Armature')
-	armName = arm.name
-	scene = Blender.Scene.GetCurrent()
-	scene.getRenderingContext().currentFrame(40)
-	scene.update(1)
-	# get the pose
-	pose = arm.getPose()
-
-	PoseUtil = DtsPoseUtilClass()
-
-	bName = 'Bone'
-	#parentName = PoseUtil.armBones[armName][bName][PARENTNAME]
-
-	
-	#setEmptyRot(PoseUtil.getBoneRestRotWS(armName, bName))
-	#putEmptyAt(PoseUtil.getBoneRestPosWS(armName, bName))
-
-	
-	print "Done!"
