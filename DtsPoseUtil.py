@@ -67,6 +67,9 @@ def __getBoneLocWS(self, poses):
 	
 def __fixBoneOffset(self, bOffset, armNI, poses):
 	offsetAccum = bOffset
+	# finally, add the armature's own scale
+	armScale = armNI.getNodeScale(poses, False)
+	offsetAccum = Vector(offsetAccum.members[0] * armScale.members[0], offsetAccum.members[1] * armScale.members[1], offsetAccum.members[2]  * armScale.members[2])
 	for parentNI in armNI.parentStack:
 		scale = parentNI.getNodeScale(poses, False)
 		# this early out is a big win!
@@ -80,9 +83,6 @@ def __fixBoneOffset(self, bOffset, armNI, poses):
 		offsetAccum = Vector(offsetAccum[0] * scale[0], offsetAccum[1] * scale[1], offsetAccum[2] * scale[2])
 		# rotate back into worldspace for next iteration :-)
 		offsetAccum = rot.apply(offsetAccum)
-	# finally, add the armature's own scale
-	armScale = armNI.getNodeScale(poses, False)
-	offsetAccum = Vector(offsetAccum.members[0] * armScale.members[0], offsetAccum.members[1] * armScale.members[1], offsetAccum.members[2]  * armScale.members[2])
 	return offsetAccum
 
 
@@ -448,16 +448,6 @@ class NodeTransformUtil:
 
 		return transformsPS[0]
 
-
-	def dumpBlendRefFrameTransforms(self, orderedNodeList, refFrame, twoPass=True):
-		# dump world space transforms, use raw scale values
-		transformsWS = self.dumpNodeTransformsWS(orderedNodeList, refFrame, refFrame, twoPass, False)
-		# get parent space tranforms without correcting scaled offsets (bake scale into offsets)
-		transformsPS = self.worldSpaceToParentSpace(orderedNodeList, transformsWS, refFrame, refFrame, True)
-
-		return transformsPS[0]
-
-
 	# used for regular animations (non-blend)
 	def dumpFrameTransforms(self, orderedNodeList, startFrame, endFrame, twoPass=True):
 		# dump world space transforms, use delta scale values
@@ -467,6 +457,16 @@ class NodeTransformUtil:
 
 		return transformsPS
 
+
+	# **
+	def dumpBlendRefFrameTransforms(self, orderedNodeList, refFrame, twoPass=True):
+		# dump world space transforms, use raw scale values
+		transformsWS = self.dumpNodeTransformsWS(orderedNodeList, refFrame, refFrame, twoPass, False)
+		# get parent space tranforms without correcting scaled offsets (bake scale into offsets)
+		transformsPS = self.worldSpaceToParentSpace(orderedNodeList, transformsWS, refFrame, refFrame, True)
+
+		return transformsPS[0]
+
 	# used for blend animations
 	def dumpBlendFrameTransforms(self, orderedNodeList, startFrame, endFrame, twoPass=True):
 		# dump world space transforms, use raw scale values
@@ -475,7 +475,7 @@ class NodeTransformUtil:
 		transformsPS = self.worldSpaceToParentSpace(orderedNodeList, transformsWS, startFrame, endFrame, True)
 
 		return transformsPS
-		
+	# **
 
 	# used to get deltas for Torque blend animations
 	def getDeltasFromRef(self, refTransforms, transformsPS):
