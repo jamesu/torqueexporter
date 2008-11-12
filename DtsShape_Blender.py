@@ -646,10 +646,6 @@ class BlenderShape(DtsShape):
 	def addNodeTree(self, nodeInfo, parentNodeIndex = -1):
 		if not nodeInfo.isBanned():
 			n = Node(self.sTable.addString(nodeInfo.dtsNodeName), parentNodeIndex)
-			#pos = nodeInfo.defPosPS
-			#rot = nodeInfo.defRotPS
-			#self.defaultTranslations.append(pos)
-			#self.defaultRotations.append(rot)
 			try: n.armName = nodeInfo.armParentNI.dtsNodeName
 			except: n.armName = None
 			n.obj = nodeInfo.getBlenderObj()
