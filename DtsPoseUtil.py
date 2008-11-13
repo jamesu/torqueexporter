@@ -67,7 +67,7 @@ def __getBoneLocWS(self, poses):
 	
 def __fixBoneOffset(self, bOffset, armNI, poses):
 	offsetAccum = bOffset
-	# finally, add the armature's own scale
+	# add the armature's own scale
 	armScale = armNI.getNodeScale(poses, False)
 	offsetAccum = Vector(offsetAccum.members[0] * armScale.members[0], offsetAccum.members[1] * armScale.members[1], offsetAccum.members[2]  * armScale.members[2])
 	for parentNI in armNI.parentStack:
