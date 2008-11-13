@@ -56,7 +56,7 @@ class nodeInfoClass:
 		if blenderType == "bone":
 			self.originalBoneName = nodeName
 		else:
-			originalBoneName = None
+			self.originalBoneName = None
 
 		#if blenderType == "object":
 		#	pass
@@ -1087,37 +1087,15 @@ class SceneInfoClass:
 
 
 
-	#def checkVertGroupNames(self, meshName, names, armNIList):
-	
-	
-	def translateVertGroupNames(self, meshName, names, armNIList):
-		# issue warnings if mesh is multi-skinned and bone matching vgroup
-		# name exists in more than one of the target armatures
-		for name in names:
-			foundList = []
-			for armNI in armNIList:
-				try: newName = self.boneNameChanges[armNI.blenderObjName][name]
-				except: newName = None
-				if newName != None: foundList.append(name)
-			if len(foundList) > 1:
-				warnString = "\n  ****************************************************************************\n"\
-				+ "  Warning: Vertex group \"" + name + "\" in multi-skinned mesh \"" + meshName +"\"\n"\
-				+ "   could not be resolved because a bone matching the name of the vertex group\n"\
-				+ "   exists in more than one of the target armatures.\n"\
-				+ "  ****************************************************************************\n"
-				dump_writeWarning(warnString)
-
-		output = []
-		for name in names:
-			for armNI in armNIList:
-				try:
-					output.append(self.boneNameChanges[armNI.blenderObjName][name])
-					break
-				except: continue
-				
-		return output
+	def getVGroupTransDict(self):
+		retVal = {}
+		# find all exportable bone nodes
+		for ni in self.nodes.values():
+			if ni.blenderType != "bone" or ni.isBanned(): continue
+			retVal[ni.originalBoneName] = ni.dtsNodeName
+		return retVal
 			
-	
+			
 
 	#################################################
 	#  Misc
