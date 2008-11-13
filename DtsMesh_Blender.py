@@ -71,7 +71,11 @@ class BlenderMesh(DtsMesh):
 		
 		# Warn if we've got a skinned mesh with no vertex groups.
 		if isSkinned and not hasWeights:
-			Torque_Util.dump_writeWarning("Warning: Skinned mesh %s has no vertex groups. Mesh will not animate!" % meshName)
+			warnString = "\n  ****************************************************************************\n"\
+			+ "  "+ ("Warning: Skinned mesh \"%s\" has no vertex groups. Mesh will not animate!" % meshName) + "\n"\
+			+ "  ****************************************************************************\n"
+			Torque_Util.dump_writeWarning(warnString)
+
 		
 		materialGroups = {}
 		
@@ -304,6 +308,9 @@ class BlenderMesh(DtsMesh):
 	
 	def createWeightDictionary(self, mesh):
 		weightDictionary = {}
+		
+		transDict = DtsGlobals.SceneInfo.getVGroupTransDict()
+		
 		boneList = []
 		hasWeights = False
 		for arm in Blender.Armature.Get().values():
@@ -313,24 +320,33 @@ class BlenderMesh(DtsMesh):
 		for i in range(len(mesh.verts)):
 			weightDictionary[i] = []
 		
-		
+		# translate groups names, if no tranlation is available, ignore the group
 		originalGroups = mesh.getVertGroupNames()
-		translatedGroups = DtsGlobals.SceneInfo.translateVertGroupNames(self.meshName, originalGroups, self.armTargets)
+		warnList = []
 		for i in range(0, len(originalGroups)):
 			oGroup = originalGroups[i]
-			
-			# ignore groups that have no corresponding bone.
-			# don't warn, because vgroups have purposes other than skinning...
-			if not (oGroup in boneList): continue
-			tGroup = translatedGroups[i]
-			try:
+			try: tGroup = transDict[oGroup]
+			except:
+				tGroup = None
+				warnList.append(oGroup)
+				
+
+			if tGroup != None:
 				for vert in mesh.getVertsFromGroup(oGroup, 1):
 					index, weight = vert[0], vert[1]
 					weightDictionary[index].append((tGroup, weight))
 					hasWeights = True
-			except AttributeError:
-				continue
-				
+		
+		if len(warnList) > 0:
+			warnString = "\n  ****************************************************************************\n"\
+			+ "  Warning: The following vertex groups in skinned mesh \"" + self.meshName +"\"\n"\
+			+ "   could not be resolved because the corresponding bones don't exist or have\n"\
+			+ "   been excluded from export:\n"\
+			+ "    "+str(warnList)+ "\n"\
+			+ "  ****************************************************************************\n"
+			Torque_Util.dump_writeWarning(warnString)
+			
+			
 		return weightDictionary, hasWeights
 		
 	def appendVertex(self, shape, msh, rootBone, matrix, scaleFactor, face, faceIndex, useSticky, isCollision = False):
@@ -356,12 +372,8 @@ class BlenderMesh(DtsMesh):
 		vert = msh.verts[face.v[faceIndex].index]
 		if face.smooth:
 			normal = matrix.passVector(Vector(vert.no[0], vert.no[1], vert.no[2]))
-			# Alberto is full of it
-			#normal = self.tpinvmat.passVector([vert.no[0], vert.no[1], vert.no[2]])
 		else:
 			normal = matrix.passVector(Vector(face.no[0], face.no[1], face.no[2]))
-			# Alberto is full of it
-			#normal = self.tpinvmat.passVector([face.no[0], face.no[1], face.no[2]])
 		
 		if self.hasAnisoScale:
 			# correct (anisotropic) scaled normals
@@ -442,7 +454,7 @@ class BlenderMesh(DtsMesh):
 						self.bindex.append(self.getVertexBone(rootBone))
 					# getVertexBone() also adds the nodeTransform(matrixF),
 					# and node Index (if not already on list)
-					if total == 0: self.vweight.append(0.0)
+					if total == 0.0: self.vweight.append(0.0)
 					else: self.vweight.append(weight / total)
 
 			# prevent unweighted verts from flying off in random directions
