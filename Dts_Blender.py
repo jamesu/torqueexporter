@@ -324,6 +324,25 @@ def handleScene(issueWarnings=False):
 def export():
 	SceneInfo = DtsGlobals.SceneInfo
 	Prefs = DtsGlobals.Prefs
+	pathSeparator = SceneInfoClass.getPathSeparator()
+	
+	if DtsGlobals.Debug:
+		Torque_Util.dump_setout("stdout")
+	else:
+		# double check the file name before opening the log
+		if Prefs['exportBasename'] == "":
+			Prefs['exportBasename'] = SceneInfoClass.getDefaultBaseName()
+		
+		try: x = Prefs['LogToOutputFolder']
+		except KeyError: Prefs['LogToOutputFolder'] = True
+		if Prefs['LogToOutputFolder']:
+			Torque_Util.dump_setout( "%s%s%s.log" % (Prefs['exportBasepath'], pathSeparator, Prefs['exportBasename']) )
+		else:
+			Torque_Util.dump_setout("%s.log" % noext(Blender.Get("filename")))
+		
+	
+	Torque_Util.dump_writeln("Torque Exporter %s " % DtsGlobals.Version)
+	Torque_Util.dump_writeln("Using blender, version %s" % Blender.Get('version'))
 	
 	# refresh prefs
 	
@@ -354,7 +373,6 @@ def export():
 		Torque_Util.dump_writeErr("Error. Not processed scene yet!")
 		
 	del cur_progress	
-	Torque_Util.dump_finish()
 	
 	if Torque_Util.numErrors > 0 or Torque_Util.numWarnings > 0:
 		message = ("Export finished with %i error(s) and %s warning(s). Read the log file for more information." % (Torque_Util.numErrors, Torque_Util.numWarnings))
@@ -380,6 +398,7 @@ def export():
 		for ob in Blender.Object.GetSelected():
 			ob.select(True)
 
+	Torque_Util.dump_finish()
 
 '''
 	Entry Point
@@ -395,11 +414,15 @@ if DtsGlobals.Profiling:
 		Profiling = False
 	
 def entryPoint(a):
+	
+
 	DtsGlobals.Prefs = prefsClass()
 	Prefs = DtsGlobals.Prefs
+	#pathSeparator = SceneInfoClass.getPathSeparator()
+	
+	'''
 	# sets the global pathSeparator variable
 	pathSeparator = SceneInfoClass.getPathSeparator()
-	
 
 	if DtsGlobals.Debug:
 		Torque_Util.dump_setout("stdout")
@@ -419,6 +442,8 @@ def entryPoint(a):
 	
 	Torque_Util.dump_writeln("Torque Exporter %s " % DtsGlobals.Version)
 	Torque_Util.dump_writeln("Using blender, version %s" % Blender.Get('version'))
+	'''
+	
 	
 	#if Torque_Util.Torque_Math.accelerator != None:
 	#	Torque_Util.dump_writeln("Using accelerated math interface '%s'" % Torque_Util.Torque_Math.accelerator)
