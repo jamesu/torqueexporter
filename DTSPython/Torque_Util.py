@@ -251,7 +251,7 @@ def dump_setout(filename="stdout"):
 def dump_finish():
 	if dump_file != None:
 		dump_file.flush()
-		#dump_file.close()
+		dump_file.close()
 	
 def dump_write(string):
 	if dump_file != None:
