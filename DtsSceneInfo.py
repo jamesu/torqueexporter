@@ -588,6 +588,7 @@ class SceneInfoClass:
 			if face.mat != None:
 				try: mat = msh.materials[face.mat]
 				except: return None
+				if mat == None: return None
 				# we have a material index, so get the name of the material
 				imageName = SceneInfoClass.stripImageExtension(mat.name)
 				#imageName = mat.name
