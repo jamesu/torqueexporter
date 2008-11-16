@@ -569,20 +569,22 @@ class BlenderShape(DtsShape):
 		return csize
 
 
-	# A utility method that gets the min and max positions of the bones in an armature
+	# A utility method that gets the min and max positions of the nodes in an armature
 	# within a passed-in ordered list.
-	def getMinMax(self, rootBone, nodeOrder, nodeOrderDict):
+	def getMinMax(self, rootNode, nodeOrder, nodeOrderDict, warning=False):
 		# find the current node in our ordered list
-		try: pos = nodeOrderDict[rootBone.name]
+		try:
+			pos = nodeOrderDict[rootNode.dtsNodeName]
+			minPos, maxPos = pos, pos
 		except:
-			return None, None
-		minPos, maxPos = pos, pos
+			minPos, maxPos = 99999, -99999
+
 		cMin = []
 		cMax = []
 		nnames = []
-		for child in rootBone.children:
-			nnames.append(child.name)
-			start, end = self.getMinMax(child, nodeOrder, nodeOrderDict)
+		for child in filter(lambda x: x.getGoodNodeParentNI() == rootNode, self.transformUtil.nodes.values()):
+			nnames.append(child.dtsNodeName)
+			start, end, warning = self.getMinMax(child, nodeOrder, nodeOrderDict, warning)
 			if start == None and end == None: continue
 			if end > maxPos: maxPos = end
 			if start < minPos: minPos = start
@@ -605,28 +607,128 @@ class BlenderShape(DtsShape):
 					Torque_Util.dump_writeln(     "    in the NodeOrder text buffer.")
 					Torque_Util.dump_writeln(     "    cMin[i], cMax[i] = %i, %i" % (cMin[i], cMax[i]) )
 					Torque_Util.dump_writeln(     "    cMin[j], cMax[j] = %i, %i\n-" % (cMin[j], cMax[j]) )
-		return minPos, maxPos
+					warning = True
+		return minPos, maxPos, warning
 	
+
+	def createOrderedNodeList(self):
+		orderedNodeList = []
+
+		# read in desired node ordering from a text buffer, if it exists.
+		no = None
+		try:
+			noTxt = Blender.Text.Get("NodeOrder")
+			no = noTxt.asLines()
+			Torque_Util.dump_writeln("NodeOrder text buffer found, attempting to export nodes in the order specified.")
+		except: no = None
+		nodeOrderDict = {}
+
+		if no != None:
+			# build a dictionary for fast order compares
+			i = 0
+			for n in no:
+				nodeOrderDict[n] = i
+				i += 1			
+
+			boneTree = []
+
+			# Validate the node ordering against the bone hierarchy in our armatures.
+			#
+			# Validation rules:
+			#
+			# 	1. Child nodes must come after their parents in the node order
+			#	list.
+			#
+			#	2. The min and max positions of all child nodes in a given bone
+			#	tree should not overlap the min/max positions of other bone
+			#	trees on the same level of the overall tree.
+
+			# Test Rule #1
+			for nodeInfo in self.transformUtil.nodes.values():
+				if nodeInfo.getGoodNodeParentNI() != None:
+					if nodeInfo.dtsNodeName in nodeOrderDict.keys()\
+					and nodeInfo.getGoodNodeParentNI() != None\
+					and nodeInfo.getGoodNodeParentNI().dtsNodeName in nodeOrderDict.keys():
+						if nodeOrderDict[nodeInfo.dtsNodeName] < nodeOrderDict[nodeInfo.getGoodNodeParentNI().dtsNodeName]:
+							Torque_Util.dump_writeWarning("-\nWarning: Invalid node order, child bone \'%s\' comes before" % nodeInfo.dtsNodeName)
+							Torque_Util.dump_writeln("  parent bone \'%s\' in the NodeOrder text buffer\n-" % nodeInfo.getGoodNodeParentNI().dtsNodeName)
+			# Test Rule #2
+			start, end, warning = self.getMinMax(None, no, nodeOrderDict)
+
+			
+			if not warning:
+				# export in the specified order
+				orderedNodeList = self.walkNodeTreeInOrder(None, nodeOrderDict, [])
+			else:
+				# otherwise export in natural order
+				orderedNodeList = self.walkNodeTree(None, [])
+		else:
+			# get list of nodes in natural order
+			orderedNodeList = self.walkNodeTree(None, [])
+
+		return orderedNodeList
+
+	# Walks the node tree recursively and returns a list of nodes in natural order
+	def walkNodeTree(self, nodeInfo, nodeOrderList):
+		for child in filter(lambda x: x.getGoodNodeParentNI() == nodeInfo, self.transformUtil.nodes.values()):
+			if not child.isBanned(): nodeOrderList.append(child.dtsNodeName)
+			nodeOrderList = self.walkNodeTree(child, nodeOrderList)
+		
+		return nodeOrderList
+
+	# Walks the node tree recursively and returns a list of nodes in the specified order, if possible
+	def walkNodeTreeInOrder(self, nodeInfo, nodeOrderDict, nodeOrderList):
+		childList = filter(lambda x: x.getGoodNodeParentNI() == nodeInfo, self.transformUtil.nodes.values())
+		orderedChildList = filter(lambda x: x.dtsNodeName in nodeOrderDict.keys(), childList)
+		extraChildList = filter(lambda x: not (x.dtsNodeName in nodeOrderDict.keys()), childList)
+		
+		orderedChildList.sort(lambda x, y: cmp(nodeOrderDict[x.dtsNodeName], nodeOrderDict[y.dtsNodeName]))
+		
+		for child in orderedChildList:
+			if not child.isBanned(): nodeOrderList.append(child.dtsNodeName)
+			nodeOrderList = self.walkNodeTreeInOrder(child, nodeOrderDict, nodeOrderList)
+		for child in extraChildList:
+			if not child.isBanned(): nodeOrderList.append(child.dtsNodeName)
+			nodeOrderList = self.walkNodeTreeInOrder(child, nodeOrderDict, nodeOrderList)
+		
+		return nodeOrderList
 	
 	# adds all object and bone nodes to the shape using the poseUtil tree
 	def addAllNodes(self):
-		# strike a pose
-		#poses = {}
+		
+		orderedNodeList = self.createOrderedNodeList()
+		
+		# add armatures to our list
 		for arm in filter(lambda x: x.getType()=='Armature', Blender.Scene.GetCurrent().objects):
 			self.addedArmatures.append(arm)
-		# get a list of ordered nodes by walking the poseUtil node tree.
+		
+		
+		# build a dict of node indices for lookup
+		nodeIndices = {}
+		i = 1
+		for nodeName in orderedNodeList:
+			nodeInfo = self.transformUtil.nodes[nodeName]
+			if not nodeInfo.isBanned():
+				nodeIndices[nodeName] = i
+				i += 1
 		
 		# add nodes in order
-		for nodeInfo in filter(lambda x: x.getGoodNodeParentNI() == None, self.transformUtil.nodes.values()):
-			self.addNodeTree(nodeInfo)
-
-		# build an ordered list of node names
-		orderedNodeList = []
-		for nodeIndex in range(1, len(self.nodes)):
-                	orderedNodeList.append(self.sTable.get(self.nodes[nodeIndex].name))
-			
+		for nodeName in orderedNodeList:
+			nodeInfo = self.transformUtil.nodes[nodeName]
+			if not nodeInfo.isBanned():
+				if nodeInfo.getGoodNodeParentNI() != None:
+					parentNodeIndex = nodeIndices[nodeInfo.getGoodNodeParentNI().dtsNodeName]
+				else:
+					parentNodeIndex = -1
+				n = Node(self.sTable.addString(nodeInfo.dtsNodeName), parentNodeIndex)
+				try: n.armName = nodeInfo.armParentNI.dtsNodeName
+				except: n.armName = None
+				n.obj = nodeInfo.getBlenderObj()
+				self.nodes.append(n)		
+				nodeIndex = len(self.nodes)-1
+				self.subshapes[0].numNodes += 1
+		
 		# dump node transforms for the rest frame
-		# TODO - off by one error in NodeTranform Util?
 		Blender.Set('curframe', self.preferences['RestFrame'])
 		self.restTransforms = self.transformUtil.dumpReferenceFrameTransforms(orderedNodeList, self.preferences['RestFrame'], self.preferences['SequenceExportTwoPassMode'])
 
@@ -640,24 +742,6 @@ class BlenderShape(DtsShape):
 			i += 1
 
 		
-
-	# adds a node tree to the ordered node list recursively.
-	# called by buildOrderedNodeList, not to be called externally.
-	def addNodeTree(self, nodeInfo, parentNodeIndex = -1):
-		if not nodeInfo.isBanned():
-			n = Node(self.sTable.addString(nodeInfo.dtsNodeName), parentNodeIndex)
-			try: n.armName = nodeInfo.armParentNI.dtsNodeName
-			except: n.armName = None
-			n.obj = nodeInfo.getBlenderObj()
-			self.nodes.append(n)		
-			nodeIndex = len(self.nodes)-1
-			self.subshapes[0].numNodes += 1
-		else:
-			nodeIndex = parentNodeIndex
-		for nodeInfo in filter(lambda x: x.getGoodNodeParentNI() == nodeInfo, self.transformUtil.nodes.values()):
-			self.addNodeTree(nodeInfo, nodeIndex)
-
-	
 	# adds a ground frame to a sequence
 	def addGroundFrame(self, sequence, frame_idx, boundsStartMat):
 		# quit trying to export ground frames if we have had an error.
