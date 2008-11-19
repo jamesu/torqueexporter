@@ -1032,12 +1032,12 @@ class SceneInfoClass:
 
 	# strips the last '.' and everything following it from the mesh name.
 	def getStrippedMeshName(meshName):
-		names = meshName.split("_")
-		detail_name_dot_index = names[0].rfind(".")
+		#names = meshName.split("_")
+		detail_name_dot_index = meshName.rfind(".")
 		if detail_name_dot_index != -1:
-			detail_name = names[0][0:detail_name_dot_index]
+			detail_name = meshName[0:detail_name_dot_index]
 		else:
-			detail_name = names[0].split(".")[0]
+			detail_name = meshName.split(".")[0]
 		return detail_name
 
 	getStrippedMeshName = staticmethod(getStrippedMeshName)
