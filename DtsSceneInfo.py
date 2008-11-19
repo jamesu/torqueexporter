@@ -133,7 +133,7 @@ class SceneInfoClass:
 		self.allThings = [] # <- contains info for all objects and bones in the blender scene.
 		self.meshExportList = [] # <- contains all exportable meshes, even those with banned object-nodes.
 		self.nodes = {} # <- indexed by dtsNodeName, contains all nodes in exportable layers after init (including banned nodes)
-		self.armatures = {} # <- indexed by actual blender object name(?)		
+		self.armatures = {} # <- indexed by actual blender object name
 		self.DTSObjects = {} # <- indexed by dtsObjName (final dts object name)
 		self.issueWarnings = issueWarnings #<- so we don't have to pass this around
 		
@@ -157,21 +157,6 @@ class SceneInfoClass:
 		if getTest: return alreadyExists, test
 		else: return alreadyExists
 
-	# gets the highest LOD for a given node (nodeInfo)
-	def getHighestLodNI(self, n):
-		highestSize = -1
-		for dlName in n.detailLevels:
-			dlSize = DtsGlobals.getTrailingNumber(dlName)
-			if dlSize > highest: highest = dlSize
-		return highestSize
-
-	# utility method used in __safeAddToNodesDict below
-	# returns the nodeInfo struct with the highest lod assignment.
-	def getHighestLodNI(self, n1, n2):
-		if self.getHighestLodNI(n1) > self.getHighestLodNI(n2):
-			return n1
-		else:
-			return n2
 
 	# add a nodes to the (good, exported) nodes dictionary
 	# does not change dts object names, only node names
@@ -296,6 +281,7 @@ class SceneInfoClass:
 		for nic in filter(lambda x: x.getGoodNodeParentNI()==ni, self.nodes.values()):
 			self.__printTree(nic, indent)
 
+
 	# adds parent stacks to armature nodes for later lookup (used when tranforming bones from
 	# armature space to world space)
 	def __addArmatureParentStacks(self):
@@ -387,7 +373,9 @@ class SceneInfoClass:
 			for dl in ni.detailLevels:
 				self.DTSObjects[ni.dtsObjName][dl] = ni
 
-		# construct nodes dictionary, fixing node names if dups exist.
+	
+		# construct nodes dictionary, fixing node names if dups exist
+		# and flattening the lod hierarchy as we go.
 		for ni in nodeExportList:
 			# skip object nodes that need skippin'
 			if ni.blenderType == 'object' and ni.dtsObjName != None:
@@ -398,19 +386,33 @@ class SceneInfoClass:
 				for dlName in sortedDLs:
 					highest = dtsObj[dlName]
 					if highest != None: break
-				if highest != ni: continue
-			
+				if highest != ni:
+					continue
+				
+				# flatten hierarcy, reparent to highest LOD version of parent
+				pNI = ni.getGoodNodeParentNI()
+				if pNI != None and pNI.blenderType == 'object' and pNI.dtsObjName != None:
+					# find highest lod version of parent object
+					dtsObj = self.DTSObjects[pNI.dtsObjName]
+					for dlName in sortedDLs:
+						highest = dtsObj[dlName]
+						if highest != None: break
+					if highest != None and highest != pNI:
+						# reparent to highest
+						ni.parentNI = highest
+
 			self.__safeAddToNodesDict(ni)
 		
 		
 		# create armature parent stacks for use in DtsPoseUtil
 		self.__addArmatureParentStacks()
-		
-		#print "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-		#for ni in filter(lambda x: x.getGoodNodeParentNI()==None, self.nodes.values()):
-		#	self.__printTree(ni)
-		#print "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 
+		'''
+		print "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		for ni in filter(lambda x: x.getGoodNodeParentNI()==None, self.nodes.values()):
+			self.__printTree(ni)
+		print "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		'''
 
 		
 
