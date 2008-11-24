@@ -84,6 +84,17 @@ class nodeInfoClass:
 		# return whatever we found.
 		return pNI
 
+	# find a non-excluded node to use as a parent for another node
+	# never returns the object's own generated node
+	# this version ignores the banned status of nodes
+	def getExportLayerNodeParentNI(self, debug=False):
+		pNI = self.parentNI
+		while (pNI != None) and ((not pNI.isExportable)):
+			pNI = pNI.parentNI
+		
+		# return whatever we found.
+		return pNI
+
 	def isBanned(self):
 		# is the node on the banned nodes list?
 		banned = (self.dtsNodeName.upper() in DtsGlobals.Prefs['BannedNodes'])
@@ -134,7 +145,7 @@ class SceneInfoClass:
 		self.meshExportList = [] # <- contains all exportable meshes, even those with banned object-nodes.
 		self.nodes = {} # <- indexed by dtsNodeName, contains all nodes in exportable layers after init (including banned nodes)
 		self.armatures = {} # <- indexed by actual blender object name
-		self.DTSObjects = {} # <- indexed by dtsObjName (final dts object name)
+		self.DTSObjects = {} # <- indexed by dtsObjName (final dts object name) and detail level name (nested)
 		self.issueWarnings = issueWarnings #<- so we don't have to pass this around
 		
 		# translation lookup dictionary for vertex group names
@@ -1057,6 +1068,44 @@ class SceneInfoClass:
 				uniqueNames[dtsObjName] = 0
 		return uniqueNames
 		'''
+
+	# gets a list of dts object names sorted by hierarchy order
+	def getSortedDtsObjectNames(self):
+		sortedDLs = DtsGlobals.Prefs.getSortedDLNames()
+		# first build an unsorted list of the highest detail level NIs for each dts object.
+		unsortedDTSObjs = []
+		for objDLs in self.DTSObjects.values():
+			for dl in sortedDLs:
+				highest = objDLs[dl]
+				if highest != None: break
+			if highest != None:
+				unsortedDTSObjs.append(highest)
+		
+		sortedList = []
+		sortedList = self.__walkDtsObjTree(None, sortedList, unsortedDTSObjs)
+		sortedNameList = []
+		for ni in sortedList:
+			sortedNameList.append(ni.dtsObjName)
+		return sortedNameList
+		
+	def __walkDtsObjTree(self, rootObj, sortedList, unsortedDTSObjs):
+		# get all objects that are children of the current root object
+		thisLevel = filter(lambda x: x.getExportLayerNodeParentNI() == rootObj, unsortedDTSObjs)
+		# early out if there are no children
+		#if len(thisLevel) == 0: return sortedList
+		# sort children on the same level alphabetially
+		thisLevel.sort(lambda x,y: cmp(x.dtsObjName, y.dtsObjName))
+		#testStr = "thisLevel ="
+		#for ni in thisLevel:
+		#	testStr += ni.dtsObjName
+		#print testStr
+		# recursive call adds grandchildren of each child on this level, on down the line
+		for objNI in thisLevel:
+			sortedList.append(objNI)
+			sortedList = self.__walkDtsObjTree(objNI, sortedList, unsortedDTSObjs)
+		# return the final list.
+		return sortedList
+
 
 	# test whether or not a mesh object is skinned
 	def isSkinnedMesh(o):
