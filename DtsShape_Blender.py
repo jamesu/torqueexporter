@@ -308,12 +308,13 @@ class BlenderShape(DtsShape):
 	
 	# Adds all meshes, detail levels, and dts objects to the shape.
 	# this should be called after nodes are added.
-	def addAllDetailLevels(self, dtsObjects, sortedDetailLevels):
+	def addAllDetailLevels(self, dtsObjects, sortedDetailLevels, sortedObjects):
 		# set current frame to rest frame
 		restFrame = self.preferences['RestFrame']
 		if Blender.Get('curframe') == restFrame: Blender.Set('curframe',restFrame+1)
 		Blender.Set('curframe', restFrame)		
-		dtsObjList = dtsObjects.keys()
+		#dtsObjList = dtsObjects.keys()
+		dtsObjList = dtsObjects
 		# add each detail level
 		for dlName in sortedDetailLevels:
 			# --------------------------------------------
@@ -321,7 +322,7 @@ class BlenderShape(DtsShape):
 			polyCount = 0
 			size = DtsGlobals.Prefs.getTrailingNumber(dlName)
 			# loop through each dts object, add dts objects and meshes to the shape.
-			for dtsObjName in dtsObjList:
+			for dtsObjName in sortedObjects:
 
 				# get nodeinfo struct for the current DL and dts object
 				ni = dtsObjects[dtsObjName][dlName]
