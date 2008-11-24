@@ -168,7 +168,7 @@ class BlenderShape(DtsShape):
 			hasModifiers = False
 
 		# Otherwise, get the final display data, as affected by modifers.
-		if ((not hasArmatureDeform) and hasModifiers) or (o.getType() in ['Surf', 'Text', 'MBall']):
+		if ((not hasArmatureDeform) and hasModifiers) or (o.getType() in DtsGlobals.needDisplayDataTypes):
 			#print "mesh:", o.name, "has modifers but not armature deform or is not a true mesh."
 			try:
 				temp_obj = Blender.Object.Get("DTSExpObj_Tmp")
