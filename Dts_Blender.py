@@ -98,11 +98,16 @@ def doExport(progressBar):
 		
 		
 		# add visible detail levels
-		sortedKeys = DtsGlobals.Prefs['DetailLevels'].keys()
-		sortedKeys.sort( lambda x,y: cmp(Prefs.getTrailingNumber(x), Prefs.getTrailingNumber(y)) )
-		sortedKeys.reverse()
+		sortedDLKeys = DtsGlobals.Prefs['DetailLevels'].keys()
+		sortedDLKeys.sort( lambda x,y: cmp(Prefs.getTrailingNumber(x), Prefs.getTrailingNumber(y)) )
+		sortedDLKeys.reverse()
 
-		Shape.addAllDetailLevels(SceneInfo.DTSObjects, sortedKeys)
+		#Shape.addAllDetailLevels(SceneInfo.DTSObjects, sortedKeys)
+		sortedObjectNIs = SceneInfo.getSortedDtsObjectNames()
+		print "sortedObjectNIs=", sortedObjectNIs
+		if len(SceneInfo.DTSObjects) != len(sortedObjectNIs):
+			print "PANIC!!!! This should never hapen!"
+		Shape.addAllDetailLevels(SceneInfo.DTSObjects, sortedDLKeys, sortedObjectNIs)
 		
 		# We have finished adding the regular detail levels. Now add the billboard if required.
 		if Prefs['Billboard']['Enabled']:
@@ -116,11 +121,10 @@ def doExport(progressBar):
 
 
 		progressBar.update()
-
-		progressBar.popTask()
-
-		progressBar.pushTask("Finalizing Geometry..." , 2, 0.6)
+		progressBar.popTask()		
+		
 		# Finalize static meshes, do triangle strips
+		progressBar.pushTask("Finalizing Geometry..." , 2, 0.6)
 		Shape.finalizeObjects()
 		Shape.finalizeMaterials()
 		progressBar.update()
