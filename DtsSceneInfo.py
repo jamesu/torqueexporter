@@ -30,7 +30,6 @@ from DtsPrefs import *
 import DtsGlobals
 from DTSPython import stripPath
 from DTSPython import dump_write, dump_writeln, dump_writeWarning, dump_writeErr
-noGeometryTypes = ['Empty', 'Curve', 'Camera', 'Lamp', 'Lattice', 'Armature']
 
 '''
 NodeInfoClass
@@ -45,7 +44,7 @@ class nodeInfoClass:
 		self.dtsObjName = None # <- name of the dts object (for meshes)
 		self.blenderObjName = blenderObj.name # either a blender bone or blender object depending on blenderType
 		self.blenderType = blenderType		
-		self.hasGeometry = not (blenderObj.getType() in noGeometryTypes)
+		self.hasGeometry = self.__hasGeometry(blenderObj)
 		self.detailLevels = []		
 		self.armParentNI = armParentNI
 		#self.isBannedNode = self.isBanned() # <- whether or not the node is in the banned nodes list
@@ -113,6 +112,42 @@ class nodeInfoClass:
 					break
 		retval = goodLayer
 		return retval
+
+	# test whether or not this node has exportable geometry
+	def __hasGeometry(self, blenderObj):
+		# these types are always assumed to contain faces (exportable geometry)
+		if blenderObj.getType() in DtsGlobals.alwaysGeometryTypes: return True
+		# these types never contain exportable geometry
+		if blenderObj.getType() in DtsGlobals.neverGeometryTypes: return False
+		# we need to test these types to see if they actually have faces and not just verts
+		if blenderObj.getType() in DtsGlobals.testGeometryTypes:
+			hasMeshData = True
+			# set up temp object and mesh data
+			try:    temp_obj = Blender.Object.Get("DTSExpObj_Tmp")
+			except: temp_obj = Blender.Object.New("Mesh", "DTSExpObj_Tmp")
+			try:	mesh_data = Blender.Mesh.Get("DTSExpMshObj_Tmp")
+			except:	mesh_data = Blender.Mesh.New("DTSExpMshObj_Tmp")
+			
+			# try to get the raw display data
+			try:
+				mesh_data.getFromObject(blenderObj)
+				temp_obj.link(mesh_data)
+			except: 
+				hasMeshData = False
+			
+			if hasMeshData and len(mesh_data.faces) > 0: retVal = True
+			else: retVal = False
+
+			# clean up temporary objects
+			try:Blender.Scene.GetCurrent().objects.unlink(Blender.Object.Get("DTSExpObj_Tmp"))
+			except: pass
+			del mesh_data
+			del temp_obj
+			
+			return retVal
+
+			
+		
 	
 	def getBlenderObj(self):
 		try: retval = Blender.Object.Get(self.blenderObjName)
