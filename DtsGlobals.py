@@ -31,7 +31,8 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   Blender Dts Classes for Python
 '''
 
-Version = "0.97 Beta1"
+#Version = "0.97 Beta1"
+Version = "0.97"
 Prefs = None
 SceneInfo = None
 Prefs_keyname = ""
@@ -40,6 +41,16 @@ Debug = False
 Profiling = False
 pathSeparator = "/"
 textDocName = "TorqueExporter_SCONF2"
+
+# these types never contain exportable geometry
+neverGeometryTypes = ['Empty', 'Camera', 'Lamp', 'Lattice', 'Armature']
+# these types are always assumed to contain faces (exportable geometry)
+alwaysGeometryTypes = ['Mesh', 'Text', 'MBall']
+# we need to test these types to see if they actually have faces and not just verts
+testGeometryTypes = ['Surf', 'Curve']
+# we need to get the display data for the following types
+needDisplayDataTypes = ['Surf', 'Curve', 'Text', 'MBall']
+
 
 tracebackImported = True
 try:
