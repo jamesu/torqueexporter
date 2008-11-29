@@ -341,7 +341,8 @@ def guiHeaderResize(control, newwidth, newheight):
 		control.x = 5
 		control.y = 5
 	elif control.name == "guiVersionText":
-		control.x = newwidth-110
+		#control.x = newwidth-110
+		control.x = newwidth-80
 		control.y = 5
 
 
