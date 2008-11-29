@@ -496,7 +496,7 @@ class BlenderShape(DtsShape):
 			else: count += 1
 		# Calculate bounds and sizes
 		if len(self.detaillevels) == 0:
-			Torque_Util.dump_writeWarning("      Warning : Shape contains no detail levels!")
+			Torque_Util.dump_writeErr("      Error : Shape contains no meshes (no valid detail levels)!")
 			
 		self.calcSmallestSize() # Get smallest size where shape is visible
 				
