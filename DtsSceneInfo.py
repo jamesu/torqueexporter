@@ -90,7 +90,6 @@ class nodeInfoClass:
 		pNI = self.parentNI
 		while (pNI != None) and ((not pNI.isExportable)):
 			pNI = pNI.parentNI
-		
 		# return whatever we found.
 		return pNI
 
@@ -436,7 +435,7 @@ class SceneInfoClass:
 					continue
 				
 				# flatten hierarcy, reparent to highest LOD version of parent
-				pNI = ni.getGoodNodeParentNI()
+				pNI = ni.getExportLayerNodeParentNI()
 				if pNI != None and pNI.blenderType == 'object' and pNI.dtsObjName != None:
 					# find highest lod version of parent object
 					dtsObj = self.DTSObjects[pNI.dtsObjName]
@@ -1104,6 +1103,7 @@ class SceneInfoClass:
 		return uniqueNames
 		'''
 
+
 	# gets a list of dts object names sorted by hierarchy order
 	def getSortedDtsObjectNames(self):
 		sortedDLs = DtsGlobals.Prefs.getSortedDLNames()
@@ -1113,31 +1113,36 @@ class SceneInfoClass:
 			for dl in sortedDLs:
 				highest = objDLs[dl]
 				if highest != None: break
+			#print "highest=", highest.dtsObjName
 			if highest != None:
 				unsortedDTSObjs.append(highest)
 		
+		# skinned meshes don't get a node, so we have to process them separately.
+		extras = filter(lambda x: x not in self.nodes.values(), unsortedDTSObjs)
+		
 		sortedList = []
-		sortedList = self.__walkDtsObjTree(None, sortedList, unsortedDTSObjs)
+		sortedList = self.__walkDtsObjTree(None, sortedList, unsortedDTSObjs, extras)
 		sortedNameList = []
 		for ni in sortedList:
 			sortedNameList.append(ni.dtsObjName)
+		
 		return sortedNameList
 		
-	def __walkDtsObjTree(self, rootObj, sortedList, unsortedDTSObjs):
-		# get all objects that are children of the current root object
-		thisLevel = filter(lambda x: x.getExportLayerNodeParentNI() == rootObj, unsortedDTSObjs)
+	def __walkDtsObjTree(self, rootObj, sortedList, unsortedDTSObjs, extras):
+		# get all objects that are children of the current root object		
+		thisLevel = filter(lambda x: x.getExportLayerNodeParentNI() == rootObj, self.nodes.values())
+		# add skinned meshes that are on this level
+		for ni in filter(lambda x: x.getExportLayerNodeParentNI() == rootObj, extras):
+			thisLevel.append(ni)
 		# early out if there are no children
 		#if len(thisLevel) == 0: return sortedList
 		# sort children on the same level alphabetially
-		thisLevel.sort(lambda x,y: cmp(x.dtsObjName, y.dtsObjName))
-		#testStr = "thisLevel ="
-		#for ni in thisLevel:
-		#	testStr += ni.dtsObjName
-		#print testStr
+		thisLevel.sort(lambda x,y: cmp(x.dtsObjName if x.dtsObjName != None else x.dtsNodeName, y.dtsObjName if y.dtsObjName != None else y.dtsNodeName))
 		# recursive call adds grandchildren of each child on this level, on down the line
 		for objNI in thisLevel:
-			sortedList.append(objNI)
-			sortedList = self.__walkDtsObjTree(objNI, sortedList, unsortedDTSObjs)
+			if objNI in unsortedDTSObjs:
+				sortedList.append(objNI)
+			sortedList = self.__walkDtsObjTree(objNI, sortedList, unsortedDTSObjs, extras)
 		# return the final list.
 		return sortedList
 
