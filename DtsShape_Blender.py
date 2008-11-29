@@ -671,7 +671,9 @@ class BlenderShape(DtsShape):
 
 	# Walks the node tree recursively and returns a list of nodes in natural order
 	def walkNodeTree(self, nodeInfo, nodeOrderList):
-		for child in filter(lambda x: x.getGoodNodeParentNI() == nodeInfo, self.transformUtil.nodes.values()):
+		thisLevel = filter(lambda x: x.getGoodNodeParentNI() == nodeInfo, self.transformUtil.nodes.values())
+		thisLevel.sort(lambda x,y: cmp(x.dtsNodeName, y.dtsNodeName))
+		for child in thisLevel:
 			if not child.isBanned(): nodeOrderList.append(child.dtsNodeName)
 			nodeOrderList = self.walkNodeTree(child, nodeOrderList)
 		
