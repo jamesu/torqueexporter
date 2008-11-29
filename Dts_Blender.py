@@ -104,9 +104,11 @@ def doExport(progressBar):
 
 		#Shape.addAllDetailLevels(SceneInfo.DTSObjects, sortedKeys)
 		sortedObjectNIs = SceneInfo.getSortedDtsObjectNames()
-		print "sortedObjectNIs=", sortedObjectNIs
+		#print "sortedObjectNIs=", sortedObjectNIs
 		if len(SceneInfo.DTSObjects) != len(sortedObjectNIs):
-			print "PANIC!!!! This should never hapen!"
+			print "sortedObjectNIs=", sortedObjectNIs
+			print "PANIC!!!! This should never hapen!"			
+			
 		Shape.addAllDetailLevels(SceneInfo.DTSObjects, sortedDLKeys, sortedObjectNIs)
 		
 		# We have finished adding the regular detail levels. Now add the billboard if required.
