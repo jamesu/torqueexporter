@@ -162,13 +162,34 @@ class BlenderShape(DtsShape):
 		try: hasMultiRes = o.getData(False,True).multires
 		except AttributeError: hasMultiRes = False
 
-		if len(o.modifiers) != 0 or hasMultiRes:
-			hasModifiers = True
-		else:
-			hasModifiers = False
+		hasModifiers = False
+		for mod in o.modifiers:
+			# skip armature modifiers
+			if mod.type == Blender.Modifier.Types.ARMATURE: continue
 
-		# Otherwise, get the final display data, as affected by modifers.
-		if ((not hasArmatureDeform) and hasModifiers) or (o.getType() in DtsGlobals.needDisplayDataTypes):
+			# skip modifiers that are "OK" if we know they can't affect the number
+			# of verts in the mesh.
+			
+			# undocumented implicit "Collision" modifier
+			if mod.type == 23: continue
+			# if we've got a skinned mesh, we can safely bake some modifiers
+			# into the mesh's root pose.
+			if hasArmatureDeform:
+				if mod.type == Blender.Modifier.Types.CURVE\
+				or mod.type == Blender.Modifier.Types.LATTICE\
+				or mod.type == Blender.Modifier.Types.WAVE\
+				or mod.type == Blender.Modifier.Types.DISPLACE\
+				or mod.type == Blender.Modifier.Types.SMOOTH\
+				or mod.type == Blender.Modifier.Types.CAST : continue
+
+			# if we made it here we've got at least one valid (non-armature) modifier on the mesh
+			hasModifiers = True
+			break
+		# if a mesh has multires, treat it as if it has modifiers			
+		if hasMultiRes: hasModifiers = True
+
+		# Get display data for non-skinned mesh with modifiers
+		if (not hasArmatureDeform) and (hasModifiers or (o.getType() in DtsGlobals.needDisplayDataTypes)):
 			#print "mesh:", o.name, "has modifers but not armature deform or is not a true mesh."
 			try:
 				temp_obj = Blender.Object.Get("DTSExpObj_Tmp")
@@ -186,8 +207,8 @@ class BlenderShape(DtsShape):
 				#todo - warn when we couldn't get mesh data?
 				pass
 
-		# TODO - check for other cases, what happens on the final else block?
-		elif hasArmatureDeform and not hasModifiers:
+		# Get display data for skinned mesh without (additional) modifiers
+		elif hasArmatureDeform and not (hasModifiers or (o.getType() in DtsGlobals.needDisplayDataTypes)):
 			#print "mesh:", o.name, "has armature deform but no modifiers."
 			originalMesh = o.getData(False,True)
 			
@@ -215,7 +236,8 @@ class BlenderShape(DtsShape):
 				temp_obj.link(mesh_data)
 			except: 
 				#todo - warn when we couldn't get mesh data?
-				pass			
+				pass
+				
 			# -----------------------------
 			
 			# remove any existing groups if we are recycling a datablock
@@ -231,19 +253,31 @@ class BlenderShape(DtsShape):
 			for group in groups:
 				if not group in existingNames:
 					mesh_data.addVertGroup(group)
-				
+			
+			# recreate vertex groups
 			for vIdx in influences.keys():
 				for inf in influences[vIdx]:
 					group, weight = inf
 					mesh_data.assignVertsToGroup(group, [vIdx], weight, Blender.Mesh.AssignModes.ADD)
 			
 			
-		# if we have armature deformation, or don't have any modifiers, get the mesh data the old fashon way
-		else:
+		# Get (non-display) mesh data for ordinary mesh with no armature deform or modifiers		
+		elif (not hasArmatureDeform) and not (hasModifiers or (o.getType() in DtsGlobals.needDisplayDataTypes)):
 			#print "mesh:", o.name, "has no modifiers and no armature deform"
 			mesh_data = o.getData(False,True)
 			temp_obj = None
 
+		# Give error message if we've got a skinned mesh with additional modifiers
+		elif hasArmatureDeform and (hasModifiers or (o.getType() in DtsGlobals.needDisplayDataTypes)):
+			# we can't support this, since the number of verts in the mesh may have been changed
+			# by one if the modifiers, it is impossible to reconstruct vertex groups.
+			print "Can't reconstruct vertex group for skinned mesh with additional modifiers!"
+			mesh_data = o.getData(False,True)
+			temp_obj = None
+
+		else:
+			# unknown mesh configuration?!
+			print "Unknown mesh configuration!!!"
 
 		# Get Object's Matrix
 		mat = self.collapseBlenderTransform(o)
