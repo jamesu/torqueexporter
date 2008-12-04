@@ -526,7 +526,7 @@ class SceneInfoClass:
 			words = string.split(filepath, "/")
 		words = string.split(words[-1], ".")
 		retVal = SceneInfoClass.__noext(string.join(words[0:len(words)], "."))
-		if retVal == "": retVal = "UNTITLED"
+		if retVal == "" or retVal.lower() == "<memory>": retVal = "UNTITLED"
 		return retVal
 	
 	getDefaultBaseName = staticmethod(getDefaultBaseName)
