@@ -368,17 +368,22 @@ class BlenderMesh(DtsMesh):
 		else:
 			texture = Vector2(float(0.0),float(0.0))
 		
-		# Compute vert normals
-		vert = msh.verts[face.v[faceIndex].index]
-		if face.smooth:
-			normal = matrix.passVector(Vector(vert.no[0], vert.no[1], vert.no[2]))
-		else:
-			normal = matrix.passVector(Vector(face.no[0], face.no[1], face.no[2]))
 		
+		vert = msh.verts[face.v[faceIndex].index]
+		
+		# Compute vert normals
+		if face.smooth:			
+			normal = Vector(vert.no[0], vert.no[1], vert.no[2])
+		else:
+			normal = Vector(face.no[0], face.no[1], face.no[2])
+
 		if self.hasAnisoScale:
 			# correct (anisotropic) scaled normals
 			normal = Torque_Math.Vector(normal[0] * self.mshScaleInv[0], normal[1] * self.mshScaleInv[1], normal[2] * self.mshScaleInv[2])
-			
+			print "correcting aniso scale..."
+		
+		normal = matrix.passVector(normal)
+		
 		normal.normalize()
 		
 		# See if the vertex/texture/normal combo already exists..
