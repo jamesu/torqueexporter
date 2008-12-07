@@ -380,7 +380,6 @@ class BlenderMesh(DtsMesh):
 		if self.hasAnisoScale:
 			# correct (anisotropic) scaled normals
 			normal = Torque_Math.Vector(normal[0] * self.mshScaleInv[0], normal[1] * self.mshScaleInv[1], normal[2] * self.mshScaleInv[2])
-			print "correcting aniso scale..."
 		
 		normal = matrix.passVector(normal)
 		
