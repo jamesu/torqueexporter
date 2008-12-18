@@ -153,6 +153,8 @@ def doExport(progressBar):
 		if len(seqKeys) > 0:
 			progressBar.pushTask("Adding Sequences..." , len(seqKeys*4), 0.8)
 			for seqName in seqKeys:
+				Torque_Util.dump_writeln("   Loading sequence '%s'...." % seqName)
+				
 				seqKey = Prefs['Sequences'][seqName]
 
 				# does the sequence have anything to export?
