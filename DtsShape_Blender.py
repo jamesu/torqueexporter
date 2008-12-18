@@ -1129,13 +1129,9 @@ class BlenderShape(DtsShape):
 		#sequence.numKeyFrames = numFrameSamples-1
 
 		# Do a second pass on the nodes to remove the last frame for cyclic anims
-		# but don't remove the last frame if the action is shorter than the overall sequence length :-)
-		removeLast = removeLast and numFrameSamples == numOverallFrames
 		if removeLast:
 			# Go through list of frames for nodes animated in sequence and delete the last frame from all of them
 			for nodeIndex in range(len(self.nodes)):
-				#ipo = sequence.ipo[nodeIndex]
-				#if ipo != 0:
 				if sequence.matters_translation[nodeIndex] or sequence.matters_rotation[nodeIndex] or sequence.matters_scale[nodeIndex]:
 					del sequence.frames[nodeIndex][-1]
 			sequence.numKeyFrames -= 1
