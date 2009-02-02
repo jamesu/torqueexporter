@@ -1076,7 +1076,8 @@ class BlenderShape(DtsShape):
 		
 		# if nothing was actually animated abandon exporting the action.
 		if not (sequence.has_loc or sequence.has_rot or sequence.has_scale):
-			Torque_Util.dump_writeWarning("Warning: Action has no keyframes, aborting export for this animation.")
+			# don't write this warning anymore, not needed.
+			#Torque_Util.dump_writeWarning("Warning: Action has no keyframes, aborting export for this animation.")
 			return sequence, False
 
 		# set the aligned scale flag if we have scale.
