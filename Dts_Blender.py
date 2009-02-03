@@ -423,7 +423,10 @@ if DtsGlobals.Profiling:
 	
 def entryPoint(a):
 	
-
+	# HAVE TO RESET THIS SINCE IT CAN PERSIST BETWEEN FILE LOADS,
+	# CAUSING ALL KINDS OF PROBLEMS !!!
+	DtsGlobals.SceneInfo = None
+	
 	DtsGlobals.Prefs = prefsClass()
 	Prefs = DtsGlobals.Prefs
 	#pathSeparator = SceneInfoClass.getPathSeparator()
