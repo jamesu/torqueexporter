@@ -582,7 +582,7 @@ class prefsClass(dict):
 				if not hasTrack:
 					del self['Sequences'][keyName]['Vis']['Tracks'][trackName]
 					continue
-				# does the blender object still exist in the highest DL?
+				# does the blender object still exist?
 				if not trackName in DtsObjList:
 					del self['Sequences'][keyName]['Vis']['Tracks'][trackName]
 					continue
