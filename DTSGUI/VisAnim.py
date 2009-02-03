@@ -371,11 +371,10 @@ class VisControlsClass(UserCreatedSeqControlsClassBase):
 		# loop through all objects, and sort into two lists
 		enabledList = []
 		disabledList = []
+		# process mesh objects
 		for objName in SceneInfo.getDtsObjectNames():
 			if objName == "Bounds": continue
-			# process mesh objects
-			# add an entry in the track list for the mesh object.
-			#self.guiVisTrackList.addControl(self.createVisTrackListItem(obj.name))
+
 			# set the state of the enabled button
 			try: enabled = Prefs['Sequences'][seqName]['Vis']['Tracks'][objName]['hasVisTrack']
 			except: enabled = False
