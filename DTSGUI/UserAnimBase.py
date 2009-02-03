@@ -148,6 +148,8 @@ class UserCreatedSeqControlsClassBase(SeqControlsClassBase):
 	#  @note Calls parent class refresh all method and additionall populates the existing
 	#     sequences pulldown.
 	def refreshAll(self):
+		SceneInfo = DtsGlobals.SceneInfo
+		SceneInfo.refreshAll()
 		SeqControlsClassBase.refreshAll(self)
 		self.refreshExistingSeqPulldown()
 
