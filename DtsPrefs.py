@@ -210,9 +210,21 @@ class prefsClass(dict):
 		return largest
 
 	def getSortedDLNames(self):
-		sortedKeys = self['DetailLevels'].keys()
-		sortedKeys.sort( lambda x,y: cmp(prefsClass.getTrailingNumber(x), prefsClass.getTrailingNumber(y)) )
-		sortedKeys.reverse()
+		sortedVisDLKeys = filter(lambda x: x[0:3].lower() == "det", self['DetailLevels'].keys())
+		sortedColDLKeys = filter(lambda x: x[0:3].lower() == "col", self['DetailLevels'].keys())
+		sortedLosDLKeys = filter(lambda x: x[0:3].lower() == "los", self['DetailLevels'].keys())
+		
+		sortedVisDLKeys.sort( lambda x,y: cmp(prefsClass.getTrailingNumber(x), prefsClass.getTrailingNumber(y)) )
+		sortedVisDLKeys.reverse()
+		sortedColDLKeys.sort( lambda x,y: cmp(prefsClass.getTrailingNumber(x), prefsClass.getTrailingNumber(y)) )
+		sortedColDLKeys.reverse()
+		sortedLosDLKeys.sort( lambda x,y: cmp(prefsClass.getTrailingNumber(x), prefsClass.getTrailingNumber(y)) )
+		sortedLosDLKeys.reverse()
+
+		sortedKeys = []
+		sortedKeys.extend(sortedVisDLKeys)
+		sortedKeys.extend(sortedColDLKeys)
+		sortedKeys.extend(sortedLosDLKeys)
 		return sortedKeys
 		
 
