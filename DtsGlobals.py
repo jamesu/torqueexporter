@@ -51,6 +51,11 @@ testGeometryTypes = ['Surf', 'Curve']
 # we need to get the display data for the following types
 needDisplayDataTypes = ['Surf', 'Curve', 'Text', 'MBall']
 
+# need to keep track of the last loaded file so we can
+# force reloading of prefs from the text buffer instead of
+# the blender registry when a new file is loaded without first
+# closing the exporter GUI.
+lastLoadedFile = ""
 
 tracebackImported = True
 try:
