@@ -308,9 +308,7 @@ class DetailLevelControlsClass:
 		Prefs = DtsGlobals.Prefs
 		self.clearDLList()
 		Prefs = DtsGlobals.Prefs
-		keys = Prefs['DetailLevels'].keys()
-		keys.sort(lambda x, y: cmp(prefsClass.getTrailingNumber(x),prefsClass.getTrailingNumber(y)))
-		keys.reverse()
+		keys = Prefs.getSortedDLNames()
 		# loop through all detail levels in the preferences
 		for dlName in keys:			
 			self.guiDetailLevelsList.addControl(self.createDLListItem(dlName))
