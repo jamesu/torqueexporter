@@ -342,7 +342,8 @@ class BlenderShape(DtsShape):
 	
 	# Adds all meshes, detail levels, and dts objects to the shape.
 	# this should be called after nodes are added.
-	def addAllDetailLevels(self, dtsObjects, sortedDetailLevels, sortedObjects):
+	def addAllDetailLevels(self, dtsObjects, sortedObjects):
+		sortedDetailLevels = DtsGlobals.Prefs.getSortedDLNames()
 		# set current frame to rest frame
 		restFrame = self.preferences['RestFrame']
 		if Blender.Get('curframe') == restFrame: Blender.Set('curframe',restFrame+1)
@@ -414,9 +415,25 @@ class BlenderShape(DtsShape):
 				detailName = "Collision-%d" % (self.numCollisionDetails)
 			elif strippedDLName.upper() == "LOSCOLLISION":
 				self.numLOSCollisionDetails += 1
-				detailName = "LOS-%d" % (self.numLOSCollisionDetails + 9)
-			
-
+				LOSTrailingNumber = -int(DtsGlobals.Prefs.getTrailingNumber(dlName))
+				# look for a matching collision detail level
+				i = 0
+				found = False
+				for dl in self.detaillevels:
+					dln = self.sTable.get(dl.name)
+					if dln[0:3].lower() == "col":
+						tn = -int(DtsGlobals.Prefs.getTrailingNumber(dln))
+						print self.sTable.get(dl.name), tn
+						if tn == LOSTrailingNumber:
+							detailName = "LOS-%d" % (i + 9)
+							found = True
+					i += 1
+				# if we didn't find a matching collision detail level,
+				# pick a name.  Need to make sure we don't match any col
+				# dls and that we don't have a name collision with another
+				# loscollision detail level.
+				if not found:					
+					detailName = "LOS-%d" % (len(sortedDetailLevels) + 9 + self.numLOSCollisionDetails)
 			# Store constructed detail level info into shape
 			self.detaillevels.append(DetailLevel(self.addName(detailName), 0, self.numBaseDetails-1, size, -1, -1, polyCount))
 			# --------------------------------------------
