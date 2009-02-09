@@ -89,6 +89,7 @@ class prefsClass(dict):
 	# Loads preferences
 	def loadPrefs(self):
 		Prefs = Registry.GetKey(self.Prefs_keyname, True)
+		if DtsGlobals.lastLoadedFile != Blender.Get("filename"): Prefs = None
 		if not Prefs:
 			
 			#print ("Registry key '%s' could not be loaded, resorting to text object." % self.Prefs_keyname)
@@ -134,6 +135,9 @@ class prefsClass(dict):
 		
 		# save cleaned preferences back to disk
 		self.savePrefs()
+		
+		# update the lastLoadedFile
+		DtsGlobals.lastLoadedFile = Blender.Get("filename")
 
 
 	def __initFromDict(self, dictionary):
