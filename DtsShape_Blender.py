@@ -338,11 +338,67 @@ class BlenderShape(DtsShape):
 		return polyCount
 
 		
+	# Adds all meshes, detail levels, and dts objects to the shape.
+	# this should be called after nodes are added.
+	def addAllDetailLevels(self, dtsObjects, sortedObjects):
+		# get lists of visible and collision detail levels
+		sortedDetailLevels = DtsGlobals.Prefs.getSortedDLNames()		
+		visDetailLevels = []
+		colDetailLevels = []
+		for dlName in sortedDetailLevels:
+			strippedDLName = DtsGlobals.Prefs.getTextPortion(dlName)
+			if strippedDLName.upper() == "DETAIL":
+				visDetailLevels.append(dlName)
+			else:
+				colDetailLevels.append(dlName)
+			
+		
+		# add visible detail levels
+		self.addDetailLevels(dtsObjects, sortedObjects, visDetailLevels)
+		# add collision detail levels
+		colDLObjects = self.getCollisionDLObjects(dtsObjects, sortedObjects)
+		self.addDetailLevels(dtsObjects, colDLObjects, colDetailLevels)
+
+	# gets a list of objects that exist in visible dls.
+	def getVisibleDLObjects(self, dtsObjects, sortedObjects):
+		sortedDetailLevels = DtsGlobals.Prefs.getSortedDLNames()
+		dtsObjList = dtsObjects
+		visObjList = []
+		for dlName in sortedDetailLevels:
+			# --------------------------------------------
+			strippedDLName = DtsGlobals.Prefs.getTextPortion(dlName)
+			if strippedDLName.upper() != "DETAIL":
+				continue
+			
+			for dtsObjName in sortedObjects:
+				# get nodeinfo struct for the current DL and dts object
+				ni = dtsObjects[dtsObjName][dlName]
+				if (ni != None) and (dtsObjName not in visObjList):
+					visObjList.append(dtsObjName)
+		return visObjList
+		
+	# gets a list of objects that exist in collision dls.
+	def getCollisionDLObjects(self, dtsObjects, sortedObjects):
+		sortedDetailLevels = DtsGlobals.Prefs.getSortedDLNames()
+		dtsObjList = dtsObjects
+		colObjList = []
+		for dlName in sortedDetailLevels:
+			# --------------------------------------------
+			strippedDLName = DtsGlobals.Prefs.getTextPortion(dlName)
+			if strippedDLName.upper() == "DETAIL":
+				continue
+			
+			for dtsObjName in sortedObjects:
+				# get nodeinfo struct for the current DL and dts object
+				ni = dtsObjects[dtsObjName][dlName]
+				if (ni != None) and (dtsObjName not in colObjList):
+					colObjList.append(dtsObjName)
+		return colObjList
 
 	
 	# Adds all meshes, detail levels, and dts objects to the shape.
 	# this should be called after nodes are added.
-	def addAllDetailLevels(self, dtsObjects, sortedObjects):
+	def addDetailLevels(self, dtsObjects, sortedObjects, sortedDLWorkingList):
 		sortedDetailLevels = DtsGlobals.Prefs.getSortedDLNames()
 		# set current frame to rest frame
 		restFrame = self.preferences['RestFrame']
@@ -351,7 +407,7 @@ class BlenderShape(DtsShape):
 		#dtsObjList = dtsObjects.keys()
 		dtsObjList = dtsObjects
 		# add each detail level
-		for dlName in sortedDetailLevels:
+		for dlName in sortedDLWorkingList:
 			# --------------------------------------------
 			numAddedMeshes = 0
 			polyCount = 0
@@ -423,7 +479,7 @@ class BlenderShape(DtsShape):
 					dln = self.sTable.get(dl.name)
 					if dln[0:3].lower() == "col":
 						tn = -int(DtsGlobals.Prefs.getTrailingNumber(dln))
-						print self.sTable.get(dl.name), tn
+						#print self.sTable.get(dl.name), tn
 						if tn == LOSTrailingNumber:
 							detailName = "LOS-%d" % (i + 9)
 							found = True
@@ -450,7 +506,7 @@ class BlenderShape(DtsShape):
 						dim,
 						includepoles),
 						size,-1,-1,0)
-		self.detaillevels.insert(self.numBaseDetails-1, bb)
+		self.detaillevels.insert(self.numBaseDetails-self.numLOSCollisionDetails-self.numCollisionDetails-1, bb)
 
 	# create triangle strips
 	def stripMeshes(self, maxsize):
