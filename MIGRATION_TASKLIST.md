@@ -9,19 +9,21 @@ Migration rules and sequencing are documented in [MIGRATION_PLAN.md](/Users/jame
 - [ ] Run a quick behavioral audit of the legacy add-on so we preserve current `.dts` output expectations.
 - [ ] Identify any Torque-side format assumptions that must remain unchanged during the Blender API migration.
 - [ ] Preserve the old UI where possible instead of replacing it with a brand-new layout.
-- [ ] Define best-guess defaults for missing config values so export can proceed without forcing complete setup.
+- [x] Define best-guess defaults for missing config values so export can proceed without forcing complete setup.
 
 ## 1. Legacy API Inventory
 
 Current working inventory: [API_USAGE_INVENTORY.md](/Users/jamesu/Desktop/torqueexporter/API_USAGE_INVENTORY.md)
 
-- [ ] Catalog every old Blender API usage in `torqueplugin/Dts_Blender.py`.
-- [ ] Catalog every old Blender API usage in `torqueplugin/DtsShape_Blender.py`.
-- [ ] Catalog every old Blender API usage in `torqueplugin/DtsMesh_Blender.py`.
-- [ ] Catalog every old Blender API usage in `torqueplugin/DtsPoseUtil.py`.
-- [ ] Catalog every old Blender API usage in `torqueplugin/Common_Gui.py`.
+- [x] Catalog every old Blender API usage in `torqueplugin/Dts_Blender.py`.
+- [x] Catalog every old Blender API usage in `torqueplugin/DtsShape_Blender.py`.
+- [x] Catalog every old Blender API usage in `torqueplugin/DtsMesh_Blender.py`.
+- [x] Catalog every old Blender API usage in `torqueplugin/DtsPoseUtil.py`.
+- [x] Catalog every old Blender API usage in `torqueplugin/Common_Gui.py`.
 - [ ] Replace `#!BPY`, `import Blender`, and `from Blender import ...` entry points with modern add-on structure.
 - [ ] Remove reliance on `Registry`, `Text`, `Scene.GetCurrent()`, `Object.Get()`, `Object.GetSelected()`, `NMesh`, `Ipo`, and other removed APIs.
+
+Status: the legacy API inventory is now captured in [API_USAGE_INVENTORY.md](/Users/jamesu/Desktop/torqueexporter/API_USAGE_INVENTORY.md), and the active export path has already been migrated off many of the catalogued APIs. The remaining unchecked items in this section are the ones that still represent real work: the add-on structure rewrite and the full removal of compatibility-only legacy entry points.
 
 ## 2. Add-On Structure
 
@@ -35,8 +37,8 @@ Current working inventory: [API_USAGE_INVENTORY.md](/Users/jamesu/Desktop/torque
 
 - [ ] Replace registry-based preferences in `torqueplugin/Dts_Blender.py` with `bpy.props` and add-on preferences.
 - [ ] Replace text-buffer persistence for config with a modern storage approach.
-- [ ] Preserve export defaults such as basename, output path, detail settings, and billboard options.
-- [ ] Infer sensible defaults from the `.blend` file, scene, and selection when stored config values are missing.
+- [x] Preserve export defaults such as basename, output path, detail settings, and billboard options.
+- [x] Infer sensible defaults from the `.blend` file, scene, and selection when stored config values are missing.
 - [ ] Rework any UI state that currently depends on global mutable module variables.
 
 ## 4. Scene, Object, And Mesh Access
