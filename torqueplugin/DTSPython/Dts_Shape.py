@@ -23,9 +23,14 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 '''
 
-from Torque_Util import *
-from Dts_Mesh import Primitive, Cluster, DtsMesh
-from Dts_Stream import *
+try:
+	from .Torque_Util import *
+except ImportError:
+	from Torque_Util import *
+try:
+	from .Dts_Mesh import Primitive, Cluster, DtsMesh
+except ImportError:
+	from Dts_Mesh import Primitive, Cluster, DtsMesh
 
 ###############################
 # Torque Game Engine

@@ -138,8 +138,8 @@ class BlenderShape(DtsShape):
 		# loop through each node and reset it's transforms.  This avoids transforms carrying over from
 		# other animations. Need to cycle through _ALL_ bones and reset the transforms.
 		for armOb in bc.get_scene_objects():
-			if (armOb.getType() != 'Armature') or (armOb.name == "DTS-EXP-GHOST-OB"): continue
-			tempPose = armOb.getPose()
+			if (getattr(armOb, "type", None) != 'ARMATURE' and armOb.getType() != 'Armature') or (armOb.name == "DTS-EXP-GHOST-OB"): continue
+			tempPose = armOb.pose if hasattr(armOb, "pose") else armOb.getPose()
 			#for bonename in armOb.getData().bones.keys():
 			for bonename in self.poseUtil.armBones[armOb.name].keys():
 				# reset the bone's transform
@@ -164,7 +164,7 @@ class BlenderShape(DtsShape):
 					pNodeIdx = self.getNodeIndex(con[Blender.Constraint.Settings.BONE])
 
 			# Check to see if the mesh is parented to a bone				
-			if o.getParent() != None and o.getParent().getType() == 'Armature' and o.parentbonename != None:
+			if o.getParent() != None and ((getattr(o.getParent(), "type", None) == 'ARMATURE') or o.getParent().getType() == 'Armature') and o.parentbonename != None:
 				for node in self.nodes[0:len(self.nodes)]:
 					if self.sTable.get(node.name) == o.parentbonename:
 						pNodeIdx = node.name
@@ -939,9 +939,9 @@ class BlenderShape(DtsShape):
 					# We are ready, lets stomp!
 					try:						
 						bound_obj = bc.get_object("Bounds")
-						bound_parent = bound_obj.getParent()
-						if bound_parent != None and bound_parent.getType() == 'Armature':
-							pose = bound_parent.getPose()
+						bound_parent = bound_obj.parent if hasattr(bound_obj, "parent") else bound_obj.getParent()
+						if bound_parent != None and ((getattr(bound_parent, "type", None) == 'ARMATURE') or bound_parent.getType() == 'Armature'):
+							pose = bound_parent.pose if hasattr(bound_parent, "pose") else bound_parent.getPose()
 							pos = self.poseUtil.getBoneLocWS(bound_parent.getName(), bound_obj.parentbonename, pose)
 							pos = pos - self.poseUtil.getBoneRestPosWS(bound_parent.name, bound_obj.parentbonename)
 							rot = self.poseUtil.getBoneRotWS(bound_parent.getName(), bound_obj.parentbonename, pose)
@@ -1100,8 +1100,8 @@ class BlenderShape(DtsShape):
 		# loop through each node and reset it's transforms.  This avoids transforms carrying over from
 		# other animations. Need to cycle through _ALL_ bones and reset the transforms.
 		for armOb in bc.get_scene_objects():
-			if (armOb.getType() != 'Armature') or (armOb.name == "DTS-EXP-GHOST-OB"): continue
-			tempPose = armOb.getPose()
+			if (getattr(armOb, "type", None) != 'ARMATURE' and armOb.getType() != 'Armature') or (armOb.name == "DTS-EXP-GHOST-OB"): continue
+			tempPose = armOb.pose if hasattr(armOb, "pose") else armOb.getPose()
 			#for bonename in armOb.getData().bones.keys():
 			for bonename in self.poseUtil.armBones[armOb.name].keys():
 				# reset the bone's transform
@@ -1118,7 +1118,7 @@ class BlenderShape(DtsShape):
 
 		# Set the current frame in blender
 		#context.currentFrame(useFrame)
-		Blender.Set('curframe', useFrame)
+		bc.set_frame(scene, useFrame)
 		
 		for armIdx in range(0, len(self.addedArmatures)):
 			arm = self.addedArmatures[armIdx][0]
@@ -1436,9 +1436,9 @@ class BlenderShape(DtsShape):
 		# This avoids transforms carrying over from other action animations.
 		else:			
 			# need to cycle through ALL bones and reset the transforms.
-			for armOb in bc.get_scene_objects():
-				if (armOb.getType() != 'Armature'): continue
-				tempPose = armOb.getPose()
+				for armOb in bc.get_scene_objects():
+					if (getattr(armOb, "type", None) != 'ARMATURE' and armOb.getType() != 'Armature'): continue
+					tempPose = armOb.pose if hasattr(armOb, "pose") else armOb.getPose()
 				for bonename in self.poseUtil.armBones[armOb.name].keys():
 					# reset the bone's transform
 					tempPose.bones[bonename].quat = bMath.Quaternion().identity()

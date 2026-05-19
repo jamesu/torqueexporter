@@ -31,7 +31,11 @@ def get_scene_objects(scene=None):
 	if bpy is not None:
 		if scene is None:
 			scene = bpy.context.scene
-		return list(scene.objects) if scene is not None else []
+		if scene is None:
+			return []
+		if hasattr(Blender, "wrap_object"):
+			return [Blender.wrap_object(obj) for obj in scene.objects]
+		return list(scene.objects)
 	if Blender is not None:
 		return list(Blender.Object.Get())
 	return []
@@ -39,6 +43,8 @@ def get_scene_objects(scene=None):
 
 def get_selected_objects():
 	if bpy is not None:
+		if hasattr(Blender, "wrap_object"):
+			return [Blender.wrap_object(obj) for obj in bpy.context.selected_objects]
 		return list(bpy.context.selected_objects)
 	if Blender is not None:
 		selected = Blender.Object.GetSelected()
@@ -56,8 +62,9 @@ def get_object(name, scene=None):
 		if scene is not None:
 			for obj in get_scene_objects(scene):
 				if obj.name == name:
-					return obj
-		return bpy.data.objects.get(name)
+					return Blender.wrap_object(obj) if hasattr(Blender, "wrap_object") else obj
+		obj = bpy.data.objects.get(name)
+		return Blender.wrap_object(obj) if hasattr(Blender, "wrap_object") else obj
 	if Blender is not None:
 		try:
 			return Blender.Object.Get(name)
@@ -68,7 +75,8 @@ def get_object(name, scene=None):
 
 def get_material(name):
 	if bpy is not None:
-		return bpy.data.materials.get(name)
+		mat = bpy.data.materials.get(name)
+		return Blender.wrap_material(mat) if hasattr(Blender, "wrap_material") else mat
 	if Blender is not None:
 		try:
 			return Blender.Material.Get(name)
@@ -79,6 +87,8 @@ def get_material(name):
 
 def get_materials():
 	if bpy is not None:
+		if hasattr(Blender, "wrap_material"):
+			return [Blender.wrap_material(mat) for mat in bpy.data.materials]
 		return list(bpy.data.materials)
 	if Blender is not None:
 		return list(Blender.Material.Get())
@@ -98,6 +108,8 @@ def get_text(name):
 
 def get_actions():
 	if bpy is not None:
+		if hasattr(Blender, "wrap_action"):
+			return {action.name: Blender.wrap_action(action) for action in bpy.data.actions}
 		return {action.name: action for action in bpy.data.actions}
 	if Blender is not None:
 		return Blender.Armature.NLA.GetActions()

@@ -138,6 +138,7 @@ Mixed utility layer with remaining Blender integration.
 - Uses `Blender.Armature.NLA.GetActions()`.
 - Uses `Blender.Object.Get(track['IPOObject'])`.
 - Uses `getIpo()`, IPO curve constants, and curve accessors.
+Status: this module now resolves through the Blender compatibility wrapper in the modern export path, so its legacy calls remain available while the shim absorbs the API translation.
 
 ### `torqueplugin/DTSPython/Dts_Stream.py`
 
@@ -161,3 +162,5 @@ The migration is dominated by three areas:
 The codebase already compiles under Python 3, so the next meaningful step is the Blender API port rather than further syntax cleanup.
 
 The migration should keep legacy UI structure intact wherever feasible and use inferred defaults to avoid forcing users through a full reconfiguration when a value is absent.
+Status: the package import chain now resolves under Python 3, including the legacy DTSPython modules and the top-level Blender shim, so the exporter modules load cleanly in the current workspace.
+Status: preference bootstrap now falls back to inferred defaults instead of hard-failing when Registry/text configuration is unavailable.

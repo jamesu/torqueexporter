@@ -192,20 +192,11 @@ Utility Functions
 #-------------------------------------------------------------------------------------------------
 # Gets the Base Name from the File Path
 def basename(filepath):
-	if "\\" in filepath:
-		words = string.split(filepath, "\\")
-	else:
-		words = string.split(filepath, "/")
-	words = string.split(words[-1], ".")
-	return string.join(words[0:len(words)], ".")
+	return os.path.basename(filepath)
 
 # Gets base path with trailing /
 def basepath(filepath):
-	if "\\" in filepath: sep = "\\"
-	else: sep = "/"
-	words = string.split(filepath, sep)
-	# join drops last word (file name)
-	return string.join(words[:-1], sep)
+	return os.path.dirname(filepath)
 	
 def getPathSeperator(filepath):
 	global pathSeperator
@@ -214,9 +205,7 @@ def getPathSeperator(filepath):
 
 # Gets the Base Name & path from the File Path
 def noext(filepath):
-	words = string.split(filepath, ".")
-	if len(words)==1: return filepath
-	return string.join(words[:-1], ".")
+	return os.path.splitext(filepath)[0]
 
 # Gets the children of an object
 def getChildren(obj):
@@ -266,72 +255,74 @@ def initPrefs():
 def loadPrefs():
 	global Prefs, Prefs_keyname, textDocName
 	Prefs_keyname = 'TorqueExporterPlugin_%s' % pythonizeFileName(noext(basename(getCurrentFilename())))
-	Prefs = Registry.GetKey(Prefs_keyname, True)
-	if not Prefs:
-		#Torque_Util.dump_writeln("Registry key '%s' could not be loaded, resorting to text object." % Prefs_keyname)
-		Prefs = initPrefs()
-		
+	Prefs = initPrefs()
+	registry = globals().get('Registry')
+	text_api = globals().get('Text')
+	if registry is not None:
+		try:
+			loaded = registry.GetKey(Prefs_keyname, True)
+		except Exception:
+			loaded = None
+		if loaded:
+			Prefs.update(loaded)
+	if text_api is not None and Prefs == initPrefs():
 		success = True
 		newConfig = True
-		try: text_doc = Text.Get(textDocName)
-		except:
-			# User hasn't updated yet?
+		try:
+			text_doc = text_api.Get(textDocName)
+		except Exception:
 			newConfig = False
-			try: text_doc = Text.Get("TORQUEEXPORTER_CONF")
-			except: 
+			try:
+				text_doc = text_api.Get("TORQUEEXPORTER_CONF")
+			except Exception:
 				success = False
-				
-		if not success:
-			# No registry, no text, so need a new Prefs
-			print("No Registry and no text objects, must be new.")
-		else:
-			# Ok, so now we can load the text document
-			if newConfig:
-				# Go ahead and load the stuff from the text buffer
-				execStr = "loadPrefs = "
-				for line in text_doc.asLines():
-					execStr += line
-				try:
-					exec(execStr)
-				except:
-					return False
-					
-				Prefs = loadPrefs
-				
-				# make sure the output path is valid.
-				if not os.path.exists(Prefs['exportBasepath']):
-					Prefs['exportBasepath'] = basepath(getCurrentFilename())
-				savePrefs()
-				return True
-			else:
-				print("Error: failed to load old preferences!")
-				print(" To generate new preferences, delete the TorqueExporter_SCONF")
-				print(" text buffer, then save and reload the .blend file.")
+		if success and newConfig:
+			execStr = "loadPrefs = "
+			for line in text_doc.asLines():
+				execStr += line
+			try:
+				exec(execStr)
+			except Exception:
 				return False
-				# We'll leave it up to the user to delete the text object
-		
-		Torque_Util.dump_writeln("Loaded Preferences.")
-		# Save prefs (to update text and registry versions)
-		savePrefs()
+			Prefs = loadPrefs
+		elif not success:
+			Torque_Util.dump_writeln("No Registry and no text objects, using defaults.")
+		else:
+			print("Error: failed to load old preferences!")
+			print(" To generate new preferences, delete the TorqueExporter_SCONF")
+			print(" text buffer, then save and reload the .blend file.")
+			return False
 
 	# make sure the output path is valid.
 	if not os.path.exists(Prefs['exportBasepath']):
 		Prefs['exportBasepath'] = basepath(getCurrentFilename())
+	if registry is not None:
+		savePrefs()
+	elif text_api is not None:
+		saveTextPrefs()
+	return True
 	
 
 		
 # Saves preferences to registry and text object
 def savePrefs():
 	global Prefs, Prefs_keyname
-	Registry.SetKey(Prefs_keyname, Prefs, False) # must NOT cache the data to disk!!!
+	registry = globals().get('Registry')
+	if registry is not None:
+		registry.SetKey(Prefs_keyname, Prefs, False) # must NOT cache the data to disk!!!
 	saveTextPrefs()
 
 # Saves preferences to a text buffer
 def saveTextPrefs():
 	global Prefs, textDocName
+	text_api = globals().get('Text')
+	if text_api is None:
+		return
 	# We need a blank buffer
 	try: text_doc = Text.Get(textDocName)
 	except: text_doc = Text.New(textDocName)
+	if text_doc is None:
+		return
 	text_doc.clear()
 	
 	# Use python's amazing str() function to create a string based
@@ -1009,7 +1000,7 @@ class SceneTree:
 
 	# Creates trees to handle children
 	def handleChild(self,obj):
-		tname = string.split(obj.getName(), ":")[0]
+		tname = obj.getName().split(":")[0]
 		if tname.upper()[0:5] == "SHAPE":
 			handle = ShapeTree(self, obj)
 		else:
@@ -1061,7 +1052,7 @@ class SceneTree:
 				
 				# parent meshes to markers
 				for obj in getCurrentSceneObjects(scene):
-					tname = string.split(obj.getName(), ":")[0].upper()
+					tname = obj.getName().split(":")[0].upper()
 					if tname[0:3] == "COL" and obj.type == "Mesh":
 						collisionEmpty.makeParent([obj], 0, 1)
 					elif tname[0:3] == "LOS" and obj.type == "Mesh":

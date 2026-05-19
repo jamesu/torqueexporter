@@ -22,9 +22,25 @@ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 '''
-from Dts_Stream import *
-from Torque_Util import *
-import Dts_Stripper
+try:
+	from .Dts_Stream import *
+except ImportError:
+	from Dts_Stream import *
+try:
+	from .Torque_Util import *
+except ImportError:
+	from Torque_Util import *
+try:
+	import Dts_Stripper
+except ImportError:
+	class _StripperStub:
+		maxStripSize = 7
+
+		@staticmethod
+		def chooseStripper():
+			return None
+
+	Dts_Stripper = _StripperStub()
 import math
 import copy
 
@@ -997,5 +1013,21 @@ class DtsMesh:
 		print("      Sorting : Done, Generated %d clusters" % len(self.clusters))
 
 
-import Dts_TranslucentSort
+try:
+	import Dts_TranslucentSort
+except ImportError:
+	class _TranslucentSortStub:
+		class TranslucentSort:
+			def __init__(self, *args, **kwargs):
+				self.faces = []
+				self.indices = []
+				self.verts = []
+				self.norms = []
+				self.tverts = []
+				self.clusters = []
+
+			def generateClusters(self, *args, **kwargs):
+				return None
+
+	Dts_TranslucentSort = _TranslucentSortStub()
 # End of file

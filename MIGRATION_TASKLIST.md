@@ -89,6 +89,8 @@ Status: export-path scene, object, action, and material lookups are now routed t
 - [ ] Add type-safe helper functions for path handling, object filtering, and bone lookup if useful.
 
 Status: a compatibility helper module now handles scene/object/material/action access for the export-focused code paths, reducing direct legacy API usage without widening the UI scope.
+Status: the legacy `DTSPython` import chain now loads under Python 3 via package-relative imports and the `Blender` shim, so the main exporter modules import cleanly in the current workspace.
+Status: preference loading now falls back to inferred defaults when registry/text configuration is absent, which matches the bounded "best guess" export behavior.
 
 ## 10. Verification
 

@@ -39,8 +39,12 @@ import blender_compat as bc
 - Code taken from various sources; See Credits.
 '''
 
-import Torque_Math
-from Torque_Math import Vector2, Vector, Vector4, Quaternion, MatrixF, Quat16, PlaneF, Box
+try:
+	from . import Torque_Math
+	from .Torque_Math import Vector2, Vector, Vector4, Quaternion, MatrixF, Quat16, PlaneF, Box
+except ImportError:
+	import Torque_Math
+	from Torque_Math import Vector2, Vector, Vector4, Quaternion, MatrixF, Quat16, PlaneF, Box
 
 # String Table Class
 class StringTable:
@@ -57,7 +61,7 @@ class StringTable:
 		
 		# Needs to be lower case if not case sensitive
 		if caseSensitive: strn_compare = strn
-		else: strn_compare = string.lower(strn)
+		else: strn_compare = strn.lower()
 		
 		# Firstly, check if the string already exists
 		for i in range(0, len(self.strings)):
@@ -65,7 +69,7 @@ class StringTable:
 				if self.strings[i].tostring() == strn_compare:
 					return i
 			else:
-				if string.lower(self.strings[i].tostring()) == strn_compare:
+				if self.strings[i].tostring().lower() == strn_compare:
 					return i
 				
 		# If we got here, we have a new string to add
@@ -308,9 +312,9 @@ def overlapSet(arr1, arr2):
 # strips the path portion of a file name
 def stripPath(filepath):
 	if "\\" in filepath:
-		words = string.split(filepath, "\\")
+		words = filepath.split("\\")
 	else:
-		words = string.split(filepath, "/")
+		words = filepath.split("/")
 	return words[-1]
 
 # Strip image names of trailing extension
@@ -325,9 +329,9 @@ def stripImageExtension(imagename, filename=""):
 	temp = ""
 	if filename != "": filename = stripPath(filename)
 	if len(imagename) < len(filename) and imagename == filename[0:len(imagename)]:
-		temp = string.split(filename,".")
+		temp = filename.split(".")
 	else:
-		temp = string.split(imagename,".")
+		temp = imagename.split(".")
 	if len(temp)==1: return temp[0]
 	retVal = ""
 	for i in range(0, len(temp)):

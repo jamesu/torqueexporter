@@ -28,10 +28,12 @@ from struct import *
 from array import *
 import sys
 
-import Torque_Util
-from Torque_Util import *
-from Dts_Shape import IflMaterial, dObject, DetailLevel, SubShape, Node, Trigger, ObjectState, Decal, DecalState
-from Dts_Mesh import Cluster, Primitive
+try:
+	from .Torque_Util import *
+	import DTSPython.Torque_Util as Torque_Util
+except ImportError:
+	import Torque_Util
+	from Torque_Util import *
 
 ##############################
 # Torque Game Engine
@@ -285,6 +287,10 @@ class DtsStream:
 		self.writePoint3F(value.min)
 		self.writePoint3F(value.max)
 	def readPrimitive(self):
+		try:
+			from .Dts_Mesh import Primitive
+		except ImportError:
+			from Dts_Mesh import Primitive
 		v1 = self.reads16()
 		v2 = self.reads16()
 		v3 = self.reads32()
@@ -363,6 +369,10 @@ class DtsStream:
 		self.writes16(q16.z)
 		self.writes16(q16.w)
 	def readCluster(self):
+		try:
+			from .Dts_Mesh import Cluster
+		except ImportError:
+			from Dts_Mesh import Cluster
 		v1 = self.reads32()
 		v2 = self.reads32()
 		v3 = self.readPoint3F()
@@ -378,6 +388,10 @@ class DtsStream:
 		self.writes32(value.frontCluster)
 		self.writes32(value.backCluster)
 	def readNode(self):
+		try:
+			from .Dts_Shape import Node
+		except ImportError:
+			from Dts_Shape import Node
 		v1 = self.reads32()
 		v2 = self.reads32()
 		v3 = self.reads32() # Computed at Runtime
@@ -396,6 +410,10 @@ class DtsStream:
 		self.writes32(value.firstChild)  # Computed at Runtime
 		self.writes32(value.nextSibling) # Computed at Runtime
 	def readObjectState(self):
+		try:
+			from .Dts_Shape import ObjectState
+		except ImportError:
+			from Dts_Shape import ObjectState
 		v1 = self.readf32()
 		v2 = self.reads32()
 		v3 = self.reads32()
@@ -405,6 +423,10 @@ class DtsStream:
 		self.writes32(value.frame)
 		self.writes32(value.matFrame)
 	def readObject(self):
+		try:
+			from .Dts_Shape import dObject
+		except ImportError:
+			from Dts_Shape import dObject
 		v1 = self.reads32()
 		v2 = self.reads32()
 		v3 = self.reads32()
@@ -423,11 +445,19 @@ class DtsStream:
 		self.writes32(value.sibling)
 		self.writes32(value.firstDecal)
 	def readDecalState(self):
+		try:
+			from .Dts_Shape import DecalState
+		except ImportError:
+			from Dts_Shape import DecalState
 		v1 = self.reads32()
 		return DecalState(v1)
 	def writeDecalState(self, value):
 		self.writes32(value.frame)
 	def readDecal(self):
+		try:
+			from .Dts_Shape import Decal
+		except ImportError:
+			from Dts_Shape import Decal
 		v1 = self.reads32()
 		v2 = self.reads32()
 		v3 = self.reads32()
@@ -441,6 +471,10 @@ class DtsStream:
 		self.writes32(value.object)
 		self.writes32(value.sibling)
 	def readTrigger(self):
+		try:
+			from .Dts_Shape import Trigger
+		except ImportError:
+			from Dts_Shape import Trigger
 		v1 = self.reads32()
 		v2 = self.readf32()
 		return Trigger(v1, v2)
@@ -448,6 +482,10 @@ class DtsStream:
 		self.writes32(value.state)
 		self.writef32(value.pos)
 	def readDetailLevel(self):
+		try:
+			from .Dts_Shape import DetailLevel
+		except ImportError:
+			from Dts_Shape import DetailLevel
 		v1 = self.reads32()
 		v2 = self.reads32()
 		v3 = self.reads32()
@@ -509,6 +547,10 @@ class DtsStream:
 		for ln in range(0, len(mystr)):
 			self.writeu8(mystr[ln])
 	def readIflMaterial(self):
+		try:
+			from .Dts_Shape import IflMaterial
+		except ImportError:
+			from Dts_Shape import IflMaterial
 		v1 = self.reads32()
 		v2 = self.reads32()
 		v3 = self.reads32()
