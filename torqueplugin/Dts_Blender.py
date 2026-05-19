@@ -226,6 +226,20 @@ def getExportMeshChildren(obj, include_bounds=False):
 		meshes.append(child)
 	return meshes
 
+def dumpSceneHierarchy(scene=None):
+	scene_objects = getCurrentSceneObjects(scene)
+	Torque_Util.dump_writeln("Scene object count: %d" % len(scene_objects))
+	if len(scene_objects) == 0:
+		return
+	root_objects = [obj for obj in scene_objects if obj.parent == None]
+	Torque_Util.dump_writeln("Scene root count: %d" % len(root_objects))
+	for obj in root_objects:
+		Torque_Util.dump_writeln(" Root: %s [%s]" % (obj.getName(), bc.get_object_type(obj)))
+		for child in getAllChildren(obj):
+			parent = bc.get_object_parent(child)
+			parent_name = parent.getName() if parent != None else "None"
+			Torque_Util.dump_writeln("   - %s [%s] parent=%s" % (child.getName(), bc.get_object_type(child), parent_name))
+
 # converts a file name into a legal python variable name.
 # this is need for blender registry support.
 def pythonizeFileName(filename):
@@ -1020,11 +1034,14 @@ class SceneTree:
 	def handleObject(self):
 		# Root scene trees discover top-level export roots.
 		# Child trees walk the actual Blender hierarchy beneath their parent object.
-		if self.obj == None:
+		if self.parent == None or not hasattr(self.obj, "parent"):
 			children = [c for c in getCurrentSceneObjects() if c.parent == None]
+			Torque_Util.dump_writeln("   Scene roots: %d" % len(children))
 		else:
 			children = getChildren(self.obj)
+			Torque_Util.dump_writeln("   Children of %s: %d" % (self.obj.getName(), len(children)))
 		for c in children:
+			Torque_Util.dump_writeln("      Found root/child candidate: %s (%s)" % (c.getName(), bc.get_object_type(c)))
 			child = self.handleChild(c)
 			if child != None:
 				self.children.append(child)
@@ -1432,6 +1449,8 @@ def handleScene():
 	setExportContext(scn)
 	if scn == None:
 		return
+	Torque_Util.dump_writeln("Scene overview:")
+	dumpSceneHierarchy(scn)
 	scn.update(1)
 	export_tree = SceneTree(None, scn)
 	updateOldPrefs()

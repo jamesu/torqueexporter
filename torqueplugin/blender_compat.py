@@ -414,7 +414,11 @@ def get_action_channel_ipos(action):
 	if hasattr(action, "getAllChannelIpos"):
 		return action.getAllChannelIpos()
 	if bpy is not None and hasattr(action, "fcurves"):
-		return {fc.data_path: fc for fc in action.fcurves}
+		try:
+			import Blender as _LegacyBlender
+			return _LegacyBlender.wrap_action(action).getAllChannelIpos()
+		except Exception:
+			return {fc.data_path: fc for fc in action.fcurves}
 	return {}
 
 

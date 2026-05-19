@@ -519,6 +519,18 @@ def wrap_mesh(mesh, owner_object=None):
 
 
 def _legacy_channel_name(data_path, array_index):
+	if data_path.startswith('pose.bones["') and '"].' in data_path:
+		bone_path, channel_path = data_path.split('"].', 1)
+		channel_map = {
+			"location": ["LocX", "LocY", "LocZ"],
+			"rotation_euler": ["RotX", "RotY", "RotZ"],
+			"scale": ["ScaleX", "ScaleY", "ScaleZ"],
+			"rotation_quaternion": ["QuatW", "QuatX", "QuatY", "QuatZ"],
+		}
+		names = channel_map.get(channel_path)
+		if names is not None:
+			return names[array_index]
+		return f"{channel_path}:{array_index}"
 	if data_path == "location":
 		return ["LocX", "LocY", "LocZ"][array_index]
 	if data_path == "rotation_euler":
@@ -556,7 +568,11 @@ def _action_channel_ipos(action):
 	channels = {}
 	for fcurve in getattr(action, "fcurves", []):
 		name = _legacy_channel_name(fcurve.data_path, fcurve.array_index)
-		proxy = channels.get(fcurve.data_path)
+		if fcurve.data_path.startswith('pose.bones["') and '"].' in fcurve.data_path:
+			channel_name = fcurve.data_path.split('"].', 1)[0][len('pose.bones["'):]
+		else:
+			channel_name = fcurve.data_path
+		proxy = channels.get(channel_name)
 		if proxy is None:
 			proxy = _IpoProxy(action, action, {})
 			proxy._curves = {}
@@ -575,7 +591,7 @@ def _action_channel_ipos(action):
 				"ScaleY": "ScaleY",
 				"ScaleZ": "ScaleZ",
 			}
-			channels[fcurve.data_path] = proxy
+			channels[channel_name] = proxy
 		proxy._curves[name] = _CurveProxy(proxy, name, fcurve)
 	return channels
 
