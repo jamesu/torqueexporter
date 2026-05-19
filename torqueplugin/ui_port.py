@@ -55,8 +55,14 @@ def _ensure_prefs():
 	prefs = getattr(legacy, "Prefs", None)
 	if prefs is None:
 		try:
-			prefs = legacy.initPrefs()
-			legacy.Prefs = prefs
+			try:
+				legacy.loadPrefs()
+			except Exception:
+				pass
+			prefs = getattr(legacy, "Prefs", None)
+			if prefs is None:
+				prefs = legacy.initPrefs()
+				legacy.Prefs = prefs
 		except Exception:
 			prefs = None
 	return prefs
@@ -817,21 +823,28 @@ class TORQUEEXPORTER_PT_scene_panel(bpy.types.Panel):
 	bl_context = "scene"
 
 	def draw(self, context):
-		state = context.scene.torque_export_ui
-		if not state.ui_initialized:
-			_sync_state_from_legacy(state)
-
 		layout = self.layout
-		layout.prop(state, "display_mode", expand=True)
-		row = layout.row(align=True)
-		row.operator("torqueexporter.refresh_ui", text="Refresh")
-		row.operator("torqueexporter.apply_ui", text="Sync")
-		row.operator("torqueexporter.export_from_ui", text="Export", icon="EXPORT")
+		try:
+			state = context.scene.torque_export_ui
+			if not state.ui_initialized:
+				_sync_state_from_legacy(state)
 
-		if state.display_mode == "CLASSIC":
-			_draw_legacy(layout, state)
-		else:
-			_draw_modern(layout, state)
+			layout.prop(state, "display_mode", expand=True)
+			row = layout.row(align=True)
+			row.operator("torqueexporter.refresh_ui", text="Refresh")
+			row.operator("torqueexporter.apply_ui", text="Sync")
+			row.operator("torqueexporter.export_from_ui", text="Export", icon="EXPORT")
+
+			if state.display_mode == "CLASSIC":
+				_draw_legacy(layout, state)
+			else:
+				_draw_modern(layout, state)
+		except Exception as exc:
+			_log_ui_error("TORQUEEXPORTER_PT_scene_panel.draw", exc)
+			box = layout.box()
+			box.label(text="Torque Exporter UI error")
+			box.label(text=str(exc))
+			box.label(text="See console for details.")
 
 
 def _draw_export_block(layout, state):
