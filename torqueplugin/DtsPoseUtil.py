@@ -104,7 +104,7 @@ class DtsPoseUtilClass:
 			armLoc = self.toTorqueVec(armMat.translationPart())
 			armSize = self.toTorqueVec(armOb.scale if hasattr(armOb, "scale") else armOb.getSize('worldspace'))
 			try: exportScale = prefs['ExportScale']
-			except: exportScale = 1.0
+			except Exception: exportScale = 1.0
 			armSize[0], armSize[1], armSize[2] = armSize[0]*exportScale, armSize[1]*exportScale, armSize[2]*exportScale
 			armLoc[0], armLoc[1], armLoc[2] = armLoc[0]*exportScale, armLoc[1]*exportScale, armLoc[2]*exportScale
 			self.armInfo[armOb.name] = [ armOb, armDb, armRot, armRotInv, armLoc, armSize ]
@@ -248,12 +248,12 @@ class DtsPoseUtilClass:
 			# even bother adding them to the list since it'll only throw off accuracy
 			if scaleRaw.eqDelta( Vector(1.0,1.0,1.0), 0.008 ):
 				try: parentName = self.armBones[armName][parentName][PARENTNAME]
-				except: parentName = None
+				except Exception: parentName = None
 				continue
 			scaleListLS.append(scaleInv)
 			rotListWS.append(rot)
 			try: parentName = self.armBones[armName][parentName][PARENTNAME]
-			except: parentName = None
+			except Exception: parentName = None
 
 
 			
@@ -413,7 +413,7 @@ class DtsPoseUtilClass:
 			r2 = [rotMat[1][0]/s1, rotMat[1][1]/s2, rotMat[1][2]/s3]		
 			r3 = [rotMat[2][0]/s1, rotMat[2][1]/s2, rotMat[2][2]/s3]
 		# just do it the old way if there is any zero scale on this node for the current frame.
-		except: return self.toTorqueQuat(bMat.rotationPart().toQuat())
+		except Exception: return self.toTorqueQuat(bMat.rotationPart().toQuat())
 		# construct a new matrix
 		newMat = bMath.Matrix(r1,r2,r3)
 		# convert to torque quat and return.

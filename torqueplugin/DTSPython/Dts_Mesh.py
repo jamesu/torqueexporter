@@ -823,7 +823,8 @@ class DtsMesh:
 			for p in self.primitives:
 				if p.numElements > 3:
 					# we should be dealing with a triangle list
-					if (p.numElements % 3) != 0: raise "Error: Wrong number of verts in Triangles primitive!"
+					if (p.numElements % 3) != 0:
+						raise ValueError("Error: Wrong number of verts in Triangles primitive!")
 					for i in range(p.firstElement,p.firstElement+p.numElements, 3):	
 						stripper.faces.append([self.indices[i:i+3], p.matindex])
 				else:				

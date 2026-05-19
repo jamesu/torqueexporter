@@ -333,7 +333,7 @@ def saveTextPrefs():
 		return
 	# We need a blank buffer
 	try: text_doc = Text.Get(textDocName)
-	except: text_doc = Text.New(textDocName)
+	except Exception: text_doc = Text.New(textDocName)
 	if text_doc is None:
 		return
 	text_doc.clear()
@@ -382,7 +382,7 @@ def getSequenceKey(value):
 		except KeyError:
 			Prefs['Sequences'][value]['Action']['Enabled'] = False
 			maxNumFrames = 0
-		except:
+		except Exception:
 			Prefs['Sequences'][value]['Action']['Enabled'] = False
 			maxNumFrames = 0		
 
@@ -560,7 +560,7 @@ def renameSequence(oldName, newName):
 			newSeq['Vis'] = Prefs['Sequences'][oldName]['Vis']
 		del Prefs['Sequences'][oldName]
 	# Nope.
-	except:
+	except Exception:
 		# copy the key
 		newKey = copySequenceKey(oldName)
 		# insert the copied key into the prefs under the new name
@@ -580,22 +580,22 @@ def renameSequence(oldName, newName):
 # Converts an old style visibility sequence to the new prefs format
 def importOldVisAnim(seqName, seqPrefs):
 		try: x = seqPrefs['Vis']
-		except: seqPrefs['Vis'] = {}
+		except Exception: seqPrefs['Vis'] = {}
 		try: x = seqPrefs['Vis']['Enabled']
-		except:
+		except Exception:
 			seqPrefs['Vis']['Enabled'] = seqPrefs['AnimateMaterial']
 			del seqPrefs['AnimateMaterial']
 		try: x = seqPrefs['Vis']['StartFrame']
-		except:			
+		except Exception:			
 			seqPrefs['Vis']['StartFrame'] = seqPrefs['MaterialIpoStartFrame']
 			try:
 				action = getCurrentActions()[seqName]
 				seqPrefs['Vis']['EndFrame'] = (seqPrefs['Vis']['StartFrame'] + DtsShape_Blender.getHighestActFrame(action))-1
-			except:
+			except Exception:
 				seqPrefs['Vis']['EndFrame'] = seqPrefs['Vis']['StartFrame']
 			del seqPrefs['MaterialIpoStartFrame']
 		try: x = seqPrefs['Vis']['Tracks']
-		except:
+		except Exception:
 			seqPrefs['Vis']['Tracks'] = {}
 			if not seqPrefs['Vis']['Enabled']: return
 			
@@ -646,85 +646,85 @@ def updateOldPrefs():
 	global Prefs
 
 	try: x = Prefs['LastActivePanel']
-	except: Prefs['LastActivePanel'] = 'Sequences'
+	except Exception: Prefs['LastActivePanel'] = 'Sequences'
 	try: x = Prefs['LastActiveSubPanel']
-	except: Prefs['LastActiveSubPanel'] = 'Common'
+	except Exception: Prefs['LastActiveSubPanel'] = 'Common'
 	try: x = Prefs["ShowWarningErrorPopup"]
-	except: Prefs["ShowWarningErrorPopup"] = True
+	except Exception: Prefs["ShowWarningErrorPopup"] = True
 	for seqName in list(Prefs['Sequences'].keys()):
 		seq = getSequenceKey(seqName)
 
 
 		# Do the really old stuff first
 		try: x = seq['Priority']
-		except: seq['Priority'] = 0
+		except Exception: seq['Priority'] = 0
 
 		# Move keys into the new "Action" subkey.and delete old keys
 		try: x = seq['Action']
-		except:
+		except Exception:
 			seq['Action'] = {}
 		actKey = seq['Action']
 		try: x = actKey['Enabled']
-		except: 
+		except Exception: 
 			actKey['Enabled'] = True
 
 		try: x = actKey['StartFrame']
-		except: actKey['StartFrame'] = 1
+		except Exception: actKey['StartFrame'] = 1
 		
 		try: x = actKey['EndFrame']
-		except:
+		except Exception:
 			try:
 				action = getCurrentActions()[seqName]				
 				actKey['EndFrame'] = DtsShape_Blender.getHighestActFrame(action)				
-			except:
+			except Exception:
 				actKey['EndFrame'] = 0
 		try: x = actKey['AutoFrames']
-		except: actKey['AutoFrames'] = True
+		except Exception: actKey['AutoFrames'] = True
 
 		try: x = actKey['AutoSamples']
-		except: actKey['AutoSamples'] = True
+		except Exception: actKey['AutoSamples'] = True
 		try: x = actKey['FrameSamples']
-		except:
+		except Exception:
 			try: actKey['FrameSamples'] = actKey['InterpolateFrames']
-			except:
+			except Exception:
 				try: actKey['FrameSamples'] = seq['InterpolateFrames']
-				except: actKey['FrameSamples'] = getNumActFrames(seqName, seq)
+				except Exception: actKey['FrameSamples'] = getNumActFrames(seqName, seq)
 			try: del actKey['InterpolateFrames']
-			except:
+			except Exception:
 				try: del seq['InterpolateFrames']
-				except: pass
+				except Exception: pass
 		try: x = actKey['NumGroundFrames']
-		except:
+		except Exception:
 			actKey['NumGroundFrames'] = seq['NumGroundFrames']
 			del seq['NumGroundFrames']
 		try: x = actKey['Blend']
-		except:
+		except Exception:
 			actKey['Blend'] = seq['Blend']
 			del seq['Blend']
 		try: x = actKey['BlendRefPoseAction']
-		except:
+		except Exception:
 			actKey['BlendRefPoseAction'] = seq['BlendRefPoseAction']
 			del seq['BlendRefPoseAction']
 		try: x = actKey['BlendRefPoseFrame']
-		except:
+		except Exception:
 			actKey['BlendRefPoseFrame'] = seq['BlendRefPoseFrame']
 			del seq['BlendRefPoseFrame']
 		
 		importOldVisAnim(seqName, seq)
 		
 		try: x = seq['TotalFrames']
-		except: seq['TotalFrames'] = 0
+		except Exception: seq['TotalFrames'] = 0
 
 		try: x = seq['FPS']
-		except:
+		except Exception:
 			try:
 				scene = getCurrentScene()
 				seq['FPS'] = float(scene.getRenderingContext().framesPerSec())
 				if seq['FPS'] == 0: seq['FPS'] = 25
-			except:
+			except Exception:
 				seq['FPS'] = 25
 		try: x = seq['Duration']		
-		except:
+		except Exception:
 			maxNumFrames = 0
 			try:
 				action = getCurrentActions()[seqName]				
@@ -732,13 +732,13 @@ def updateOldPrefs():
 			except KeyError:
 				maxNumFrames = 0			
 			try: seq['Duration'] = float(maxNumFrames) / float(seq['FPS'])
-			except:
+			except Exception:
 				seq['Duration'] = 1.0
 				seq['FPS'] = 1.0
 		try: x = seq['DurationLocked']
-		except: seq['DurationLocked'] = False
+		except Exception: seq['DurationLocked'] = False
 		try: x = seq['FPSLocked']
-		except: seq['FPSLocked'] = True
+		except Exception: seq['FPSLocked'] = True
 		
 
 	# loop through all actions in the preferences and add the 'IFL' key to them with some reasonable default values.
@@ -755,7 +755,7 @@ def updateOldPrefs():
 			seq['IFL']['WriteIFLFile'] = True
 	
 	try: x = Prefs['Materials']
-	except: Prefs['Materials'] = {}
+	except Exception: Prefs['Materials'] = {}
 	# loop through materials and add new keys
 	for matName in list(Prefs['Materials'].keys()):
 		mat = Prefs['Materials'][matName]
@@ -763,7 +763,7 @@ def updateOldPrefs():
 		except KeyError: mat['IFLMaterial'] = False
 
 	try: x = Prefs['ExportScale']
-	except: Prefs['ExportScale'] = 1.0
+	except Exception: Prefs['ExportScale'] = 1.0
 
 
 # Call this function when the number of frames in the sequence has changed, or may have changed.
@@ -800,7 +800,7 @@ def refreshActionData():
 		try:
 			action = actions[seqName]			
 			maxFrames = DtsShape_Blender.getHighestActFrame(action)
-		except: pass # this seqName no longer exists(!?)
+		except Exception: pass # this seqName no longer exists(!?)
 
 		# update affected preferences
 		if seqPrefs['Action']['AutoFrames']:
@@ -821,7 +821,7 @@ def importMaterialList():
 
 	try:
 		materials = Prefs['Materials']
-	except:			
+	except Exception:			
 		Prefs['Materials'] = {}
 		materials = Prefs['Materials']
 
@@ -896,7 +896,7 @@ def importMaterialList():
 
 		# We have a blender material, do we have a prefs key for it?
 		try: x = Prefs['Materials'][bmat.name]			
-		except:
+		except Exception:
 			# No prefs key, so create one.
 			Prefs['Materials'][bmat.name] = {}
 			pmb = Prefs['Materials'][bmat.name]
@@ -1117,7 +1117,7 @@ class SceneTree:
 				if self.children[0] != None:
 					self.children[0].clear()
 				del self.children[0]
-		except: pass
+		except Exception: pass
 
 '''
 	Shape Handling code
@@ -1439,7 +1439,7 @@ def export():
 	# switch out of edit mode if we are in edit mode
 	try:
 		Window.EditMode(0)
-	except:
+	except Exception:
 		pass
 	handleScene()
 	importMaterialList()
@@ -5596,7 +5596,7 @@ if Profiling:
 		import profile
 		import __main__
 		import pstats
-	except:
+	except Exception:
 		Profiling = False
 	
 def entryPoint(a):

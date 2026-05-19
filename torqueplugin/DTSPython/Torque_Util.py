@@ -53,36 +53,42 @@ class StringTable:
 	def __del__(self):
 		del self.strings
 	
-	# Adds a string to the StringTable. The string is stored as an array of char
+	# Adds a string to the StringTable. Strings are stored as raw bytes.
 	def addString(self, strn, caseSensitive=False):
-		# Change strn to array('c')
 		if strn == None: # Add "" if a bad string
 			return self.addString("")
-		
+
+		if isinstance(strn, bytes):
+			strn_bytes = strn
+			strn_text = strn.decode("utf-8", errors="replace")
+		else:
+			strn_text = str(strn)
+			strn_bytes = strn_text.encode("utf-8")
+
 		# Needs to be lower case if not case sensitive
-		if caseSensitive: strn_compare = strn
-		else: strn_compare = strn.lower()
+		if caseSensitive:
+			strn_compare = strn_text
+		else:
+			strn_compare = strn_text.lower()
 		
 		# Firstly, check if the string already exists
 		for i in range(0, len(self.strings)):
+			cur_text = self.strings[i].decode("utf-8", errors="replace")
 			if caseSensitive:
-				if self.strings[i].tostring() == strn_compare:
+				if cur_text == strn_compare:
 					return i
 			else:
-				if self.strings[i].tostring().lower() == strn_compare:
+				if cur_text.lower() == strn_compare:
 					return i
 				
 		# If we got here, we have a new string to add
-		arr = array('c')
-		for c in range(0, len(strn)):
-			arr.append(strn[c])
-		self.strings.append(arr)
+		self.strings.append(strn_bytes)
 		return len(self.strings)-1
 	
 	# Gets a string from the StringTable as a string
 	def get(self, no):
 		if (no > -1) and (no < len(self.strings)):
-			return self.strings[no].tostring()
+			return self.strings[no].decode("utf-8", errors="replace")
 		else:
 			return "" # Nothing really
 	
@@ -94,10 +100,9 @@ class StringTable:
 	def reads(self, fs):
 		# Read in string
 		slen = struct.unpack('<B', fs.read(calcsize('B')))[0]
-		if slen[0] == 0:
-			return array('c') # 0 length array
-		mystr = array('c')
-		mystr.fromfile(fs, slen[0])
+		if slen == 0:
+			return b""
+		mystr = fs.read(slen)
 		self.strings.append(mystr)
 		return mystr
 	
@@ -105,14 +110,14 @@ class StringTable:
 	def print_table(self):
 		print("Strings in table :")
 		for sn in range(0, len(self.strings)):
-			print(self.strings[sn].tostring())
+			print(self.strings[sn].decode("utf-8", errors="replace"))
 	
 	# Writes the StringTable to a file
 	def write(self): # Writes all of the strings
 		count = 0
 		for s in self.strings:
 			fs.write(struct.pack('<B', len(self.strings[count])))
-			self.strings[count].tofile(self.fs)
+			self.fs.write(self.strings[count])
 			count += 1
 
 # Integer Sets...
@@ -158,8 +163,12 @@ def writeIntegerSet(fs, bits):
 # A port of the nice map2dif tokenizer
 class Tokenizer:
 	def __init__(self, buff):
-		self.mBuffer = array('c')	# Current File Buffer
-		self.mBuffer.fromstring(buff.tostring())
+		if hasattr(buff, "tobytes"):
+			self.mBuffer = buff.tobytes().decode("latin1")
+		elif isinstance(buff, bytes):
+			self.mBuffer = buff.decode("latin1")
+		else:
+			self.mBuffer = str(buff)
 		self.mCurrToken = ""		# Token we are on
 		self.mCurrPos = 0		# Position in mBuffer
 		self.mCurrLine = 0		# Current Line in mBuffer
@@ -243,6 +252,11 @@ class Tokenizer:
 # Dump print functions
 dump_file = None
 
+def _as_text(value):
+	if isinstance(value, bytes):
+		return value.decode("utf-8", errors="replace")
+	return str(value)
+
 def dump_setout(filename="stdout"):
 	global dump_file
 	if filename == "stdout":
@@ -251,7 +265,7 @@ def dump_setout(filename="stdout"):
 		print("Dumping output to console")
 	else:
 		dump_file = open(filename, "w")
-		print("Dumping output to file '%s'" % filename)
+		print(f"Dumping output to file '{_as_text(filename)}'")
 
 def dump_finish():
 	if dump_file != None:
@@ -259,13 +273,14 @@ def dump_finish():
 		#dump_file.close()
 	
 def dump_write(string):
+	string = _as_text(string)
 	if dump_file != None:
-		dump_file.write("%s " % string)
+		dump_file.write(f"{string} ")
 	else:
 		print(string, end=' ')
 
 def dump_writeln(string):
-	dump_write("%s\n" % string)
+	dump_write(f"{_as_text(string)}\n")
 	
 # Error and warning dump print functions
 numErrors = 0
@@ -274,12 +289,12 @@ numWarnings = 0
 def dump_writeErr(string):
 	global numErrors
 	numErrors += 1
-	dump_write("%s\n" % string)
+	dump_write(f"{_as_text(string)}\n")
 
 def dump_writeWarning(string):
 	global numWarnings
 	numWarnings += 1
-	dump_write("%s\n" % string)
+	dump_write(f"{_as_text(string)}\n")
 
 
 # Function to ensure all delete operations are called on objects in a list

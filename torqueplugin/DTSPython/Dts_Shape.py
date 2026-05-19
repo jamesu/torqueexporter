@@ -149,11 +149,10 @@ class MaterialList:
 			sz = struct.unpack('<i', fs.read(calcsize('<i')))[0] #S32
 			# Read strings, adding a material for each one
 			for cnt in range(0, sz):
-				st = array('c') 
 				# Read in string..
 				ss = struct.unpack('<b', fs.read(calcsize('<b')))[0] #U8
-				st.fromfile(fs, ss)
-				self.materials.append(dMaterial(st.tostring()))
+				st = fs.read(ss)
+				self.materials.append(dMaterial(st.decode("utf-8", errors="replace")))
 			# Read the rest of the Material properties (ref and ds is F32, rest is U32)
 			for mat in self.materials:
 				mat.flags = struct.unpack('<I', fs.read(calcsize('<I')))[0] # U32
@@ -180,7 +179,7 @@ class MaterialList:
 			except LookupError: mn = mat.name
 			fs.write(struct.pack('<b', len(mn))) # Length of Name
 			st = array('B')
-			st.fromstring(mn)
+			st.frombytes(mn)
 			st.tofile(fs)
 		for mat in self.materials:			
 			fs.write(struct.pack('<I', mat.flags))			
@@ -1190,7 +1189,7 @@ class DtsShape:
 		Torque_Util.dump_writeln("meshes : %d" % len(self.meshes))
 		Torque_Util.dump_writeln("names : %d" % len(self.sTable.strings))
 		for n in self.sTable.strings:
-			Torque_Util.dump_writeln("  %s" % n.tostring())
+			Torque_Util.dump_writeln("  %s" % n.decode("utf-8", errors="replace"))
 		Torque_Util.dump_writeln("smallest visible size : %d" % self.mSmallestVisibleSize)
 		Torque_Util.dump_writeln("smallest visible DL : %d" % self.mSmallestVisibleDL)
 		

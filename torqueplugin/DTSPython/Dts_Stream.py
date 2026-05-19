@@ -48,7 +48,7 @@ except ImportError:
 
 # Snagged from a mailing list
 def little_endian():
-    return ord(array("i",[1]).tostring()[0])
+    return array("i",[1]).tobytes()[0]
 
 class DtsStream:
 	mExporterVersion = int(1)		# Exporter Version
@@ -510,13 +510,15 @@ class DtsStream:
 		mystr = array('B')
 		for ln in range(0, slen):
 			mystr.append(self.readu8()) # May not work
-		return mystr.tostring()
+		return mystr.tobytes()
 	def writeString(self, value):
 		# Write string... in Dts Stream
+		if isinstance(value, str):
+			value = value.encode("utf-8")
 		mystr = array('B')
-		mystr.fromstring(value)
+		mystr.frombytes(value)
 		self.write8(len(mystr))
-		for ln in range(0, len(value)):
+		for ln in range(0, len(mystr)):
 			self.writeu8(mystr[ln])
 	def readStringt(self):
 		# Read in string...(terminated) from Dts Stream
@@ -528,20 +530,22 @@ class DtsStream:
 				mystr.append(val)
 			else:
 				end = 1
-		return mystr.tostring()
+		return mystr.tobytes()
 	def writeStringt(self, value):
 		# Write string... in Dts Stream
 		# Quick fix : If we are None, or length 0, then just terminate
 		if value == None:
 			self.writeu8(0x00)
 			return
+		if isinstance(value, str):
+			value = value.encode("utf-8")
 		elif len(value) == 0:
 			self.writeu8(0x00)
 			return
 
 		# Else just do the normal way
 		mystr = array('B')
-		mystr.fromstring(value)
+		mystr.frombytes(value)
 		if mystr[len(mystr)-1] != 0x00:
 			mystr.append(0x00)
 		for ln in range(0, len(mystr)):
