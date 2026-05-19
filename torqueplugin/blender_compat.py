@@ -208,6 +208,14 @@ def reset_pose_bone_transform(pose_bone):
 			pass
 
 
+def get_pose_bone_scale(pose_bone):
+	if hasattr(pose_bone, "scale"):
+		return pose_bone.scale
+	if hasattr(pose_bone, "size"):
+		return pose_bone.size
+	return (1.0, 1.0, 1.0)
+
+
 def update_pose(obj):
 	raw_obj = getattr(obj, "_obj", obj)
 	if raw_obj is None:

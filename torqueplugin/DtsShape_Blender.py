@@ -981,7 +981,7 @@ class BlenderShape(DtsShape):
 		# Get our values from the poseUtil interface		
 		transVec, quatRot = self.poseUtil.getBoneLocRotLS(arm.name, bonename, pose)
 		# - determine the scale of the bone.
-		scaleVec = pose.bones[bonename].size
+		scaleVec = bc.get_pose_bone_scale(pose.bones[bonename])
 
 
 		# We dump out every transform regardless of whether it matters or not.  This avoids having to
@@ -1240,7 +1240,7 @@ class BlenderShape(DtsShape):
 							# this prevents us from having to do a second pass through the frames.							
 							node = self.nodes[nodeIndex]
 							bonename = self.sTable.get(node.name)
-							scale = self.poseUtil.toTorqueVec(pose.bones[bonename].size)
+							scale = self.poseUtil.toTorqueVec(bc.get_pose_bone_scale(pose.bones[bonename]))
 							if self.isScaled(scale):
 								sequence.matters_scale[nodeIndex] = True
 								sequence.has_scale = True

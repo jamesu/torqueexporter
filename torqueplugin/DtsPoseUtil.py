@@ -260,7 +260,7 @@ class DtsPoseUtilClass:
 		# go backwards through the hierarchy and build a list of scale and rotation operations (both inverse)
 		while parentName != None:
 			rot = self.getBoneRotWS(armName, parentName, pose)
-			scaleRaw = self.toTorqueVec(pose.bones[parentName].size)
+			scaleRaw = self.toTorqueVec(bc.get_pose_bone_scale(pose.bones[parentName]))
 			scaleInv = Vector(1.0/scaleRaw[0], 1.0/scaleRaw[1], 1.0/scaleRaw[2])
 			# check to see if all members are within delta of one, if so, don't
 			# even bother adding them to the list since it'll only throw off accuracy
