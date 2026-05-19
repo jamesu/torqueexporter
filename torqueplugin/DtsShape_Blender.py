@@ -142,9 +142,7 @@ class BlenderShape(DtsShape):
 			#for bonename in armOb.data.bones.keys():
 			for bonename in self.poseUtil.armBones[armOb.name].keys():
 				# reset the bone's transform
-				tempPose.bones[bonename].quat = bMath.Quaternion().identity()
-				tempPose.bones[bonename].size = bMath.Vector(1.0, 1.0, 1.0)
-				tempPose.bones[bonename].loc = bMath.Vector(0.0, 0.0, 0.0)
+				bc.reset_pose_bone_transform(tempPose.bones[bonename])
 			# update the pose.
 			tempPose.update()
 		#Blender.Scene.GetCurrent().makeCurrent()		
@@ -277,9 +275,7 @@ class BlenderShape(DtsShape):
 			#for bonename in armOb.data.bones.keys():
 			for bonename in self.poseUtil.armBones[armOb.name].keys():
 				# reset the bone's transform
-				tempPose.bones[bonename].quat = bMath.Quaternion().identity()
-				tempPose.bones[bonename].size = bMath.Vector(1.0, 1.0, 1.0)
-				tempPose.bones[bonename].loc = bMath.Vector(0.0, 0.0, 0.0)
+				bc.reset_pose_bone_transform(tempPose.bones[bonename])
 			# update the pose.
 			tempPose.update()
 		#Blender.Scene.GetCurrent().makeCurrent()		
@@ -1097,9 +1093,7 @@ class BlenderShape(DtsShape):
 			#for bonename in armOb.data.bones.keys():
 			for bonename in self.poseUtil.armBones[armOb.name].keys():
 				# reset the bone's transform
-				tempPose.bones[bonename].quat = bMath.Quaternion().identity()
-				tempPose.bones[bonename].size = bMath.Vector(1.0, 1.0, 1.0)
-				tempPose.bones[bonename].loc = bMath.Vector(0.0, 0.0, 0.0)
+				bc.reset_pose_bone_transform(tempPose.bones[bonename])
 			# update the pose.
 			tempPose.update()
 
@@ -1438,9 +1432,7 @@ class BlenderShape(DtsShape):
 				tempPose = bc.get_object_pose(armOb)
 				for bonename in self.poseUtil.armBones[armOb.name].keys():
 					# reset the bone's transform
-					tempPose.bones[bonename].quat = bMath.Quaternion().identity()
-					tempPose.bones[bonename].size = bMath.Vector(1.0, 1.0, 1.0)
-					tempPose.bones[bonename].loc = bMath.Vector(0.0, 0.0, 0.0)
+					bc.reset_pose_bone_transform(tempPose.bones[bonename])
 				# update the pose.
 				tempPose.update()
 

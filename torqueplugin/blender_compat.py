@@ -147,6 +147,44 @@ def is_armature_in_rest_pose(obj):
 	return False
 
 
+def reset_pose_bone_transform(pose_bone):
+	if hasattr(pose_bone, "rotation_mode"):
+		try:
+			pose_bone.rotation_mode = "QUATERNION"
+		except Exception:
+			pass
+	if hasattr(pose_bone, "rotation_quaternion"):
+		try:
+			pose_bone.rotation_quaternion = (1.0, 0.0, 0.0, 0.0)
+		except Exception:
+			pass
+	elif hasattr(pose_bone, "quat"):
+		try:
+			pose_bone.quat = (0.0, 0.0, 0.0, 1.0)
+		except Exception:
+			pass
+	if hasattr(pose_bone, "location"):
+		try:
+			pose_bone.location = (0.0, 0.0, 0.0)
+		except Exception:
+			pass
+	elif hasattr(pose_bone, "loc"):
+		try:
+			pose_bone.loc = (0.0, 0.0, 0.0)
+		except Exception:
+			pass
+	if hasattr(pose_bone, "scale"):
+		try:
+			pose_bone.scale = (1.0, 1.0, 1.0)
+		except Exception:
+			pass
+	elif hasattr(pose_bone, "size"):
+		try:
+			pose_bone.size = (1.0, 1.0, 1.0)
+		except Exception:
+			pass
+
+
 def get_pose_bone_matrix(pose_bone):
 	if hasattr(pose_bone, "matrix"):
 		return pose_bone.matrix
