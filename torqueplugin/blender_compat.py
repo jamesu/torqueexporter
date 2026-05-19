@@ -59,6 +59,12 @@ def get_object_pose(obj):
 	return None
 
 
+def get_object_ipo(obj):
+	if hasattr(obj, "getIpo"):
+		return obj.getIpo()
+	return None
+
+
 def get_object_matrix(obj):
 	if hasattr(obj, "matrix_world"):
 		return obj.matrix_world
@@ -171,6 +177,18 @@ def get_actions():
 	if Blender is not None:
 		return Blender.Armature.NLA.GetActions()
 	return {}
+
+
+def get_action_channel_ipos(action):
+	if hasattr(action, "getAllChannelIpos"):
+		return action.getAllChannelIpos()
+	if bpy is not None and hasattr(action, "fcurves"):
+		return {fc.data_path: fc for fc in action.fcurves}
+	return {}
+
+
+def get_ipo_scale_index(name):
+	return {"ScaleX": 0, "ScaleY": 1, "ScaleZ": 2}.get(name, None)
 
 
 def set_frame(scene, frame):

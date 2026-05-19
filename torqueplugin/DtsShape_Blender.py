@@ -1319,7 +1319,7 @@ class BlenderShape(DtsShape):
 		# the transforms to be keyed in place for some reason.
 		nodeFound = False
 		nodeIndex = None
-		channels = action.getAllChannelIpos()
+		channels = bc.get_action_channel_ipos(action)
 		for channel_name in channels:
 			if channels[channel_name] == None or channels[channel_name].getNcurves() == 0: continue
 			nodeIndex = self.getNodeIndex(channel_name)
@@ -1477,7 +1477,7 @@ class BlenderShape(DtsShape):
 
 			# temporarily remove scale ipos
 			tempDict = {}
-			channelIpos = action.getAllChannelIpos()
+			channelIpos = bc.get_action_channel_ipos(action)
 			for ipoName in channelIpos.keys():
 				tempDict[ipoName] = {}
 				tempDict[ipoName]['X'] = {}
@@ -1519,7 +1519,7 @@ class BlenderShape(DtsShape):
 
 			# restore scale IPOs (only if they existed in the first place)
 			nf = getHighestActFrame(act)
-			channelIpos = action.getAllChannelIpos()
+			channelIpos = bc.get_action_channel_ipos(action)
 			for ipoName in channelIpos.keys():
 				ipo = channelIpos[ipoName]
 
@@ -1770,7 +1770,7 @@ class BlenderShape(DtsShape):
 				elif keyedObj['IPOType'] == "Material":
 					bObj = bc.get_material(keyedObj['IPOObject'])
 
-				bIpo = bObj.getIpo()
+				bIpo = bc.get_object_ipo(bObj)
 				IPOCurveName = getBlenderIPOChannelConst(keyedObj['IPOType'], keyedObj['IPOChannel'])
 				IPOCurve = None
 				IPOCurveConst = bIpo.curveConsts[IPOCurveName]

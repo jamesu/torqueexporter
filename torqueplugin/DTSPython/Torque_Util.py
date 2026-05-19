@@ -478,7 +478,7 @@ def validateVisibility(seqName, seqPrefs):
 						bObj = bc.get_object(track['IPOObject'])
 					elif track['IPOType'] == "Material":
 						bObj = bc.get_material(track['IPOObject'])
-					bIpo = bObj.getIpo()
+					bIpo = bc.get_object_ipo(bObj)
 					IPOCurveName = getBlenderIPOChannelConst(track['IPOType'], track['IPOChannel'])
 					IPOCurve = None
 					IPOCurveConst = bIpo.curveConsts[IPOCurveName]
