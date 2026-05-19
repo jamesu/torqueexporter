@@ -25,6 +25,8 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 import DTSPython
 from DTSPython import *
 
+from bisect import bisect_left
+
 import blender_compat as bc
 import Blender
 from Blender import NMesh
