@@ -826,14 +826,17 @@ class TORQUEEXPORTER_PT_scene_panel(bpy.types.Panel):
 		layout = self.layout
 		try:
 			state = context.scene.torque_export_ui
-			if not state.ui_initialized:
-				_sync_state_from_legacy(state)
-
 			layout.prop(state, "display_mode", expand=True)
 			row = layout.row(align=True)
 			row.operator("torqueexporter.refresh_ui", text="Refresh")
 			row.operator("torqueexporter.apply_ui", text="Sync")
 			row.operator("torqueexporter.export_from_ui", text="Export", icon="EXPORT")
+
+			if not state.ui_initialized:
+				box = layout.box()
+				box.label(text="Torque UI not initialized")
+				box.label(text="Use Refresh to load current scene/prefs.")
+				return
 
 			if state.display_mode == "CLASSIC":
 				_draw_legacy(layout, state)
