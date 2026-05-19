@@ -1285,7 +1285,7 @@ class ShapeTree(SceneTree):
 				# Process sequences
 				seqKeys = Prefs['Sequences'].keys()
 				if len(seqKeys) > 0:
-					progressBar.pushTask("Adding Sequences..." , len(seqKeys*4), 0.8)
+					progressBar.pushTask("Adding Sequences..." , len(seqKeys) * 4, 0.8)
 					for seqName in seqKeys:
 						seqKey = getSequenceKey(seqName)
 
