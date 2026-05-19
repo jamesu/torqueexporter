@@ -342,7 +342,13 @@ def stripImageExtension(imagename, filename=""):
 		     'ppm', 'bmp', 'pcc', 'xbm',
 		     'xpm', 'xwd', 'bitmap']
 	temp = ""
+	if imagename is None:
+		imagename = ""
 	if filename != "": filename = stripPath(filename)
+	if filename is None:
+		filename = ""
+	if imagename == "" and filename == "":
+		return ""
 	if len(imagename) < len(filename) and imagename == filename[0:len(imagename)]:
 		temp = filename.split(".")
 	else:
