@@ -52,19 +52,16 @@ def BuildCurveMap(ipo):
 
 # Function to determine what animation is present in a curveMap
 def getCMapSupports(curveMap):
-	try:
-		foo = curveMap['LocX']
-		has_loc = True
-	except KeyError: has_loc = False
-	try:
-		foo = curveMap['QuatX']
-		has_rot = True
-	except KeyError: has_rot = False
-	try:
-		foo = curveMap['SizeX']
-		has_scale = True
-	except KeyError: has_scale = False
-	return has_loc,has_rot,has_scale
+	return getCurveSupportNames(curveMap)
+	
+def getCurveSupportNames(curveMap):
+	locNames = ('LocX', 'LocY', 'LocZ')
+	rotNames = ('QuatX', 'QuatY', 'QuatZ', 'QuatW', 'RotX', 'RotY', 'RotZ')
+	scaleNames = ('ScaleX', 'ScaleY', 'ScaleZ', 'SizeX', 'SizeY', 'SizeZ')
+	has_loc = any(name in curveMap for name in locNames)
+	has_rot = any(name in curveMap for name in rotNames)
+	has_scale = any(name in curveMap for name in scaleNames)
+	return has_loc, has_rot, has_scale
 	
 # gets the highest frame in an action
 def getHighestActFrame(act):
@@ -1318,16 +1315,18 @@ class BlenderShape(DtsShape):
 			# determine channel type and force matters for all channels that are explicitly keyed.
 			# I'm still not sure if I really want to do this :)
 			try:
-				if (channels[channel_name].getCurve('LocX') != None) or (channels[channel_name].getCurve('LocY') != None) or (channels[channel_name].getCurve('LocZ') != None):
+				curveMap = BuildCurveMap(channels[channel_name])
+				has_loc, has_rot, has_scale = getCurveSupportNames(curveMap)
+				if has_loc:
 					sequence.matters_translation[nodeIndex] = True
 					sequence.has_loc = True
-				if (channels[channel_name].getCurve('QuatX') != None) or (channels[channel_name].getCurve('QuatY') != None) or (channels[channel_name].getCurve('QuatZ') != None):
+				if has_rot:
 					sequence.matters_rotation[nodeIndex] = True
 					sequence.has_rot = True
 				scale_x = channels[channel_name][bc.get_ipo_scale_index("ScaleX")]
 				scale_y = channels[channel_name][bc.get_ipo_scale_index("ScaleY")]
 				scale_z = channels[channel_name][bc.get_ipo_scale_index("ScaleZ")]
-				if (scale_x != None) or (scale_y != None) or (scale_z != None):
+				if has_scale or (scale_x != None) or (scale_y != None) or (scale_z != None):
 					nf = getHighestActFrame(action)
 					sequence.matters_scale[nodeIndex] = True
 					sequence.has_scale = True

@@ -317,7 +317,7 @@ def get_action_channel_ipos(action):
 
 
 def get_ipo_scale_index(name):
-	return {"ScaleX": 0, "ScaleY": 1, "ScaleZ": 2}.get(name, None)
+	return {"ScaleX": 0, "ScaleY": 1, "ScaleZ": 2, "SizeX": 0, "SizeY": 1, "SizeZ": 2}.get(name, None)
 
 
 def get_ipo_curve_names():

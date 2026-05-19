@@ -287,6 +287,9 @@ class _IpoProxy:
 			"ScaleX": "ScaleX",
 			"ScaleY": "ScaleY",
 			"ScaleZ": "ScaleZ",
+			"SizeX": "ScaleX",
+			"SizeY": "ScaleY",
+			"SizeZ": "ScaleZ",
 		}
 
 	def getCurves(self):
@@ -296,9 +299,11 @@ class _IpoProxy:
 		return len(self._curves)
 
 	def getCurve(self, name):
+		name = self.curveConsts.get(name, name)
 		return self._curves.get(name)
 
 	def addCurve(self, name):
+		name = self.curveConsts.get(name, name)
 		if name in self._curves:
 			return self._curves[name]
 		fcurve = _ensure_fcurve(self._action, self._owner, name)
@@ -307,6 +312,8 @@ class _IpoProxy:
 		return curve
 
 	def __getitem__(self, key):
+		if isinstance(key, str):
+			key = self.curveConsts.get(key, key)
 		if key in self._curves:
 			return self._curves[key]
 		if key == 0:
@@ -318,6 +325,8 @@ class _IpoProxy:
 		return None
 
 	def __setitem__(self, key, value):
+		if isinstance(key, str):
+			key = self.curveConsts.get(key, key)
 		if value is not None:
 			return
 		name = {0: "ScaleX", 1: "ScaleY", 2: "ScaleZ"}.get(key, key)

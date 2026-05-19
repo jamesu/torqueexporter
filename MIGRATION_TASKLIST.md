@@ -66,10 +66,11 @@ Status: the active mesh/material path now resolves image data through helper fun
 - [x] Replace legacy pose access in `torqueplugin/DtsShape_Blender.py` and `torqueplugin/DtsPoseUtil.py` with current pose-bone APIs.
 - [x] Update bone lookup, rest pose, and pose evaluation logic for modern armatures.
 - [x] Replace IPO/action-based animation handling with current action and FCurve APIs.
-- [ ] Rebuild curve discovery logic that currently depends on IPO curve names like `LocX`, `QuatX`, and `SizeX`.
+- [x] Rebuild curve discovery logic that currently depends on IPO curve names like `LocX`, `QuatX`, and `SizeX`.
 - [ ] Validate frame sampling, sequence generation, and node animation export against known good files.
 
 Status: the active sequence export and visibility-validation paths now use helper-based action-channel and IPO access. The exporter preserves legacy curve semantics for imported old scenes, but the core action handling is now routed through the modern helper layer.
+Status: curve discovery now runs through a shared curve-map helper that recognizes both legacy and alias scale names, so `LocX`/`QuatX`/`SizeX`-style detection no longer lives in the main animation scan.
 Status: armature export now uses helper-based rest-matrix and pose-matrix access in `DtsPoseUtil.py` and `DtsShape_Blender.py`, so the active path no longer depends on legacy pose access methods or bone-space matrix lookups.
 
 ## 7. Geometry And Modifier Evaluation
