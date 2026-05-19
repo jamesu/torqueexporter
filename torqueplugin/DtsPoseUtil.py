@@ -333,6 +333,7 @@ class DtsPoseUtilClass:
 		offsetWS = boneLocWS - parentBoneLocWS
 		# scale the offset by armature's scale
 		armSize = self.armInfo[armName][ARMSIZE]
+		offsetWS = Vector(offsetWS[0] * armSize[0], offsetWS[1] * armSize[1], offsetWS[2] * armSize[2])
 		# rotate the offset into the parent bone's default local space		
 		offsetPS = self.armBones[armName][parentName][BONERESTROTWS].inverse().apply(offsetWS)
 		return offsetPS

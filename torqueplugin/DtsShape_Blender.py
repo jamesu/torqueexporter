@@ -310,15 +310,19 @@ class BlenderShape(DtsShape):
 				# Must be unique
 				pNodeIdx = -1
 			# Check to see if the mesh is parented to a bone				
-				oparent = bc.get_object_parent(o)
-				if oparent != None and bc.is_armature_object(oparent) and o.parentbonename != None:
-					for node in self.nodes[0:len(self.nodes)]:
-						if self.sTable.get(node.name) == o.parentbonename:
-							pNodeIdx = node.name
-							break
-				obj = dObject(self.addName(detail_name), -1, -1, pNodeIdx)
-				obj.tempMeshes = []
-				self.objects.append(obj)
+			oparent = bc.get_object_parent(o)
+			if oparent != None and bc.is_armature_object(oparent) and o.parentbonename != None:
+				for node in self.nodes[0:len(self.nodes)]:
+					if self.sTable.get(node.name) == o.parentbonename:
+						pNodeIdx = node.name
+						break
+			if obj != None and pNodeIdx >= 0:
+				obj.node = pNodeIdx
+			elif obj == None and pNodeIdx >= 0:
+				pass
+			obj = dObject(self.addName(detail_name), -1, -1, pNodeIdx)
+			obj.tempMeshes = []
+			self.objects.append(obj)
 				
 			# Kill the clones
 			if (self.subshapes[0].numObjects != 0) and (len(obj.tempMeshes) > self.numBaseDetails):
