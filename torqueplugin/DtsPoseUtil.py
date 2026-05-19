@@ -449,12 +449,28 @@ class DtsPoseUtilClass:
 		return bMath.Vector(v[0], v[1], v[2])
 
 	def toTorqueQuat(self, q):
-		q = q.inverse().normalize()
-		return Quaternion(q[1],q[2],q[3],q[0])
+		if hasattr(q, "normalize"):
+			q = q.copy() if hasattr(q, "copy") else q
+			q.normalize()
+		if hasattr(q, "conjugated") and not hasattr(q, "inverse"):
+			q = q.conjugated()
+		elif hasattr(q, "inverse"):
+			q = q.inverse()
+			if hasattr(q, "normalize"):
+				q.normalize()
+		return Quaternion(q[1], q[2], q[3], q[0])
 
 	def toBlenderQuat(self, q):
-		q = q.inverse().normalize()		
-		return bMath.Quaternion(q[3],q[0],q[1],q[2])
+		if hasattr(q, "normalize"):
+			q = q.copy() if hasattr(q, "copy") else q
+			q.normalize()
+		if hasattr(q, "conjugated") and not hasattr(q, "inverse"):
+			q = q.conjugated()
+		elif hasattr(q, "inverse"):
+			q = q.inverse()
+			if hasattr(q, "normalize"):
+				q.normalize()
+		return bMath.Quaternion(q[3], q[0], q[1], q[2])
 
 	
 
