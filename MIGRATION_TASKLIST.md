@@ -33,6 +33,11 @@ Status: the legacy API inventory is now captured in [API_USAGE_INVENTORY.md](/Us
 - [ ] Add clean `register()` and `unregister()` entry points.
 - [ ] Ensure the exporter can be enabled/disabled without requiring manual script execution.
 
+Status note: placeholder Blender 4.x preview surfaces now exist for the Properties editor, 3D View sidebar, and popup/dialog context so layout scale can be compared before the real controls are ported.
+Status note: a Scene panel port has started in `torqueplugin/ui_port.py`, and the porting checklist now lives in [UI_PORT_CHECKLIST.md](/Users/jamesu/Desktop/torqueexporter/UI_PORT_CHECKLIST.md).
+Status note: the Scene panel now writes changes back into the legacy config model live, and the export button saves prefs before handing off to the legacy export routine.
+Status note: the Materials section in `torqueplugin/ui_port.py` now exposes the old U/V texture list behavior with refresh/select support, matching the legacy importer-driven material entries more closely.
+
 ## 3. Preferences And Configuration
 
 - [ ] Replace registry-based preferences in `torqueplugin/Dts_Blender.py` with `bpy.props` and add-on preferences.
