@@ -31,15 +31,38 @@ def get_object_name(obj):
 	return getattr(obj, "name", None)
 
 
+def _legacy_object_type_name(type_name):
+	if type_name is None:
+		return None
+	type_name = str(type_name)
+	if type_name == "":
+		return type_name
+	legacy_map = {
+		"ARMATURE": "Armature",
+		"CAMERA": "Camera",
+		"CURVE": "Curve",
+		"EMPTY": "Empty",
+		"LAMP": "Lamp",
+		"LIGHT": "Lamp",
+		"MESH": "Mesh",
+		"META": "Meta",
+		"SURFACE": "Surf",
+		"TEXT": "Text",
+		"LATTICE": "Lattice",
+	}
+	return legacy_map.get(type_name.upper(), type_name)
+
+
 def get_object_type(obj):
-	return getattr(obj, "type", None)
+	return _legacy_object_type_name(getattr(obj, "type", None))
 
 
 def get_object_data(obj, *args):
 	raw_obj = getattr(obj, "_obj", obj)
 	if hasattr(raw_obj, "data"):
 		data = raw_obj.data
-		if bpy is not None and get_object_type(raw_obj) == "MESH":
+		raw_type = str(getattr(raw_obj, "type", "")).upper()
+		if bpy is not None and raw_type == "MESH":
 			apply_modifiers = any(bool(arg) for arg in args)
 			return get_mesh_data(raw_obj, apply_modifiers=apply_modifiers)
 		return data
@@ -66,7 +89,7 @@ def get_mesh_data(obj, apply_modifiers=False):
 	raw_obj = getattr(obj, "_obj", obj)
 	if bpy is None or raw_obj is None:
 		return get_object_data(obj)
-	if get_object_type(raw_obj) != "MESH":
+	if str(getattr(raw_obj, "type", "")).upper() != "MESH":
 		return get_object_data(obj)
 	mesh = getattr(raw_obj, "data", None)
 	if mesh is None:
@@ -252,7 +275,7 @@ def get_object_scale(obj):
 
 def is_armature_object(obj):
 	obj_type = get_object_type(obj)
-	if obj_type in ("ARMATURE", "Armature"):
+	if obj_type == "Armature":
 		return True
 	if hasattr(obj, "getType"):
 		return obj.getType() == "Armature"

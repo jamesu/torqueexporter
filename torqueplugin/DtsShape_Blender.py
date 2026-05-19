@@ -1207,46 +1207,47 @@ class BlenderShape(DtsShape):
 			# add ground frames
 			self.addGroundFrame(sequence, curFrame, boundsStartMat)
 			# loop through each armature
-		for armIdx in range(0, len(self.addedArmatures)):
-			arm = self.addedArmatures[armIdx][0]
-			pose = bc.get_object_pose(arm)
-			# loop through each node for the current frame.
-			#i = 0
-			for nodeIndex in range(1, len(self.nodes)):
-				# since Armature.getPose() leaks memory in Blender 2.41, skip nodes not
-				# belonging to the current armature to avoid having to call it unnecessarily.
-				if self.nodes[nodeIndex].armIdx != armIdx: continue
-				if isBlend: 
-					baseTransform = baseTransforms[nodeIndex]
-				else:
-					baseTransform = None
-				if not addScale:
-					# make sure we're not past the end of our action
-					if frame < numFrameSamples:
-						# let's pretend that everything matters, we'll remove the cruft later
-						# this prevents us from having to do a second pass through the frames.
-						loc, rot, scale = self.getPoseTransform(sequence, nodeIndex, curFrame, pose, baseTransform)
-						sequence.frames[nodeIndex].append([loc,rot,scale])
-					# if we're past the end, just duplicate the last good frame.
+			for armIdx in range(0, len(self.addedArmatures)):
+				arm = self.addedArmatures[armIdx][0]
+				pose = bc.get_object_pose(arm)
+				# loop through each node for the current frame.
+				#i = 0
+				for nodeIndex in range(1, len(self.nodes)):
+					# since Armature.getPose() leaks memory in Blender 2.41, skip nodes not
+					# belonging to the current armature to avoid having to call it unnecessarily.
+					if self.nodes[nodeIndex].armIdx != armIdx:
+						continue
+					if isBlend: 
+						baseTransform = baseTransforms[nodeIndex]
 					else:
-						loc, rot, scale = sequence.frames[nodeIndex][-1][0], sequence.frames[nodeIndex][-1][1], sequence.frames[nodeIndex][-1][2]
-						sequence.frames[nodeIndex].append([loc,rot,scale])
-				else:
-					# make sure we're not past the end of our action
-					if frame < numFrameSamples:
-						# let's pretend that everything matters, we'll remove the cruft later
-						# this prevents us from having to do a second pass through the frames.							
-						node = self.nodes[nodeIndex]
-						bonename = self.sTable.get(node.name)
-						scale = self.poseUtil.toTorqueVec(pose.bones[bonename].size)
-						if self.isScaled(scale):
-							sequence.matters_scale[nodeIndex] = True
-							sequence.has_scale = True
-							sequence.frames[nodeIndex][frame][2] = scale
-					# if we're past the end, just duplicate the last good frame.
+						baseTransform = None
+					if not addScale:
+						# make sure we're not past the end of our action
+						if frame < numFrameSamples:
+							# let's pretend that everything matters, we'll remove the cruft later
+							# this prevents us from having to do a second pass through the frames.
+							loc, rot, scale = self.getPoseTransform(sequence, nodeIndex, curFrame, pose, baseTransform)
+							sequence.frames[nodeIndex].append([loc, rot, scale])
+						# if we're past the end, just duplicate the last good frame.
+						else:
+							loc, rot, scale = sequence.frames[nodeIndex][-1][0], sequence.frames[nodeIndex][-1][1], sequence.frames[nodeIndex][-1][2]
+							sequence.frames[nodeIndex].append([loc, rot, scale])
 					else:
-						loc, rot, scale = sequence.frames[nodeIndex][-1][0], sequence.frames[nodeIndex][-1][1], sequence.frames[nodeIndex][-1][2]
-						sequence.frames[nodeIndex].append([loc,rot,scale])
+						# make sure we're not past the end of our action
+						if frame < numFrameSamples:
+							# let's pretend that everything matters, we'll remove the cruft later
+							# this prevents us from having to do a second pass through the frames.							
+							node = self.nodes[nodeIndex]
+							bonename = self.sTable.get(node.name)
+							scale = self.poseUtil.toTorqueVec(pose.bones[bonename].size)
+							if self.isScaled(scale):
+								sequence.matters_scale[nodeIndex] = True
+								sequence.has_scale = True
+								sequence.frames[nodeIndex][frame][2] = scale
+						# if we're past the end, just duplicate the last good frame.
+						else:
+							loc, rot, scale = sequence.frames[nodeIndex][-1][0], sequence.frames[nodeIndex][-1][1], sequence.frames[nodeIndex][-1][2]
+							sequence.frames[nodeIndex].append([loc, rot, scale])
 
 
 
