@@ -802,14 +802,16 @@ class DtsMesh:
 			newPrimitives = []
 			newIndices = []
 			for c in self.clusters:
+				origStart = c.startPrimitive
+				origEnd = c.endPrimitive
 				# We need to update offsets for primitives when we strip (since there will be less of them)
 				c.startPrimitive = len(newPrimitives)
-				for p in self.primitives[c.startPrimitive:c.endPrimitive]:
+				for p in self.primitives[origStart:origEnd]:
 					stripper.faces.append([self.indices[p.firstElement:p.firstElement+p.numElements], p.matindex])
 				# Ready, Steady, Strip!
 				stripper.strip()
 				for strip in stripper.strips:
-					self.primitives.append(Primitive(len(newIndices),len(strip[0]),strip[1]))
+					newPrimitives.append(Primitive(len(newIndices),len(strip[0]),strip[1]))
 					for ind in strip[0]:
 						newIndices.append(ind)
 				c.endPrimitive = len(newPrimitives)

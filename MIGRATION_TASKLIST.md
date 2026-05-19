@@ -82,6 +82,7 @@ Status: the anisotropic scale two-pass restore path now preserves the separate X
 - [ ] Recheck vertex weights, skinning, and root bone assignment against modern armature deformation behavior.
 
 Status: skinned meshes now fall back to the exporter’s catch-root node when an unweighted vertex needs a default bone, so the active path has a deterministic root assignment instead of `-1`.
+Status: triangle-strip batching for sorted meshes now preserves original primitive ranges while rebuilding new primitives, fixing a cluster-path offset bug that would have made validation unreliable.
 
 ## 8. UI And Export Workflow
 
