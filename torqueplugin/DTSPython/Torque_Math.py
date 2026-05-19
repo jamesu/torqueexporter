@@ -510,17 +510,17 @@ else:
 				self.members[0] * float(other),
 				self.members[1] * float(other),
 				self.members[2] * float(other))
-			def __div__(self, other):
-				result = Vector()
-				# iterate through the members
-				for i in range(len(self.members)):
-					# divide by the val stored in other
-					if self.members[i] != 0:
-						result.members[i] = self.members[i] / float(other)
-					else:
-						result.members[i] = 0.0
-				return result
-			__truediv__ = __div__
+		def __div__(self, other):
+			result = Vector()
+			# iterate through the members
+			for i in range(len(self.members)):
+				# divide by the val stored in other
+				if self.members[i] != 0:
+					result.members[i] = self.members[i] / float(other)
+				else:
+					result.members[i] = 0.0
+			return result
+		__truediv__ = __div__
 		def __eq__(self, other):
 			if len(other.members) != len(self.members):
 				return False
