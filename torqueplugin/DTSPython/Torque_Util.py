@@ -251,14 +251,16 @@ class Tokenizer:
 
 # Dump print functions
 dump_file = None
+dump_echo_stdout = False
 
 def _as_text(value):
 	if isinstance(value, bytes):
 		return value.decode("utf-8", errors="replace")
 	return str(value)
 
-def dump_setout(filename="stdout"):
-	global dump_file
+def dump_setout(filename="stdout", echo_stdout=False):
+	global dump_file, dump_echo_stdout
+	dump_echo_stdout = echo_stdout
 	if filename == "stdout":
 		if dump_file != None: dump_file.close()
 		dump_file = None
@@ -276,6 +278,8 @@ def dump_write(string):
 	string = _as_text(string)
 	if dump_file != None:
 		dump_file.write(f"{string} ")
+		if dump_echo_stdout:
+			print(string, end=' ')
 	else:
 		print(string, end=' ')
 

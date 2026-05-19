@@ -5637,23 +5637,21 @@ def entryPoint(a):
 	
 	loadPrefs()
 	
-	if Debug:
-		Torque_Util.dump_setout("stdout")
-	else:
-		# double check the file name before opening the log
-		if Prefs['exportBasename'] == "":
-			Prefs['exportBasename'] = noext(basename(Blender.Get("filename")))
-		
-		try: x = Prefs['LogToOutputFolder']
-		except KeyError: Prefs['LogToOutputFolder'] = True
-		if Prefs['LogToOutputFolder']:
-			getPathSeperator(Prefs['exportBasepath'])
-			Torque_Util.dump_setout( "%s%s%s.log" % (Prefs['exportBasepath'], pathSeperator, Prefs['exportBasename']) )
-		else:
-			Torque_Util.dump_setout("%s.log" % noext(Blender.Get("filename")))
-		
-		
+	# double check the file name before opening the log
+	if Prefs['exportBasename'] == "":
+		Prefs['exportBasename'] = noext(basename(Blender.Get("filename")))
 	
+	try: x = Prefs['LogToOutputFolder']
+	except KeyError: Prefs['LogToOutputFolder'] = True
+	if Prefs['LogToOutputFolder']:
+		getPathSeperator(Prefs['exportBasepath'])
+		log_name = "%s%s%s.log" % (Prefs['exportBasepath'], pathSeperator, Prefs['exportBasename'])
+	else:
+		log_name = "%s.log" % noext(Blender.Get("filename"))
+	Torque_Util.dump_setout(log_name, echo_stdout=Debug)
+		
+		
+		
 	Torque_Util.dump_writeln("Torque Exporter %s " % Version)
 	Torque_Util.dump_writeln("Using blender, version %s" % Blender.Get('version'))
 	
