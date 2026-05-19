@@ -413,8 +413,9 @@ def get_ipo_curve_key(ipo, name):
 
 
 def set_frame(scene, frame):
+	raw_scene = getattr(scene, "_scene", scene)
 	if bpy is not None and scene is not None:
-		scene.frame_set(frame)
+		raw_scene.frame_set(frame)
 		return
 	if Blender is not None:
 		Blender.Scene.GetCurrent().getRenderingContext().currentFrame(frame)
