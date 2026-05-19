@@ -285,8 +285,13 @@ def loadPrefs():
 				success = False
 		if success and newConfig:
 			execStr = "loadPrefs = "
-			for line in text_doc.asLines():
-				execStr += line
+			if hasattr(text_doc, "as_string"):
+				execStr += text_doc.as_string()
+			elif hasattr(text_doc, "asLines"):
+				for line in text_doc.asLines():
+					execStr += line
+			else:
+				execStr += str(text_doc)
 			try:
 				exec(execStr)
 			except Exception:

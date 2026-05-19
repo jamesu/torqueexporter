@@ -123,6 +123,8 @@ Status: preference loading now falls back to inferred defaults when registry/tex
 - [ ] Document known limitations, especially where Torque DTS behavior is preserved over Blender-native conventions.
 - [ ] Add a short migration note explaining that this file is the active task tracker for the rewrite.
 
+Status: the repository now includes [INSTALL.md](/Users/jamesu/Desktop/torqueexporter/INSTALL.md) with separate guidance for in-place development and legacy-script installation. The true modern Blender add-on install path remains tied to the add-on-structure work in section 2.
+
 ## Suggested Execution Order
 
 1. Establish target Blender version and baseline behavior.
