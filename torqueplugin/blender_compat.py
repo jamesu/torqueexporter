@@ -36,11 +36,46 @@ def get_object_type(obj):
 
 
 def get_object_data(obj, *args):
-	if hasattr(obj, "data"):
-		return obj.data
+	raw_obj = getattr(obj, "_obj", obj)
+	if hasattr(raw_obj, "data"):
+		data = raw_obj.data
+		if bpy is not None and get_object_type(raw_obj) == "MESH":
+			apply_modifiers = any(bool(arg) for arg in args)
+			return get_mesh_data(raw_obj, apply_modifiers=apply_modifiers)
+		return data
 	if hasattr(obj, "getData"):
 		return obj.getData(*args)
 	return None
+
+
+def get_mesh_data(obj, apply_modifiers=False):
+	raw_obj = getattr(obj, "_obj", obj)
+	if bpy is None or raw_obj is None:
+		return get_object_data(obj)
+	if get_object_type(raw_obj) != "MESH":
+		return get_object_data(obj)
+	mesh = getattr(raw_obj, "data", None)
+	if mesh is None:
+		return None
+	temp_mesh = None
+	if apply_modifiers and hasattr(raw_obj, "evaluated_get"):
+		try:
+			depsgraph = bpy.context.evaluated_depsgraph_get()
+			evaluated = raw_obj.evaluated_get(depsgraph)
+			temp_mesh = bpy.data.meshes.new_from_object(evaluated, preserve_all_data_layers=True, depsgraph=depsgraph)
+			mesh = temp_mesh
+		except Exception:
+			mesh = getattr(raw_obj, "data", None)
+	try:
+		if hasattr(Blender, "wrap_mesh"):
+			return Blender.wrap_mesh(mesh, owner_object=raw_obj)
+		return mesh
+	finally:
+		if temp_mesh is not None:
+			try:
+				bpy.data.meshes.remove(temp_mesh)
+			except Exception:
+				pass
 
 
 def get_object_parent(obj):

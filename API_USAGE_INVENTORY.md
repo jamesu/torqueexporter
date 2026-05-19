@@ -114,6 +114,7 @@ Mesh conversion path.
 - Uses `import Blender` and `from Blender import NMesh`.
 - Uses `msh.mode`, `NMesh.Modes.TWOSIDED`, `NMesh.FaceModes.TWOSIDE`.
 - Uses face/image/material access patterns that need a modern mesh/UV/material rewrite.
+Status: the active export path now snapshots modern evaluated `bpy.types.Mesh` data into a legacy-style proxy, including faces, UVs, materials, and vertex-group weights, so the mesh exporter can operate without the removed `getFromObject()` path.
 
 ### `torqueplugin/DtsPoseUtil.py`
 
@@ -166,3 +167,4 @@ Status: the package import chain now resolves under Python 3, including the lega
 Status: preference bootstrap now falls back to inferred defaults instead of hard-failing when Registry/text configuration is unavailable.
 Status: the active export path now uses modern object, parent, and data access helpers for mesh, armature, and sequence import flows, reducing direct `getType()`/`getData()` usage in the main code path.
 Status: animation and visibility code now route through explicit helper accessors for action channels and IPO lookup. Legacy curve names are still preserved in the compatibility layer so old scenes continue to evaluate the same way after import into modern Blender.
+Status: mesh export now snapshots evaluated Blender meshes into a read-only compatibility proxy, replacing the removed temporary-mesh and `getFromObject()` workflow for modifier-aware exports.

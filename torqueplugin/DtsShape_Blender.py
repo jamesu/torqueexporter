@@ -355,22 +355,13 @@ class BlenderShape(DtsShape):
 				hasModifiers = True
 			else:
 				hasModifiers = False			
-			# Otherwise, get the final display data, as affected by modifers.
-			if (not hasArmatureDeform) and hasModifiers:				
-				try:
-					temp_obj = bc.get_object("DTSExpObj_Tmp")
-				except:
-					temp_obj = Blender.Object.New("Mesh", "DTSExpObj_Tmp")
-				try:
-					mesh_data = Blender.Mesh.Get("DTSExpMshObj_Tmp")
-				except:
-					mesh_data = Blender.Mesh.New("DTSExpMshObj_Tmp")
-				mesh_data.getFromObject(o)
-				temp_obj.link(mesh_data)
-			# if we have armature deformation, or don't have any modifiers, get the mesh data the old fashon way
-			else:
+			# Otherwise, get the final display data, as affected by modifiers.
+			# Modern Blender no longer supports getFromObject(), so the compatibility
+			# layer returns an evaluated mesh snapshot when modifiers should be applied.
+			if (not hasArmatureDeform) and hasModifiers:
 				mesh_data = bc.get_object_data(o, False, True)
-				temp_obj = None
+			else:
+				mesh_data = bc.get_object_data(o)
 
 				
 			# Get Object's Matrix
@@ -393,7 +384,6 @@ class BlenderShape(DtsShape):
 			
 			# clean up temporary objects
 			del mesh_data
-			del temp_obj
 		
 		# Modify base subshape if required
 		if self.numBaseDetails == 0:

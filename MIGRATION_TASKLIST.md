@@ -46,7 +46,7 @@ Current working inventory: [API_USAGE_INVENTORY.md](/Users/jamesu/Desktop/torque
 - [x] Update selection handling to use `bpy.context.selected_objects`.
 - [x] Replace `getData()` calls with modern `obj.data` access.
 - [x] Replace parent and bone-parent handling with the current object/armature relationship APIs.
-- [ ] Update mesh access to use `bpy.types.Mesh`, evaluated meshes, and `bmesh` where required.
+- [x] Update mesh access to use `bpy.types.Mesh`, evaluated meshes, and `bmesh` where required.
 - [ ] Preserve collision mesh, bounds mesh, and export filtering behavior.
 
 Status: export-path scene, object, action, and material lookups are now routed through helper wrappers in `Dts_Blender.py`, `DtsPoseUtil.py`, `DtsShape_Blender.py`, and `Torque_Util.py`. The active export path now also uses modern object, parent, and data access helpers instead of direct `getType()` / `getData()` calls.
@@ -70,8 +70,8 @@ Status: the active sequence export and visibility-validation paths now use helpe
 
 ## 7. Geometry And Modifier Evaluation
 
-- [ ] Update modifier handling for evaluated meshes in modern Blender.
-- [ ] Replace multiresolution and mesh update code paths that depend on removed APIs.
+- [x] Update modifier handling for evaluated meshes in modern Blender.
+- [x] Replace multiresolution and mesh update code paths that depend on removed APIs.
 - [ ] Confirm triangulation, strip generation, and primitive batching still behave correctly.
 - [ ] Recheck vertex weights, skinning, and root bone assignment against modern armature deformation behavior.
 
@@ -91,6 +91,7 @@ Status: the active sequence export and visibility-validation paths now use helpe
 - [ ] Add type-safe helper functions for path handling, object filtering, and bone lookup if useful.
 
 Status: a compatibility helper module now handles scene/object/material/action access for the export-focused code paths, reducing direct legacy API usage without widening the UI scope.
+Status: mesh export now snapshots modern evaluated `bpy.types.Mesh` data into a legacy-style proxy so the exporter can read faces, UVs, material slots, and vertex-group weights without the removed `getFromObject()` path.
 Status: the legacy `DTSPython` import chain now loads under Python 3 via package-relative imports and the `Blender` shim, so the main exporter modules import cleanly in the current workspace.
 Status: preference loading now falls back to inferred defaults when registry/text configuration is absent, which matches the bounded "best guess" export behavior.
 

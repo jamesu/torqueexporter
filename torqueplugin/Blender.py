@@ -348,6 +348,177 @@ class _ActionProxy:
 		return _action_channel_ipos(self._action)
 
 
+class _MeshVertexProxy:
+	def __init__(self, index, co, no, uvco=None, groups=None):
+		self.index = index
+		self.co = co
+		self.no = no
+		self.uvco = uvco if uvco is not None else (0.0, 0.0)
+		self.groups = groups if groups is not None else []
+
+	def __iter__(self):
+		return iter(self.co)
+
+	def __getitem__(self, index):
+		return self.co[index]
+
+	def __len__(self):
+		return len(self.co)
+
+
+class _MeshFaceProxy:
+	def __init__(self, verts, uv, smooth, no, mat, image=None, mode=0):
+		self.v = verts
+		self.uv = uv
+		self.smooth = smooth
+		self.no = no
+		self.mat = mat
+		self.image = image
+		self.mode = mode
+
+
+class _MeshProxy:
+	def __init__(self, mesh, owner_object=None):
+		self._mesh = mesh
+		self.owner_object = owner_object
+		self.name = getattr(mesh, "name", "")
+		self.mode = 0
+		self.materials = [wrap_material(mat) if mat is not None else None for mat in getattr(mesh, "materials", [])]
+		self.verts = []
+		self.faces = []
+		self._has_vertex_uv = False
+		self._build_snapshot()
+
+	def __getattr__(self, name):
+		return getattr(self._mesh, name)
+
+	def update(self, *_args, **_kwargs):
+		return None
+
+	def hasVertexUV(self):
+		return self._has_vertex_uv
+
+	def getVertGroupNames(self):
+		if self.owner_object is None:
+			return []
+		return [group.name for group in getattr(self.owner_object, "vertex_groups", [])]
+
+	def getVertsFromGroup(self, group_name, _weight_mode=1):
+		if self.owner_object is None:
+			return []
+		group_index = None
+		for idx, group in enumerate(getattr(self.owner_object, "vertex_groups", [])):
+			if group.name == group_name:
+				group_index = idx
+				break
+		if group_index is None:
+			return []
+		results = []
+		for vert in self.verts:
+			for group in getattr(vert, "groups", []):
+				if group[0] == group_name:
+					results.append((vert.index, group[1]))
+					break
+		return results
+
+	def _mesh_image_for_polygon(self, polygon):
+		if self.owner_object is None:
+			return None
+		material_index = getattr(polygon, "material_index", -1)
+		if material_index < 0:
+			return None
+		try:
+			material = self.materials[material_index]
+		except Exception:
+			return None
+		material = getattr(material, "_material", material)
+		if material is None:
+			return None
+		if getattr(material, "use_nodes", False) and getattr(material, "node_tree", None) is not None:
+			for node in material.node_tree.nodes:
+				if getattr(node, "type", None) == "TEX_IMAGE" and getattr(node, "image", None) is not None:
+					return node.image
+		for slot in getattr(self.owner_object, "material_slots", []):
+			mat = getattr(slot, "material", None)
+			if mat == material:
+				return getattr(mat, "image", None)
+		return None
+
+	def _build_snapshot(self):
+		mesh = self._mesh
+		try:
+			mesh.calc_normals()
+		except Exception:
+			pass
+		uv_layer = None
+		uv_layers = getattr(mesh, "uv_layers", None)
+		if uv_layers is not None and len(uv_layers) > 0:
+			uv_layer = uv_layers.active or uv_layers[0]
+			self._has_vertex_uv = True
+
+		vertex_group_map = {}
+		if self.owner_object is not None:
+			for group in getattr(self.owner_object, "vertex_groups", []):
+				vertex_group_map[group.index] = group.name
+
+		vertex_uvs = {}
+		if uv_layer is not None:
+			for polygon in mesh.polygons:
+				for loop_index, vert_index in zip(polygon.loop_indices, polygon.vertices):
+					uv = uv_layer.data[loop_index].uv
+					vertex_uvs.setdefault(vert_index, uv)
+
+		for index, vert in enumerate(mesh.vertices):
+			groups = []
+			for group in getattr(vert, "groups", []):
+				group_name = vertex_group_map.get(group.group)
+				if group_name is not None:
+					groups.append((group_name, float(group.weight)))
+			self.verts.append(
+				_MeshVertexProxy(
+					index=index,
+					co=vert.co.copy(),
+					no=getattr(vert, "normal", vert.normal if hasattr(vert, "normal") else (0.0, 0.0, 1.0)),
+					uvco=vertex_uvs.get(index, (0.0, 0.0)),
+					groups=groups,
+				)
+			)
+
+		for polygon in mesh.polygons:
+			face_verts = [self.verts[i] for i in polygon.vertices]
+			face_uv = []
+			if uv_layer is not None:
+				for loop_index in polygon.loop_indices:
+					uv = uv_layer.data[loop_index].uv
+					face_uv.append((float(uv.x), float(uv.y)))
+			image = self._mesh_image_for_polygon(polygon)
+			self.faces.append(
+				_MeshFaceProxy(
+					face_verts,
+					face_uv,
+					bool(getattr(polygon, "use_smooth", False)),
+					polygon.normal.copy(),
+					getattr(polygon, "material_index", 0),
+					image=image,
+					mode=0,
+				)
+			)
+		if getattr(mesh, "use_auto_smooth", False) or getattr(mesh, "use_double_sided", False):
+			self.mode |= getattr(NMesh.Modes, "TWOSIDED", 0)
+
+
+def wrap_mesh(mesh, owner_object=None):
+	if mesh is None:
+		return None
+	if bpy is None:
+		return mesh
+	if isinstance(mesh, _MeshProxy):
+		return mesh
+	if hasattr(mesh, "vertices") and hasattr(mesh, "polygons"):
+		return _MeshProxy(mesh, owner_object=owner_object)
+	return mesh
+
+
 def _legacy_channel_name(data_path, array_index):
 	if data_path == "location":
 		return ["LocX", "LocY", "LocZ"][array_index]
@@ -555,7 +726,7 @@ class Mesh:
 	def Get(name):
 		if bpy is None:
 			raise ValueError(name)
-		return bpy.data.meshes.get(name)
+		return wrap_mesh(bpy.data.meshes.get(name))
 
 	@staticmethod
 	def New(name):

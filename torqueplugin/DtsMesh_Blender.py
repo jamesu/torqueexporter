@@ -25,6 +25,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 import DTSPython
 from DTSPython import *
 
+import blender_compat as bc
 import Blender
 from Blender import NMesh
 
@@ -335,23 +336,33 @@ class BlenderMesh(DtsMesh):
 		weightDictionary = {}
 		boneList = []
 		hasWeights = False
-		for arm in Blender.Armature.Get().values():
-			for b in arm.bones.values():
+		for arm in bc.get_scene_objects():
+			if not bc.is_armature_object(arm):
+				continue
+			armData = bc.get_object_data(arm)
+			for b in armData.bones.values():
 				boneList.append(b.name)
 
 		for i in range(len(mesh.verts)):
 			weightDictionary[i] = []
-		
-		for group in mesh.getVertGroupNames():
-			# ignore groups that have no corresponding bone.
-			if not (group in boneList): continue
-			try:
-				for vert in mesh.getVertsFromGroup(group, 1):
-					index, weight = vert[0], vert[1]
-					weightDictionary[index].append((group, weight))
+		if len(mesh.verts) > 0 and hasattr(mesh.verts[0], "groups"):
+			for vert in mesh.verts:
+				for group_name, weight in getattr(vert, "groups", []):
+					if not (group_name in boneList):
+						continue
+					weightDictionary[vert.index].append((group_name, weight))
 					hasWeights = True
-			except AttributeError:
-				continue
+		else:
+			for group in mesh.getVertGroupNames():
+				# ignore groups that have no corresponding bone.
+				if not (group in boneList): continue
+				try:
+					for vert in mesh.getVertsFromGroup(group, 1):
+						index, weight = vert[0], vert[1]
+						weightDictionary[index].append((group, weight))
+						hasWeights = True
+				except AttributeError:
+					continue
 				
 		return weightDictionary, hasWeights
 		
@@ -478,4 +489,3 @@ class BlenderMesh(DtsMesh):
 				self.flags |= DtsMesh.Billboard | DtsMesh.BillboardZ
 			elif n == "SORT":
 				self.mtype = self.T_Sorted
-
