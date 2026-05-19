@@ -47,9 +47,10 @@ Current working inventory: [API_USAGE_INVENTORY.md](/Users/jamesu/Desktop/torque
 - [x] Replace `getData()` calls with modern `obj.data` access.
 - [x] Replace parent and bone-parent handling with the current object/armature relationship APIs.
 - [x] Update mesh access to use `bpy.types.Mesh`, evaluated meshes, and `bmesh` where required.
-- [ ] Preserve collision mesh, bounds mesh, and export filtering behavior.
+- [x] Preserve collision mesh, bounds mesh, and export filtering behavior.
 
 Status: export-path scene, object, action, and material lookups are now routed through helper wrappers in `Dts_Blender.py`, `DtsPoseUtil.py`, `DtsShape_Blender.py`, and `Torque_Util.py`. The active export path now also uses modern object, parent, and data access helpers instead of direct `getType()` / `getData()` calls.
+Status: collision, LOS, bounds, and visibility-track export filtering now share one mesh-only helper so the active export path preserves the legacy “real mesh only, skip Bounds” behavior consistently.
 
 ## 5. Materials, UVs, And Shading
 

@@ -218,6 +218,16 @@ def getAllChildren(obj):
 		obj_children += getAllChildren(child)
 	return obj_children
 
+def getExportMeshChildren(obj, include_bounds=False):
+	meshes = []
+	for child in getAllChildren(obj):
+		if bc.get_object_type(child) != "Mesh":
+			continue
+		if not include_bounds and child.name == "Bounds":
+			continue
+		meshes.append(child)
+	return meshes
+
 # converts a file name into a legal python variable name.
 # this is need for blender registry support.
 def pythonizeFileName(filename):
@@ -502,9 +512,7 @@ def cleanVisTracks():
 		# make a list of mesh objects in the highest detail level.
 		meshList = []
 		highestDL = export_tree.findHighestDL()
-		for obj in getAllChildren(highestDL):
-			if bc.get_object_type(obj) != "Mesh": continue
-			if obj.name == "Bounds": continue
+		for obj in getExportMeshChildren(highestDL):
 			meshList.append(obj.name)
 		# check each track in the prefs and see if it's enabled.
 		# if it's not enabled, get rid of the track key.  Also,
@@ -613,9 +621,7 @@ def importOldVisAnim(seqName, seqPrefs):
 			for marker in getChildren(shapeTree.obj):
 				if marker.name.lower() != markerName: continue
 				# loop through all objects, and sort into two lists
-				for obj in getAllChildren(marker):
-					if bc.get_object_type(obj) != "Mesh": continue
-					if obj.name == "Bounds": continue
+				for obj in getExportMeshChildren(marker):
 					# process mesh objects
 					objData = bc.get_object_data(obj)
 					# Does the mesh that use this material?
@@ -823,8 +829,7 @@ def importMaterialList():
 	if shapeTree != None:
 		for marker in getChildren(shapeTree.obj):		
 			if marker.name[0:6].lower() != "detail": continue
-			for obj in getAllChildren(marker):
-				if bc.get_object_type(obj) != "Mesh": continue
+			for obj in getExportMeshChildren(marker):
 				objData = bc.get_object_data(obj)
 				for face in objData.faces:					
 					try: x = face.image
@@ -1228,13 +1233,13 @@ class ShapeTree(SceneTree):
 						progressBar.update()
 					curSize = -1
 					for marker in self.collisionMeshes:
-						meshes = [x for x in getAllChildren(marker) if bc.get_object_type(x) == 'Mesh']
+						meshes = getExportMeshChildren(marker)
 						self.Shape.addCollisionDetailLevel(meshes, False, curSize)
 						curSize -= 1
 						progressBar.update()					
 					curSize = -1
 					for marker in self.losCollisionMeshes:
-						meshes = getAllChildren(marker)
+						meshes = getExportMeshChildren(marker)
 						self.Shape.addCollisionDetailLevel(meshes, True, curSize)
 						curSize -= 1
 						progressBar.update()
@@ -4807,9 +4812,7 @@ class VisControlsClass(UserCreatedSeqControlsClassBase):
 				# loop through all objects, and sort into two lists
 				enabledList = []
 				disabledList = []
-				for obj in getAllChildren(marker):
-					if bc.get_object_type(obj) != "Mesh": continue
-					if obj.name == "Bounds": continue
+				for obj in getExportMeshChildren(marker):
 					# process mesh objects
 					objData = bc.get_object_data(obj)
 					# add an entry in the track list for the mesh object.

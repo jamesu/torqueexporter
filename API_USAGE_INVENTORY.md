@@ -97,6 +97,7 @@ Highest-density legacy file.
 - Uses `getData()`, `getPose()`, `getType()`, `getParent()` throughout export and GUI paths.
 - Uses `Armature.NLA.GetActions()` and IPO-based animation helpers.
 - Contains many old-style sequence/material list operations that now work under Python 3 but still depend on Blender 2.x concepts.
+Status: the active export path now uses a shared mesh-only filter helper for detail, collision, LOS, and visibility scans so Bounds objects are excluded consistently while preserving the legacy export selection rules.
 
 ### `torqueplugin/DtsShape_Blender.py`
 
@@ -168,3 +169,4 @@ Status: preference bootstrap now falls back to inferred defaults instead of hard
 Status: the active export path now uses modern object, parent, and data access helpers for mesh, armature, and sequence import flows, reducing direct `getType()`/`getData()` usage in the main code path.
 Status: animation and visibility code now route through explicit helper accessors for action channels and IPO lookup. Legacy curve names are still preserved in the compatibility layer so old scenes continue to evaluate the same way after import into modern Blender.
 Status: mesh export now snapshots evaluated Blender meshes into a read-only compatibility proxy, replacing the removed temporary-mesh and `getFromObject()` workflow for modifier-aware exports.
+Status: export filtering for detail, collision, LOS, and visibility-track scans now goes through one helper that keeps only mesh children and skips Bounds by default, matching the legacy behavior in the modernized active path.
