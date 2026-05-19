@@ -100,6 +100,47 @@ def get_object_parent(obj):
 	return None
 
 
+def get_armature_data(obj):
+	raw_obj = getattr(obj, "_obj", obj)
+	if hasattr(raw_obj, "data"):
+		return raw_obj.data
+	if hasattr(obj, "getData"):
+		return obj.getData()
+	return None
+
+
+def get_bone_rest_matrix(bone):
+	if hasattr(bone, "matrix_local"):
+		return bone.matrix_local
+	if hasattr(bone, "matrix") and isinstance(getattr(bone, "matrix"), dict):
+		return bone.matrix.get("ARMATURESPACE")
+	return None
+
+
+def get_bone_parent_name(bone):
+	parent = getattr(bone, "parent", None)
+	if parent is not None:
+		return getattr(parent, "name", None)
+	if hasattr(bone, "hasParent") and bone.hasParent():
+		return bone.parent.name
+	return None
+
+
+def get_bone_children(bone):
+	children = getattr(bone, "children", None)
+	if children is not None:
+		return list(children)
+	return []
+
+
+def get_pose_bone_matrix(pose_bone):
+	if hasattr(pose_bone, "matrix"):
+		return pose_bone.matrix
+	if hasattr(pose_bone, "poseMatrix"):
+		return pose_bone.poseMatrix
+	return None
+
+
 def get_object_pose(obj):
 	if hasattr(obj, "pose"):
 		return obj.pose

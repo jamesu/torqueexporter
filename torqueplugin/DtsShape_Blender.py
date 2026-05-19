@@ -836,7 +836,7 @@ class BlenderShape(DtsShape):
 		self.defaultTranslations.append(loc)
 		self.defaultRotations.append(rot)
 		# need to get the bone's armature space transform and store it to use later with the pose stuff
-		b.armSpaceTransform = bone.matrix['ARMATURESPACE']
+		b.armSpaceTransform = bc.get_bone_rest_matrix(bone)
 		self.nodes.append(b)
 
 

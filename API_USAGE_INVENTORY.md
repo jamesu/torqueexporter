@@ -107,6 +107,7 @@ Shape export core with legacy armature and IPO handling.
 - Uses `BuildCurveMap`, `getCurves()`, `getFrameNumbers()`.
 - Uses `Blender.Object.Get()`, `Blender.Scene.GetCurrent()`, `arm.getPose()`, `o.getData()`.
 - Uses `NMesh`-style face and mesh access.
+Status: active armature export now resolves bone rest transforms and pose matrices through compatibility helpers rather than direct `bone.matrix['ARMATURESPACE']` and `poseMatrix` access.
 
 ### `torqueplugin/DtsMesh_Blender.py`
 
@@ -172,3 +173,4 @@ Status: animation and visibility code now route through explicit helper accessor
 Status: mesh export now snapshots evaluated Blender meshes into a read-only compatibility proxy, replacing the removed temporary-mesh and `getFromObject()` workflow for modifier-aware exports.
 Status: export filtering for detail, collision, LOS, and visibility-track scans now goes through one helper that keeps only mesh children and skips Bounds by default, matching the legacy behavior in the modernized active path.
 Status: material and UV extraction now run through the same mesh proxy and material-image helpers, so the active exporter can read node-based materials and image-backed faces without depending on old Blender texture APIs.
+Status: armature export now uses helper-based rest-matrix and pose-matrix access in the pose utility and shape exporter, reducing direct reliance on legacy pose and bone matrix APIs in the active path.

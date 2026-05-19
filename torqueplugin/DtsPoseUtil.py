@@ -94,10 +94,10 @@ class DtsPoseUtilClass:
 	def __populateData(self, prefs):
 		# go through each armature object
 		for armOb in bc.get_scene_objects():
-			if getattr(armOb, "type", None) not in ('ARMATURE', 'Armature') and armOb.getType() != 'Armature':
+			if not bc.is_armature_object(armOb):
 				continue
 			# add a dictionary entry for the armature, and store all it's static data in a list
-			armDb = armOb.data if hasattr(armOb, "data") else armOb.getData()
+			armDb = bc.get_armature_data(armOb)
 			armMat = bMath.Matrix(armOb.matrix_world) if hasattr(armOb, "matrix_world") else bMath.Matrix(armOb.getMatrix('worldspace'))
 			armRot = self.toTorqueQuat(armMat.rotationPart().toQuat().normalize())
 			armRotInv = armRot.inverse()
@@ -115,11 +115,8 @@ class DtsPoseUtilClass:
 				bName = bone.name				
 				# store off all static values for each bone
 				# leaks memory in blender 2.41
-				bMat = bone.matrix['ARMATURESPACE']				
-				if bone.hasParent():
-					parentName = bone.parent.name
-				else:
-					parentName = None				
+				bMat = bc.get_bone_rest_matrix(bone)
+				parentName = bc.get_bone_parent_name(bone)
 				self.armBones[armOb.name][bName] = [ bone, bMat, None, None, parentName, None, None ]
 				self.armBones[armOb.name][bName][BONERESTPOSWS] = self.getBoneRestPosWS(armOb.name, bName)
 				self.armBones[armOb.name][bName][BONERESTROTWS] = self.getBoneRestRotWS(armOb.name, bName)
@@ -127,7 +124,7 @@ class DtsPoseUtilClass:
 			# second pass for calculated static bone data
 			for bone in armDb.bones.values():
 				bName = bone.name				
-				if bone.hasParent():
+				if bc.get_bone_parent_name(bone) is not None:
 					self.armBones[armOb.name][bName][BONEDEFPOSPS] = self.getBoneDefPosPS(armOb.name, bName)
 					self.armBones[armOb.name][bName][BONEDEFROTPS] = self.getBoneDefRotPS(armOb.name, bName)
 
@@ -378,7 +375,8 @@ class DtsPoseUtilClass:
 		# and it's inverse
 		armRotInv = self.armInfo[armName][ARMROTINV]
 		# get the pose location
-		bTrans = armRot.apply(self.toTorqueVec(pose.bones[bName].poseMatrix.translationPart()))
+		bone_matrix = bc.get_pose_bone_matrix(pose.bones[bName])
+		bTrans = armRot.apply(self.toTorqueVec(bone_matrix.translationPart()))
 		# Scale by armature's scale
 		armSize = self.armInfo[armName][ARMSIZE]
 		#bTrans = Vector(bTrans[0] * armSize[0], bTrans[1] * armSize[1], bTrans[2]  * armSize[2])
@@ -393,7 +391,8 @@ class DtsPoseUtilClass:
 		# get the armature's rotation
 		armRot = self.armInfo[armName][ARMROT].inverse()
 		# get the pose rotation and rotate into worldspace
-		bRot = ( armRot * self.bMatToTorqueQuat(pose.bones[bName].poseMatrix, bName ).inverse())
+		bone_matrix = bc.get_pose_bone_matrix(pose.bones[bName])
+		bRot = ( armRot * self.bMatToTorqueQuat(bone_matrix, bName ).inverse())
 		return bRot
 
 	# Blender's matrix toQuat() method gives incorrect values for matrices containing non-uniform scale.
