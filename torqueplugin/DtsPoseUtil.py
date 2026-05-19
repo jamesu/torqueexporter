@@ -90,6 +90,24 @@ class DtsPoseUtilClass:
 		self.armBones = {}
 		self.armInfo = {}	
 		self.__populateData(prefs)
+
+	def _matrix_translation(self, mat):
+		if hasattr(mat, "to_translation"):
+			return mat.to_translation()
+		if hasattr(mat, "translationPart"):
+			return mat.translationPart()
+		return bMath.Vector((0.0, 0.0, 0.0))
+
+	def _matrix_rotation_quat(self, mat):
+		if hasattr(mat, "to_3x3"):
+			return mat.to_3x3().normalized().to_quaternion()
+		if hasattr(mat, "to_quaternion"):
+			return mat.to_quaternion()
+		if hasattr(mat, "rotationPart"):
+			return mat.rotationPart().toQuat()
+		if hasattr(mat, "toQuat"):
+			return mat.toQuat()
+		raise AttributeError("Matrix does not provide a quaternion conversion")
 	
 	def __populateData(self, prefs):
 		# go through each armature object
@@ -98,10 +116,10 @@ class DtsPoseUtilClass:
 				continue
 			# add a dictionary entry for the armature, and store all it's static data in a list
 			armDb = bc.get_armature_data(armOb)
-			armMat = bMath.Matrix(armOb.matrix_world) if hasattr(armOb, "matrix_world") else bMath.Matrix(armOb.getMatrix('worldspace'))
-			armRot = self.toTorqueQuat(armMat.rotationPart().toQuat().normalize())
+			armMat = armOb.matrix_world if hasattr(armOb, "matrix_world") else armOb.getMatrix('worldspace')
+			armRot = self.toTorqueQuat(self._matrix_rotation_quat(armMat))
 			armRotInv = armRot.inverse()
-			armLoc = self.toTorqueVec(armMat.translationPart())
+			armLoc = self.toTorqueVec(self._matrix_translation(armMat))
 			armSize = self.toTorqueVec(armOb.scale if hasattr(armOb, "scale") else armOb.getSize('worldspace'))
 			try: exportScale = prefs['ExportScale']
 			except Exception: exportScale = 1.0
@@ -343,7 +361,7 @@ class DtsPoseUtilClass:
 		# get the armature's rotation
 		armRot = self.armInfo[armName][ARMROT]
 		# get the bone's location in armaturespace
-		bLoc = self.toTorqueVec(self.armBones[armName][bName][BONEMAT].translationPart())
+		bLoc = self.toTorqueVec(self._matrix_translation(self.armBones[armName][bName][BONEMAT]))
 		# add on armature's scale
 		armSize = self.armInfo[armName][ARMSIZE]
 		bLoc = Vector( bLoc[0] * armSize[0], bLoc[1] * armSize[1], bLoc[2] * armSize[2] )
@@ -359,7 +377,7 @@ class DtsPoseUtilClass:
 		# get the armature's rotation
 		armRot = self.armInfo[armName][ARMROT]
 		# get the bone's rotation in armaturespace
-		bRot = self.toTorqueQuat(self.armBones[armName][bName][BONEMAT].rotationPart().toQuat())
+		bRot = self.toTorqueQuat(self._matrix_rotation_quat(self.armBones[armName][bName][BONEMAT]))
 		# rotate out of armature space
 		bRot = (bRot * armRot)
 		return bRot
@@ -376,7 +394,7 @@ class DtsPoseUtilClass:
 		armRotInv = self.armInfo[armName][ARMROTINV]
 		# get the pose location
 		bone_matrix = bc.get_pose_bone_matrix(pose.bones[bName])
-		bTrans = armRot.apply(self.toTorqueVec(bone_matrix.translationPart()))
+		bTrans = armRot.apply(self.toTorqueVec(self._matrix_translation(bone_matrix)))
 		# Scale by armature's scale
 		armSize = self.armInfo[armName][ARMSIZE]
 		#bTrans = Vector(bTrans[0] * armSize[0], bTrans[1] * armSize[1], bTrans[2]  * armSize[2])
@@ -398,7 +416,7 @@ class DtsPoseUtilClass:
 	# Blender's matrix toQuat() method gives incorrect values for matrices containing non-uniform scale.
 	# This method is (mostly) scale invariant...
 	def bMatToTorqueQuat(self, bMat, bName=None):		
-		return self.toTorqueQuat(bMat.rotationPart().toQuat())
+		return self.toTorqueQuat(self._matrix_rotation_quat(bMat))
 		'''
 		#return self.toTorqueQuat(bMat.rotationPart().toQuat())
 		# get 3x3 submatrix
@@ -413,7 +431,7 @@ class DtsPoseUtilClass:
 			r2 = [rotMat[1][0]/s1, rotMat[1][1]/s2, rotMat[1][2]/s3]		
 			r3 = [rotMat[2][0]/s1, rotMat[2][1]/s2, rotMat[2][2]/s3]
 		# just do it the old way if there is any zero scale on this node for the current frame.
-		except Exception: return self.toTorqueQuat(bMat.rotationPart().toQuat())
+		except Exception: return self.toTorqueQuat(self._matrix_rotation_quat(bMat))
 		# construct a new matrix
 		newMat = bMath.Matrix(r1,r2,r3)
 		# convert to torque quat and return.
