@@ -86,10 +86,11 @@ if accelerator == "BLENDER":
 			res = Vector(self.object.x, self.object.y, self.object.z)
 			res.object *= other
 			return res
-		def __div__(self, other):
-			res = Vector(self.object.x, self.object.y, self.object.z)
-			res.object /= other
-			return res
+			def __div__(self, other):
+				res = Vector(self.object.x, self.object.y, self.object.z)
+				res.object /= other
+				return res
+			__truediv__ = __div__
 		def __eq__(self, other):
 			return (self.object == other.object)
 		def x(self):
@@ -160,10 +161,11 @@ if accelerator == "BLENDER":
 			res = Vector(self.object.x, self.object.y, self.object.z, self.object.w)
 			res.object *= other
 			return res
-		def __div__(self, other):
-			res = Vector(self.object.x, self.object.y, self.object.z, self.object.w)
-			res.object /= other
-			return res
+			def __div__(self, other):
+				res = Vector(self.object.x, self.object.y, self.object.z, self.object.w)
+				res.object /= other
+				return res
+			__truediv__ = __div__
 		def __eq__(self, other):
 			return (self.object == other.object)
 		def x(self):
@@ -219,10 +221,11 @@ if accelerator == "BLENDER":
 			res = Vector2(self.object.x, self.object.y)
 			res.object *= other
 			return res
-		def __div__(self, other):
-			res = Vector2(self.object.x, self.object.y)
-			res.object /= other
-			return res
+			def __div__(self, other):
+				res = Vector2(self.object.x, self.object.y)
+				res.object /= other
+				return res
+			__truediv__ = __div__
 		def x(self):
 			return self.object.z
 		def y(self):
@@ -268,10 +271,11 @@ if accelerator == "BLENDER":
 			for m in range(0, len(self.members)):
 				res[m] = -self[m]
 			return res
-		def __div__(self, other):
-			res = Quaternion()
-			res.object = self.object / other
-			return res
+			def __div__(self, other):
+				res = Quaternion()
+				res.object = self.object / other
+				return res
+			__truediv__ = __div__
 		def toMatrix(self):
 			mat = MatrixF()
 			mat.object = self.object.toMatrix()
@@ -330,12 +334,12 @@ if accelerator == "BLENDER":
 			del self.object
 		def setData(self, dat):
 			self.members = dat
-		def __getitem__(self, key):
-			bin = int(key) / 4
-			return self.object[bin][bin*4]
-		def __setitem__(self, key, value):
-			bin = int(key) / 4
-			self.object[bin][bin*4] = value
+			def __getitem__(self, key):
+				bin = int(key) // 4
+				return self.object[bin][bin*4]
+			def __setitem__(self, key, value):
+				bin = int(key) // 4
+				self.object[bin][bin*4] = value
 		def get(self, x, y):
 			# x = row, y = col
 			return self.object[x][y]
@@ -506,16 +510,17 @@ else:
 				self.members[0] * float(other),
 				self.members[1] * float(other),
 				self.members[2] * float(other))
-		def __div__(self, other):
-			result = Vector()
-			# iterate through the members
-			for i in range(len(self.members)):
-				# divide by the val stored in other
-				if self.members[i] != 0:
-					result.members[i] = self.members[i] / float(other)
-				else:
-					result.members[i] = 0.0
-			return result
+			def __div__(self, other):
+				result = Vector()
+				# iterate through the members
+				for i in range(len(self.members)):
+					# divide by the val stored in other
+					if self.members[i] != 0:
+						result.members[i] = self.members[i] / float(other)
+					else:
+						result.members[i] = 0.0
+				return result
+			__truediv__ = __div__
 		def __eq__(self, other):
 			if len(other.members) != len(self.members):
 				return False
@@ -618,6 +623,7 @@ else:
 					result[i] = .0
 				result[i] = self[i] / float(other)
 			return result
+		__truediv__ = __div__
 		def w(self):
 			return self.members[3]
 		def length(self):
@@ -690,6 +696,7 @@ else:
 				else:
 					result.members[i] = .0
 			return result
+		__truediv__ = __div__
 		# eqDelta function for 2 component vectors
 		def eqDelta(self, vec2, delta):
 			# tests for equality with another vector, using delta as the margin of error
@@ -787,6 +794,7 @@ else:
 					result[i] = .0
 				result[i] = self[i] / float(other)
 			return result
+		__truediv__ = __div__
 		def toMatrix(self):
 			# Note : NOT TESTED!!
 			mat = MatrixF()
