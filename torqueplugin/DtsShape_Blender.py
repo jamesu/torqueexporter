@@ -183,8 +183,20 @@ class BlenderShape(DtsShape):
 			
 			# Get Object's Matrix
 			mat = self.collapseBlenderTransform(o)
-			
-			# Import Mesh, process flags
+			Torque_Util.dump_writeln("      addDetailLevel object=%s parentBone=%s hasArmatureDeform=%s hasModifiers=%s meshData=%s" % (
+				o.getName(),
+				str(getattr(o, "parentbonename", None)),
+				str(hasArmatureDeform),
+				str(hasModifiers),
+				mesh_data.getName() if hasattr(mesh_data, "getName") else getattr(mesh_data, "name", "<unknown>"),
+			))
+			Torque_Util.dump_writeln("        bound node=%s objectType=%s parent=%s" % (
+				str(pNodeIdx),
+				bc.get_object_type(o),
+				str(getattr(bc.get_object_parent(o), "name", None)),
+			))
+				
+				# Import Mesh, process flags
 			tmsh = BlenderMesh(self, o.name, mesh_data, 0, 1.0, mat, False, True)
 			
 			# Increment polycount metric
@@ -496,6 +508,12 @@ class BlenderShape(DtsShape):
 					# Transform the mesh into node space. The Mesh vertices
 					# must all be relative to the bone they're attached to
 					world_trans, world_rot = self.getNodeWorldPosRot(o.node)
+					Torque_Util.dump_writeln("        rigid finalize object=%s node=%d world_trans=(%.6f, %.6f, %.6f) world_rot=(%.6f, %.6f, %.6f, %.6f)" % (
+						self.sTable.get(o.name),
+						o.node,
+						world_trans[0], world_trans[1], world_trans[2],
+						world_rot[0], world_rot[1], world_rot[2], world_rot[3],
+					))
 					tmsh.translate(-world_trans)
 					tmsh.rotate(world_rot.inverse())
 					
@@ -508,6 +526,12 @@ class BlenderShape(DtsShape):
 					for n in range(0, tmsh.getNodeIndexCount()):
 						# The node transform must take us from shape space to bone space
 						world_trans, world_rot = self.getNodeWorldPosRot(tmsh.getNodeIndex(n))
+						Torque_Util.dump_writeln("        skinned finalize object=%s node=%d world_trans=(%.6f, %.6f, %.6f) world_rot=(%.6f, %.6f, %.6f, %.6f)" % (
+							self.sTable.get(o.name),
+							tmsh.getNodeIndex(n),
+							world_trans[0], world_trans[1], world_trans[2],
+							world_rot[0], world_rot[1], world_rot[2], world_rot[3],
+						))
 						tmsh.setNodeTransform(n, world_trans, world_rot)		
 				
 				self.meshes.append(tmsh)
@@ -572,14 +596,27 @@ class BlenderShape(DtsShape):
 
 	# Creates a matrix that transforms to shape space
 	def collapseBlenderTransform(self, object):
-		cmat = self.toTorqueUtilMatrix(bc.get_object_matrix(object))
+		bmat = bc.get_object_matrix(object)
+		cmat = self.toTorqueUtilMatrix(bmat)
 
 		# add on scaling factor
 		exportScale = self.preferences['ExportScale']
 		scaleMat = MatrixF([exportScale, 0.0, 0.0, 0.0,
-				    0.0, exportScale, 0.0, 0.0,
-				    0.0, 0.0, exportScale, 0.0,
-				    0.0, 0.0, 0.0, exportScale])
+					    0.0, exportScale, 0.0, 0.0,
+					    0.0, 0.0, exportScale, 0.0,
+					    0.0, 0.0, 0.0, exportScale])
+		Torque_Util.dump_writeln("      collapseBlenderTransform %s: loc=(%.6f, %.6f, %.6f) scale=(%.6f, %.6f, %.6f) exportScale=%.6f" % (
+			object.getName(),
+			cmat.get(3, 0), cmat.get(3, 1), cmat.get(3, 2),
+			bc.get_object_scale(object)[0], bc.get_object_scale(object)[1], bc.get_object_scale(object)[2],
+			exportScale,
+		))
+		Torque_Util.dump_writeln("        matrix rows: [%s] [%s] [%s] [%s]" % (
+			", ".join(["%.6f" % bmat[0][i] for i in range(4)]),
+			", ".join(["%.6f" % bmat[1][i] for i in range(4)]),
+			", ".join(["%.6f" % bmat[2][i] for i in range(4)]),
+			", ".join(["%.6f" % bmat[3][i] for i in range(4)]),
+		))
 		return scaleMat * cmat
 		
 	# Creates a cumilative scaling ratio for an object
@@ -743,6 +780,11 @@ class BlenderShape(DtsShape):
 		'''
 		# First, process armature
 		arm = self.poseUtil.armInfo[armature.name][DtsPoseUtil.ARMDATA]
+		Torque_Util.dump_writeln("   Armature %s datablock=%s collapseTransform=%s" % (
+			armature.getName(),
+			arm.name,
+			str(collapseTransform),
+		))
 		
 		# no node ordering is indicated, so add them the normal way
 		
@@ -809,6 +851,10 @@ class BlenderShape(DtsShape):
 		'''
 
 		bonename = bone.name
+		Torque_Util.dump_writeln("      Bone %s parent=%s" % (
+			bonename,
+			"None" if bone.parent is None else bone.parent.name,
+		))
 		
 		# Do not add bones on the "BannedBones" list
 		if bonename.upper() in self.preferences['BannedBones']:
@@ -986,6 +1032,13 @@ class BlenderShape(DtsShape):
 		transVec, quatRot = self.poseUtil.getBoneLocRotLS(arm.name, bonename, pose)
 		# - determine the scale of the bone.
 		scaleVec = bc.get_pose_bone_scale(pose.bones[bonename])
+		Torque_Util.dump_writeln("      Pose node %s frame=%d loc=(%.6f, %.6f, %.6f) rot=(%.6f, %.6f, %.6f, %.6f) scale=(%.6f, %.6f, %.6f)" % (
+			bonename,
+			frame_idx,
+			transVec[0], transVec[1], transVec[2],
+			quatRot[0], quatRot[1], quatRot[2], quatRot[3],
+			scaleVec[0], scaleVec[1], scaleVec[2],
+		))
 
 
 		# We dump out every transform regardless of whether it matters or not.  This avoids having to

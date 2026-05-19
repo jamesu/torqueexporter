@@ -163,6 +163,13 @@ class DtsPoseUtilClass:
 		else:
 			loc = self.getBoneLocLS(armName, bName, pose)
 			rot = self.getBoneRotLS(armName, bName, pose)
+		Torque_Util.dump_writeln("        getBoneLocRotLS arm=%s bone=%s parent=%s loc=(%.6f, %.6f, %.6f) rot=(%.6f, %.6f, %.6f, %.6f)" % (
+			armName,
+			bName,
+			str(self.armBones[armName][bName][PARENTNAME]),
+			loc[0], loc[1], loc[2],
+			rot[0], rot[1], rot[2], rot[3],
+		))
 		return loc, rot
 	# *****
 	
@@ -370,6 +377,9 @@ class DtsPoseUtilClass:
 		bLoc = armRot.apply(bLoc)
 		# add on armature's location
 		bLoc = bLoc + self.armInfo[armName][ARMLOC]
+		Torque_Util.dump_writeln("        getBoneRestPosWS arm=%s bone=%s pos=(%.6f, %.6f, %.6f)" % (
+			armName, bName, bLoc[0], bLoc[1], bLoc[2]
+		))
 		return bLoc
 
 	# determine a bone's rest rotation in worldspace
@@ -381,6 +391,9 @@ class DtsPoseUtilClass:
 		bRot = self.toTorqueQuat(self._matrix_rotation_quat(self.armBones[armName][bName][BONEMAT]))
 		# rotate out of armature space
 		bRot = (bRot * armRot)
+		Torque_Util.dump_writeln("        getBoneRestRotWS arm=%s bone=%s rot=(%.6f, %.6f, %.6f, %.6f)" % (
+			armName, bName, bRot[0], bRot[1], bRot[2], bRot[3]
+		))
 		return bRot
 
 	# ***********************
