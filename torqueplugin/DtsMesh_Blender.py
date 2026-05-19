@@ -45,6 +45,10 @@ class BlenderMesh(DtsMesh):
 		# store off the transpose of the inverse of the object's 3x3 submatrix so we don't have to recalculate it every time we need it.
 		self.tpinvmat = Torque_Math.Matrix3x3(matrix).transpose().inverse()
 		self.isSkinned = isSkinned
+		if self.isSkinned and (rootBone is None or rootBone < 0):
+			rootBone = shape.getNodeIndex("Exp-Catch-Root")
+			if rootBone is None:
+				rootBone = 0
 		self.bVertList = [] 		# list of blender mesh vertex indices ordered by value, for fast searching
 		self.dVertList = [] 		# list containing lists of dts vertex indices, the outer list elements correspond to the bVertList element in the same position.
 		self.mainMaterial = None	# For determining material ipo track to use for ObjectState visibility animation

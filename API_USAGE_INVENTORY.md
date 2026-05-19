@@ -177,3 +177,4 @@ Status: material and UV extraction now run through the same mesh proxy and mater
 Status: armature export now uses helper-based rest-matrix and pose-matrix access in the pose utility and shape exporter, reducing direct reliance on legacy pose and bone matrix APIs in the active path.
 Status: curve discovery for animation channels now recognizes both legacy and alias scale names through a shared helper, keeping old-scene export semantics intact while removing the ad hoc name checks from the active path.
 Status: the anisotropic scale two-pass export path now restores X/Y/Z curves independently after temporary removal, reducing the risk of legacy-scene scale drift during validation.
+Status: skinned mesh export now uses the exporter’s catch-root node as the default bone fallback for unweighted vertices, which makes the root-bone assignment deterministic in modern Blender scenes.

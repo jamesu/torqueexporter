@@ -81,6 +81,8 @@ Status: the anisotropic scale two-pass restore path now preserves the separate X
 - [ ] Confirm triangulation, strip generation, and primitive batching still behave correctly.
 - [ ] Recheck vertex weights, skinning, and root bone assignment against modern armature deformation behavior.
 
+Status: skinned meshes now fall back to the exporter’s catch-root node when an unweighted vertex needs a default bone, so the active path has a deterministic root assignment instead of `-1`.
+
 ## 8. UI And Export Workflow
 
 - [ ] Modernize only the UI portions that cannot survive the Blender API migration.
