@@ -818,8 +818,8 @@ class TORQUEEXPORTER_PT_scene_panel(bpy.types.Panel):
 
 	def draw(self, context):
 		state = context.scene.torque_export_ui
-	if not state.ui_initialized:
-		_sync_state_from_legacy(state)
+		if not state.ui_initialized:
+			_sync_state_from_legacy(state)
 
 		layout = self.layout
 		layout.prop(state, "display_mode", expand=True)
