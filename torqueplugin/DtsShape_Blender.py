@@ -603,10 +603,14 @@ class BlenderShape(DtsShape):
 			
 	# Converts a blender matrix to a Torque_Util.MatrixF
 	def toTorqueUtilMatrix(self, blendermatrix):
-		return MatrixF([blendermatrix[0][0],blendermatrix[0][1],blendermatrix[0][2],blendermatrix[0][3],
-				blendermatrix[1][0],blendermatrix[1][1],blendermatrix[1][2],blendermatrix[1][3],
-				blendermatrix[2][0],blendermatrix[2][1],blendermatrix[2][2],blendermatrix[2][3],
-				blendermatrix[3][0],blendermatrix[3][1],blendermatrix[3][2],blendermatrix[3][3]])
+		# MatrixF expects the same storage layout used by its passPoint/passVector helpers,
+		# which is effectively the transpose of Blender's row-major matrix view.
+		return MatrixF([
+			blendermatrix[0][0], blendermatrix[1][0], blendermatrix[2][0], blendermatrix[3][0],
+			blendermatrix[0][1], blendermatrix[1][1], blendermatrix[2][1], blendermatrix[3][1],
+			blendermatrix[0][2], blendermatrix[1][2], blendermatrix[2][2], blendermatrix[3][2],
+			blendermatrix[0][3], blendermatrix[1][3], blendermatrix[2][3], blendermatrix[3][3],
+		])
 
 	# Creates a matrix that transforms to shape space
 	def collapseBlenderTransform(self, object):
