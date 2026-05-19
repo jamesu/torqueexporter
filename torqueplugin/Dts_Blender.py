@@ -172,6 +172,13 @@ def getCurrentMaterials():
 		return []
 
 
+def findCurrentMaterial(name):
+	for mat in getCurrentMaterials():
+		if mat.name == name:
+			return mat
+	return None
+
+
 def clearExportContext():
 	global export_scene, export_objects
 	export_scene = None
@@ -213,7 +220,7 @@ def noext(filepath):
 
 # Gets the children of an object
 def getChildren(obj):
-	return list(filter(lambda x: x.parent==obj, getCurrentSceneObjects()))
+	return [x for x in getCurrentSceneObjects() if x.parent == obj]
 
 # Gets all the children of an object (recursive)
 def getAllChildren(obj):
@@ -449,7 +456,7 @@ def copySequenceKey(value):
 	retVal['Vis']['EndFrame'] = Prefs['Sequences'][value]['Vis']['EndFrame']
 	# copy visibility tracks
 	retVal['Vis']['Tracks'] = {}
-	for trackName in Prefs['Sequences'][value]['Vis']['Tracks'].keys():
+	for trackName in list(Prefs['Sequences'][value]['Vis']['Tracks'].keys()):
 		retVal['Vis']['Tracks'][trackName] = {}
 		retVal['Vis']['Tracks'][trackName]['hasVisTrack'] = Prefs['Sequences'][value]['Vis']['Tracks'][trackName]['hasVisTrack']
 		retVal['Vis']['Tracks'][trackName]['IPOType'] = Prefs['Sequences'][value]['Vis']['Tracks'][trackName]['IPOType']
@@ -465,14 +472,14 @@ def cleanKeys():
 	# clean visibility tracks
 	cleanVisTracks()
 	# Sequences
-	for keyName in Prefs['Sequences'].keys():
+	for keyName in list(Prefs['Sequences'].keys()):
 		key = getSequenceKey(keyName)
 		actionFound = False
 		try: actEnabled = key['Action']['Enabled']
 		except: actEnabled = False
 		# if action is enabled for the sequence
 		if actEnabled:
-			for actionName in Armature.NLA.GetActions().keys():
+			for actionName in list(Armature.NLA.GetActions().keys()):
 				if actionName == keyName:
 					# we found a (hopefully) valid action
 					actionFound = True
@@ -494,7 +501,7 @@ def cleanKeys():
 # Cleans up unused and invalid visibility tracks
 def cleanVisTracks():
 	global Prefs
-	for keyName in Prefs['Sequences'].keys():
+	for keyName in list(Prefs['Sequences'].keys()):
 		key = getSequenceKey(keyName)
 		VisFound = False
 		try: VisFound = key['Vis']['Enabled']
@@ -511,7 +518,7 @@ def cleanVisTracks():
 		# check each track in the prefs and see if it's enabled.
 		# if it's not enabled, get rid of the track key.  Also,
 		# check to make sure that objects still exist :-)
-		for trackName in visKey['Tracks'].keys():
+		for trackName in list(visKey['Tracks'].keys()):
 			track = visKey['Tracks'][trackName]
 			try: hasTrack = track['hasVisTrack']
 			except: hasTrack = False
@@ -528,7 +535,7 @@ def cleanVisTracks():
 
 # Creates action keys that don't already exist
 def createActionKeys():
-	for action in getCurrentActions().keys():
+	for action in list(getCurrentActions().keys()):
 		getSequenceKey(action)
 
 
@@ -644,7 +651,7 @@ def updateOldPrefs():
 	except: Prefs['LastActiveSubPanel'] = 'Common'
 	try: x = Prefs["ShowWarningErrorPopup"]
 	except: Prefs["ShowWarningErrorPopup"] = True
-	for seqName in Prefs['Sequences'].keys():
+	for seqName in list(Prefs['Sequences'].keys()):
 		seq = getSequenceKey(seqName)
 
 
@@ -735,7 +742,7 @@ def updateOldPrefs():
 		
 
 	# loop through all actions in the preferences and add the 'IFL' key to them with some reasonable default values.
-	for seqName in Prefs['Sequences'].keys():
+	for seqName in list(Prefs['Sequences'].keys()):
 		seq = getSequenceKey(seqName)
 		try: x = seq['IFL']
 		except KeyError:
@@ -750,7 +757,7 @@ def updateOldPrefs():
 	try: x = Prefs['Materials']
 	except: Prefs['Materials'] = {}
 	# loop through materials and add new keys
-	for matName in Prefs['Materials'].keys():
+	for matName in list(Prefs['Materials'].keys()):
 		mat = Prefs['Materials'][matName]
 		try: x = mat['IFLMaterial']
 		except KeyError: mat['IFLMaterial'] = False
@@ -787,7 +794,7 @@ def updateSeqDurationAndFPS(seqName, seqPrefs):
 # refreshes action data that is read from blender and updates the related preferences
 def refreshActionData():
 	actions = getCurrentActions()
-	for seqName in actions.keys():
+	for seqName in list(actions.keys()):
 		seqPrefs = getSequenceKey(seqName)
 		maxFrames = 1
 		try:
@@ -850,7 +857,7 @@ def importMaterialList():
 
 
 	# remove unused materials from the prefs
-	for imageName in materials.keys()[:]:
+	for imageName in list(materials.keys()):
 		if not (imageName in imageList): del materials[imageName]
 
 	if len(imageList)==0: return
@@ -859,8 +866,8 @@ def importMaterialList():
 	for imageName in imageList:
 		bmat = None
 		# Do we have a blender material that matches the image name?
-		try: bmat = Blender.Material.Get(imageName)
-		except NameError:
+		bmat = findCurrentMaterial(imageName)
+		if bmat == None:
 			# No blender material, do we have a prefs key for this material?
 			try: x = Prefs['Materials'][imageName]
 			except KeyError:
@@ -4247,7 +4254,7 @@ class IFLControlsClass(UserCreatedSeqControlsClassBase):
 		except: Prefs['Materials'] = {}
 		keys = list(Prefs['Materials'].keys())
 		keys.sort(key=lambda x: x.lower())
-		for matName in Prefs['Materials'].keys():
+		for matName in list(Prefs['Materials'].keys()):
 			mat = Prefs['Materials'][matName]
 			try: x = mat['IFLMaterial']
 			except KeyError: mat['IFLMaterial'] = False
@@ -4477,7 +4484,7 @@ def getArmBoneNames(armature):
 	try: arm = Blender.Armature.Get(armature)
 	except: return []
 	retVal = []
-	for bone in arm.bones.keys():
+	for bone in list(arm.bones.keys()):
 		retVal.append(bone)
 	return retVal
 
@@ -5354,7 +5361,7 @@ class MaterialControlsClass:
 
 		# add the materials to the list
 		startEvent = 40
-		for mat in materials.keys():
+		for mat in list(materials.keys()):
 			self.guiMaterialList.addControl(self.createMaterialListItem(mat, startEvent))
 			startEvent += 1
 

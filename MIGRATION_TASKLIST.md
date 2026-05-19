@@ -49,6 +49,8 @@ Current working inventory: [API_USAGE_INVENTORY.md](/Users/jamesu/Desktop/torque
 - [ ] Update mesh access to use `bpy.types.Mesh`, evaluated meshes, and `bmesh` where required.
 - [ ] Preserve collision mesh, bounds mesh, and export filtering behavior.
 
+Status: export-path scene, object, action, and material lookups are now routed through helper wrappers, and the remaining legacy references are mostly confined to the dormant GUI code.
+
 ## 5. Materials, UVs, And Shading
 
 - [ ] Replace legacy material and texture access with modern Blender material slots and image nodes.
