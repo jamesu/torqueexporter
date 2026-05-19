@@ -28,6 +28,7 @@ from DTSPython import *
 import DtsMesh_Blender
 from DtsMesh_Blender import *
 
+import blender_compat as bc
 import Blender
 from Blender import NMesh, Armature, Scene, Object, Material, Texture
 from Blender import Mathutils as bMath
@@ -136,7 +137,7 @@ class BlenderShape(DtsShape):
 		# before we do anything else, reset the transforms of all bones.
 		# loop through each node and reset it's transforms.  This avoids transforms carrying over from
 		# other animations. Need to cycle through _ALL_ bones and reset the transforms.
-		for armOb in Blender.Object.Get():
+		for armOb in bc.get_scene_objects():
 			if (armOb.getType() != 'Armature') or (armOb.name == "DTS-EXP-GHOST-OB"): continue
 			tempPose = armOb.getPose()
 			#for bonename in armOb.getData().bones.keys():
@@ -269,7 +270,7 @@ class BlenderShape(DtsShape):
 		# before we do anything else, reset the transforms of all bones.
 		# loop through each node and reset it's transforms.  This avoids transforms carrying over from
 		# other animations. Need to cycle through _ALL_ bones and reset the transforms.
-		for armOb in Blender.Object.Get():
+		for armOb in bc.get_scene_objects():
 			if (armOb.getType() != 'Armature') or (armOb.name == "DTS-EXP-GHOST-OB"): continue
 			tempPose = armOb.getPose()
 			#for bonename in armOb.getData().bones.keys():
@@ -352,7 +353,7 @@ class BlenderShape(DtsShape):
 			# Otherwise, get the final display data, as affected by modifers.
 			if (not hasArmatureDeform) and hasModifiers:				
 				try:
-					temp_obj = Blender.Object.Get("DTSExpObj_Tmp")
+					temp_obj = bc.get_object("DTSExpObj_Tmp")
 				except:
 					temp_obj = Blender.Object.New("Mesh", "DTSExpObj_Tmp")
 				try:
@@ -537,7 +538,7 @@ class BlenderShape(DtsShape):
 		# Calculate the bounds,
 		# If we have an object in blender called "Bounds" of type "Mesh", use that.
 		try:
-			bound_obj = Blender.Object.Get("Bounds")
+			bound_obj = bc.get_object("Bounds")
 			matf = self.collapseBlenderTransform(bound_obj)
 			if bound_obj.getType() == "Mesh":
 				bmesh = bound_obj.getData()
@@ -651,7 +652,7 @@ class BlenderShape(DtsShape):
 		# read in desired node ordering from a text buffer, if it exists.
 		no = None
 		try:
-			noTxt = Blender.Text.Get("NodeOrder")
+			noTxt = bc.get_text("NodeOrder")
 			no = noTxt.asLines()
 			Torque_Util.dump_writeln("NodeOrder text buffer found, attempting to export nodes in the order specified.")
 		except: no = None
@@ -937,7 +938,7 @@ class BlenderShape(DtsShape):
 				if frame_idx >= (duration * (sequence.numGroundFrames+1))-1:
 					# We are ready, lets stomp!
 					try:						
-						bound_obj = Blender.Object.Get("Bounds")
+						bound_obj = bc.get_object("Bounds")
 						bound_parent = bound_obj.getParent()
 						if bound_parent != None and bound_parent.getType() == 'Armature':
 							pose = bound_parent.getPose()
@@ -948,7 +949,7 @@ class BlenderShape(DtsShape):
 							self.groundTranslations.append(pos)
 							self.groundRotations.append(rot)
 						else:
-							bound_obj = Blender.Object.Get("Bounds")							
+							bound_obj = bc.get_object("Bounds")							
 							matf = self.collapseBlenderTransform(bound_obj)
 							pos = Vector(matf.get(3,0),matf.get(3,1),matf.get(3,2))
 							pos = pos - Vector(boundsStartMat.get(3,0),boundsStartMat.get(3,1),boundsStartMat.get(3,2))
@@ -1068,7 +1069,7 @@ class BlenderShape(DtsShape):
 	# Builds a base transform for blend animations using the
 	# designated action and frame #. 
 	def buildBaseTransforms(self, blendSequence, blendAction, useActionName, useFrame, scene, context):
-		useAction = Blender.Armature.NLA.GetActions()[useActionName]
+		useAction = bc.get_actions()[useActionName]
 		
 		# Need to create a temporary sequence and build a list
 		# of node transforms to use as the base transforms for nodes
@@ -1098,7 +1099,7 @@ class BlenderShape(DtsShape):
 
 		# loop through each node and reset it's transforms.  This avoids transforms carrying over from
 		# other animations. Need to cycle through _ALL_ bones and reset the transforms.
-		for armOb in Blender.Object.Get():
+		for armOb in bc.get_scene_objects():
 			if (armOb.getType() != 'Armature') or (armOb.name == "DTS-EXP-GHOST-OB"): continue
 			tempPose = armOb.getPose()
 			#for bonename in armOb.getData().bones.keys():
@@ -1413,7 +1414,7 @@ class BlenderShape(DtsShape):
 		# store off the default position of the bounds box
 		try:
 			Blender.Set('curframe', 1)
-			bound_obj = Blender.Object.Get("Bounds")
+			bound_obj = bc.get_object("Bounds")
 			boundsStartMat = self.collapseBlenderTransform(bound_obj)
 		except ValueError:
 			boundsStartMat = MatrixF()
@@ -1423,7 +1424,7 @@ class BlenderShape(DtsShape):
 		# during the blend sequence.
 		if isBlend:
 			# get our blend ref pose action
-			refPoseAct = Blender.Armature.NLA.GetActions()[useAction]
+			refPoseAct = bc.get_actions()[useAction]
 			# now set the active action and move to the desired frame
 			for i in range(0, len(self.addedArmatures)):
 				arm = self.addedArmatures[i][0]
@@ -1435,7 +1436,7 @@ class BlenderShape(DtsShape):
 		# This avoids transforms carrying over from other action animations.
 		else:			
 			# need to cycle through ALL bones and reset the transforms.
-			for armOb in Blender.Object.Get():
+			for armOb in bc.get_scene_objects():
 				if (armOb.getType() != 'Armature'): continue
 				tempPose = armOb.getPose()
 				for bonename in self.poseUtil.armBones[armOb.name].keys():
@@ -1453,7 +1454,7 @@ class BlenderShape(DtsShape):
 			sequence.frames[nodeIndex] = []
 		
 
-		act = Blender.Armature.NLA.GetActions()[sequence.name]
+		act = bc.get_actions()[sequence.name]
 
 		# loop through all of the armatures and set the current action as active for all
 		# of them.  Sadly, there is no way to tell which action belongs with which armature
@@ -1740,8 +1741,8 @@ class BlenderShape(DtsShape):
 		NOTE: this function needs to be called AFTER finalizeObjects, for obvious reasons.
 		'''
 
-		scene = Blender.Scene.GetCurrent()
-		context = Blender.Scene.GetCurrent().getRenderingContext()
+		scene = bc.get_current_scene()
+		context = scene
 		sequence.matters_vis = [False]*len(self.objects)
 
 		# includes last frame
@@ -1760,9 +1761,9 @@ class BlenderShape(DtsShape):
 			
 			try:
 				if keyedObj['IPOType'] == "Object":
-					bObj = Blender.Object.Get(keyedObj['IPOObject'])
+					bObj = bc.get_object(keyedObj['IPOObject'])
 				elif keyedObj['IPOType'] == "Material":
-					bObj = Blender.Material.Get(keyedObj['IPOObject'])
+					bObj = bc.get_material(keyedObj['IPOObject'])
 
 				bIpo = bObj.getIpo()
 				IPOCurveName = getBlenderIPOChannelConst(keyedObj['IPOType'], keyedObj['IPOChannel'])

@@ -49,7 +49,7 @@ Current working inventory: [API_USAGE_INVENTORY.md](/Users/jamesu/Desktop/torque
 - [ ] Update mesh access to use `bpy.types.Mesh`, evaluated meshes, and `bmesh` where required.
 - [ ] Preserve collision mesh, bounds mesh, and export filtering behavior.
 
-Status: export-path scene, object, action, and material lookups are now routed through helper wrappers, and the remaining legacy references are mostly confined to the dormant GUI code.
+Status: export-path scene, object, action, and material lookups are now routed through helper wrappers in `Dts_Blender.py`, `DtsPoseUtil.py`, `DtsShape_Blender.py`, and `Torque_Util.py`. Remaining legacy references are concentrated in dormant GUI code and a few legacy compatibility branches.
 
 ## 5. Materials, UVs, And Shading
 
@@ -87,6 +87,8 @@ Status: export-path scene, object, action, and material lookups are now routed t
 - [ ] Remove deprecated language patterns such as old-style `print`, `filter` assumptions, and legacy exception handling.
 - [ ] Standardize imports and reduce reliance on globals where practical.
 - [ ] Add type-safe helper functions for path handling, object filtering, and bone lookup if useful.
+
+Status: a compatibility helper module now handles scene/object/material/action access for the export-focused code paths, reducing direct legacy API usage without widening the UI scope.
 
 ## 10. Verification
 

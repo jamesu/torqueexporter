@@ -26,6 +26,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 import struct, array, math, string
 from struct import *
 from array import *
+import blender_compat as bc
 
 #############################
 # Torque Game Engine
@@ -427,12 +428,11 @@ def getBlenderIPOChannelConst(IPOType, IPOChannel):
 
 # Helper functions for dealing with sequences
 
-import Blender
 def validateAction(seqName, seqPrefs):
 	# Check to see if there's a valid action animation
 	ActionIsValid = False
 	if seqPrefs['Action']['Enabled']:
-		action = (seqName in Blender.Armature.NLA.GetActions().keys())
+		action = (seqName in bc.get_actions().keys())
 		if action != None:
 			ActionIsValid = True
 	
@@ -471,9 +471,9 @@ def validateVisibility(seqName, seqPrefs):
 				try:
 					bObj = None
 					if track['IPOType'] == "Object":
-						bObj = Blender.Object.Get(track['IPOObject'])
+						bObj = bc.get_object(track['IPOObject'])
 					elif track['IPOType'] == "Material":
-						bObj = Blender.Material.Get(track['IPOObject'])
+						bObj = bc.get_material(track['IPOObject'])
 					bIpo = bObj.getIpo()
 					IPOCurveName = getBlenderIPOChannelConst(track['IPOType'], track['IPOChannel'])
 					IPOCurve = None

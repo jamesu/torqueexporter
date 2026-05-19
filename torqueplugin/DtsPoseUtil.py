@@ -23,8 +23,18 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 '''
 
-import Blender
-from Blender import Mathutils as bMath
+import blender_compat as bc
+try:
+	import Blender
+	from Blender import Mathutils as bMath
+except ImportError:
+	Blender = None
+	from mathutils import Matrix as _Matrix, Vector as _Vector, Quaternion as _Quaternion
+	class _MathShim:
+		Matrix = _Matrix
+		Vector = _Vector
+		Quaternion = _Quaternion
+	bMath = _MathShim
 import math as pMath
 
 import DTSPython
@@ -83,15 +93,16 @@ class DtsPoseUtilClass:
 	
 	def __populateData(self, prefs):
 		# go through each armature object
-		for armOb in Blender.Object.Get():
-			if (armOb.getType() != 'Armature'): continue
+		for armOb in bc.get_scene_objects():
+			if getattr(armOb, "type", None) not in ('ARMATURE', 'Armature') and armOb.getType() != 'Armature':
+				continue
 			# add a dictionary entry for the armature, and store all it's static data in a list
-			armDb = armOb.getData()
-			armMat = bMath.Matrix(armOb.getMatrix('worldspace'))
+			armDb = armOb.data if hasattr(armOb, "data") else armOb.getData()
+			armMat = bMath.Matrix(armOb.matrix_world) if hasattr(armOb, "matrix_world") else bMath.Matrix(armOb.getMatrix('worldspace'))
 			armRot = self.toTorqueQuat(armMat.rotationPart().toQuat().normalize())
 			armRotInv = armRot.inverse()
 			armLoc = self.toTorqueVec(armMat.translationPart())
-			armSize = self.toTorqueVec(armOb.getSize('worldspace'))
+			armSize = self.toTorqueVec(armOb.scale if hasattr(armOb, "scale") else armOb.getSize('worldspace'))
 			try: exportScale = prefs['ExportScale']
 			except: exportScale = 1.0
 			armSize[0], armSize[1], armSize[2] = armSize[0]*exportScale, armSize[1]*exportScale, armSize[2]*exportScale
@@ -451,31 +462,43 @@ def toBlenderQuat(q):
 
 
 def putEmptyAt(loc):
-	scene = Blender.Scene.GetCurrent()
+	scene = bc.get_current_scene()
 	loc = toBlenderVec(loc)
-	try: Blender.Object.Get('Empty')
-	except:
+	empty = bc.get_object('Empty', scene)
+	if empty is None and Blender is not None:
 		Blender.Object.New('Empty', 'Empty')
-	empty = Blender.Object.Get('Empty')
-	if not (empty in scene.getChildren()): scene.link(empty)
+		empty = bc.get_object('Empty', scene)
+	if empty is None:
+		return
+	if hasattr(scene, "objects"):
+		if empty not in scene.objects:
+			scene.objects.link(empty)
+	elif not (empty in scene.getChildren()):
+		scene.link(empty)
 	empty.setLocation(loc.x, loc.y, loc.z)
-	scene.update(1)
-	Blender.Window.RedrawAll()
+	if hasattr(scene, "update"):
+		scene.update()
+	bc.redraw_all()
 	
 def setEmptyRot(rot):
-	scene = Blender.Scene.GetCurrent()
+	scene = bc.get_current_scene()
 	rot = toBlenderQuat(rot)
-	try: Blender.Object.Get('Empty')
-	except:
+	empty = bc.get_object('Empty', scene)
+	if empty is None and Blender is not None:
 		Blender.Object.New('Empty', 'Empty')
-	empty = Blender.Object.Get('Empty')
-	if not (empty in scene.getChildren()): scene.link(empty)
-	#print rot
-	#print rot.toMatrix()
+		empty = bc.get_object('Empty', scene)
+	if empty is None:
+		return
+	if hasattr(scene, "objects"):
+		if empty not in scene.objects:
+			scene.objects.link(empty)
+	elif not (empty in scene.getChildren()):
+		scene.link(empty)
 	rot = rot.toMatrix().resize4x4()
 	empty.setMatrix(rot)
-	scene.update(1)
-	Blender.Window.RedrawAll()
+	if hasattr(scene, "update"):
+		scene.update()
+	bc.redraw_all()
 
 
 
@@ -483,11 +506,12 @@ def setEmptyRot(rot):
 
 # *** entry point for getBoneLocWS testing ***
 if __name__ == "__main__":
-	arm = Blender.Object.Get('Armature')
+	arm = bc.get_object('Armature')
 	armName = arm.name
-	scene = Blender.Scene.GetCurrent()
-	scene.getRenderingContext().currentFrame(40)
-	scene.update(1)
+	scene = bc.get_current_scene()
+	bc.set_frame(scene, 40)
+	if hasattr(scene, "update"):
+		scene.update()
 	# get the pose
 	pose = arm.getPose()
 

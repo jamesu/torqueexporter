@@ -10,7 +10,7 @@ Initial audit of legacy APIs used by the Torque Blender exporter. This file is t
 - UI migration policy: preserve the legacy UI where possible
 - Config policy: infer safe defaults when stored values are missing
 - Current implementation phase: legacy GUI is temporarily bypassed so export code can be worked on in isolation
-- Export-path lookup state: scene, object, action, and material access now flow through helper wrappers; most remaining direct legacy calls are in dormant GUI code
+- Export-path lookup state: scene, object, action, and material access now flow through helper wrappers in `Dts_Blender.py`, `DtsPoseUtil.py`, `DtsShape_Blender.py`, and `Torque_Util.py`; most remaining direct legacy calls are in dormant GUI code or compatibility branches
 
 ## High-Impact Legacy APIs
 
