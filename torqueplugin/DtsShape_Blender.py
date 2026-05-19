@@ -1526,16 +1526,20 @@ class BlenderShape(DtsShape):
 				if len(tempDict[ipoName]['Z']['vec']) > 0:
 					ipo.addCurve('ScaleZ')
 
+				scale_x = ipo[bc.get_ipo_scale_index("ScaleX")]
+				scale_y = ipo[bc.get_ipo_scale_index("ScaleY")]
+				scale_z = ipo[bc.get_ipo_scale_index("ScaleZ")]
+
 				# add points
 				for point in tempDict[ipoName]['X']['vec']:
 					knot = point[1]
 					ipo[bc.get_ipo_scale_index("ScaleX")].append((knot[0], knot[1]))
 				
-				for point in tempDict[ipoName]['X']['vec']:
+				for point in tempDict[ipoName]['Y']['vec']:
 					knot = point[1]
 					ipo[bc.get_ipo_scale_index("ScaleY")].append((knot[0], knot[1]))
 
-				for point in tempDict[ipoName]['X']['vec']:
+				for point in tempDict[ipoName]['Z']['vec']:
 					knot = point[1]
 					ipo[bc.get_ipo_scale_index("ScaleZ")].append((knot[0], knot[1]))
 

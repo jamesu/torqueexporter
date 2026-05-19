@@ -72,6 +72,7 @@ Status: the active mesh/material path now resolves image data through helper fun
 Status: the active sequence export and visibility-validation paths now use helper-based action-channel and IPO access. The exporter preserves legacy curve semantics for imported old scenes, but the core action handling is now routed through the modern helper layer.
 Status: curve discovery now runs through a shared curve-map helper that recognizes both legacy and alias scale names, so `LocX`/`QuatX`/`SizeX`-style detection no longer lives in the main animation scan.
 Status: armature export now uses helper-based rest-matrix and pose-matrix access in `DtsPoseUtil.py` and `DtsShape_Blender.py`, so the active path no longer depends on legacy pose access methods or bone-space matrix lookups.
+Status: the anisotropic scale two-pass restore path now preserves the separate X/Y/Z curves correctly after the temporary scale removal pass, which is the last known structural fix before scene-by-scene validation.
 
 ## 7. Geometry And Modifier Evaluation
 
