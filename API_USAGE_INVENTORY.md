@@ -116,6 +116,7 @@ Mesh conversion path.
 - Uses `msh.mode`, `NMesh.Modes.TWOSIDED`, `NMesh.FaceModes.TWOSIDE`.
 - Uses face/image/material access patterns that need a modern mesh/UV/material rewrite.
 Status: the active export path now snapshots modern evaluated `bpy.types.Mesh` data into a legacy-style proxy, including faces, UVs, materials, and vertex-group weights, so the mesh exporter can operate without the removed `getFromObject()` path.
+Status: material and texture discovery now resolve through helper functions that prefer modern material slots and node images, while preserving the legacy face-grouping and double-sided export semantics.
 
 ### `torqueplugin/DtsPoseUtil.py`
 
@@ -170,3 +171,4 @@ Status: the active export path now uses modern object, parent, and data access h
 Status: animation and visibility code now route through explicit helper accessors for action channels and IPO lookup. Legacy curve names are still preserved in the compatibility layer so old scenes continue to evaluate the same way after import into modern Blender.
 Status: mesh export now snapshots evaluated Blender meshes into a read-only compatibility proxy, replacing the removed temporary-mesh and `getFromObject()` workflow for modifier-aware exports.
 Status: export filtering for detail, collision, LOS, and visibility-track scans now goes through one helper that keeps only mesh children and skips Bounds by default, matching the legacy behavior in the modernized active path.
+Status: material and UV extraction now run through the same mesh proxy and material-image helpers, so the active exporter can read node-based materials and image-backed faces without depending on old Blender texture APIs.

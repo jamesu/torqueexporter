@@ -166,10 +166,7 @@ def getCurrentActions():
 
 
 def getCurrentMaterials():
-	try:
-		return Blender.Material.Get()
-	except:
-		return []
+	return bc.get_materials()
 
 
 def findCurrentMaterial(name):
@@ -847,7 +844,7 @@ def importMaterialList():
 
 					# Otherwise we do have an image assigned to the face, so add it to the imageList.
 					else:
-						imageName = stripImageExtension(face.image.getName(), face.image.getFilename())
+						imageName = stripImageExtension(bc.get_image_name(face.image))
 						if not (imageName in imageList):
 							imageList.append(imageName)
 
@@ -929,8 +926,8 @@ def importMaterialList():
 			textures = bmat.getTextures()
 			if len(textures) > 0:
 				if textures[0] != None:
-					if textures[0].tex.image != None:						
-						pmb['BaseTex'] = stripImageExtension(textures[0].tex.image.getName())
+					if textures[0].tex.image != None:
+						pmb['BaseTex'] = stripImageExtension(bc.get_image_name(textures[0].tex.image))
 					else:
 						pmb['BaseTex'] = None
 
@@ -968,21 +965,21 @@ def importMaterialList():
 						pmb['ReflectanceMapFlag'] = True
 						pmb['NeverEnvMap'] = False
 						if textures[0].tex.image != None:
-							pmb['RefMapTex'] = stripImageExtension(textures[i].tex.image.getName())
+							pmb['RefMapTex'] = stripImageExtension(bc.get_image_name(textures[i].tex.image))
 						else:
 							pmb['RefMapTex'] = None
 					# B) We have a normal map (basically a 3d bump map)
 					elif (texture_obj.mapto & Texture.MapTo.NOR):
 						pmb['BumpMapFlag'] = True
 						if textures[0].tex.image != None:
-							pmb['BumpMapTex'] = stripImageExtension(textures[i].tex.image.getName())
+							pmb['BumpMapTex'] = stripImageExtension(bc.get_image_name(textures[i].tex.image))
 						else:
 							pmb['BumpMapTex'] = None
 					# C) We have a texture; Lets presume its a detail map (since its laid on top after all)
 					else:
 						pmb['DetailMapFlag'] = True
 						if textures[0].tex.image != None:
-							pmb['DetailTex'] = stripImageExtension(textures[i].tex.image.getName())
+							pmb['DetailTex'] = stripImageExtension(bc.get_image_name(textures[i].tex.image))
 						else:
 							pmb['DetailTex'] = None
 

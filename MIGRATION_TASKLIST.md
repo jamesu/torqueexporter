@@ -54,10 +54,12 @@ Status: collision, LOS, bounds, and visibility-track export filtering now share 
 
 ## 5. Materials, UVs, And Shading
 
-- [ ] Replace legacy material and texture access with modern Blender material slots and image nodes.
-- [ ] Rebuild face/image/material grouping logic in `torqueplugin/DtsMesh_Blender.py`.
-- [ ] Update UV extraction paths for current mesh UV APIs.
-- [ ] Verify double-sided handling and material assignment still match the DTS exporter’s expectations.
+- [x] Replace legacy material and texture access with modern Blender material slots and image nodes.
+- [x] Rebuild face/image/material grouping logic in `torqueplugin/DtsMesh_Blender.py`.
+- [x] Update UV extraction paths for current mesh UV APIs.
+- [x] Verify double-sided handling and material assignment still match the DTS exporter’s expectations.
+
+Status: the active mesh/material path now resolves image data through helper functions and a legacy-style mesh proxy, so the exporter can read node-based materials, image-backed faces, UVs, and double-sided flags without the removed Blender 2.x APIs.
 
 ## 6. Armatures, Bones, And Animation
 

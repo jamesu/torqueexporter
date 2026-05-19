@@ -48,6 +48,20 @@ def get_object_data(obj, *args):
 	return None
 
 
+def get_material_for_mesh(obj, face):
+	raw_obj = getattr(obj, "_obj", obj)
+	mesh = getattr(raw_obj, "data", None)
+	if mesh is None:
+		return None
+	index = getattr(face, "mat", getattr(face, "material_index", -1))
+	if index < 0:
+		return None
+	materials = getattr(mesh, "materials", [])
+	if index >= len(materials):
+		return None
+	return materials[index]
+
+
 def get_mesh_data(obj, apply_modifiers=False):
 	raw_obj = getattr(obj, "_obj", obj)
 	if bpy is None or raw_obj is None:
@@ -181,6 +195,45 @@ def get_material(name):
 		except Exception:
 			return None
 	return None
+
+
+def get_image_name(image):
+	if image is None:
+		return None
+	if hasattr(image, "getName"):
+		try:
+			return image.getName()
+		except Exception:
+			pass
+	return getattr(image, "name", None)
+
+
+def get_material_images(material):
+	raw_material = getattr(material, "_material", material)
+	images = []
+	if raw_material is None:
+		return images
+	if getattr(raw_material, "use_nodes", False) and getattr(raw_material, "node_tree", None) is not None:
+		for node in raw_material.node_tree.nodes:
+			if getattr(node, "type", None) != "TEX_IMAGE":
+				continue
+			image = getattr(node, "image", None)
+			if image is not None:
+				images.append(image)
+		return images
+	for slot in getattr(raw_material, "texture_slots", []) or []:
+		if slot is None:
+			continue
+		texture = getattr(slot, "texture", None)
+		image = getattr(texture, "image", None)
+		if image is not None:
+			images.append(image)
+	return images
+
+
+def get_material_primary_image(material):
+	images = get_material_images(material)
+	return images[0] if images else None
 
 
 def get_materials():

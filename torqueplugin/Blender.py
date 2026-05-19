@@ -192,6 +192,7 @@ class _MaterialProxy:
 
 	def getTextures(self):
 		textures = []
+		images = bc.get_material_images(self)
 		if getattr(self._material, "use_nodes", False) and getattr(self._material, "node_tree", None) is not None:
 			for node in self._material.node_tree.nodes:
 				if getattr(node, "type", None) != "TEX_IMAGE":
@@ -206,6 +207,10 @@ class _MaterialProxy:
 					mapto = getattr(Texture.MapTo, "ALPHA", 0)
 				tex = _TextureDataProxy(image=getattr(node, "image", None), type_name=Texture.Types.IMAGE, image_flags=getattr(Texture.ImageFlags, "MIPMAP", 0))
 				textures.append(_TextureSlotProxy(tex=tex, mapto=mapto))
+		elif images:
+			for image in images:
+				tex = _TextureDataProxy(image=image, type_name=Texture.Types.IMAGE, image_flags=getattr(Texture.ImageFlags, "MIPMAP", 0))
+				textures.append(_TextureSlotProxy(tex=tex, mapto=getattr(Texture.MapTo, "ALPHA", 0) if self.getAlpha() < 1.0 else 0))
 		return textures
 
 
@@ -424,25 +429,10 @@ class _MeshProxy:
 	def _mesh_image_for_polygon(self, polygon):
 		if self.owner_object is None:
 			return None
-		material_index = getattr(polygon, "material_index", -1)
-		if material_index < 0:
-			return None
-		try:
-			material = self.materials[material_index]
-		except Exception:
-			return None
-		material = getattr(material, "_material", material)
+		material = bc.get_material_for_mesh(self.owner_object, polygon)
 		if material is None:
 			return None
-		if getattr(material, "use_nodes", False) and getattr(material, "node_tree", None) is not None:
-			for node in material.node_tree.nodes:
-				if getattr(node, "type", None) == "TEX_IMAGE" and getattr(node, "image", None) is not None:
-					return node.image
-		for slot in getattr(self.owner_object, "material_slots", []):
-			mat = getattr(slot, "material", None)
-			if mat == material:
-				return getattr(mat, "image", None)
-		return None
+		return bc.get_material_primary_image(material)
 
 	def _build_snapshot(self):
 		mesh = self._mesh
