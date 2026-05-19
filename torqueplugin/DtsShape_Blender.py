@@ -491,8 +491,22 @@ class BlenderShape(DtsShape):
 				elif o.node < 1:
 					o.node = 0
 			else:
-				#o.node = -1
+				# Bind skinned objects to the root bone of their armature when possible,
+				# instead of the synthetic catch root. This keeps the object anchor in the
+				# same space as the bone hierarchy and avoids a bind-pose offset.
 				o.node = 0
+				oparent = bc.get_object_parent(o)
+				if oparent != None and bc.is_armature_object(oparent):
+					rootBones = []
+					for bone in self.poseUtil.armBones[oparent.name].keys():
+						if self.poseUtil.armBones[oparent.name][bone][DtsPoseUtil.PARENTNAME] == None:
+							rootBones.append(bone)
+					if len(rootBones) > 0:
+						rootBoneName = rootBones[0]
+						for node in self.nodes:
+							if self.sTable.get(node.name) == rootBoneName:
+								o.node = self.nodes.index(node)
+								break
 				isSkinned = True
 				Torque_Util.dump_writeln("Object %s, Skinned" % (self.sTable.get(o.name)))
 			for tmsh in o.tempMeshes:
