@@ -27,6 +27,63 @@ def get_current_scene():
 	return None
 
 
+def get_object_name(obj):
+	return getattr(obj, "name", None)
+
+
+def get_object_type(obj):
+	return getattr(obj, "type", None)
+
+
+def get_object_data(obj, *args):
+	if hasattr(obj, "data"):
+		return obj.data
+	if hasattr(obj, "getData"):
+		return obj.getData(*args)
+	return None
+
+
+def get_object_parent(obj):
+	if hasattr(obj, "parent"):
+		return obj.parent
+	if hasattr(obj, "getParent"):
+		return obj.getParent()
+	return None
+
+
+def get_object_pose(obj):
+	if hasattr(obj, "pose"):
+		return obj.pose
+	if hasattr(obj, "getPose"):
+		return obj.getPose()
+	return None
+
+
+def get_object_matrix(obj):
+	if hasattr(obj, "matrix_world"):
+		return obj.matrix_world
+	if hasattr(obj, "getMatrix"):
+		return obj.getMatrix("worldspace")
+	return None
+
+
+def get_object_scale(obj):
+	if hasattr(obj, "scale"):
+		return obj.scale
+	if hasattr(obj, "getSize"):
+		return obj.getSize("worldspace")
+	return None
+
+
+def is_armature_object(obj):
+	obj_type = get_object_type(obj)
+	if obj_type in ("ARMATURE", "Armature"):
+		return True
+	if hasattr(obj, "getType"):
+		return obj.getType() == "Armature"
+	return False
+
+
 def get_scene_objects(scene=None):
 	if bpy is not None:
 		if scene is None:

@@ -164,3 +164,4 @@ The codebase already compiles under Python 3, so the next meaningful step is the
 The migration should keep legacy UI structure intact wherever feasible and use inferred defaults to avoid forcing users through a full reconfiguration when a value is absent.
 Status: the package import chain now resolves under Python 3, including the legacy DTSPython modules and the top-level Blender shim, so the exporter modules load cleanly in the current workspace.
 Status: preference bootstrap now falls back to inferred defaults instead of hard-failing when Registry/text configuration is unavailable.
+Status: the active export path now uses modern object, parent, and data access helpers for mesh, armature, and sequence import flows, reducing direct `getType()`/`getData()` usage in the main code path.

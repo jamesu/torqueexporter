@@ -503,7 +503,7 @@ def cleanVisTracks():
 		meshList = []
 		highestDL = export_tree.findHighestDL()
 		for obj in getAllChildren(highestDL):
-			if obj.getType() != "Mesh": continue
+			if bc.get_object_type(obj) != "Mesh": continue
 			if obj.name == "Bounds": continue
 			meshList.append(obj.name)
 		# check each track in the prefs and see if it's enabled.
@@ -614,10 +614,10 @@ def importOldVisAnim(seqName, seqPrefs):
 				if marker.name.lower() != markerName: continue
 				# loop through all objects, and sort into two lists
 				for obj in getAllChildren(marker):
-					if obj.getType() != "Mesh": continue
+					if bc.get_object_type(obj) != "Mesh": continue
 					if obj.name == "Bounds": continue
 					# process mesh objects
-					objData = obj.getData()
+					objData = bc.get_object_data(obj)
 					# Does the mesh that use this material?
 					if len(objData.faces) < 1: continue
 					if len(objData.materials) <= objData.faces[0].mat: continue
@@ -824,8 +824,8 @@ def importMaterialList():
 		for marker in getChildren(shapeTree.obj):		
 			if marker.name[0:6].lower() != "detail": continue
 			for obj in getAllChildren(marker):
-				if obj.getType() != "Mesh": continue
-				objData = obj.getData()
+				if bc.get_object_type(obj) != "Mesh": continue
+				objData = bc.get_object_data(obj)
 				for face in objData.faces:					
 					try: x = face.image
 					except IndexError: x = None
@@ -1191,25 +1191,25 @@ class ShapeTree(SceneTree):
 					for detail in self.normalDetails:
 						meshList = []
 						for child in getAllChildren(detail[1]):
-							if child.getType() == "Armature":
+							if bc.get_object_type(child) == "Armature":
 								# Need to ensure we only add one instance of an armature datablock
 								for arm in armatures:
 									#if arm.getData().getName() == child.getData().getName():
-									if arm.getData().name == child.getData().name:
+									if bc.get_object_data(arm).name == bc.get_object_data(child).name:
 										progressBar.update()
 										continue
 								armatures.append(child)
-							elif child.getType() == "Camera":
+							elif bc.get_object_type(child) == "Camera":
 								# Treat these like nodes
 								nodes.append(child)
-							elif child.getType() == "Mesh":
+							elif bc.get_object_type(child) == "Mesh":
 								meshList.append(child)
-							elif child.getType() == "Empty":
+							elif bc.get_object_type(child) == "Empty":
 								# Anything we need here?
 								progressBar.update()
 								continue
 							else:
-								Torque_Util.dump_writeWarning("Warning: Unhandled object '%s'" % child.getType())
+								Torque_Util.dump_writeWarning("Warning: Unhandled object '%s'" % bc.get_object_type(child))
 								progressBar.update()
 								continue
 								
@@ -1228,7 +1228,7 @@ class ShapeTree(SceneTree):
 						progressBar.update()
 					curSize = -1
 					for marker in self.collisionMeshes:
-						meshes = filter(lambda x: x.getType()=='Mesh', getAllChildren(marker))
+						meshes = [x for x in getAllChildren(marker) if bc.get_object_type(x) == 'Mesh']
 						self.Shape.addCollisionDetailLevel(meshes, False, curSize)
 						curSize -= 1
 						progressBar.update()					
@@ -1267,8 +1267,8 @@ class ShapeTree(SceneTree):
 
 				# check the armatures to see if any are locked in rest position
 				for armOb in getCurrentSceneObjects(scene):
-					if (armOb.getType() != 'Armature'): continue
-					if armOb.getData().restPosition:
+					if not bc.is_armature_object(armOb): continue
+					if bc.get_object_data(armOb).restPosition:
 						# this popup was too long and annoying, let the standard warning/error popup handle it.
 						#Blender.Draw.PupMenu("Warning%t|One or more of your armatures is locked into rest position. This will cause problems with exported animations.")
 						Torque_Util.dump_writeWarning("Warning: One or more of your armatures is locked into rest position.\n This will cause problems with exported animations.")
@@ -1385,11 +1385,12 @@ class ShapeTree(SceneTree):
 		# We need a list of bones for our gui, so find them
 		for obj in self.normalDetails:
 			for c in getAllChildren(obj[1]):
-				if c.getType() == "Armature":
-					if c.getData().name in addedArmatures: continue
-					else: addedArmatures.append(c.getData().name)
+				if bc.get_object_type(c) == "Armature":
+					cdata = bc.get_object_data(c)
+					if cdata.name in addedArmatures: continue
+					else: addedArmatures.append(cdata.name)
 					armBoneList = []
-					for bone in c.getData().bones.values():
+					for bone in cdata.bones.values():
 						armBoneList.append(bone.name)
 					# sort each armature's bone list before
 					# appending it to the main list.
@@ -4807,10 +4808,10 @@ class VisControlsClass(UserCreatedSeqControlsClassBase):
 				enabledList = []
 				disabledList = []
 				for obj in getAllChildren(marker):
-					if obj.getType() != "Mesh": continue
+					if bc.get_object_type(obj) != "Mesh": continue
 					if obj.name == "Bounds": continue
 					# process mesh objects
-					objData = obj.getData()
+					objData = bc.get_object_data(obj)
 					# add an entry in the track list for the mesh object.
 					#self.guiVisTrackList.addControl(self.createVisTrackListItem(obj.name))
 					# set the state of the enabled button

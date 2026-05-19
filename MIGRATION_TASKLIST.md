@@ -42,14 +42,14 @@ Current working inventory: [API_USAGE_INVENTORY.md](/Users/jamesu/Desktop/torque
 ## 4. Scene, Object, And Mesh Access
 
 - [x] Centralize export scene/object lookup behind helper functions.
-- [ ] Update object iteration to use `bpy.context.scene.objects` or evaluated depsgraph access where needed.
-- [ ] Update selection handling to use `bpy.context.selected_objects`.
-- [ ] Replace `getData()` calls with modern `obj.data` access.
-- [ ] Replace parent and bone-parent handling with the current object/armature relationship APIs.
+- [x] Update object iteration to use `bpy.context.scene.objects` or evaluated depsgraph access where needed.
+- [x] Update selection handling to use `bpy.context.selected_objects`.
+- [x] Replace `getData()` calls with modern `obj.data` access.
+- [x] Replace parent and bone-parent handling with the current object/armature relationship APIs.
 - [ ] Update mesh access to use `bpy.types.Mesh`, evaluated meshes, and `bmesh` where required.
 - [ ] Preserve collision mesh, bounds mesh, and export filtering behavior.
 
-Status: export-path scene, object, action, and material lookups are now routed through helper wrappers in `Dts_Blender.py`, `DtsPoseUtil.py`, `DtsShape_Blender.py`, and `Torque_Util.py`. Remaining legacy references are concentrated in dormant GUI code and a few legacy compatibility branches.
+Status: export-path scene, object, action, and material lookups are now routed through helper wrappers in `Dts_Blender.py`, `DtsPoseUtil.py`, `DtsShape_Blender.py`, and `Torque_Util.py`. The active export path now also uses modern object, parent, and data access helpers instead of direct `getType()` / `getData()` calls.
 
 ## 5. Materials, UVs, And Shading
 
