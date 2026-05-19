@@ -7,6 +7,8 @@ different display mode without rewriting every control twice.
 
 from __future__ import annotations
 
+import os
+
 try:
 	import bpy
 	from bpy.props import (
@@ -54,6 +56,26 @@ def _ensure_prefs():
 		except Exception:
 			prefs = None
 	return prefs
+
+
+def _blend_dir():
+	if bpy is None:
+		return ""
+	try:
+		filepath = bpy.data.filepath
+	except Exception:
+		filepath = ""
+	if filepath:
+		return os.path.dirname(filepath)
+	legacy = _legacy_module()
+	if legacy is not None:
+		try:
+			filename = legacy.getCurrentFilename()
+		except Exception:
+			filename = ""
+		if filename:
+			return os.path.dirname(filename)
+	return ""
 
 
 def _sequence_items(self, context):
@@ -252,7 +274,7 @@ def _sync_state_from_legacy(state):
 	prefs = _legacy_prefs() or {}
 	if not prefs:
 		return
-	state.export_basepath = str(prefs.get("exportBasepath", ""))
+	state.export_basepath = str(prefs.get("exportBasepath", "") or _blend_dir())
 	state.export_basename = str(prefs.get("exportBasename", ""))
 	state.dts_version = int(prefs.get("DTSVersion", 24))
 	state.write_shape_script = bool(prefs.get("WriteShapeScript", False))
@@ -278,7 +300,14 @@ def _sync_state_from_legacy(state):
 
 
 def _on_state_changed(self, context):
-	_sync_state_to_legacy(self)
+	_sync_state_to_legacy_safe(self)
+
+
+def _sync_state_to_legacy_safe(state):
+	try:
+		_sync_state_to_legacy(state)
+	except Exception as exc:
+		print(f"Torque UI sync warning: {exc}")
 
 
 def _sync_state_to_legacy(state):
@@ -587,7 +616,7 @@ class TORQUEEXPORTER_OT_apply_ui(bpy.types.Operator):
 	bl_options = {"INTERNAL"}
 
 	def execute(self, context):
-		_sync_state_to_legacy(context.scene.torque_export_ui)
+		_sync_state_to_legacy_safe(context.scene.torque_export_ui)
 		return {"FINISHED"}
 
 
@@ -597,7 +626,7 @@ class TORQUEEXPORTER_OT_export_from_ui(bpy.types.Operator):
 	bl_options = {"REGISTER"}
 
 	def execute(self, context):
-		_sync_state_to_legacy(context.scene.torque_export_ui)
+		_sync_state_to_legacy_safe(context.scene.torque_export_ui)
 		legacy = _legacy_module()
 		if legacy is None:
 			self.report({"ERROR"}, "Legacy exporter module is not available")
@@ -607,6 +636,22 @@ class TORQUEEXPORTER_OT_export_from_ui(bpy.types.Operator):
 		except Exception:
 			pass
 		legacy.entryPoint("normal")
+		return {"FINISHED"}
+
+
+class TORQUEEXPORTER_OT_use_blend_dir(bpy.types.Operator):
+	bl_idname = "torqueexporter.use_blend_dir"
+	bl_label = "Use Current File Folder"
+	bl_options = {"INTERNAL"}
+
+	def execute(self, context):
+		state = context.scene.torque_export_ui
+		blend_dir = _blend_dir()
+		if not blend_dir:
+			self.report({"WARNING"}, "Current .blend file has not been saved yet")
+			return {"CANCELLED"}
+		state.export_basepath = blend_dir
+		_sync_state_to_legacy_safe(state)
 		return {"FINISHED"}
 
 
@@ -639,7 +684,9 @@ def _draw_export_block(layout, state):
 	box = layout.box()
 	box.label(text="Export")
 	col = box.column(align=True)
-	col.prop(state, "export_basepath")
+	path_row = col.row(align=True)
+	path_row.prop(state, "export_basepath", text="Export Path")
+	path_row.operator("torqueexporter.use_blend_dir", text="", icon="FILE_FOLDER")
 	col.prop(state, "export_basename")
 	row = col.row(align=True)
 	row.prop(state, "dts_version")
@@ -850,6 +897,7 @@ _CLASSES = (
 	TORQUEEXPORTER_OT_refresh_materials,
 	TORQUEEXPORTER_OT_refresh_ui,
 	TORQUEEXPORTER_OT_apply_ui,
+	TORQUEEXPORTER_OT_use_blend_dir,
 	TORQUEEXPORTER_OT_export_from_ui,
 	TORQUEEXPORTER_PT_scene_panel,
 )
