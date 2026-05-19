@@ -186,6 +186,21 @@ class DtsStream:
 	def write(self, value): self.write32(value) # Evil
 	def write8(self, value): self.buffer8.append(value)
 	def write16(self, value): self.buffer16.append(value)	
+	def _coerce_s8(self, value):
+		value = int(value) & 0xff
+		if value >= 0x80:
+			value -= 0x100
+		return value
+	def _coerce_s16(self, value):
+		value = int(value) & 0xffff
+		if value >= 0x8000:
+			value -= 0x10000
+		return value
+	def _coerce_s32(self, value):
+		value = int(value) & 0xffffffff
+		if value >= 0x80000000:
+			value -= 0x100000000
+		return value
 	'''
 	def write32(self, value):
 		# ugly ugly hack to deal with python 2.4's int -> long int conversion confusion
@@ -193,13 +208,9 @@ class DtsStream:
 		self.buffer32.append(val)
 	'''
 	def write32_py24(self, value):
-		# ugly ugly hack to deal with python 2.4's int -> long int conversion confusion
-		val = struct.unpack('i', struct.pack('I', value))[0]
-		self.buffer32.append(val)
+		self.buffer32.append(self._coerce_s32(value))
 	def write32_py25(self, value):
-		try:self.buffer32.append(value)
-		except OverflowError:
-			self.buffer32.append(struct.unpack('i', struct.pack('I', value))[0])
+		self.buffer32.append(self._coerce_s32(value))
 			
 
 	def read(self): return self.read32()
@@ -235,11 +246,8 @@ class DtsStream:
 	def writes32(self, value):
 		self.write32(value)
 	def writeu32(self, value):
-		# Capital Letter = Unsigned
-		uval = value
-		puval = struct.pack('I', uval)
-		ival = struct.unpack('i', puval)[0]
-		self.write32(ival)
+		# Capital Letter = Unsigned, but the stored bytes are still 32-bit two's complement.
+		self.write32(self._coerce_s32(int(value) & 0xffffffff))
 	def writef32(self, value):
 		# bit of a hack, but should work
 		fval = value
@@ -255,13 +263,10 @@ class DtsStream:
 		pval = struct.unpack('H', uval)[0]
 		return pval
 	def writes16(self, value):
-		self.write16(value)
+		self.write16(self._coerce_s16(value))
 	def writeu16(self, value):
-		# Capital Letter = Unsigned
-		uval = value
-		puval = struct.pack('H', uval)
-		ival = struct.unpack('h', puval)[0]
-		self.write16(ival)
+		# Capital Letter = Unsigned, but preserve the exact 16-bit bit pattern.
+		self.write16(int(value) & 0xffff)
 	def reads8(self):
 		return self.read8()
 	def readu8(self):
@@ -271,13 +276,10 @@ class DtsStream:
 		pval = struct.unpack('B', uval)[0]
 		return pval
 	def writes8(self, value):
-		self.write8(value)
+		self.write8(self._coerce_s8(value))
 	def writeu8(self, value):
-		# Capital Letter = Unsigned
-		uval = value
-		puval = struct.pack('B', uval)
-		ival = struct.unpack('b', puval)[0]
-		self.write8(ival)
+		# Capital Letter = Unsigned, but preserve the exact 8-bit bit pattern.
+		self.write8(int(value) & 0xff)
 	# End ?x* functions
 	def readBox(self):
 		v1 = self.readPoint3F()
