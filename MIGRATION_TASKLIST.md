@@ -1,14 +1,19 @@
 # Torque Blender Exporter Modernization Task List
 
 Canonical backlog for updating the legacy Torque `.dts` Blender exporter to modern Blender APIs.
+Migration rules and sequencing are documented in [MIGRATION_PLAN.md](/Users/jamesu/Desktop/torqueexporter/MIGRATION_PLAN.md).
 
 ## 0. Scope And Baseline
 
 - [ ] Confirm the target Blender version range to support, then document it at the top of the exporter.
 - [ ] Run a quick behavioral audit of the legacy add-on so we preserve current `.dts` output expectations.
 - [ ] Identify any Torque-side format assumptions that must remain unchanged during the Blender API migration.
+- [ ] Preserve the old UI where possible instead of replacing it with a brand-new layout.
+- [ ] Define best-guess defaults for missing config values so export can proceed without forcing complete setup.
 
 ## 1. Legacy API Inventory
+
+Current working inventory: [API_USAGE_INVENTORY.md](/Users/jamesu/Desktop/torqueexporter/API_USAGE_INVENTORY.md)
 
 - [ ] Catalog every old Blender API usage in `torqueplugin/Dts_Blender.py`.
 - [ ] Catalog every old Blender API usage in `torqueplugin/DtsShape_Blender.py`.
@@ -31,6 +36,7 @@ Canonical backlog for updating the legacy Torque `.dts` Blender exporter to mode
 - [ ] Replace registry-based preferences in `torqueplugin/Dts_Blender.py` with `bpy.props` and add-on preferences.
 - [ ] Replace text-buffer persistence for config with a modern storage approach.
 - [ ] Preserve export defaults such as basename, output path, detail settings, and billboard options.
+- [ ] Infer sensible defaults from the `.blend` file, scene, and selection when stored config values are missing.
 - [ ] Rework any UI state that currently depends on global mutable module variables.
 
 ## 4. Scene, Object, And Mesh Access
@@ -66,14 +72,14 @@ Canonical backlog for updating the legacy Torque `.dts` Blender exporter to mode
 
 ## 8. UI And Export Workflow
 
-- [ ] Modernize the export dialog and settings UI.
+- [ ] Modernize only the UI portions that cannot survive the Blender API migration.
 - [ ] Keep existing exporter options available where they still make sense.
 - [ ] Simplify or remove obsolete options that were specific to the old Blender API.
 - [ ] Make error reporting and warnings visible in Blender’s UI and console.
 
 ## 9. Code Cleanup And Compatibility
 
-- [ ] Replace Python 2 syntax with Python 3 syntax throughout the add-on.
+- [x] Replace Python 2 syntax with Python 3 syntax throughout the add-on.
 - [ ] Remove deprecated language patterns such as old-style `print`, `filter` assumptions, and legacy exception handling.
 - [ ] Standardize imports and reduce reliance on globals where practical.
 - [ ] Add type-safe helper functions for path handling, object filtering, and bone lookup if useful.
@@ -90,6 +96,8 @@ Canonical backlog for updating the legacy Torque `.dts` Blender exporter to mode
 
 - [ ] Update installation instructions for modern Blender add-on installation.
 - [ ] Document supported Blender versions and any behavioral differences from the legacy exporter.
+- [ ] Document the fallback/default behavior for missing configuration values.
+- [ ] Document the decision to preserve the legacy UI where feasible.
 - [ ] Document known limitations, especially where Torque DTS behavior is preserved over Blender-native conventions.
 - [ ] Add a short migration note explaining that this file is the active task tracker for the rewrite.
 
@@ -102,4 +110,3 @@ Canonical backlog for updating the legacy Torque `.dts` Blender exporter to mode
 5. Clean up Python 3 compatibility and modern Blender registration.
 6. Verify exports against known scenes.
 7. Update docs and remove dead legacy paths.
-
