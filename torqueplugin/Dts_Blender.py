@@ -48,7 +48,7 @@ tracebackImported = True
 try:
 	import traceback	
 except:
-	print "Could not import exception traceback module."
+	print("Could not import exception traceback module.")
 	tracebackImported = False
 
 
@@ -116,7 +116,7 @@ def getAllChildren(obj):
 # this is need for blender registry support.
 def pythonizeFileName(filename):
 	# replace all non-alphanumeric chars with _
-	p = re.compile('\W')
+	p = re.compile(r'\W')
 	return p.sub('_', filename)
 
 
@@ -165,7 +165,7 @@ def loadPrefs():
 				
 		if not success:
 			# No registry, no text, so need a new Prefs
-			print "No Registry and no text objects, must be new."
+			print("No Registry and no text objects, must be new.")
 		else:
 			# Ok, so now we can load the text document
 			if newConfig:
@@ -186,9 +186,9 @@ def loadPrefs():
 				savePrefs()
 				return True
 			else:
-				print "Error: failed to load old preferences!"
-				print " To generate new preferences, delete the TorqueExporter_SCONF"
-				print " text buffer, then save and reload the .blend file."
+				print("Error: failed to load old preferences!")
+				print(" To generate new preferences, delete the TorqueExporter_SCONF")
+				print(" text buffer, then save and reload the .blend file.")
 				return False
 				# We'll leave it up to the user to delete the text object
 		
@@ -1229,11 +1229,11 @@ class ShapeTree(SceneTree):
 				del self.Shape
 				progressBar.popTask()
 				return None
-		except Exception, msg:
+		except Exception as msg:
 			Torque_Util.dump_writeErr("Error: Exception encountered, bailing out.")
 			Torque_Util.dump_writeln(Exception)
 			if tracebackImported:
-				print "Dumping traceback to log..."
+				print("Dumping traceback to log...")
 				Torque_Util.dump_writeln(traceback.format_exc())
 			Torque_Util.dump_setout("stdout")
 			if self.Shape: del self.Shape
@@ -1307,7 +1307,7 @@ def handleScene():
 
 def export():
 	Torque_Util.dump_writeln("Exporting...")
-	print "Exporting..."
+	print("Exporting...")
 	# switch out of edit mode if we are in edit mode
 	Window.EditMode(0)
 	handleScene()
@@ -1338,7 +1338,7 @@ def export():
 	
 	if Torque_Util.numErrors > 0 or Torque_Util.numWarnings > 0:
 		message = ("Export finished with %i error(s) and %s warning(s). Read the log file for more information." % (Torque_Util.numErrors, Torque_Util.numWarnings))
-		print message
+		print(message)
 		if Prefs["ShowWarningErrorPopup"]:
 			message +=  "%t|Continue|Do not show this message again"
 			opt = Blender.Draw.PupMenu(message)
@@ -1349,7 +1349,7 @@ def export():
 		Torque_Util.numWarnings = 0
 		Torque_Util.numErrors = 0
 	else:
-		print "Finished.  See generated log file for details."
+		print("Finished.  See generated log file for details.")
 		
 		
 		
@@ -2336,14 +2336,14 @@ class SeqControlsClassBase:
 	#  @param seqName The name of the currently selected sequence.
 	#  @param seqPrefs The preferences key of the currently selected sequence.
 	def refreshSequenceOptions(self, seqName, seqPrefs):
-		print "Parent refreshSequenceOptions called.  You probably forgot to implement it in your new child class :-)"
+		print("Parent refreshSequenceOptions called.  You probably forgot to implement it in your new child class :-)")
 		pass
 
 	## @brief Clears sequence specific option controls on the right side of the sequences panel.
 	#  @note This method should be called when no sequence list item is currently selected.
 	#  @note Must be overridden by child classes.
 	def clearSequenceOptions(self):
-		print "Parent clearSequenceOptions called.  You probably forgot to implement it in your new child class :-)"
+		print("Parent clearSequenceOptions called.  You probably forgot to implement it in your new child class :-)")
 		pass
 
 	## @brief Updates GUI states when the sequence list item selection is changed.
@@ -2493,8 +2493,8 @@ class SeqControlsClassBase:
 		if self.guiSeqList.width == 0: return
 		# loop through all actions in the preferences
 		global Prefs
-		keys = Prefs['Sequences'].keys()
-		keys.sort(lambda x, y: cmp(x.lower(),y.lower()))
+		keys = list(Prefs['Sequences'].keys())
+		keys.sort(key=lambda x: x.lower())
 		for seqName in keys:
 			seqPrefs = getSequenceKey(seqName)
 			if self.seqFilter == "All":				
@@ -3411,8 +3411,8 @@ class ActionControlsClass(SeqControlsClassBase):
 	## @brief Refresh the blend animation reference pose action pulldown.
 	def refreshBlendRefPosePulldown(self):
 		actions = Armature.NLA.GetActions()
-		keys = actions.keys()
-		keys.sort(lambda x, y: cmp(x.lower(),y.lower()))
+		keys = list(actions.keys())
+		keys.sort(key=lambda x: x.lower())
 		for key in keys:
 			# skip the fake action (hack for blender 2.41 bug)
 			if key == "DTSEXPFAKEACT": continue		
@@ -3737,14 +3737,14 @@ class UserCreatedSeqControlsClassBase(SeqControlsClassBase):
 	#  @param seqName The name of the currently selected sequence.
 	#  @param seqPrefs The preferences key of the currently selected sequence.
 	def refreshSequenceOptions(self, seqName, seqPrefs):
-		print "Parent refreshSequenceOptions called.  You probably forgot to implement it in your new child class :-)"
+		print("Parent refreshSequenceOptions called.  You probably forgot to implement it in your new child class :-)")
 		pass
 
 	## @brief Clears sequence specific option controls on the right side of the sequences panel.
 	#  @note This method should be called when no sequence list item is currently selected.
 	#  @note Must be overridden by child classes.
 	def clearSequenceOptions(self):
-		print "Parent clearSequenceOptions called.  You probably forgot to implement it in your new child class :-)"
+		print("Parent clearSequenceOptions called.  You probably forgot to implement it in your new child class :-)")
 		pass
 
 	## @brief Refreshes all controls on the panel w/ fresh data from blender and the prefs.
@@ -3759,8 +3759,8 @@ class UserCreatedSeqControlsClassBase(SeqControlsClassBase):
 		self.clearExistingSeqPulldown()
 		# loop through all actions in the preferences and check for sequences without (self.seqFilter) animations
 		global Prefs
-		keys = Prefs['Sequences'].keys()
-		keys.sort(lambda x, y: cmp(x.lower(),y.lower()))
+		keys = list(Prefs['Sequences'].keys())
+		keys.sort(key=lambda x: x.lower())
 		for seqName in keys:
 			seqPrefs = getSequenceKey(seqName)
 			if (not seqPrefs[self.seqFilter]['Enabled']) and self.hasAnyAnim(seqPrefs):
@@ -3807,7 +3807,7 @@ class UserCreatedSeqControlsClassBase(SeqControlsClassBase):
 	#     sequence type.
 	#  @param newSeqName The name of the sequence to be created.
 	def addNewAnim(self, newSeqName):
-		print "Parent addNewAnim called.  You probably forgot to implement it in your new child class :-)"
+		print("Parent addNewAnim called.  You probably forgot to implement it in your new child class :-)")
 		pass
 
 
@@ -4118,8 +4118,8 @@ class IFLControlsClass(UserCreatedSeqControlsClassBase):
 		global Prefs
 		try: x = Prefs['Materials'].keys()
 		except: Prefs['Materials'] = {}
-		keys = Prefs['Materials'].keys()
-		keys.sort(lambda x, y: cmp(x.lower(),y.lower()))
+		keys = list(Prefs['Materials'].keys())
+		keys.sort(key=lambda x: x.lower())
 		for matName in Prefs['Materials'].keys():
 			mat = Prefs['Materials'][matName]
 			try: x = mat['IFLMaterial']
@@ -4643,7 +4643,7 @@ class VisControlsClass(UserCreatedSeqControlsClassBase):
 	def refreshIpoObjectPulldown(self, IpoType):
 		self.clearIpoObjectPulldown()
 		objs = getAllSceneObjectNames(IpoType)
-		objs.sort(lambda x, y: cmp(x.lower(),y.lower()))
+		objs.sort(key=lambda x: x.lower())
 		for obj in objs:
 			self.guiIpoObject.items.append(obj)
 
@@ -4695,8 +4695,8 @@ class VisControlsClass(UserCreatedSeqControlsClassBase):
 					if enabled: enabledList.append(obj.name)
 					else: disabledList.append(obj.name)
 				# sort, then combine lists
-				enabledList.sort(lambda x, y: cmp(x.lower(),y.lower()))
-				disabledList.sort(lambda x, y: cmp(x.lower(),y.lower()))
+				enabledList.sort(key=lambda x: x.lower())
+				disabledList.sort(key=lambda x: x.lower())
 				combinedList = enabledList + disabledList
 				# add everything in the combined list
 				for item in combinedList:

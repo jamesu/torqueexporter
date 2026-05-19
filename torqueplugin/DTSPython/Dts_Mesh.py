@@ -992,9 +992,9 @@ class DtsMesh:
 		new primitives / clusters / vertexes into the mesh data
 		'''
 		self.alwaysWriteDepth = alwaysWriteDepth
-		print "      Sorting : WD(%d) NB(%d) MD(%d) ZU(%d), ZD(%d)" % (alwaysWriteDepth, numBigFaces, maxDepth, zLayerUp, zLayerDown)
+		print("      Sorting : WD(%d) NB(%d) MD(%d) ZU(%d), ZD(%d)" % (alwaysWriteDepth, numBigFaces, maxDepth, zLayerUp, zLayerDown))
 		self.generateClusters(numBigFaces, maxDepth, zLayerUp, zLayerDown)
-		print "      Sorting : Done, Generated %d clusters" % len(self.clusters)
+		print("      Sorting : Done, Generated %d clusters" % len(self.clusters))
 
 
 import Dts_TranslucentSort

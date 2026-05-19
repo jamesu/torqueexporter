@@ -219,7 +219,7 @@ class BlenderShape(DtsShape):
 			# the autobillboard LOD is set to a value higher than
 			# the lowest regular detail level. - Joe G.
 			if self.subshapes[0].numObjects < numAddedMeshes:
-				print "PANIC!! PANIC!! RUN!!!"
+				print("PANIC!! PANIC!! RUN!!!")
 				return False
 			'''
 			# Ok, so we have an object with not enough meshes - find the odd one out
@@ -400,7 +400,7 @@ class BlenderShape(DtsShape):
 		if self.subshapes[0].numObjects != numAddedMeshes:
 			# The following condition should NEVER happen
 			if self.subshapes[0].numObjects < numAddedMeshes:
-				print "PANIC!! PANIC!! RUN!!!"
+				print("PANIC!! PANIC!! RUN!!!")
 				return False
 			# Ok, so we have an object with not enough meshes - find the odd one out
 			for obj in self.objects[self.subshapes[0].firstObject:self.subshapes[0].firstObject+self.subshapes[0].numObjects]:
@@ -412,7 +412,7 @@ class BlenderShape(DtsShape):
 		if size == -1:
 			# Calculate size using meshes
 			# TODO
-			print "TODO: calcSize"
+			print("TODO: calcSize")
 			calcSize = 0
 		else:
 			# No, not at all
@@ -599,7 +599,7 @@ class BlenderShape(DtsShape):
 			csize[0],csize[1],csize[2] = csize[0]*nsize[0],csize[1]*nsize[1],csize[2]*nsize[2]
 			parent = parent.getParent()
 		exportScale = self.preferences['ExportScale']
-		print "exportScale = ", exportScale
+		print("exportScale = ", exportScale)
 		# add on export scale factor
 		csize[0], csize[1], csize[2] = csize[0]*exportScale, csize[1]*exportScale, csize[2]*exportScale
 		return csize
@@ -768,7 +768,7 @@ class BlenderShape(DtsShape):
 				if bone.parent == None:
 					rootBones.append(bone.name)
 			# sort by Node order
-			rootBones.sort(lambda x, y: cmp(nodeOrderDict[x], nodeOrderDict[y]))
+			rootBones.sort(key=lambda x: nodeOrderDict[x])
 			for bone in rootBones:
 				self.addBones(arm.bones[bone], parentBone, armature, arm, nodeOrderDict, nodeOrderList)
 		else:
@@ -1343,7 +1343,7 @@ class BlenderShape(DtsShape):
 							sequence.has_ansitropic_scale = True
 			except ValueError:
 				# not an Action IPO...
-				print "whoops!"
+				print("whoops!")
 				pass
 			
 			# TODO: how do we determine RVK channels?
@@ -1401,7 +1401,7 @@ class BlenderShape(DtsShape):
 		if isBlend:
 			# Need to build a list of node transforms to use as the
 			# base transforms for nodes in our blend animation.
- 			useAction = seqPrefs['Action']['BlendRefPoseAction']
+			useAction = seqPrefs['Action']['BlendRefPoseAction']
 			useFrame = seqPrefs['Action']['BlendRefPoseFrame']
 			baseTransforms = self.buildBaseTransforms(sequence, action, useAction, useFrame, scene, context)
 			if baseTransforms == None:

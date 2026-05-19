@@ -1256,21 +1256,21 @@ class DtsShape:
 		'''
 		for i in range(0, len(self.detaillevels)):
 			if self.detaillevels[i].size < 0:
-				print "TODO 1" # Not implemented creation of these lists yet!!
+				print("TODO 1") # Not implemented creation of these lists yet!!
 				#self.alphaIn[i] = 0.0
 				#self.alphaOut[i] = 0.0
 			elif i+1 == len(self.detaillevels) or self.detaillevels[i+1].size < 0:
-				print "TODO 2"
+				print("TODO 2")
 				#self.alphaIn[i] = 0.0
 				#self.alphaOut[i] = smAlphaOutLastDetail
 			else:
 				if self.detaillevels[i+1].subshape < 0:
-					print "TODO 3" 
+					print("TODO 3") 
 					# billboard detail special
 					#self.alphaIn[i] = smAlphaInBillboard
 					#self.alphaOut[i] = smAlphaOutBillboard
 				else:
-					print "TODO 4"
+					print("TODO 4")
 					# Normal detail next
 					#self.alphaIn[i] = smAlphaInDefault
 					#self.alphaOut[i] = smAlphaOutDefault

@@ -436,7 +436,7 @@ if accelerator == "BLENDER":
 			return result
 		def mprint(self):
 			for x in range(0, 4):
-				print "| %f %f %f %f |" % (self.get(x, 0), self.get(x,1), self.get(x,2), self.get(x,3))
+				print("| %f %f %f %f |" % (self.get(x, 0), self.get(x,1), self.get(x,2), self.get(x,3)))
 else:
 	# Vector class (3 members)
 	class Vector:
@@ -446,9 +446,9 @@ else:
 			del self.members
 		def __str__(self):
 			retVal = ""
-			retVal += ""  + `self[0]`
-			retVal += "," + `self[1]`
-			retVal += "," + `self[2]`
+			retVal += "" + repr(self[0])
+			retVal += "," + repr(self[1])
+			retVal += "," + repr(self[2])
 			return retVal
 		# Optimized version of __getitem__ is below the original
 		'''
@@ -578,10 +578,10 @@ else:
 			self.members = [float(x), float(y), float(z), float(w)]
 		def __str__(self):
 			retVal = ""
-			retVal += ""  + `self[0]`
-			retVal += "," + `self[1]`
-			retVal += "," + `self[2]`
-			retVal += "," + `self[3]`
+			retVal += "" + repr(self[0])
+			retVal += "," + repr(self[1])
+			retVal += "," + repr(self[2])
+			retVal += "," + repr(self[3])
 			return retVal
 		def __add__(self, other):
 			return Vector4(
@@ -651,8 +651,8 @@ else:
 			self.members = [float(x), float(y)]
 		def __str__(self):
 			retVal = ""
-			retVal += ""  + `self.members[0]`
-			retVal += "," + `self.members[1]`
+			retVal += "" + repr(self.members[0])
+			retVal += "," + repr(self.members[1])
 			return retVal
 		def __add__(self, other):
 			result = Vector2()
@@ -710,10 +710,10 @@ else:
 		
 		def __str__(self):
 			retVal = ""
-			retVal += ""  + `self[0]`
-			retVal += "," + `self[1]`
-			retVal += "," + `self[2]`
-			retVal += "," + `self[3]`
+			retVal += "" + repr(self[0])
+			retVal += "," + repr(self[1])
+			retVal += "," + repr(self[2])
+			retVal += "," + repr(self[3])
 			return retVal
 		# we're spending a lot of time in __mul__ so it's worth optimizing
 		'''
@@ -1188,7 +1188,7 @@ else:
 
 		def mprint(self):
 			for x in range(0, 4):
-				print "| %f %f %f %f |" % (self.get(x, 0), self.get(x,1), self.get(x,2), self.get(x,3))
+				print("| %f %f %f %f |" % (self.get(x, 0), self.get(x,1), self.get(x,2), self.get(x,3)))
 
 # Quat16 - Compressed Quaternion
 class Quat16:
@@ -1329,7 +1329,7 @@ class Box:
 					return 0
 			return 1
 		else:
-			print "ERROR; Could not check object",type(obj)
+			print("ERROR; Could not check object", type(obj))
 			return None
 
 	def isOverlapped(self, obj):
@@ -1361,9 +1361,7 @@ class Box:
 			ret = Box(Vector(self.min[0], self.min[1], middle[2]), Vector(self.max[0], self.max[1], self.max[2]))
 			self.max[2] = middle[2]
 		else:
-			print "ERROR: Cannot open inter-dimensional portal!"
+			print("ERROR: Cannot open inter-dimensional portal!")
 			return None
 
 		return ret
-
-

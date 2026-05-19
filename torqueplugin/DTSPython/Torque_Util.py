@@ -98,9 +98,9 @@ class StringTable:
 	
 	# Prints statistics of strings in the StringTable
 	def print_table(self):
-		print "Strings in table :"
+		print("Strings in table :")
 		for sn in range(0, len(self.strings)):
-			print self.strings[sn].tostring()
+			print(self.strings[sn].tostring())
 	
 	# Writes the StringTable to a file
 	def write(self): # Writes all of the strings
@@ -195,7 +195,7 @@ class Tokenizer:
 			elif (c == '\"'):
 				# Quoted token
 				if currPos != 0:
-					print "ERROR: Quotes must be at beginning of token! (line : %d)" % (self.mCurrLine)
+					print("ERROR: Quotes must be at beginning of token! (line : %d)" % (self.mCurrLine))
 				
 				startLine = self.mCurrLine
 				self.mCurrPos += 1
@@ -206,9 +206,9 @@ class Tokenizer:
 					
 				while (self.mBuffer[self.mCurrPos] != '\"'):
 					if self.mCurrPos >= len(self.mBuffer):
-						print "End of file before quote closed.  Quote started: (line : %d)" % startLine
+						print("End of file before quote closed.  Quote started: (line : %d)" % startLine)
 					if (self.mBuffer[self.mCurrPos] == '\n') or (self.mBuffer[self.mCurrPos] == '\r'):
-						print "End of line reached before end of quote.  Quote started: (line : %d)" % startLine
+						print("End of line reached before end of quote.  Quote started: (line : %d)" % startLine)
 					self.mCurrToken = self.mCurrToken + self.mBuffer[self.mCurrPos]
 					self.mCurrPos += 1 # Advance buffer pos
 					currPos += 1 # Advance token pos
@@ -243,10 +243,10 @@ def dump_setout(filename="stdout"):
 	if filename == "stdout":
 		if dump_file != None: dump_file.close()
 		dump_file = None
-		print "Dumping output to console"
+		print("Dumping output to console")
 	else:
 		dump_file = open(filename, "w")
-		print "Dumping output to file '%s'" % filename
+		print("Dumping output to file '%s'" % filename)
 
 def dump_finish():
 	if dump_file != None:
@@ -257,7 +257,7 @@ def dump_write(string):
 	if dump_file != None:
 		dump_file.write("%s " % string)
 	else:
-		print string,
+		print(string, end=' ')
 
 def dump_writeln(string):
 	dump_write("%s\n" % string)

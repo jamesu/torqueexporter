@@ -96,8 +96,8 @@ class DtsStream:
 	def storeCheck(self, checkPoint= -1):
 		# Write checkpoints (unsigned presumably)
 		a = self.checkCount % 256
-      		b = self.checkCount % 65536
-      		c = self.checkCount % (2**32)
+		b = self.checkCount % 65536
+		c = self.checkCount % (2**32)
 		self.writeu8(a)
 		self.writeu16(b)
 		self.writeu32(c)
@@ -158,7 +158,7 @@ class DtsStream:
 		if not little_endian():
 			hdr.byteswap()
 		ver = 0
-		ver, totalSize, offset16, offset8 = long(hdr[0]), long(hdr[1]), long(hdr[2]), long(hdr[3])
+		ver, totalSize, offset16, offset8 = int(hdr[0]), int(hdr[1]), int(hdr[2]), int(hdr[3])
 		
 		self.mExporterVersion = ver >> 16
 		ver &= 0xFF

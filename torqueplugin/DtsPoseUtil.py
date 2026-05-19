@@ -540,4 +540,4 @@ if __name__ == "__main__":
 	#putEmptyAt(locWS)
 
 
-	print "Done!"
+	print("Done!")
