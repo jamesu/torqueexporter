@@ -1276,7 +1276,7 @@ class ShapeTree(SceneTree):
 				# check the armatures to see if any are locked in rest position
 				for armOb in getCurrentSceneObjects(scene):
 					if not bc.is_armature_object(armOb): continue
-					if bc.get_object_data(armOb).restPosition:
+					if bc.is_armature_in_rest_pose(armOb):
 						# this popup was too long and annoying, let the standard warning/error popup handle it.
 						#Blender.Draw.PupMenu("Warning%t|One or more of your armatures is locked into rest position. This will cause problems with exported animations.")
 						Torque_Util.dump_writeWarning("Warning: One or more of your armatures is locked into rest position.\n This will cause problems with exported animations.")

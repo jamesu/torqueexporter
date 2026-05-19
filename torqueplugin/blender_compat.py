@@ -133,6 +133,20 @@ def get_bone_children(bone):
 	return []
 
 
+def is_armature_in_rest_pose(obj):
+	raw_obj = getattr(obj, "_obj", obj)
+	if raw_obj is None:
+		return False
+	if hasattr(raw_obj, "pose_position"):
+		return getattr(raw_obj, "pose_position") == "REST"
+	data = getattr(raw_obj, "data", None)
+	if data is not None and hasattr(data, "pose_position"):
+		return getattr(data, "pose_position") == "REST"
+	if hasattr(raw_obj, "mode"):
+		return getattr(raw_obj, "mode") == "EDIT"
+	return False
+
+
 def get_pose_bone_matrix(pose_bone):
 	if hasattr(pose_bone, "matrix"):
 		return pose_bone.matrix
