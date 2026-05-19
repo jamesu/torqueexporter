@@ -838,7 +838,8 @@ class BlenderShape(DtsShape):
 		
 		# Add the rest of the bones
 		parentId = len(self.nodes)-1		
-		if bone.hasChildren():
+		children_bones = bc.get_bone_children(bone)
+		if len(children_bones) > 0:
 			# make a list of children
 			children = []
 			extraChildren = []
@@ -848,7 +849,7 @@ class BlenderShape(DtsShape):
 				# add children
 				for nname in nodeOrderList:
 					# see if the curent node is one of our children
-					for bChild in bone.children:
+					for bChild in children_bones:
 						# if our bone is not in the list at all...
 						try: x = nodeOrderDict[bChild.name]
 						except:
@@ -870,7 +871,7 @@ class BlenderShape(DtsShape):
 					self.addBones(armData.bones[nname], parentId, arm, armData, nodeOrderDict, nodeOrderList)
 
 			else:
-				for bChild in bone.children:
+				for bChild in children_bones:
 					self.addBones(bChild, parentId, arm, armData)
 			
 
