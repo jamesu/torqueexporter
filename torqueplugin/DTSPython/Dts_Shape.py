@@ -1355,7 +1355,7 @@ class DtsShape:
 			# Write the node, since its a part of the sequence
 			if self.nodes[n].name != -1:
 				fs.write(struct.pack('<i', len(self.sTable.strings[self.nodes[n].name])))
-				self.sTable.strings[self.nodes[n].name].tofile(fs)
+				fs.write(self.sTable.strings[self.nodes[n].name])
 			else:
 				fs.write(struct.pack('<i', 0)) # No length, -1 index!
 				# Warning : do not name more than 1 node -1 index!
@@ -1477,7 +1477,7 @@ class DtsShape:
 
 		if sequence.nameIndex != -1:
 			fs.write(struct.pack('<i', len(self.sTable.strings[sequence.nameIndex])))
-			self.sTable.strings[sequence.nameIndex].tofile(fs)
+			fs.write(self.sTable.strings[sequence.nameIndex])
 		else:
 			fs.write(0x00)
 
