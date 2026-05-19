@@ -1018,10 +1018,16 @@ class SceneTree:
 
 	# Performs tasks to handle this object, and its children
 	def handleObject(self):
-		# Go through children and handle them
-		for c in getCurrentSceneObjects():
-			if c.getParent() != None: continue
-			self.children.append(self.handleChild(c))
+		# Root scene trees discover top-level export roots.
+		# Child trees walk the actual Blender hierarchy beneath their parent object.
+		if self.obj == None:
+			children = [c for c in getCurrentSceneObjects() if c.parent == None]
+		else:
+			children = getChildren(self.obj)
+		for c in children:
+			child = self.handleChild(c)
+			if child != None:
+				self.children.append(child)
 
 	def process(self, progressBar):
 		# Process children
