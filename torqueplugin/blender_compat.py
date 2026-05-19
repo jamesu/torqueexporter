@@ -191,6 +191,19 @@ def get_ipo_scale_index(name):
 	return {"ScaleX": 0, "ScaleY": 1, "ScaleZ": 2}.get(name, None)
 
 
+def get_ipo_curve_names():
+	return ("LocX", "LocY", "LocZ", "QuatX", "QuatY", "QuatZ", "QuatW", "ScaleX", "ScaleY", "ScaleZ")
+
+
+def get_ipo_curve_key(ipo, name):
+	if hasattr(ipo, "curveConsts"):
+		try:
+			return ipo.curveConsts[name]
+		except Exception:
+			return name
+	return name
+
+
 def set_frame(scene, frame):
 	if bpy is not None and scene is not None:
 		scene.frame_set(frame)

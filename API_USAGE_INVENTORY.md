@@ -165,4 +165,4 @@ The migration should keep legacy UI structure intact wherever feasible and use i
 Status: the package import chain now resolves under Python 3, including the legacy DTSPython modules and the top-level Blender shim, so the exporter modules load cleanly in the current workspace.
 Status: preference bootstrap now falls back to inferred defaults instead of hard-failing when Registry/text configuration is unavailable.
 Status: the active export path now uses modern object, parent, and data access helpers for mesh, armature, and sequence import flows, reducing direct `getType()`/`getData()` usage in the main code path.
-Status: animation and visibility code now route through explicit helper accessors for action channels and IPO lookup, but the exporter still relies on legacy channel naming conventions for scale and curve discovery.
+Status: animation and visibility code now route through explicit helper accessors for action channels and IPO lookup. Legacy curve names are still preserved in the compatibility layer so old scenes continue to evaluate the same way after import into modern Blender.

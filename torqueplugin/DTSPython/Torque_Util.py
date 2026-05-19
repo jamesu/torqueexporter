@@ -481,7 +481,7 @@ def validateVisibility(seqName, seqPrefs):
 					bIpo = bc.get_object_ipo(bObj)
 					IPOCurveName = getBlenderIPOChannelConst(track['IPOType'], track['IPOChannel'])
 					IPOCurve = None
-					IPOCurveConst = bIpo.curveConsts[IPOCurveName]
+					IPOCurveConst = bc.get_ipo_curve_key(bIpo, IPOCurveName)
 					IPOCurve = bIpo[IPOCurveConst]
 					if IPOCurve == None: raise TypeError
 				except: continue

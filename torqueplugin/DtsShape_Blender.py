@@ -1334,15 +1334,18 @@ class BlenderShape(DtsShape):
 				if (channels[channel_name].getCurve('QuatX') != None) or (channels[channel_name].getCurve('QuatY') != None) or (channels[channel_name].getCurve('QuatZ') != None):
 					sequence.matters_rotation[nodeIndex] = True
 					sequence.has_rot = True
-				if (channels[channel_name][Blender.Ipo.PO_SCALEX] != None) or (channels[channel_name][Blender.Ipo.PO_SCALEY] != None) or (channels[channel_name][Blender.Ipo.PO_SCALEZ] != None):
+				scale_x = channels[channel_name][bc.get_ipo_scale_index("ScaleX")]
+				scale_y = channels[channel_name][bc.get_ipo_scale_index("ScaleY")]
+				scale_z = channels[channel_name][bc.get_ipo_scale_index("ScaleZ")]
+				if (scale_x != None) or (scale_y != None) or (scale_z != None):
 					nf = getHighestActFrame(action)
 					sequence.matters_scale[nodeIndex] = True
 					sequence.has_scale = True
 					# check for anisotropic scale
 					for i in range(0, nf):
-						sx = channels[channel_name][Blender.Ipo.PO_SCALEX][i]
-						sy = channels[channel_name][Blender.Ipo.PO_SCALEY][i]
-						sz = channels[channel_name][Blender.Ipo.PO_SCALEZ][i]
+						sx = scale_x[i]
+						sy = scale_y[i]
+						sz = scale_z[i]
 						sv = self.poseUtil.toTorqueVec([sx, sy, sz])
 						sv2 = self.poseUtil.toTorqueVec([sy, sz, sx])
 						if not sv.eqDelta(sv2, 0.001):
@@ -1491,24 +1494,27 @@ class BlenderShape(DtsShape):
 				tempDict[ipoName]['Z']['ht'] = []
 				ipo = channelIpos[ipoName]
 				# copy scale ipos to temp holding dictionary
-				for point in ipo[Blender.Ipo.PO_SCALEX].bezierPoints:
+				scale_x = ipo[bc.get_ipo_scale_index("ScaleX")]
+				scale_y = ipo[bc.get_ipo_scale_index("ScaleY")]
+				scale_z = ipo[bc.get_ipo_scale_index("ScaleZ")]
+				for point in scale_x.bezierPoints:
 					tempDict[ipoName]['X']['vec'].append(point.vec)
 					tempDict[ipoName]['X']['ht'].append(point.handleTypes)
 
-				for point in ipo[Blender.Ipo.PO_SCALEY].bezierPoints:
+				for point in scale_y.bezierPoints:
 					tempDict[ipoName]['Y']['vec'].append(point.vec)
 					tempDict[ipoName]['Y']['ht'].append(point.handleTypes)
 
-				for point in ipo[Blender.Ipo.PO_SCALEZ].bezierPoints:
+				for point in scale_z.bezierPoints:
 					tempDict[ipoName]['Z']['vec'].append(point.vec)
 					tempDict[ipoName]['Z']['ht'].append(point.handleTypes)
 
 				# remove scale ipos
-				try:ipo[Blender.Ipo.PO_SCALEX] = None
+				try:ipo[bc.get_ipo_scale_index("ScaleX")] = None
 				except: pass
-				try:ipo[Blender.Ipo.PO_SCALEY] = None
+				try:ipo[bc.get_ipo_scale_index("ScaleY")] = None
 				except: pass
-				try:ipo[Blender.Ipo.PO_SCALEZ] = None
+				try:ipo[bc.get_ipo_scale_index("ScaleZ")] = None
 				except: pass
 
 			try:
@@ -1534,34 +1540,34 @@ class BlenderShape(DtsShape):
 				# add points
 				for point in tempDict[ipoName]['X']['vec']:
 					knot = point[1]
-					ipo[Blender.Ipo.PO_SCALEX].append((knot[0], knot[1]))
+					ipo[bc.get_ipo_scale_index("ScaleX")].append((knot[0], knot[1]))
 				
 				for point in tempDict[ipoName]['X']['vec']:
 					knot = point[1]
-					ipo[Blender.Ipo.PO_SCALEY].append((knot[0], knot[1]))
+					ipo[bc.get_ipo_scale_index("ScaleY")].append((knot[0], knot[1]))
 
 				for point in tempDict[ipoName]['X']['vec']:
 					knot = point[1]
-					ipo[Blender.Ipo.PO_SCALEZ].append((knot[0], knot[1]))
+					ipo[bc.get_ipo_scale_index("ScaleZ")].append((knot[0], knot[1]))
 
 				# fix up handles
-				for i in range(0, len(ipo[Blender.Ipo.PO_SCALEX].bezierPoints)):
-					point = ipo[Blender.Ipo.PO_SCALEX].bezierPoints[i]
+				for i in range(0, len(scale_x.bezierPoints)):
+					point = scale_x.bezierPoints[i]
 					point.handleTypes = tempDict[ipoName]['X']['ht'][i]
 					point.vec = tempDict[ipoName]['X']['vec'][i]
-				for i in range(0, len(ipo[Blender.Ipo.PO_SCALEY].bezierPoints)):
-					point = ipo[Blender.Ipo.PO_SCALEY].bezierPoints[i]
+				for i in range(0, len(scale_y.bezierPoints)):
+					point = scale_y.bezierPoints[i]
 					point.handleTypes = tempDict[ipoName]['Y']['ht'][i]
 					point.vec = tempDict[ipoName]['Y']['vec'][i]
-				for i in range(0, len(ipo[Blender.Ipo.PO_SCALEZ].bezierPoints)):
-					point = ipo[Blender.Ipo.PO_SCALEZ].bezierPoints[i]
+				for i in range(0, len(scale_z.bezierPoints)):
+					point = scale_z.bezierPoints[i]
 					point.handleTypes = tempDict[ipoName]['Z']['ht'][i]
 					point.vec = tempDict[ipoName]['Z']['vec'][i]
 				
 				# recalc scale curves
-				ipo[Blender.Ipo.PO_SCALEX].recalc()
-				ipo[Blender.Ipo.PO_SCALEY].recalc()
-				ipo[Blender.Ipo.PO_SCALEZ].recalc()
+				scale_x.recalc()
+				scale_y.recalc()
+				scale_z.recalc()
 
 
 			# loop through all of the exisitng action frames, get scales
@@ -1773,7 +1779,7 @@ class BlenderShape(DtsShape):
 				bIpo = bc.get_object_ipo(bObj)
 				IPOCurveName = getBlenderIPOChannelConst(keyedObj['IPOType'], keyedObj['IPOChannel'])
 				IPOCurve = None
-				IPOCurveConst = bIpo.curveConsts[IPOCurveName]
+				IPOCurveConst = bc.get_ipo_curve_key(bIpo, IPOCurveName)
 				IPOCurve = bIpo[IPOCurveConst]
 				if IPOCurve == None: raise TypeError
 			except: 
