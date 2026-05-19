@@ -185,6 +185,33 @@ def reset_pose_bone_transform(pose_bone):
 			pass
 
 
+def update_pose(obj):
+	raw_obj = getattr(obj, "_obj", obj)
+	if raw_obj is None:
+		return
+	if hasattr(raw_obj, "update_tag"):
+		try:
+			raw_obj.update_tag()
+		except Exception:
+			pass
+	scene = get_current_scene()
+	if bpy is not None and scene is not None:
+		try:
+			depsgraph = bpy.context.evaluated_depsgraph_get()
+			depsgraph.update()
+		except Exception:
+			pass
+		try:
+			scene.frame_set(scene.frame_current)
+		except Exception:
+			pass
+	elif hasattr(obj, "update"):
+		try:
+			obj.update()
+		except Exception:
+			pass
+
+
 def get_pose_bone_matrix(pose_bone):
 	if hasattr(pose_bone, "matrix"):
 		return pose_bone.matrix

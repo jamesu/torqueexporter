@@ -144,7 +144,7 @@ class BlenderShape(DtsShape):
 				# reset the bone's transform
 				bc.reset_pose_bone_transform(tempPose.bones[bonename])
 			# update the pose.
-			tempPose.update()
+			bc.update_pose(armOb)
 		#Blender.Scene.GetCurrent().makeCurrent()		
 		
 		numAddedMeshes = 0
@@ -277,7 +277,7 @@ class BlenderShape(DtsShape):
 				# reset the bone's transform
 				bc.reset_pose_bone_transform(tempPose.bones[bonename])
 			# update the pose.
-			tempPose.update()
+			bc.update_pose(armOb)
 		#Blender.Scene.GetCurrent().makeCurrent()		
 		
 		numAddedMeshes = 0
@@ -1095,7 +1095,7 @@ class BlenderShape(DtsShape):
 				# reset the bone's transform
 				bc.reset_pose_bone_transform(tempPose.bones[bonename])
 			# update the pose.
-			tempPose.update()
+			bc.update_pose(armOb)
 
 		# now set the active action and move to the desired frame
 		for i in range(0, len(self.addedArmatures)):
@@ -1434,7 +1434,7 @@ class BlenderShape(DtsShape):
 					# reset the bone's transform
 					bc.reset_pose_bone_transform(tempPose.bones[bonename])
 				# update the pose.
-				tempPose.update()
+				bc.update_pose(armOb)
 
 			
 		
