@@ -85,12 +85,16 @@ class DtsStream:
 		self.Allocated16 = 0		# Size buffer16 should be
 		self.Allocated8  = 0		# Size buffer8 should be
 	def clearStreams(self):
-		del self.buffer8
-		del self.buffer16
-		del self.buffer32
+		for attr in ("buffer8", "buffer16", "buffer32"):
+			if hasattr(self, attr):
+				try:
+					delattr(self, attr)
+				except Exception:
+					pass
 	def closeStream(self):
 		self.clearStreams()
-		self.fs.close()
+		if hasattr(self, "fs") and self.fs is not None:
+			self.fs.close()
 	
 	def __del__(self):
 		self.closeStream()

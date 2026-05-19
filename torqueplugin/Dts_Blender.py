@@ -207,7 +207,14 @@ def noext(filepath):
 
 # Gets the children of an object
 def getChildren(obj):
-	return [x for x in getCurrentSceneObjects() if x.parent == obj]
+	obj_raw = getattr(obj, "_obj", obj)
+	children = []
+	for x in getCurrentSceneObjects():
+		parent = getattr(x, "parent", None)
+		parent_raw = getattr(parent, "_obj", parent)
+		if parent_raw == obj_raw:
+			children.append(x)
+	return children
 
 # Gets all the children of an object (recursive)
 def getAllChildren(obj):
