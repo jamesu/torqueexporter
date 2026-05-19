@@ -44,6 +44,10 @@ def _legacy_prefs():
 	return getattr(legacy, "Prefs", None)
 
 
+def _log_ui_error(where, exc):
+	print(f"Torque UI warning in {where}: {exc}")
+
+
 def _ensure_prefs():
 	legacy = _legacy_module()
 	if legacy is None:
@@ -79,8 +83,15 @@ def _blend_dir():
 
 
 def _sequence_items(self, context):
-	prefs = _legacy_prefs() or {}
+	prefs = _ensure_prefs() or _legacy_prefs() or {}
 	seqs = prefs.get("Sequences", {})
+	if not seqs:
+		legacy = _legacy_module()
+		if legacy is not None:
+			try:
+				seqs = {name: {} for name in legacy.getCurrentActions().keys()}
+			except Exception as exc:
+				_log_ui_error("_sequence_items", exc)
 	items = [("N/A", "<None>", "")]
 	for name in sorted(seqs.keys(), key=lambda x: x.lower()):
 		items.append((name, name, "Torque sequence"))
@@ -88,7 +99,7 @@ def _sequence_items(self, context):
 
 
 def _material_items(self, context):
-	prefs = _legacy_prefs() or {}
+	prefs = _ensure_prefs() or _legacy_prefs() or {}
 	mats = prefs.get("Materials", {})
 	items = [("N/A", "<None>", "")]
 	for name in sorted(mats.keys(), key=lambda x: x.lower()):
@@ -122,6 +133,28 @@ def _material_summary(mat):
 	return ", ".join(parts)
 
 
+def _sequence_summary(seq):
+	parts = []
+	if seq.get("Cyclic"):
+		parts.append("Cyclic")
+	if seq.get("NoExport"):
+		parts.append("NoExport")
+	if seq.get("Dsq"):
+		parts.append("DSQ")
+	if seq.get("Duration") is not None:
+		parts.append(f"{float(seq.get('Duration', 0.0)):.2f}s")
+	action = seq.get("Action", {})
+	if action.get("Enabled"):
+		parts.append("Action")
+	if seq.get("IFL", {}).get("Enabled"):
+		parts.append("IFL")
+	if seq.get("Vis", {}).get("Enabled"):
+		parts.append("Vis")
+	if not parts:
+		return "No summary"
+	return ", ".join(parts)
+
+
 def _armature_items(self, context):
 	legacy = _legacy_module()
 	names = []
@@ -133,7 +166,7 @@ def _armature_items(self, context):
 		except Exception:
 			pass
 	if not names:
-		return [("N/A", "<None>", "")]
+		return [("N/A", "<None>", "No armatures detected")]
 	return [(name, name, "Armature in the current scene") for name in sorted(names, key=lambda x: x.lower())]
 
 
@@ -176,6 +209,41 @@ def _sync_sequence_from_prefs(state, seq_name):
 	state.seq_vis_enabled = bool(vis.get("Enabled", False))
 	state.seq_vis_start = int(vis.get("StartFrame", 1))
 	state.seq_vis_end = int(vis.get("EndFrame", 1))
+
+
+def _sync_sequence_list_from_prefs(state):
+	prefs = _ensure_prefs() or _legacy_prefs() or {}
+	seqs = prefs.get("Sequences", {})
+	state.sequence_items.clear()
+	names = sorted(seqs.keys(), key=lambda x: x.lower())
+	for name in names:
+		seq = seqs.get(name, {})
+		item = state.sequence_items.add()
+		item.name = name
+		item.summary = _sequence_summary(seq)
+		item.action = "Action" if seq.get("Action", {}).get("Enabled") else ""
+		item.flags = ", ".join(
+			flag for flag, enabled in (
+				("Cyclic", bool(seq.get("Cyclic", False))),
+				("NoExport", bool(seq.get("NoExport", False))),
+				("DSQ", bool(seq.get("Dsq", False))),
+			)
+			if enabled
+		)
+
+	if not names:
+		state.sequence_list_index = -1
+		state.selected_sequence = "N/A"
+		return
+
+	if state.selected_sequence not in seqs:
+		state.selected_sequence = names[0]
+
+	try:
+		state.sequence_list_index = names.index(state.selected_sequence)
+	except ValueError:
+		state.sequence_list_index = 0
+		state.selected_sequence = names[0]
 
 
 def _sync_material_from_prefs(state, mat_name):
@@ -256,18 +324,51 @@ def _on_material_list_index_changed(self, context):
 	_sync_material_from_prefs(self, mat_name)
 
 
+def _on_sequence_list_index_changed(self, context):
+	items = self.sequence_items
+	if not items:
+		self.selected_sequence = "N/A"
+		return
+	index = max(0, min(self.sequence_list_index, len(items) - 1))
+	if index != self.sequence_list_index:
+		self.sequence_list_index = index
+	seq_name = items[index].name
+	if self.selected_sequence != seq_name:
+		self.selected_sequence = seq_name
+	try:
+		_sync_sequence_from_prefs(self, seq_name)
+	except Exception as exc:
+		_log_ui_error("_on_sequence_list_index_changed", exc)
+
+
 def _on_selected_sequence_changed(self, context):
-	_sync_sequence_from_prefs(self, self.selected_sequence)
+	try:
+		if self.selected_sequence != "N/A":
+			_sync_sequence_from_prefs(self, self.selected_sequence)
+	except Exception as exc:
+		_log_ui_error("_on_selected_sequence_changed", exc)
 
 
 def _on_selected_material_changed(self, context):
-	_sync_material_from_prefs(self, self.selected_material)
-	if self.material_items:
-		for idx, item in enumerate(self.material_items):
-			if item.name == self.selected_material:
-				if self.material_list_index != idx:
-					self.material_list_index = idx
-				break
+	try:
+		if self.selected_material != "N/A":
+			_sync_material_from_prefs(self, self.selected_material)
+		if self.material_items:
+			for idx, item in enumerate(self.material_items):
+				if item.name == self.selected_material:
+					if self.material_list_index != idx:
+						self.material_list_index = idx
+					break
+	except Exception as exc:
+		_log_ui_error("_on_selected_material_changed", exc)
+
+
+def _on_armature_name_changed(self, context):
+	try:
+		if self.armature_name == "N/A":
+			return
+	except Exception as exc:
+		_log_ui_error("_on_armature_name_changed", exc)
 
 
 def _sync_state_from_legacy(state):
@@ -294,9 +395,21 @@ def _sync_state_from_legacy(state):
 	state.billboard_size = float(prefs.get("Billboard", {}).get("Size", 20.0))
 	state.banned_bones = ", ".join(prefs.get("BannedBones", []))
 	state.ui_initialized = True
+	_sync_sequence_list_from_prefs(state)
 	if state.selected_sequence != "N/A":
 		_sync_sequence_from_prefs(state, state.selected_sequence)
 	_sync_material_list_from_prefs(state)
+	if getattr(state, "armature_name", "N/A") == "N/A":
+		try:
+			items = _armature_items(None, None)
+			if items and items[0][0] != "N/A":
+				state.armature_name = items[0][0]
+		except Exception as exc:
+			_log_ui_error("_sync_state_from_legacy.armature", exc)
+	if state.selected_material == "N/A" or state.selected_material not in prefs.get("Materials", {}):
+		mat_names = sorted(prefs.get("Materials", {}).keys(), key=lambda x: x.lower())
+		if mat_names:
+			state.selected_material = mat_names[0]
 
 
 def _on_state_changed(self, context):
@@ -438,6 +551,7 @@ def _refresh_sequences(state):
 			legacy.getSequenceKey(name)
 	except Exception:
 		pass
+	_sync_sequence_list_from_prefs(state)
 	_sync_state_from_legacy(state)
 
 
@@ -460,6 +574,13 @@ class TorqueExporterMaterialItem(bpy.types.PropertyGroup):
 	flags: StringProperty(name="Flags", default="")
 
 
+class TorqueExporterSequenceItem(bpy.types.PropertyGroup):
+	name: StringProperty(name="Name", default="")
+	summary: StringProperty(name="Summary", default="")
+	action: StringProperty(name="Action", default="")
+	flags: StringProperty(name="Flags", default="")
+
+
 class TORQUEEXPORTER_UL_material_items(bpy.types.UIList):
 	def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
 		if self.layout_type in {"DEFAULT", "COMPACT"}:
@@ -468,6 +589,20 @@ class TORQUEEXPORTER_UL_material_items(bpy.types.UIList):
 			row.label(text=item.name, icon="MATERIAL")
 			if item.base_tex:
 				row.label(text=item.base_tex)
+			if item.summary:
+				col.label(text=item.summary)
+			elif item.flags:
+				col.label(text=item.flags)
+		elif self.layout_type == "GRID":
+			layout.label(text=item.name)
+
+
+class TORQUEEXPORTER_UL_sequence_items(bpy.types.UIList):
+	def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
+		if self.layout_type in {"DEFAULT", "COMPACT"}:
+			col = layout.column(align=True)
+			row = col.row(align=True)
+			row.label(text=item.name, icon="ACTION")
 			if item.summary:
 				col.label(text=item.summary)
 			elif item.flags:
@@ -493,6 +628,22 @@ class TORQUEEXPORTER_OT_refresh_materials(bpy.types.Operator):
 		state = context.scene.torque_export_ui
 		_sync_state_from_legacy(state)
 		_sync_material_list_from_prefs(state)
+		return {"FINISHED"}
+
+
+class TORQUEEXPORTER_OT_refresh_sequences(bpy.types.Operator):
+	bl_idname = "torqueexporter.refresh_sequences"
+	bl_label = "Refresh Sequences"
+	bl_options = {"INTERNAL"}
+
+	def execute(self, context):
+		legacy = _legacy_module()
+		if legacy is None:
+			self.report({"WARNING"}, "Legacy exporter module is not available")
+			return {"CANCELLED"}
+		state = context.scene.torque_export_ui
+		_sync_sequence_list_from_prefs(state)
+		_sync_state_from_legacy(state)
 		return {"FINISHED"}
 
 
@@ -567,6 +718,9 @@ class TorqueExporterUIState(bpy.types.PropertyGroup):
 	seq_vis_end: IntProperty(name="End Frame", default=1, update=_on_state_changed)
 	seq_vis_tracks_summary: StringProperty(name="Tracks", default="")
 
+	sequence_list_index: IntProperty(name="Sequence Index", default=-1, update=_on_sequence_list_index_changed)
+	sequence_items: CollectionProperty(type=TorqueExporterSequenceItem)
+
 	selected_material: EnumProperty(name="Material", items=_material_items, update=_on_selected_material_changed)
 	material_list_index: IntProperty(name="Material Index", default=-1, update=_on_material_list_index_changed)
 	material_show_advanced: BoolProperty(name="Show Advanced Settings", default=False, update=_on_state_changed)
@@ -596,7 +750,7 @@ class TorqueExporterUIState(bpy.types.PropertyGroup):
 		description="Comma-separated list of bone names to skip",
 		update=_on_state_changed,
 	)
-	armature_name: EnumProperty(name="Armature", items=_armature_items, update=_on_state_changed)
+	armature_name: EnumProperty(name="Armature", items=_armature_items, update=_on_armature_name_changed)
 
 
 class TORQUEEXPORTER_OT_refresh_ui(bpy.types.Operator):
@@ -664,8 +818,8 @@ class TORQUEEXPORTER_PT_scene_panel(bpy.types.Panel):
 
 	def draw(self, context):
 		state = context.scene.torque_export_ui
-		if not state.ui_initialized:
-			_sync_state_from_legacy(state)
+	if not state.ui_initialized:
+		_sync_state_from_legacy(state)
 
 		layout = self.layout
 		layout.prop(state, "display_mode", expand=True)
@@ -723,11 +877,28 @@ def _draw_general_block(layout, state):
 def _draw_sequence_block(layout, state):
 	box = layout.box()
 	box.label(text="Sequences")
-	box.prop(state, "selected_sequence")
-	if state.selected_sequence == "N/A":
-		box.label(text="No sequence selected")
+	head = box.row(align=True)
+	head.operator("torqueexporter.refresh_sequences", text="", icon="FILE_REFRESH")
+	head.prop(state, "selected_sequence")
+	if len(state.sequence_items) == 0:
+		box.label(text="No sequences imported. Refresh to pull from prefs or actions.")
 		return
-	col = box.column(align=True)
+	split = box.split(factor=0.42)
+	left = split.column()
+	left.template_list(
+		"TORQUEEXPORTER_UL_sequence_items",
+		"",
+		state,
+		"sequence_items",
+		state,
+		"sequence_list_index",
+		rows=6,
+	)
+	right = split.column(align=True)
+	if state.selected_sequence == "N/A":
+		right.label(text="No sequence selected")
+		return
+	col = right.column(align=True)
 	row = col.row(align=True)
 	row.prop(state, "seq_priority")
 	row.prop(state, "seq_cyclic")
@@ -892,9 +1063,12 @@ def _draw_modern(layout, state):
 
 _CLASSES = (
 	TorqueExporterMaterialItem,
+	TorqueExporterSequenceItem,
 	TorqueExporterUIState,
 	TORQUEEXPORTER_UL_material_items,
+	TORQUEEXPORTER_UL_sequence_items,
 	TORQUEEXPORTER_OT_refresh_materials,
+	TORQUEEXPORTER_OT_refresh_sequences,
 	TORQUEEXPORTER_OT_refresh_ui,
 	TORQUEEXPORTER_OT_apply_ui,
 	TORQUEEXPORTER_OT_use_blend_dir,
