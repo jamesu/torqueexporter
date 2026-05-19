@@ -9,6 +9,7 @@ Initial audit of legacy APIs used by the Torque Blender exporter. This file is t
 - This inventory: first-pass audit only, focused on high-impact legacy calls and patterns
 - UI migration policy: preserve the legacy UI where possible
 - Config policy: infer safe defaults when stored values are missing
+- Current implementation phase: legacy GUI is temporarily bypassed so export code can be worked on in isolation
 
 ## High-Impact Legacy APIs
 

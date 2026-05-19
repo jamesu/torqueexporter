@@ -41,6 +41,7 @@ Current working inventory: [API_USAGE_INVENTORY.md](/Users/jamesu/Desktop/torque
 
 ## 4. Scene, Object, And Mesh Access
 
+- [x] Centralize export scene/object lookup behind helper functions.
 - [ ] Update object iteration to use `bpy.context.scene.objects` or evaluated depsgraph access where needed.
 - [ ] Update selection handling to use `bpy.context.selected_objects`.
 - [ ] Replace `getData()` calls with modern `obj.data` access.
@@ -76,6 +77,7 @@ Current working inventory: [API_USAGE_INVENTORY.md](/Users/jamesu/Desktop/torque
 - [ ] Keep existing exporter options available where they still make sense.
 - [ ] Simplify or remove obsolete options that were specific to the old Blender API.
 - [ ] Make error reporting and warnings visible in Blender’s UI and console.
+- [x] Temporarily disable the legacy GUI layer so export code can be migrated in isolation.
 
 ## 9. Code Cleanup And Compatibility
 

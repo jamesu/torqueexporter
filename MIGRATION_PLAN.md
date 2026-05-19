@@ -25,6 +25,7 @@ When a stored configuration entry is unavailable:
 - Replace only the parts that rely on removed Blender 2.x UI APIs.
 - Prefer thin compatibility shims before introducing a brand-new panel layout.
 - Retain existing exporter options unless they are no longer meaningful in modern Blender.
+- Temporarily disable the legacy UI when needed so export logic can be modernized independently.
 
 ## Phases
 
@@ -55,4 +56,3 @@ When a stored configuration entry is unavailable:
 - Verify `.dts` output on representative scenes.
 - Revisit any UI elements that need compromise after the runtime migration.
 - Document behavior changes only where they are unavoidable.
-

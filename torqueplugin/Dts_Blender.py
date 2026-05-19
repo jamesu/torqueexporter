@@ -66,6 +66,116 @@ Debug = False
 Profiling = False
 textDocName = "TorqueExporter_SCONF"
 pathSeperator = "/"
+UseLegacyUI = False
+export_scene = None
+export_objects = None
+
+
+class HeadlessProgress:
+	def __init__(self):
+		self.stack = []
+		self.cProgress = 0.0
+
+	def __del__(self):
+		del self.stack
+
+	def pushTask(self, name, maxItems, maxProgress):
+		increment = 0.0
+		if maxItems:
+			increment = (maxProgress - self.cProgress) / maxItems
+		self.stack.append([name, increment, maxProgress])
+
+	def popTask(self):
+		if len(self.stack) > 0:
+			del self.stack[-1]
+		else:
+			Torque_Util.dump_writeln("Warning: popTask() with no task!")
+
+	def curMax(self):
+		return self.stack[-1][2]
+
+	def curInc(self):
+		return self.stack[-1][-1]
+
+	def update(self):
+		if len(self.stack) == 0:
+			return
+		self.cProgress += self.stack[-1][1]
+		if self.cProgress > self.stack[-1][2]:
+			self.cProgress = self.stack[-1][2]
+
+
+def getCurrentFilename():
+	try:
+		return Blender.Get("filename")
+	except:
+		return ""
+
+
+def getCurrentScene():
+	global export_scene
+	if export_scene != None:
+		return export_scene
+	try:
+		return Blender.Scene.GetCurrent()
+	except:
+		return None
+
+
+def getCurrentSceneObjects(scene=None):
+	global export_objects
+	if export_objects != None:
+		return export_objects
+	if scene == None:
+		scene = getCurrentScene()
+	if scene != None:
+		try:
+			return list(scene.objects)
+		except:
+			pass
+	try:
+		return list(Blender.Object.Get())
+	except:
+		return []
+
+
+def getSelectedObjects():
+	try:
+		selected = Blender.Object.GetSelected()
+	except:
+		selected = None
+	if selected == None:
+		return []
+	try:
+		return list(selected)
+	except:
+		return [selected]
+
+
+def setExportContext(scene=None):
+	global export_scene, export_objects
+	export_scene = scene if scene != None else getCurrentScene()
+	export_objects = getCurrentSceneObjects(export_scene)
+
+
+def getCurrentActions():
+	try:
+		return Blender.Armature.NLA.GetActions()
+	except:
+		return {}
+
+
+def getCurrentMaterials():
+	try:
+		return Blender.Material.Get()
+	except:
+		return []
+
+
+def clearExportContext():
+	global export_scene, export_objects
+	export_scene = None
+	export_objects = None
 
 
 
@@ -103,7 +213,7 @@ def noext(filepath):
 
 # Gets the children of an object
 def getChildren(obj):
-	return filter(lambda x: x.parent==obj, Blender.Object.Get())
+	return list(filter(lambda x: x.parent==obj, getCurrentSceneObjects()))
 
 # Gets all the children of an object (recursive)
 def getAllChildren(obj):
@@ -138,8 +248,9 @@ def initPrefs():
 	Prefs['BannedBones'] = []
 	Prefs['CollapseRootTransform'] = True
 	Prefs['TSEMaterial'] = False
-	Prefs['exportBasename'] = noext(basename(Blender.Get("filename")))
-	Prefs['exportBasepath'] = basepath(Blender.Get("filename"))
+	filename = getCurrentFilename()
+	Prefs['exportBasename'] = noext(basename(filename)) if filename != "" else ""
+	Prefs['exportBasepath'] = basepath(filename) if filename != "" else ""
 	Prefs['LastActivePanel'] = 'Sequences'
 	Prefs['LastActiveSubPanel'] = 'Common'
 	return Prefs
@@ -147,7 +258,7 @@ def initPrefs():
 # Loads preferences
 def loadPrefs():
 	global Prefs, Prefs_keyname, textDocName
-	Prefs_keyname = 'TorqueExporterPlugin_%s' % pythonizeFileName(noext(basename(Blender.Get("filename"))))
+	Prefs_keyname = 'TorqueExporterPlugin_%s' % pythonizeFileName(noext(basename(getCurrentFilename())))
 	Prefs = Registry.GetKey(Prefs_keyname, True)
 	if not Prefs:
 		#Torque_Util.dump_writeln("Registry key '%s' could not be loaded, resorting to text object." % Prefs_keyname)
@@ -182,7 +293,7 @@ def loadPrefs():
 				
 				# make sure the output path is valid.
 				if not os.path.exists(Prefs['exportBasepath']):
-					Prefs['exportBasepath'] = basepath(Blender.Get("filename"))
+					Prefs['exportBasepath'] = basepath(getCurrentFilename())
 				savePrefs()
 				return True
 			else:
@@ -198,7 +309,7 @@ def loadPrefs():
 
 	# make sure the output path is valid.
 	if not os.path.exists(Prefs['exportBasepath']):
-		Prefs['exportBasepath'] = basepath(Blender.Get("filename"))
+		Prefs['exportBasepath'] = basepath(getCurrentFilename())
 	
 
 		
@@ -255,7 +366,7 @@ def getSequenceKey(value):
 		Prefs['Sequences'][value]['Action']['Enabled'] = True
 
 		try:
-			action = Blender.Armature.NLA.GetActions()[value]			
+			action = getCurrentActions()[value]			
 			maxNumFrames = DtsShape_Blender.getHighestActFrame(action)
 		except KeyError:
 			Prefs['Sequences'][value]['Action']['Enabled'] = False
@@ -417,7 +528,7 @@ def cleanVisTracks():
 
 # Creates action keys that don't already exist
 def createActionKeys():
-	for action in Blender.Armature.NLA.GetActions().keys():
+	for action in getCurrentActions().keys():
 		getSequenceKey(action)
 
 
@@ -469,7 +580,7 @@ def importOldVisAnim(seqName, seqPrefs):
 		except:			
 			seqPrefs['Vis']['StartFrame'] = seqPrefs['MaterialIpoStartFrame']
 			try:
-				action = Blender.Armature.NLA.GetActions()[seqName]
+				action = getCurrentActions()[seqName]
 				seqPrefs['Vis']['EndFrame'] = (seqPrefs['Vis']['StartFrame'] + DtsShape_Blender.getHighestActFrame(action))-1
 			except:
 				seqPrefs['Vis']['EndFrame'] = seqPrefs['Vis']['StartFrame']
@@ -481,7 +592,7 @@ def importOldVisAnim(seqName, seqPrefs):
 			
 			# make a list of blender materials with alpha IPOs
 			IPOMatList = []
-			for mat in Blender.Material.Get():
+			for mat in getCurrentMaterials():
 				ipo = mat.getIpo()
 				if ipo == None:	continue
 				alphaFound = False
@@ -556,7 +667,7 @@ def updateOldPrefs():
 		try: x = actKey['EndFrame']
 		except:
 			try:
-				action = Blender.Armature.NLA.GetActions()[seqName]				
+				action = getCurrentActions()[seqName]				
 				actKey['EndFrame'] = DtsShape_Blender.getHighestActFrame(action)				
 			except:
 				actKey['EndFrame'] = 0
@@ -600,7 +711,8 @@ def updateOldPrefs():
 		try: x = seq['FPS']
 		except:
 			try:
-				seq['FPS'] = float(Blender.Scene.GetCurrent().getRenderingContext().framesPerSec())
+				scene = getCurrentScene()
+				seq['FPS'] = float(scene.getRenderingContext().framesPerSec())
 				if seq['FPS'] == 0: seq['FPS'] = 25
 			except:
 				seq['FPS'] = 25
@@ -608,7 +720,7 @@ def updateOldPrefs():
 		except:
 			maxNumFrames = 0
 			try:
-				action = Blender.Armature.NLA.GetActions()[seqName]				
+				action = getCurrentActions()[seqName]				
 				maxNumFrames = DtsShape_Blender.getHighestActFrame(action)
 			except KeyError:
 				maxNumFrames = 0			
@@ -674,11 +786,12 @@ def updateSeqDurationAndFPS(seqName, seqPrefs):
 
 # refreshes action data that is read from blender and updates the related preferences
 def refreshActionData():
-	for seqName in Blender.Armature.NLA.GetActions().keys():
+	actions = getCurrentActions()
+	for seqName in actions.keys():
 		seqPrefs = getSequenceKey(seqName)
 		maxFrames = 1
 		try:
-			action = Blender.Armature.NLA.GetActions()[seqName]			
+			action = actions[seqName]			
 			maxFrames = DtsShape_Blender.getHighestActFrame(action)
 		except: pass # this seqName no longer exists(!?)
 
@@ -900,7 +1013,7 @@ class SceneTree:
 	# Performs tasks to handle this object, and its children
 	def handleObject(self):
 		# Go through children and handle them
-		for c in Blender.Object.Get():
+		for c in getCurrentSceneObjects():
 			if c.getParent() != None: continue
 			self.children.append(self.handleChild(c))
 
@@ -912,9 +1025,14 @@ class SceneTree:
 			found = True
 			c.process(progressBar)
 		if not found:
+			if not UseLegacyUI:
+				Torque_Util.dump_writeErr("Error: No export hierarchy found in the scene.")
+				return False
 			message = "Would you like the exporter to set up your hierarchy for you?%t" +"|Yes, set up the export hierarchy automatically.|No, Cancel the export."
 			if Blender.Draw.PupMenu(message) == 1:
-				scene = Blender.Scene.GetCurrent()
+				scene = getCurrentScene()
+				if scene == None:
+					return False
 				# Create the shape empty, somewhere :-)
 				shapeEmpty = Blender.Object.New("Empty", "Shape")
 				scene.objects.link(shapeEmpty)
@@ -935,7 +1053,7 @@ class SceneTree:
 				shapeEmpty.makeParent([detailEmpty, collisionEmpty, losCollisionEmpty], 0, 1)
 				
 				# parent meshes to markers
-				for obj in scene.objects:
+				for obj in getCurrentSceneObjects(scene):
 					tname = string.split(obj.getName(), ":")[0].upper()
 					if tname[0:3] == "COL" and obj.type == "Mesh":
 						collisionEmpty.makeParent([obj], 0, 1)
@@ -1145,12 +1263,12 @@ class ShapeTree(SceneTree):
 				progressBar.update()
 				
 				# Add all actions (will ignore ones not belonging to shape)
-				scene = Blender.Scene.GetCurrent()
+				scene = getCurrentScene()
 				context = scene.getRenderingContext()
 				actions = Armature.NLA.GetActions()
 
 				# check the armatures to see if any are locked in rest position
-				for armOb in Blender.Object.Get():
+				for armOb in getCurrentSceneObjects(scene):
 					if (armOb.getType() != 'Armature'): continue
 					if armOb.getData().restPosition:
 						# this popup was too long and annoying, let the standard warning/error popup handle it.
@@ -1297,9 +1415,12 @@ def handleScene():
 	# What we do here is clear any existing export tree, then create a brand new one.
 	# This is useful if things have changed.
 	if export_tree != None: export_tree.clear()
-	scn = Blender.Scene.GetCurrent()
+	scn = getCurrentScene()
+	setExportContext(scn)
+	if scn == None:
+		return
 	scn.update(1)
-	export_tree = SceneTree(None,Blender.Scene.GetCurrent())
+	export_tree = SceneTree(None, scn)
 	updateOldPrefs()
 	#Torque_Util.dump_writeln("Cleaning Preference Keys")
 	cleanKeys()
@@ -1309,23 +1430,29 @@ def export():
 	Torque_Util.dump_writeln("Exporting...")
 	print("Exporting...")
 	# switch out of edit mode if we are in edit mode
-	Window.EditMode(0)
+	try:
+		Window.EditMode(0)
+	except:
+		pass
 	handleScene()
 	importMaterialList()
 	refreshActionData()
 	savePrefs()
 	
-	cur_progress = Common_Gui.Progress()
+	cur_progress = Common_Gui.Progress() if UseLegacyUI else HeadlessProgress()
 
 	if export_tree != None:
 		cur_progress.pushTask("Done", 1, 1.0)
 		if not export_tree.process(cur_progress):
-			# try again :-)
-			handleScene()
-			importMaterialList()
-			refreshActionData()
-			savePrefs()
-			export_tree.process(cur_progress)
+			if UseLegacyUI:
+				# try again :-)
+				handleScene()
+				importMaterialList()
+				refreshActionData()
+				savePrefs()
+				export_tree.process(cur_progress)
+			else:
+				Torque_Util.dump_writeErr("Error: Export hierarchy is incomplete or invalid.")
 			
 		cur_progress.update()
 		cur_progress.popTask()
@@ -1339,7 +1466,7 @@ def export():
 	if Torque_Util.numErrors > 0 or Torque_Util.numWarnings > 0:
 		message = ("Export finished with %i error(s) and %s warning(s). Read the log file for more information." % (Torque_Util.numErrors, Torque_Util.numWarnings))
 		print(message)
-		if Prefs["ShowWarningErrorPopup"]:
+		if UseLegacyUI and Prefs["ShowWarningErrorPopup"]:
 			message +=  "%t|Continue|Do not show this message again"
 			opt = Blender.Draw.PupMenu(message)
 			if opt == 2:
@@ -1356,9 +1483,9 @@ def export():
 	# Reselect any objects that are currently selected.
 	# this prevents a strange bug where objects are selected after
 	# export, but behave as if they are not.
-	if Blender.Object.GetSelected() != None:
-		for ob in Blender.Object.GetSelected():
-			ob.select(True)
+	for ob in getSelectedObjects():
+		ob.select(True)
+	clearExportContext()
 
 '''
 	Gui Handling Code
@@ -3232,7 +3359,7 @@ class ActionControlsClass(SeqControlsClassBase):
 			self.guiRefPoseFrame.visible = True
 			# reset max to raw number of frames in ref pose action
 			try:
-				action = Blender.Armature.NLA.GetActions()[seqPrefs['Action']['BlendRefPoseAction']]				
+				action = getCurrentActions()[seqPrefs['Action']['BlendRefPoseAction']]				
 				maxNumFrames = DtsShape_Blender.getHighestActFrame(action)
 			except: maxNumFrames = 1
 			self.guiRefPoseFrame.max = maxNumFrames
@@ -3250,7 +3377,7 @@ class ActionControlsClass(SeqControlsClassBase):
 		seqPrefs['Action']['BlendRefPoseFrame'] = 1
 		# reset max to raw number of frames in ref pose action
 		try:
-			action = Blender.Armature.NLA.GetActions()[seqPrefs['Action']['BlendRefPoseAction']]
+			action = getCurrentActions()[seqPrefs['Action']['BlendRefPoseAction']]
 			maxNumFrames = DtsShape_Blender.getHighestActFrame(action)
 		except: maxNumFrames = 1
 		self.guiRefPoseFrame.max = maxNumFrames
@@ -3333,7 +3460,7 @@ class ActionControlsClass(SeqControlsClassBase):
 		self.guiSeqOptsContainer.enabled = True
 		self.guiSeqOptsContainerTitle.label = "Sequence '%s'" % seqName
 		try:
-			action = Blender.Armature.NLA.GetActions()[seqName]
+			action = getCurrentActions()[seqName]
 			maxNumFrames = (seqPrefs['Action']['EndFrame'] - seqPrefs['Action']['StartFrame']) + 1
 		except:
 			maxNumFrames = 0
@@ -3343,14 +3470,14 @@ class ActionControlsClass(SeqControlsClassBase):
 		# out from underneath us while we weren't looking.
 		if seqPrefs['Action']['FrameSamples'] > maxNumFrames:
 			seqPrefs['Action']['FrameSamples'] = maxNumFrames
-		try: blah = Blender.Armature.NLA.GetActions()[seqPrefs['Action']['BlendRefPoseAction']]
+		try: blah = getCurrentActions()[seqPrefs['Action']['BlendRefPoseAction']]
 		except: seqPrefs['Action']['BlendRefPoseAction'] = seqName
 		self.guiRefPoseTitle.label = "Ref pose for '%s'" % seqName
 		self.guiRefPoseMenu.setTextValue(seqPrefs['Action']['BlendRefPoseAction'])
 		self.guiRefPoseFrame.min = 1
 		# reset max to raw number of frames in ref pose action
 		try:
-			action = Blender.Armature.NLA.GetActions()[seqPrefs['Action']['BlendRefPoseAction']]			
+			action = getCurrentActions()[seqPrefs['Action']['BlendRefPoseAction']]			
 			maxNumFrames = DtsShape_Blender.getHighestActFrame(action)
 		except: maxNumFrames = 1
 		self.guiRefPoseFrame.max = maxNumFrames
@@ -4332,14 +4459,13 @@ def getIPOChannelTypes(IPOType):
 ## @brief Returns a list of all objects or materials in the scene.
 #  @param IPOType What we want.  Valid values are "Object" or "Material"
 def getAllSceneObjectNames(IPOType):
-	scene = Blender.Scene.GetCurrent()
 	retVal = []
 	if IPOType == "Object":
-		allObjs = Blender.Object.Get()
+		allObjs = getCurrentSceneObjects()
 		for obj in allObjs:
 			retVal.append(obj.name)
 	elif IPOType == "Material":
-		allObjs = Blender.Material.Get()
+		allObjs = getCurrentMaterials()
 		for obj in allObjs:
 			retVal.append(obj.name)
 
@@ -5503,7 +5629,6 @@ def entryPoint(a):
 	
 	
 	if (a == 'quick'):
-		handleScene()
 		# Use the profiler, if enabled.
 		if Profiling:
 			# make the entry point available from __main__
@@ -5520,9 +5645,8 @@ def entryPoint(a):
 			p.strip_dirs().sort_stats('time').print_stats(60)
 			p.strip_dirs().print_callers('__getitem__', 20)
 	elif a == 'normal' or (a == None):
-		# Process scene and load configuration gui
-		handleScene()
-		initGui()
+		# Temporarily bypass the legacy GUI so export code can be migrated in isolation.
+		export()
 	
 
 
