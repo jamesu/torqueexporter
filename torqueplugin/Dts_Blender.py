@@ -36,6 +36,7 @@ from DTSPython import *
 import Blender
 from Blender import *
 import Common_Gui
+import ast
 import string, math, re, gc
 
 import DtsShape_Blender
@@ -284,19 +285,19 @@ def loadPrefs():
 			except Exception:
 				success = False
 		if success and newConfig:
-			execStr = "loadPrefs = "
 			if hasattr(text_doc, "as_string"):
-				execStr += text_doc.as_string()
+				text_data = text_doc.as_string()
 			elif hasattr(text_doc, "asLines"):
-				for line in text_doc.asLines():
-					execStr += line
+				text_data = "".join(text_doc.asLines())
 			else:
-				execStr += str(text_doc)
+				text_data = str(text_doc)
+			text_data = text_data.strip()
+			if text_data.startswith("loadPrefs ="):
+				text_data = text_data.split("=", 1)[1].strip()
 			try:
-				exec(execStr)
+				Prefs = ast.literal_eval(text_data)
 			except Exception:
 				return False
-			Prefs = loadPrefs
 		elif not success:
 			Torque_Util.dump_writeln("No Registry and no text objects, using defaults.")
 		else:
