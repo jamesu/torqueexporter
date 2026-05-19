@@ -129,8 +129,8 @@ class DtsStream:
 			sz8 += 1
 		# Actual Size must equal calculated size!
 		offset16  = sz32
-		offset8   = offset16 + (sz16/2)
-		totalSize = offset8 + (sz8/4)
+		offset8   = offset16 + (sz16 // 2)
+		totalSize = offset8 + (sz8 // 4)
 		# Write the resulting data to the file
 		hdr = array('i')
 		hdr.append(self.DTSVersion | (self.mExporterVersion<<16))
