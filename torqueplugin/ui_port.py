@@ -1203,17 +1203,6 @@ class TORQUEEXPORTER_OT_remove_banned_bone(bpy.types.Operator):
 		return {"FINISHED"}
 
 
-class TORQUEEXPORTER_OT_refresh_banned_bones(bpy.types.Operator):
-	bl_idname = "torqueexporter.refresh_banned_bones"
-	bl_label = "Refresh Banned Bones"
-	bl_options = {"INTERNAL"}
-
-	def execute(self, context):
-		state = context.scene.torque_export_ui
-		_sync_banned_bones_from_prefs(state)
-		return {"FINISHED"}
-
-
 class TorqueExporterUIState(bpy.types.PropertyGroup):
 	ui_initialized: BoolProperty(default=False)
 
@@ -1613,7 +1602,7 @@ def _draw_material_block(layout, state):
 
 def _draw_armature_block(layout, state):
 	box = layout.box()
-	box.label(text="Armatures")
+	box.label(text="Banned Bones")
 	list_box = box.box()
 	list_box.template_list(
 		"TORQUEEXPORTER_UL_banned_bone_items",
@@ -1626,10 +1615,9 @@ def _draw_armature_block(layout, state):
 	)
 	row = box.row(align=True)
 	row.prop(state, "banned_bone_new", text="Pattern")
-	row.operator("torqueexporter.add_banned_bone", text="Add")
-	row.operator("torqueexporter.remove_banned_bone", text="Remove")
-	box.operator("torqueexporter.refresh_banned_bones", text="Reset List", icon="FILE_REFRESH")
-	box.label(text="Wildcards: * and ? are allowed. Stored as Prefs['BannedBones'].")
+	row.operator("torqueexporter.add_banned_bone", text="", icon="ADD")
+	row.operator("torqueexporter.remove_banned_bone", text="", icon="REMOVE")
+	box.label(text="Use bone names or wildcards like Head* and keep them in Prefs['BannedBones'].")
 
 
 def _draw_about_block(layout, state):
@@ -1660,7 +1648,6 @@ _CLASSES = (
 	TorqueExporterUIState,
 	TORQUEEXPORTER_OT_refresh_materials,
 	TORQUEEXPORTER_OT_refresh_sequences,
-	TORQUEEXPORTER_OT_refresh_banned_bones,
 	TORQUEEXPORTER_OT_refresh_ui,
 	TORQUEEXPORTER_OT_use_blend_dir,
 	TORQUEEXPORTER_OT_export_from_ui,
