@@ -1051,9 +1051,7 @@ class TORQUEEXPORTER_UL_banned_bone_items(bpy.types.UIList):
 	def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
 		if self.layout_type in {"DEFAULT", "COMPACT"}:
 			row = layout.row(align=True)
-			row.label(text=item.name or "<empty>", icon="BONE_DATA")
-			if "*" in item.name or "?" in item.name:
-				row.label(text="wildcard")
+			row.prop(item, "name", text="", emboss=False, icon="BONE_DATA")
 		elif self.layout_type == "GRID":
 			layout.label(text=item.name or "<empty>")
 
@@ -1202,6 +1200,17 @@ class TORQUEEXPORTER_OT_remove_banned_bone(bpy.types.Operator):
 			if owned:
 				_end_internal_ui_update(state)
 		_sync_banned_bones_to_prefs(state)
+		return {"FINISHED"}
+
+
+class TORQUEEXPORTER_OT_refresh_banned_bones(bpy.types.Operator):
+	bl_idname = "torqueexporter.refresh_banned_bones"
+	bl_label = "Refresh Banned Bones"
+	bl_options = {"INTERNAL"}
+
+	def execute(self, context):
+		state = context.scene.torque_export_ui
+		_sync_banned_bones_from_prefs(state)
 		return {"FINISHED"}
 
 
@@ -1605,8 +1614,6 @@ def _draw_material_block(layout, state):
 def _draw_armature_block(layout, state):
 	box = layout.box()
 	box.label(text="Armatures")
-	box.label(text="Bones are discovered automatically from scene armatures.")
-	box.label(text="Use wildcard patterns like Head* or *Toe? in the ban list.")
 	list_box = box.box()
 	list_box.template_list(
 		"TORQUEEXPORTER_UL_banned_bone_items",
@@ -1617,32 +1624,12 @@ def _draw_armature_block(layout, state):
 		"banned_bone_list_index",
 		rows=5,
 	)
-	gen = box.box()
-	gen.label(text="General")
-	gencol = gen.column(align=True)
-	add_row = gencol.row(align=True)
-	add_row.prop(state, "banned_bone_new", text="Add Pattern")
-	add_row.operator("torqueexporter.add_banned_bone", text="Add")
-	edit_row = gencol.row(align=True)
-	edit_row.enabled = state.banned_bone_list_index >= 0 and len(state.banned_bone_items) > 0
-	edit_row.prop(state, "banned_bone_edit", text="Selected")
-	edit_row.operator("torqueexporter.remove_banned_bone", text="Remove")
-	gencol.label(text="This list is written back to Prefs['BannedBones'] unchanged.")
-	pad = box.box()
-	pad.label(text="Current scene armatures")
-	legacy = _legacy_module()
-	if legacy is None:
-		pad.label(text="Legacy exporter module not loaded")
-		return
-	try:
-		arm_names = [obj.name for obj in legacy.getCurrentSceneObjects() if bc is not None and bc.is_armature_object(obj)]
-	except Exception:
-		arm_names = []
-	if arm_names:
-		for name in sorted(arm_names, key=lambda x: x.lower()):
-			pad.label(text=f"• {name}")
-	else:
-		pad.label(text="No armatures detected")
+	row = box.row(align=True)
+	row.prop(state, "banned_bone_new", text="Pattern")
+	row.operator("torqueexporter.add_banned_bone", text="Add")
+	row.operator("torqueexporter.remove_banned_bone", text="Remove")
+	box.operator("torqueexporter.refresh_banned_bones", text="Reset List", icon="FILE_REFRESH")
+	box.label(text="Wildcards: * and ? are allowed. Stored as Prefs['BannedBones'].")
 
 
 def _draw_about_block(layout, state):
@@ -1673,6 +1660,7 @@ _CLASSES = (
 	TorqueExporterUIState,
 	TORQUEEXPORTER_OT_refresh_materials,
 	TORQUEEXPORTER_OT_refresh_sequences,
+	TORQUEEXPORTER_OT_refresh_banned_bones,
 	TORQUEEXPORTER_OT_refresh_ui,
 	TORQUEEXPORTER_OT_use_blend_dir,
 	TORQUEEXPORTER_OT_export_from_ui,
