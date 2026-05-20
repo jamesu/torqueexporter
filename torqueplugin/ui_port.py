@@ -157,7 +157,7 @@ def _set_name_collection(collection, values):
 
 def _refresh_vis_option_sources(state):
 	legacy = _legacy_module()
-	selected = _selected_vis_track_item(self)
+	selected = _selected_vis_track_item(state)
 	ipo_type = getattr(state, "vis_track_ipo_type", "") or (selected.ipo_type if selected else "") or "Object"
 	_set_name_collection(state.vis_type_options, ["Object", "Material"])
 	channel_values = []
@@ -173,6 +173,58 @@ def _refresh_vis_option_sources(state):
 			_log_ui_error("_refresh_vis_option_sources.objects", exc)
 	_set_name_collection(state.vis_channel_options, channel_values)
 	_set_name_collection(state.vis_object_options, sorted(object_values, key=lambda x: str(x).lower()))
+
+
+def _vis_type_items(self, context):
+	return [("Object", "Object", "Drive visibility from an object animation"), ("Material", "Material", "Drive visibility from a material animation")]
+
+
+def _enum_items_with_current(current_value, values, empty_label="<None>"):
+	items = [("", empty_label, "")]
+	seen = set()
+	for value in values:
+		text = str(value or "")
+		if not text or text in seen:
+			continue
+		seen.add(text)
+		items.append((text, text, ""))
+	current_text = str(current_value or "")
+	if current_text and current_text not in seen:
+		items.append((current_text, current_text, ""))
+	return items
+
+
+def _vis_channel_items(self, context):
+	state = self
+	selected = _selected_vis_track_item(state)
+	ipo_type = getattr(state, "vis_track_ipo_type", "") or (selected.ipo_type if selected else "") or "Object"
+	legacy = _legacy_module()
+	values = []
+	if legacy is not None:
+		try:
+			values = legacy.getIPOChannelTypes(ipo_type) or []
+		except Exception as exc:
+			_log_ui_error("_vis_channel_items", exc)
+	if not values:
+		values = ["LocZ"]
+	return _enum_items_with_current(getattr(state, "vis_track_ipo_channel", "") or (selected.ipo_channel if selected else ""), values)
+
+
+def _vis_object_items(self, context):
+	state = self
+	selected = _selected_vis_track_item(state)
+	ipo_type = getattr(state, "vis_track_ipo_type", "") or (selected.ipo_type if selected else "") or "Object"
+	legacy = _legacy_module()
+	values = []
+	if legacy is not None:
+		try:
+			values = legacy.getAllSceneObjectNames(ipo_type) or []
+		except Exception as exc:
+			_log_ui_error("_vis_object_items", exc)
+	if not values:
+		return [("", "<None>", "")]
+	values = sorted({str(value) for value in values if str(value).strip()}, key=lambda x: x.lower())
+	return _enum_items_with_current(getattr(state, "vis_track_ipo_object", "") or (selected.ipo_object if selected else ""), values)
 
 
 def _material_summary(mat):
@@ -1303,9 +1355,9 @@ class TorqueExporterUIState(bpy.types.PropertyGroup):
 	seq_vis_end: IntProperty(name="End Frame", default=1, update=_on_state_changed)
 	seq_vis_tracks_summary: StringProperty(name="Tracks", default="")
 	vis_track_enabled: BoolProperty(name="Track Enabled", default=False, update=_on_vis_track_changed)
-	vis_track_ipo_type: StringProperty(name="Source Type", default="", update=_on_vis_track_changed)
-	vis_track_ipo_channel: StringProperty(name="Source Channel", default="", update=_on_vis_track_changed)
-	vis_track_ipo_object: StringProperty(name="Source Object", default="", update=_on_vis_track_changed)
+	vis_track_ipo_type: EnumProperty(name="Source Type", items=_vis_type_items, update=_on_vis_track_changed)
+	vis_track_ipo_channel: EnumProperty(name="Source Channel", items=_vis_channel_items, update=_on_vis_track_changed)
+	vis_track_ipo_object: EnumProperty(name="Source Object", items=_vis_object_items, update=_on_vis_track_changed)
 	vis_type_options: CollectionProperty(type=TorqueExporterOptionItem)
 	vis_channel_options: CollectionProperty(type=TorqueExporterOptionItem)
 	vis_object_options: CollectionProperty(type=TorqueExporterOptionItem)
@@ -1547,7 +1599,7 @@ def _draw_sequence_block(layout, state):
 	row.prop(state, "seq_vis_start")
 	row.prop(state, "seq_vis_end")
 	viscol.label(text="Each track corresponds to a scene object from the export hierarchy.")
-	viscol.label(text="Choose how that object's visibility is driven. Most legacy setups use Object / LocZ.")
+	viscol.label(text="Pick from the scene items below. The object/material field is a search over valid names.")
 	track_box = vis.box()
 	track_box.template_list(
 		"TORQUEEXPORTER_UL_vis_track_items",
@@ -1563,13 +1615,11 @@ def _draw_sequence_block(layout, state):
 	tdcol = track_detail.column(align=True)
 	tdcol.enabled = state.seq_vis_enabled and state.vis_track_list_index >= 0 and len(state.vis_track_items) > 0
 	tdcol.prop(state, "vis_track_enabled", text="Enabled")
-	tdcol.prop_search(state, "vis_track_ipo_type", state, "vis_type_options", text="Source Type")
-	tdcol.prop_search(state, "vis_track_ipo_channel", state, "vis_channel_options", text="Source Channel")
-	tdcol.prop_search(
+	tdcol.prop(state, "vis_track_ipo_type", text="Source Type")
+	tdcol.prop(state, "vis_track_ipo_channel", text="Source Channel")
+	tdcol.prop(
 		state,
 		"vis_track_ipo_object",
-		state,
-		"vis_object_options",
 		text="Source Material" if state.vis_track_ipo_type == "Material" else "Source Object",
 	)
 	viscol.label(text=f"Tracks: {state.seq_vis_tracks_summary or 'none'}")
