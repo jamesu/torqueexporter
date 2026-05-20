@@ -486,30 +486,35 @@ def validateVisibility(seqName, seqPrefs):
 				track = seqPrefs['Vis']['Tracks'][trackName]
 				# is the current track enabled?
 				#print "is the current track enabled?"
-				if not track['hasVisTrack']: continue
+				if not track['hasVisTrack']:
+					continue
 				#print "Has the user has defined an IPO Type?"
 				# Has the user has defined an IPO Type?
-				if track['IPOType'] == "" or track['IPOType'] == None: continue
+				if track['IPOType'] == "" or track['IPOType'] == None:
+					continue
 				#print "Has the user has defined an IPO channel?"
 				# Has the user has defined an IPO channel?
-				if track['IPOChannel'] == "" or track['IPOChannel'] == None: continue
-				#print "Has the user defined an IPO Object?"
-				# Has the user defined an IPO Object?
-				if track['IPOObject'] == "" or track['IPOObject'] == None: continue
+				if track['IPOChannel'] == "" or track['IPOChannel'] == None:
+					continue
 				# is the object valid?
 				try:
 					bObj = None
 					if track['IPOType'] == "Object":
-						bObj = bc.get_object(track['IPOObject'])
+						bObj = bc.get_object(track['IPOObject'] or trackName)
 					elif track['IPOType'] == "Material":
 						bObj = bc.get_material(track['IPOObject'])
+						if bObj is None or track['IPOObject'] in ("", None, trackName):
+							track_obj = bc.get_object(trackName)
+							bObj = bc.get_object_primary_material(track_obj)
 					bIpo = bc.get_object_ipo(bObj)
 					IPOCurveName = getBlenderIPOChannelConst(track['IPOType'], track['IPOChannel'])
 					IPOCurve = None
 					IPOCurveConst = bc.get_ipo_curve_key(bIpo, IPOCurveName)
 					IPOCurve = bIpo[IPOCurveConst]
-					if IPOCurve == None: raise TypeError
-				except: continue
+					if IPOCurve == None:
+						raise TypeError
+				except:
+					continue
 				# If we've gotten this far, the track is valid and exportable.
 				visIsValid = True
 				break

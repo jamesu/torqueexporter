@@ -387,6 +387,24 @@ def get_material_primary_image(material):
 	return images[0] if images else None
 
 
+def get_object_primary_material(obj):
+	raw_obj = getattr(obj, "_obj", obj)
+	if raw_obj is None:
+		return None
+	data = getattr(raw_obj, "data", None)
+	if data is None:
+		return None
+	materials = getattr(data, "materials", None)
+	if not materials:
+		return None
+	mat = materials[0]
+	if mat is None:
+		return None
+	if bpy is not None and hasattr(Blender, "wrap_material"):
+		return Blender.wrap_material(mat)
+	return mat
+
+
 def get_materials():
 	if bpy is not None:
 		if hasattr(Blender, "wrap_material"):

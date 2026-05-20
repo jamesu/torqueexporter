@@ -1850,9 +1850,11 @@ class BlenderShape(DtsShape):
 			
 			try:
 				if keyedObj['IPOType'] == "Object":
-					bObj = bc.get_object(keyedObj['IPOObject'])
+					bObj = bc.get_object(keyedObj['IPOObject'] or dObjName)
 				elif keyedObj['IPOType'] == "Material":
 					bObj = bc.get_material(keyedObj['IPOObject'])
+					if bObj is None or keyedObj['IPOObject'] in (None, "", dObjName):
+						bObj = bc.get_object_primary_material(dObj)
 
 				bIpo = bc.get_object_ipo(bObj)
 				IPOCurveName = getBlenderIPOChannelConst(keyedObj['IPOType'], keyedObj['IPOChannel'])

@@ -400,7 +400,6 @@ def _sync_vis_track_detail_from_index(state):
 			state.vis_track_enabled = False
 			state.vis_track_ipo_type = ""
 			state.vis_track_ipo_channel = ""
-			state.vis_track_ipo_object = ""
 			_refresh_vis_option_sources(state)
 			return
 		track = state.vis_track_items[state.vis_track_list_index]
@@ -408,7 +407,7 @@ def _sync_vis_track_detail_from_index(state):
 		state.vis_track_enabled = bool(track.has_track)
 		state.vis_track_ipo_type = ipo_type
 		state.vis_track_ipo_channel = str(track.ipo_channel or "")
-		state.vis_track_ipo_object = str(track.ipo_object or "")
+		state.vis_track_ipo_object = str(track.track_name or track.name or "")
 		_refresh_vis_option_sources(state)
 	finally:
 		if owned:
@@ -431,6 +430,7 @@ def _write_current_vis_track_to_prefs(state):
 	for item in state.vis_track_items:
 		if not item.track_name:
 			continue
+		item.ipo_object = item.track_name
 		seq["Vis"]["Tracks"][item.track_name] = {
 			"hasVisTrack": bool(item.has_track),
 			"IPOType": item.ipo_type,
@@ -708,7 +708,7 @@ def _on_vis_track_changed(self, context):
 			item.has_track = bool(self.vis_track_enabled)
 			item.ipo_type = self.vis_track_ipo_type
 			item.ipo_channel = self.vis_track_ipo_channel
-			item.ipo_object = self.vis_track_ipo_object
+			item.ipo_object = item.track_name or item.name or ""
 		_refresh_vis_option_sources(self)
 		_write_current_vis_track_to_prefs(self)
 	except Exception as exc:
@@ -1602,7 +1602,7 @@ def _draw_sequence_block(layout, state):
 	row.prop(state, "seq_vis_start")
 	row.prop(state, "seq_vis_end")
 	viscol.label(text="Each track corresponds to a scene object from the export hierarchy.")
-	viscol.label(text="Pick from the scene items below. The object/material field is a search over valid names.")
+	viscol.label(text="The selected list item is the track object. The source object is not edited separately.")
 	track_box = vis.box()
 	track_box.template_list(
 		"TORQUEEXPORTER_UL_vis_track_items",
@@ -1620,13 +1620,7 @@ def _draw_sequence_block(layout, state):
 	tdcol.prop(state, "vis_track_enabled", text="Enabled")
 	tdcol.prop(state, "vis_track_ipo_type", text="Source Type")
 	tdcol.prop_search(state, "vis_track_ipo_channel", state, "vis_channel_options", text="Source Channel")
-	tdcol.prop_search(
-		state,
-		"vis_track_ipo_object",
-		state,
-		"vis_object_options",
-		text="Source Material" if state.vis_track_ipo_type == "Material" else "Source Object",
-	)
+	tdcol.label(text=f"Track Object: {state.vis_track_ipo_object or '<none>'}")
 	viscol.label(text=f"Tracks: {state.seq_vis_tracks_summary or 'none'}")
 
 
