@@ -243,6 +243,33 @@ def _sync_sequence_from_prefs(state, seq_name):
 			_end_internal_ui_update(state)
 
 
+def _set_sequence_selection(state, seq_name, persist=True):
+	owned = _begin_internal_ui_update(state)
+	try:
+		if seq_name == "N/A":
+			state.selected_sequence = "N/A"
+			state.sequence_list_index = -1
+			state.seq_vis_tracks_summary = "none"
+			state.vis_track_list_index = -1
+			state.vis_track_items.clear()
+			return
+		prefs = _legacy_prefs() or {}
+		seqs = prefs.get("Sequences", {})
+		if seq_name not in seqs:
+			return
+		state.selected_sequence = seq_name
+		names = [item.name for item in state.sequence_items]
+		if seq_name in names:
+			state.sequence_list_index = names.index(seq_name)
+		_sync_sequence_from_prefs(state, seq_name)
+		_sync_visibility_from_prefs(state, seq_name)
+	finally:
+		if owned:
+			_end_internal_ui_update(state)
+	if persist:
+		_sync_state_to_legacy_safe(state)
+
+
 def _sync_sequence_list_from_prefs(state):
 	owned = _begin_internal_ui_update(state)
 	prefs = _ensure_prefs() or _legacy_prefs() or {}
@@ -290,6 +317,53 @@ def _sync_sequence_list_from_prefs(state):
 			_end_internal_ui_update(state)
 
 
+def _sync_visibility_from_prefs(state, seq_name):
+	owned = _begin_internal_ui_update(state)
+	prefs = _legacy_prefs() or {}
+	try:
+		seq = prefs.get("Sequences", {}).get(seq_name)
+		if not seq:
+			state.vis_track_items.clear()
+			state.vis_track_list_index = -1
+			state.seq_vis_tracks_summary = "none"
+			return
+		vis = seq.setdefault("Vis", {})
+		state.seq_vis_enabled = bool(vis.get("Enabled", False))
+		state.seq_vis_start = int(vis.get("StartFrame", 1))
+		state.seq_vis_end = int(vis.get("EndFrame", 1))
+
+		track_prefs = vis.get("Tracks", {}) or {}
+		state.vis_track_items.clear()
+		scene_tracks = []
+		legacy = _legacy_module()
+		if legacy is not None:
+			try:
+				scene_tracks = [obj.name for obj in legacy.getCurrentSceneObjects()]
+			except Exception as exc:
+				_log_ui_error("_sync_visibility_from_prefs.scene_tracks", exc)
+		for name in sorted(set(scene_tracks) | set(track_prefs.keys()), key=lambda x: x.lower()):
+			track = track_prefs.get(name, {})
+			item = state.vis_track_items.add()
+			item.name = name
+			item.has_track = bool(track.get("hasVisTrack", False))
+			item.ipo_type = str(track.get("IPOType", "") or "")
+			item.ipo_channel = str(track.get("IPOChannel", "") or "")
+			item.ipo_object = str(track.get("IPOObject", "") or "")
+		if not state.vis_track_items:
+			state.vis_track_list_index = -1
+			state.seq_vis_tracks_summary = "none"
+			return
+		if state.vis_track_list_index < 0 or state.vis_track_list_index >= len(state.vis_track_items):
+			state.vis_track_list_index = 0
+		current = state.vis_track_items[state.vis_track_list_index]
+		state.seq_vis_tracks_summary = _sequence_summary(seq)
+		if current.name and current.name != state.selected_sequence:
+			pass
+	finally:
+		if owned:
+			_end_internal_ui_update(state)
+
+
 def _sync_material_from_prefs(state, mat_name):
 	owned = _begin_internal_ui_update(state)
 	prefs = _legacy_prefs() or {}
@@ -320,6 +394,29 @@ def _sync_material_from_prefs(state, mat_name):
 	finally:
 		if owned:
 			_end_internal_ui_update(state)
+
+
+def _set_material_selection(state, mat_name, persist=True):
+	owned = _begin_internal_ui_update(state)
+	try:
+		if mat_name == "N/A":
+			state.selected_material = "N/A"
+			state.material_list_index = -1
+			return
+		prefs = _legacy_prefs() or {}
+		materials = prefs.get("Materials", {})
+		if mat_name not in materials:
+			return
+		state.selected_material = mat_name
+		names = [item.name for item in state.material_items]
+		if mat_name in names:
+			state.material_list_index = names.index(mat_name)
+		_sync_material_from_prefs(state, mat_name)
+	finally:
+		if owned:
+			_end_internal_ui_update(state)
+	if persist:
+		_sync_state_to_legacy_safe(state)
 
 
 def _sync_material_list_from_prefs(state):
@@ -364,31 +461,58 @@ def _sync_material_list_from_prefs(state):
 			_end_internal_ui_update(state)
 
 
+def _on_vis_track_list_index_changed(self, context):
+	if _ui_update_active(self):
+		return
+	items = self.vis_track_items
+	if not items:
+		owned = _begin_internal_ui_update(self)
+		try:
+			self.vis_track_list_index = -1
+		finally:
+			if owned:
+				_end_internal_ui_update(self)
+		return
+	index = max(0, min(self.vis_track_list_index, len(items) - 1))
+	owned = _begin_internal_ui_update(self)
+	try:
+		if index != self.vis_track_list_index:
+			self.vis_track_list_index = index
+		track = items[index]
+		self.vis_track_enabled = bool(track.has_track)
+		self.vis_track_ipo_type = str(track.ipo_type or "")
+		self.vis_track_ipo_channel = str(track.ipo_channel or "")
+		self.vis_track_ipo_object = str(track.ipo_object or "")
+	finally:
+		if owned:
+			_end_internal_ui_update(self)
+	_sync_state_to_legacy_safe(self)
+
+
+def _on_vis_track_changed(self, context):
+	if _ui_update_active(self):
+		return
+	try:
+		if self.vis_track_items and 0 <= self.vis_track_list_index < len(self.vis_track_items):
+			item = self.vis_track_items[self.vis_track_list_index]
+			item.has_track = bool(self.vis_track_enabled)
+			item.ipo_type = self.vis_track_ipo_type
+			item.ipo_channel = self.vis_track_ipo_channel
+			item.ipo_object = self.vis_track_ipo_object
+		_sync_state_to_legacy_safe(self)
+	except Exception as exc:
+		_log_ui_error("_on_vis_track_changed", exc)
+
+
 def _on_material_list_index_changed(self, context):
 	if _ui_update_active(self):
 		return
 	items = self.material_items
 	if not items:
-		owned = _begin_internal_ui_update(self)
-		try:
-			self.selected_material = "N/A"
-		finally:
-			if owned:
-				_end_internal_ui_update(self)
+		_set_material_selection(self, "N/A", persist=False)
 		return
 	index = max(0, min(self.material_list_index, len(items) - 1))
-	mat_name = items[index].name
-	owned = _begin_internal_ui_update(self)
-	try:
-		if index != self.material_list_index:
-			self.material_list_index = index
-		if self.selected_material != mat_name:
-			self.selected_material = mat_name
-		_sync_material_from_prefs(self, mat_name)
-	finally:
-		if owned:
-			_end_internal_ui_update(self)
-	_sync_state_to_legacy_safe(self)
+	_set_material_selection(self, items[index].name, persist=True)
 
 
 def _on_sequence_list_index_changed(self, context):
@@ -396,38 +520,17 @@ def _on_sequence_list_index_changed(self, context):
 		return
 	items = self.sequence_items
 	if not items:
-		owned = _begin_internal_ui_update(self)
-		try:
-			self.selected_sequence = "N/A"
-		finally:
-			if owned:
-				_end_internal_ui_update(self)
+		_set_sequence_selection(self, "N/A", persist=False)
 		return
 	index = max(0, min(self.sequence_list_index, len(items) - 1))
-	seq_name = items[index].name
-	owned = _begin_internal_ui_update(self)
-	try:
-		if index != self.sequence_list_index:
-			self.sequence_list_index = index
-		if self.selected_sequence != seq_name:
-			self.selected_sequence = seq_name
-		_sync_sequence_from_prefs(self, seq_name)
-	finally:
-		if owned:
-			_end_internal_ui_update(self)
-	try:
-		_sync_state_to_legacy_safe(self)
-	except Exception as exc:
-		_log_ui_error("_on_sequence_list_index_changed", exc)
+	_set_sequence_selection(self, items[index].name, persist=True)
 
 
 def _on_selected_sequence_changed(self, context):
 	if _ui_update_active(self):
 		return
 	try:
-		if self.selected_sequence != "N/A":
-			_sync_sequence_from_prefs(self, self.selected_sequence)
-			_sync_state_to_legacy_safe(self)
+		_set_sequence_selection(self, self.selected_sequence, persist=True)
 	except Exception as exc:
 		_log_ui_error("_on_selected_sequence_changed", exc)
 
@@ -436,15 +539,7 @@ def _on_selected_material_changed(self, context):
 	if _ui_update_active(self):
 		return
 	try:
-		if self.selected_material != "N/A":
-			_sync_material_from_prefs(self, self.selected_material)
-		if self.material_items:
-			for idx, item in enumerate(self.material_items):
-				if item.name == self.selected_material:
-					if self.material_list_index != idx:
-						self.material_list_index = idx
-					break
-		_sync_state_to_legacy_safe(self)
+		_set_material_selection(self, self.selected_material, persist=True)
 	except Exception as exc:
 		_log_ui_error("_on_selected_material_changed", exc)
 
@@ -477,12 +572,12 @@ def _sync_state_from_legacy(state):
 		state.ui_initialized = True
 		_sync_sequence_list_from_prefs(state)
 		if state.selected_sequence != "N/A":
-			_sync_sequence_from_prefs(state, state.selected_sequence)
+			_set_sequence_selection(state, state.selected_sequence, persist=False)
 		_sync_material_list_from_prefs(state)
 		if state.selected_material == "N/A" or state.selected_material not in prefs.get("Materials", {}):
 			mat_names = sorted(prefs.get("Materials", {}).keys(), key=lambda x: x.lower())
 			if mat_names:
-				state.selected_material = mat_names[0]
+				_set_material_selection(state, mat_names[0], persist=False)
 	finally:
 		if owned:
 			_end_internal_ui_update(state)
@@ -565,6 +660,16 @@ def _sync_state_to_legacy(state):
 		seq["Vis"]["Enabled"] = state.seq_vis_enabled
 		seq["Vis"]["StartFrame"] = state.seq_vis_start
 		seq["Vis"]["EndFrame"] = state.seq_vis_end
+		seq["Vis"]["Tracks"] = {}
+		for item in state.vis_track_items:
+			if not item.name:
+				continue
+			seq["Vis"]["Tracks"][item.name] = {
+				"hasVisTrack": bool(item.has_track),
+				"IPOType": item.ipo_type,
+				"IPOChannel": item.ipo_channel,
+				"IPOObject": item.ipo_object,
+			}
 
 	mat_name = state.selected_material
 	mat = prefs.get("Materials", {}).get(mat_name)
@@ -699,6 +804,12 @@ def _snapshot_state(state):
 		"seq_vis_enabled": state.seq_vis_enabled,
 		"seq_vis_start": state.seq_vis_start,
 		"seq_vis_end": state.seq_vis_end,
+		"seq_vis_tracks_summary": state.seq_vis_tracks_summary,
+		"vis_track_list_index": state.vis_track_list_index,
+		"vis_track_enabled": state.vis_track_enabled,
+		"vis_track_ipo_type": state.vis_track_ipo_type,
+		"vis_track_ipo_channel": state.vis_track_ipo_channel,
+		"vis_track_ipo_object": state.vis_track_ipo_object,
 		"selected_material": state.selected_material,
 		"material_show_advanced": state.material_show_advanced,
 		"mat_swrap": state.mat_swrap,
@@ -754,6 +865,10 @@ def _load_saved_snapshot(state):
 		_store_saved_snapshot(state)
 		return
 	_restore_snapshot(state, loaded)
+	if state.selected_sequence != "N/A":
+		_set_sequence_selection(state, state.selected_sequence, persist=False)
+	if state.selected_material != "N/A":
+		_set_material_selection(state, state.selected_material, persist=False)
 
 
 def _store_saved_snapshot(state):
@@ -799,6 +914,14 @@ class TorqueExporterSequenceItem(bpy.types.PropertyGroup):
 	flags: StringProperty(name="Flags", default="")
 
 
+class TorqueExporterVisTrackItem(bpy.types.PropertyGroup):
+	name: StringProperty(name="Name", default="")
+	has_track: BoolProperty(name="Enabled", default=False)
+	ipo_type: StringProperty(name="IPO Type", default="")
+	ipo_channel: StringProperty(name="IPO Channel", default="")
+	ipo_object: StringProperty(name="IPO Object", default="")
+
+
 class TORQUEEXPORTER_UL_material_items(bpy.types.UIList):
 	def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
 		if self.layout_type in {"DEFAULT", "COMPACT"}:
@@ -823,6 +946,24 @@ class TORQUEEXPORTER_UL_sequence_items(bpy.types.UIList):
 				row.label(text=item.summary)
 			elif item.flags:
 				row.label(text=item.flags)
+		elif self.layout_type == "GRID":
+			layout.label(text=item.name)
+
+
+class TORQUEEXPORTER_UL_vis_track_items(bpy.types.UIList):
+	def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
+		if self.layout_type in {"DEFAULT", "COMPACT"}:
+			row = layout.row(align=True)
+			row.label(text=item.name, icon="VISIBLE_IPO_ON" if item.has_track else "HIDE_OFF")
+			summary = []
+			if item.ipo_type:
+				summary.append(item.ipo_type)
+			if item.ipo_channel:
+				summary.append(item.ipo_channel)
+			if item.ipo_object:
+				summary.append(item.ipo_object)
+			if summary:
+				row.label(text=" / ".join(summary))
 		elif self.layout_type == "GRID":
 			layout.label(text=item.name)
 
@@ -927,9 +1068,15 @@ class TorqueExporterUIState(bpy.types.PropertyGroup):
 	seq_vis_start: IntProperty(name="Start Frame", default=1, update=_on_state_changed)
 	seq_vis_end: IntProperty(name="End Frame", default=1, update=_on_state_changed)
 	seq_vis_tracks_summary: StringProperty(name="Tracks", default="")
+	vis_track_enabled: BoolProperty(name="Track Enabled", default=False, update=_on_vis_track_changed)
+	vis_track_ipo_type: StringProperty(name="IPO Type", default="", update=_on_vis_track_changed)
+	vis_track_ipo_channel: StringProperty(name="IPO Channel", default="", update=_on_vis_track_changed)
+	vis_track_ipo_object: StringProperty(name="IPO Object", default="", update=_on_vis_track_changed)
 
 	sequence_list_index: IntProperty(name="Sequence Index", default=-1, update=_on_sequence_list_index_changed)
 	sequence_items: CollectionProperty(type=TorqueExporterSequenceItem)
+	vis_track_list_index: IntProperty(name="Visibility Track Index", default=-1, update=_on_vis_track_list_index_changed)
+	vis_track_items: CollectionProperty(type=TorqueExporterVisTrackItem)
 
 	selected_material: EnumProperty(name="Material", items=_material_items, update=_on_selected_material_changed)
 	material_list_index: IntProperty(name="Material Index", default=-1, update=_on_material_list_index_changed)
@@ -1156,6 +1303,25 @@ def _draw_sequence_block(layout, state):
 	row.prop(state, "seq_vis_enabled")
 	row.prop(state, "seq_vis_start")
 	row.prop(state, "seq_vis_end")
+	viscol.label(text="Visibility tracks come from scene objects and map to IPO-based material/alpha tracks.")
+	track_box = vis.box()
+	track_box.template_list(
+		"TORQUEEXPORTER_UL_vis_track_items",
+		"",
+		state,
+		"vis_track_items",
+		state,
+		"vis_track_list_index",
+		rows=6,
+	)
+	track_detail = vis.box()
+	track_detail.label(text="General")
+	tdcol = track_detail.column(align=True)
+	tdcol.enabled = state.seq_vis_enabled and state.vis_track_list_index >= 0 and len(state.vis_track_items) > 0
+	tdcol.prop(state, "vis_track_enabled")
+	tdcol.prop(state, "vis_track_ipo_type")
+	tdcol.prop(state, "vis_track_ipo_channel")
+	tdcol.prop(state, "vis_track_ipo_object")
 	viscol.label(text=f"Tracks: {state.seq_vis_tracks_summary or 'none'}")
 
 
@@ -1261,9 +1427,11 @@ def _draw_main(layout, state):
 _CLASSES = (
 	TorqueExporterMaterialItem,
 	TorqueExporterSequenceItem,
+	TorqueExporterVisTrackItem,
 	TorqueExporterUIState,
 	TORQUEEXPORTER_UL_material_items,
 	TORQUEEXPORTER_UL_sequence_items,
+	TORQUEEXPORTER_UL_vis_track_items,
 	TORQUEEXPORTER_OT_refresh_materials,
 	TORQUEEXPORTER_OT_refresh_sequences,
 	TORQUEEXPORTER_OT_refresh_ui,

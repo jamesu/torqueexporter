@@ -30,6 +30,7 @@ Goal: port the old Torque exporter UI into a modern Blender 4.x Scene panel whil
 - [x] Action sequence settings.
 - [x] IFL sequence settings.
 - [x] Visibility sequence settings.
+- [x] Visibility track list / IPO fields.
 - [x] Sequence section includes a short explanatory note.
 - [ ] Visibility track editor parity with the legacy GUI.
 - [ ] Sequence list add/remove/reorder controls.
