@@ -1200,8 +1200,9 @@ class TORQUEEXPORTER_UL_vis_track_items(bpy.types.UIList):
 		if self.layout_type in {"DEFAULT", "COMPACT"}:
 			row = layout.row(align=True)
 			display_name = item.display_name or item.track_name or getattr(item, "name", "") or f"Track {index + 1}"
-			row.label(text=display_name, icon="VISIBLE_IPO_ON" if item.has_track else "HIDE_OFF")
+			row.label(text=display_name, icon="OBJECT_DATA")
 			summary = []
+			summary.append("Enabled" if item.has_track else "Disabled")
 			if item.ipo_type:
 				summary.append(item.ipo_type)
 			if item.ipo_channel:
