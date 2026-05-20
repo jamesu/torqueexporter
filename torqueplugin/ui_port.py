@@ -175,10 +175,6 @@ def _refresh_vis_option_sources(state):
 	_set_name_collection(state.vis_object_options, sorted(object_values, key=lambda x: str(x).lower()))
 
 
-def _vis_type_items(self, context):
-	return [("Object", "Object", "Drive visibility from an object animation"), ("Material", "Material", "Drive visibility from a material animation")]
-
-
 def _enum_items_with_current(current_value, values, empty_label="<None>"):
 	items = [("", empty_label, "")]
 	seen = set()
@@ -1355,9 +1351,16 @@ class TorqueExporterUIState(bpy.types.PropertyGroup):
 	seq_vis_end: IntProperty(name="End Frame", default=1, update=_on_state_changed)
 	seq_vis_tracks_summary: StringProperty(name="Tracks", default="")
 	vis_track_enabled: BoolProperty(name="Track Enabled", default=False, update=_on_vis_track_changed)
-	vis_track_ipo_type: EnumProperty(name="Source Type", items=_vis_type_items, update=_on_vis_track_changed)
-	vis_track_ipo_channel: EnumProperty(name="Source Channel", items=_vis_channel_items, update=_on_vis_track_changed)
-	vis_track_ipo_object: EnumProperty(name="Source Object", items=_vis_object_items, update=_on_vis_track_changed)
+	vis_track_ipo_type: EnumProperty(
+		name="Source Type",
+		items=[
+			("Object", "Object", "Drive visibility from an object animation"),
+			("Material", "Material", "Drive visibility from a material animation"),
+		],
+		update=_on_vis_track_changed,
+	)
+	vis_track_ipo_channel: StringProperty(name="Source Channel", default="", update=_on_vis_track_changed)
+	vis_track_ipo_object: StringProperty(name="Source Object", default="", update=_on_vis_track_changed)
 	vis_type_options: CollectionProperty(type=TorqueExporterOptionItem)
 	vis_channel_options: CollectionProperty(type=TorqueExporterOptionItem)
 	vis_object_options: CollectionProperty(type=TorqueExporterOptionItem)
@@ -1616,10 +1619,12 @@ def _draw_sequence_block(layout, state):
 	tdcol.enabled = state.seq_vis_enabled and state.vis_track_list_index >= 0 and len(state.vis_track_items) > 0
 	tdcol.prop(state, "vis_track_enabled", text="Enabled")
 	tdcol.prop(state, "vis_track_ipo_type", text="Source Type")
-	tdcol.prop(state, "vis_track_ipo_channel", text="Source Channel")
-	tdcol.prop(
+	tdcol.prop_search(state, "vis_track_ipo_channel", state, "vis_channel_options", text="Source Channel")
+	tdcol.prop_search(
 		state,
 		"vis_track_ipo_object",
+		state,
+		"vis_object_options",
 		text="Source Material" if state.vis_track_ipo_type == "Material" else "Source Object",
 	)
 	viscol.label(text=f"Tracks: {state.seq_vis_tracks_summary or 'none'}")
