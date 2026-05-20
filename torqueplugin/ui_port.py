@@ -621,12 +621,6 @@ def _sync_state_to_legacy(state):
 	except Exception:
 		pass
 
-	try:
-		_sync_sequence_list_from_prefs(state)
-		_sync_material_list_from_prefs(state)
-	except Exception as exc:
-		_log_ui_error("_sync_state_to_legacy.refresh_lists", exc)
-
 
 def _refresh_sequences(state):
 	legacy = _legacy_module()
