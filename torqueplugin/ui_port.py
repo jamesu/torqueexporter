@@ -164,6 +164,10 @@ def _normalize_banned_bone(text):
 	return str(text or "").strip()
 
 
+def _parse_banned_bones_text(text):
+	return [entry.strip() for entry in str(text or "").split(",") if entry.strip()]
+
+
 def _banned_bone_matches(name, pattern):
 	name_u = str(name or "").upper()
 	pattern_u = str(pattern or "").upper()
@@ -520,18 +524,14 @@ def _sync_material_list_from_prefs(state):
 
 def _sync_banned_bones_from_prefs(state):
 	prefs = _legacy_prefs() or {}
-	_populate_banned_bone_items(state, prefs.get("BannedBones", []))
+	state.banned_bones = ", ".join(prefs.get("BannedBones", []))
 
 
 def _sync_banned_bones_to_prefs(state):
 	prefs = _ensure_prefs()
 	if prefs is None:
 		return
-	banned = []
-	for item in state.banned_bone_items:
-		pattern = _normalize_banned_bone(item.name)
-		if pattern:
-			banned.append(pattern)
+	banned = _parse_banned_bones_text(state.banned_bones)
 	prefs["BannedBones"] = banned
 	state.banned_bones = ", ".join(banned)
 
@@ -723,7 +723,7 @@ def _sync_state_to_legacy(state):
 		"IncludePoles": state.billboard_include_poles,
 		"Size": state.billboard_size,
 	}
-	prefs["BannedBones"] = [item.name for item in state.banned_bone_items if item.name]
+	prefs["BannedBones"] = _parse_banned_bones_text(state.banned_bones)
 
 	seq_name = state.selected_sequence
 	seq = prefs.get("Sequences", {}).get(seq_name)
@@ -1264,6 +1264,7 @@ class TorqueExporterUIState(bpy.types.PropertyGroup):
 		name="Banned Bones",
 		default="",
 		description="Comma-separated list of bone names to skip",
+		update=_on_state_changed,
 	)
 	banned_bone_list_index: IntProperty(
 		name="Banned Bone Index",
@@ -1552,20 +1553,9 @@ def _draw_material_block(layout, state):
 def _draw_armature_block(layout, state):
 	box = layout.box()
 	box.label(text="Banned Bones")
-	actions = box.row(align=True)
-	actions.operator("torqueexporter.add_banned_bone", text="Add Item", icon="ADD")
-	actions.operator("torqueexporter.remove_banned_bone", text="Remove Selected", icon="REMOVE")
-	list_box = box.box()
-	list_box.template_list(
-		"TORQUEEXPORTER_UL_banned_bone_items",
-		"",
-		state,
-		"banned_bone_items",
-		state,
-		"banned_bone_list_index",
-		rows=6,
-	)
-	box.label(text="Add a row, then type a bone name or wildcard like Head* directly in the list.")
+	col = box.column(align=True)
+	col.prop(state, "banned_bones", text="")
+	box.label(text="Enter a comma-separated list of bone names or wildcards like Head*, Toe?, Spine*.")
 
 
 def _draw_about_block(layout, state):
