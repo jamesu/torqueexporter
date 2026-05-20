@@ -716,7 +716,6 @@ def _on_vis_track_changed(self, context):
 			item.ipo_type = self.vis_track_ipo_type
 			item.ipo_channel = self.vis_track_ipo_channel
 			item.ipo_object = item.track_name or item.name or ""
-			self.vis_track_ipo_object = item.ipo_object
 		_refresh_vis_option_sources(self)
 		_write_current_vis_track_to_prefs(self)
 	except Exception as exc:
