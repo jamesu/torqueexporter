@@ -38,7 +38,8 @@ Goal: port the old Torque exporter UI into a modern Blender 4.x Scene panel whil
 ## Armature Section
 
 - [x] Armature summary / banned-bone guidance.
-- [x] Banned bones text entry.
+- [x] Banned bones list editor with add/remove and selected-pattern editing.
+- [x] Wildcard patterns are accepted in the banned-bones list.
 - [ ] Bone grid / per-bone toggle parity with the legacy GUI.
 - [ ] Armature ordering / traversal tools parity.
 

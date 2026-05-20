@@ -22,6 +22,7 @@ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 '''
+import fnmatch
 import DTSPython
 from DTSPython import *
 
@@ -37,6 +38,21 @@ import copy
 import DtsPoseUtil
 
 import gc
+
+
+def _bone_is_banned(bonename, banned_bones):
+	upper_name = str(bonename or "").upper()
+	for entry in banned_bones or []:
+		pattern = str(entry or "").strip()
+		if not pattern:
+			continue
+		pattern_upper = pattern.upper()
+		if "*" in pattern_upper or "?" in pattern_upper:
+			if fnmatch.fnmatchcase(upper_name, pattern_upper):
+				return True
+		elif upper_name == pattern_upper:
+			return True
+	return False
 
 '''
    Util functions used by class as well as exporter gui
@@ -875,7 +891,7 @@ class BlenderShape(DtsShape):
 		))
 		
 		# Do not add bones on the "BannedBones" list
-		if bonename.upper() in self.preferences['BannedBones']:
+		if _bone_is_banned(bonename, self.preferences.get('BannedBones', [])):
 			return False
 
 		# Add a DTS bone to the shape

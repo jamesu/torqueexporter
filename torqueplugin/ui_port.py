@@ -8,6 +8,7 @@ different display mode without rewriting every control twice.
 from __future__ import annotations
 
 import os
+import fnmatch
 
 try:
 	import bpy
@@ -157,6 +158,56 @@ def _material_summary(mat):
 	if not parts:
 		return "No summary"
 	return ", ".join(parts)
+
+
+def _normalize_banned_bone(text):
+	return str(text or "").strip()
+
+
+def _banned_bone_matches(name, pattern):
+	name_u = str(name or "").upper()
+	pattern_u = str(pattern or "").upper()
+	if not pattern_u:
+		return False
+	if "*" in pattern_u or "?" in pattern_u:
+		return fnmatch.fnmatchcase(name_u, pattern_u)
+	return name_u == pattern_u
+
+
+def _populate_banned_bone_items(state, banned_bones):
+	owned = _begin_internal_ui_update(state)
+	try:
+		state.banned_bone_items.clear()
+		for entry in banned_bones:
+			pattern = _normalize_banned_bone(entry)
+			if not pattern:
+				continue
+			item = state.banned_bone_items.add()
+			item.name = pattern
+		if len(state.banned_bone_items) > 0:
+			index = state.banned_bone_list_index
+			if index < 0 or index >= len(state.banned_bone_items):
+				index = 0
+			state.banned_bone_list_index = index
+			state.banned_bone_edit = state.banned_bone_items[index].name
+			state.banned_bone_new = ""
+		else:
+			state.banned_bone_list_index = -1
+			state.banned_bone_edit = ""
+			state.banned_bone_new = ""
+		state.banned_bones = ", ".join(item.name for item in state.banned_bone_items if item.name)
+	finally:
+		if owned:
+			_end_internal_ui_update(state)
+
+
+def _sync_banned_bones_from_state(state):
+	raw = getattr(state, "banned_bones", "") or ""
+	if isinstance(raw, (list, tuple)):
+		banned = [str(entry).strip() for entry in raw if str(entry).strip()]
+	else:
+		banned = [entry.strip() for entry in str(raw).split(",") if entry.strip()]
+	_populate_banned_bone_items(state, banned)
 
 
 def _sequence_summary(seq):
@@ -461,6 +512,24 @@ def _sync_material_list_from_prefs(state):
 			_end_internal_ui_update(state)
 
 
+def _sync_banned_bones_from_prefs(state):
+	prefs = _legacy_prefs() or {}
+	_populate_banned_bone_items(state, prefs.get("BannedBones", []))
+
+
+def _sync_banned_bones_to_prefs(state):
+	prefs = _ensure_prefs()
+	if prefs is None:
+		return
+	banned = []
+	for item in state.banned_bone_items:
+		pattern = _normalize_banned_bone(item.name)
+		if pattern:
+			banned.append(pattern)
+	prefs["BannedBones"] = banned
+	state.banned_bones = ", ".join(banned)
+
+
 def _on_vis_track_list_index_changed(self, context):
 	if _ui_update_active(self):
 		return
@@ -502,6 +571,53 @@ def _on_vis_track_changed(self, context):
 		_sync_state_to_legacy_safe(self)
 	except Exception as exc:
 		_log_ui_error("_on_vis_track_changed", exc)
+
+
+def _on_banned_bone_list_index_changed(self, context):
+	if _ui_update_active(self):
+		return
+	items = self.banned_bone_items
+	if not items:
+		owned = _begin_internal_ui_update(self)
+		try:
+			self.banned_bone_list_index = -1
+			self.banned_bone_edit = ""
+		finally:
+			if owned:
+				_end_internal_ui_update(self)
+		return
+	index = max(0, min(self.banned_bone_list_index, len(items) - 1))
+	owned = _begin_internal_ui_update(self)
+	try:
+		if index != self.banned_bone_list_index:
+			self.banned_bone_list_index = index
+		self.banned_bone_edit = items[index].name
+	finally:
+		if owned:
+			_end_internal_ui_update(self)
+
+
+def _on_banned_bone_new_changed(self, context):
+	return
+
+
+def _on_banned_bone_edit_changed(self, context):
+	if _ui_update_active(self):
+		return
+	items = self.banned_bone_items
+	if not items:
+		return
+	index = max(0, min(self.banned_bone_list_index, len(items) - 1))
+	owned = _begin_internal_ui_update(self)
+	try:
+		if index != self.banned_bone_list_index:
+			self.banned_bone_list_index = index
+		items[index].name = _normalize_banned_bone(self.banned_bone_edit)
+		self.banned_bones = ", ".join(item.name for item in items if item.name)
+	finally:
+		if owned:
+			_end_internal_ui_update(self)
+	_sync_banned_bones_to_prefs(self)
 
 
 def _on_material_list_index_changed(self, context):
@@ -569,6 +685,7 @@ def _sync_state_from_legacy(state):
 		state.billboard_include_poles = bool(prefs.get("Billboard", {}).get("IncludePoles", True))
 		state.billboard_size = float(prefs.get("Billboard", {}).get("Size", 20.0))
 		state.banned_bones = ", ".join(prefs.get("BannedBones", []))
+		_sync_banned_bones_from_state(state)
 		state.ui_initialized = True
 		_sync_sequence_list_from_prefs(state)
 		if state.selected_sequence != "N/A":
@@ -625,7 +742,7 @@ def _sync_state_to_legacy(state):
 		"IncludePoles": state.billboard_include_poles,
 		"Size": state.billboard_size,
 	}
-	prefs["BannedBones"] = [b.strip() for b in state.banned_bones.split(",") if b.strip()]
+	prefs["BannedBones"] = [item.name for item in state.banned_bone_items if item.name]
 
 	seq_name = state.selected_sequence
 	seq = prefs.get("Sequences", {}).get(seq_name)
@@ -830,6 +947,9 @@ def _snapshot_state(state):
 		"mat_ref_tex": state.mat_ref_tex,
 		"mat_reflectance": state.mat_reflectance,
 		"mat_detail_scale": state.mat_detail_scale,
+		"banned_bone_new": state.banned_bone_new,
+		"banned_bone_edit": state.banned_bone_edit,
+		"banned_bone_list_index": state.banned_bone_list_index,
 		"banned_bones": state.banned_bones,
 	}
 
@@ -865,6 +985,7 @@ def _load_saved_snapshot(state):
 		_store_saved_snapshot(state)
 		return
 	_restore_snapshot(state, loaded)
+	_sync_banned_bones_from_state(state)
 	if state.selected_sequence != "N/A":
 		_set_sequence_selection(state, state.selected_sequence, persist=False)
 	if state.selected_material != "N/A":
@@ -920,6 +1041,21 @@ class TorqueExporterVisTrackItem(bpy.types.PropertyGroup):
 	ipo_type: StringProperty(name="IPO Type", default="")
 	ipo_channel: StringProperty(name="IPO Channel", default="")
 	ipo_object: StringProperty(name="IPO Object", default="")
+
+
+class TorqueExporterBannedBoneItem(bpy.types.PropertyGroup):
+	name: StringProperty(name="Pattern", default="")
+
+
+class TORQUEEXPORTER_UL_banned_bone_items(bpy.types.UIList):
+	def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
+		if self.layout_type in {"DEFAULT", "COMPACT"}:
+			row = layout.row(align=True)
+			row.label(text=item.name or "<empty>", icon="BONE_DATA")
+			if "*" in item.name or "?" in item.name:
+				row.label(text="wildcard")
+		elif self.layout_type == "GRID":
+			layout.label(text=item.name or "<empty>")
 
 
 class TORQUEEXPORTER_UL_material_items(bpy.types.UIList):
@@ -1001,6 +1137,71 @@ class TORQUEEXPORTER_OT_refresh_sequences(bpy.types.Operator):
 		state = context.scene.torque_export_ui
 		_sync_sequence_list_from_prefs(state)
 		_sync_state_from_legacy(state)
+		return {"FINISHED"}
+
+
+class TORQUEEXPORTER_OT_add_banned_bone(bpy.types.Operator):
+	bl_idname = "torqueexporter.add_banned_bone"
+	bl_label = "Add Banned Bone"
+	bl_options = {"INTERNAL"}
+
+	def execute(self, context):
+		state = context.scene.torque_export_ui
+		value = _normalize_banned_bone(state.banned_bone_new)
+		if not value:
+			self.report({"WARNING"}, "Enter a bone name or wildcard pattern first")
+			return {"CANCELLED"}
+		if any(item.name.upper() == value.upper() for item in state.banned_bone_items):
+			owned = _begin_internal_ui_update(state)
+			try:
+				state.banned_bone_new = ""
+			finally:
+				if owned:
+					_end_internal_ui_update(state)
+			return {"FINISHED"}
+		item = state.banned_bone_items.add()
+		item.name = value
+		owned = _begin_internal_ui_update(state)
+		try:
+			state.banned_bone_list_index = len(state.banned_bone_items) - 1
+			state.banned_bone_edit = item.name
+			state.banned_bone_new = ""
+			state.banned_bones = ", ".join(item.name for item in state.banned_bone_items if item.name)
+		finally:
+			if owned:
+				_end_internal_ui_update(state)
+		_sync_banned_bones_to_prefs(state)
+		return {"FINISHED"}
+
+
+class TORQUEEXPORTER_OT_remove_banned_bone(bpy.types.Operator):
+	bl_idname = "torqueexporter.remove_banned_bone"
+	bl_label = "Remove Banned Bone"
+	bl_options = {"INTERNAL"}
+
+	def execute(self, context):
+		state = context.scene.torque_export_ui
+		if not state.banned_bone_items:
+			return {"CANCELLED"}
+		index = max(0, min(state.banned_bone_list_index, len(state.banned_bone_items) - 1))
+		try:
+			state.banned_bone_items.remove(index)
+		except Exception as exc:
+			self.report({"ERROR"}, str(exc))
+			return {"CANCELLED"}
+		owned = _begin_internal_ui_update(state)
+		try:
+			state.banned_bone_list_index = min(index, len(state.banned_bone_items) - 1)
+			if state.banned_bone_list_index < 0:
+				state.banned_bone_edit = ""
+				state.banned_bone_new = ""
+			elif state.banned_bone_list_index < len(state.banned_bone_items):
+				state.banned_bone_edit = state.banned_bone_items[state.banned_bone_list_index].name
+			state.banned_bones = ", ".join(item.name for item in state.banned_bone_items if item.name)
+		finally:
+			if owned:
+				_end_internal_ui_update(state)
+		_sync_banned_bones_to_prefs(state)
 		return {"FINISHED"}
 
 
@@ -1105,8 +1306,24 @@ class TorqueExporterUIState(bpy.types.PropertyGroup):
 		name="Banned Bones",
 		default="",
 		description="Comma-separated list of bone names to skip",
-		update=_on_state_changed,
 	)
+	banned_bone_new: StringProperty(
+		name="Add Pattern",
+		default="",
+		description="Type a bone name or wildcard pattern, then add it to the ban list",
+	)
+	banned_bone_edit: StringProperty(
+		name="Pattern",
+		default="",
+		description="Selected banned bone pattern",
+		update=_on_banned_bone_edit_changed,
+	)
+	banned_bone_list_index: IntProperty(
+		name="Banned Bone Index",
+		default=-1,
+		update=_on_banned_bone_list_index_changed,
+	)
+	banned_bone_items: CollectionProperty(type=TorqueExporterBannedBoneItem)
 
 
 class TORQUEEXPORTER_OT_refresh_ui(bpy.types.Operator):
@@ -1389,8 +1606,28 @@ def _draw_armature_block(layout, state):
 	box = layout.box()
 	box.label(text="Armatures")
 	box.label(text="Bones are discovered automatically from scene armatures.")
-	box.label(text="Banned bones are skipped during armature export.")
-	box.prop(state, "banned_bones")
+	box.label(text="Use wildcard patterns like Head* or *Toe? in the ban list.")
+	list_box = box.box()
+	list_box.template_list(
+		"TORQUEEXPORTER_UL_banned_bone_items",
+		"",
+		state,
+		"banned_bone_items",
+		state,
+		"banned_bone_list_index",
+		rows=5,
+	)
+	gen = box.box()
+	gen.label(text="General")
+	gencol = gen.column(align=True)
+	add_row = gencol.row(align=True)
+	add_row.prop(state, "banned_bone_new", text="Add Pattern")
+	add_row.operator("torqueexporter.add_banned_bone", text="Add")
+	edit_row = gencol.row(align=True)
+	edit_row.enabled = state.banned_bone_list_index >= 0 and len(state.banned_bone_items) > 0
+	edit_row.prop(state, "banned_bone_edit", text="Selected")
+	edit_row.operator("torqueexporter.remove_banned_bone", text="Remove")
+	gencol.label(text="This list is written back to Prefs['BannedBones'] unchanged.")
 	pad = box.box()
 	pad.label(text="Current scene armatures")
 	legacy = _legacy_module()
@@ -1429,6 +1666,8 @@ _CLASSES = (
 	TorqueExporterSequenceItem,
 	TorqueExporterVisTrackItem,
 	TorqueExporterUIState,
+	TorqueExporterBannedBoneItem,
+	TORQUEEXPORTER_UL_banned_bone_items,
 	TORQUEEXPORTER_UL_material_items,
 	TORQUEEXPORTER_UL_sequence_items,
 	TORQUEEXPORTER_UL_vis_track_items,

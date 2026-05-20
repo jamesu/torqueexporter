@@ -40,6 +40,7 @@ Status note: the Scene panel now also exposes an explicit export-path field with
 Status note: the Materials section in `torqueplugin/ui_port.py` now exposes the old U/V texture list behavior with list selection, live control syncing, and persistence support, matching the legacy importer-driven material entries more closely.
 Status note: the sequence and material sections in `torqueplugin/ui_port.py` now use list-first layouts with the list box at the top and the editable controls grouped below as General/Action/IFL/Visibility or General/Advanced, the UI no longer exposes the redundant classic/compact layout split, the sequence section exposes the DSQ toggle, and the sequence visibility section now has a real track list and editable IPO fields instead of only a summary label.
 Status note: the UI panel now stores a `LoadedState` snapshot in the legacy prefs so the Reset button can restore the last saved UI/config state without changing the existing config format, and selection changes now hydrate the relevant sequence/material controls instead of leaving the panel stuck on stale data.
+Status note: the armature section now uses a compact banned-bones list editor with add/remove and selected-pattern editing, and the exporter matches exact names plus wildcard patterns against `Prefs['BannedBones']` without changing the stored config format.
 
 ## 3. Preferences And Configuration
 
