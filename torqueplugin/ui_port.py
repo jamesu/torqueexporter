@@ -1200,6 +1200,7 @@ class TORQUEEXPORTER_UL_vis_track_items(bpy.types.UIList):
 				summary.append(item.ipo_object)
 			if summary:
 				row.label(text=" / ".join(summary))
+			row.label(text="On" if item.has_track else "Off")
 		elif self.layout_type == "GRID":
 			layout.label(text=item.track_name or getattr(item, "name", "") or f"Track {index + 1}")
 
@@ -1616,7 +1617,7 @@ def _draw_sequence_block(layout, state):
 	track_detail = vis.box()
 	track_detail.label(text="General")
 	tdcol = track_detail.column(align=True)
-	tdcol.enabled = state.seq_vis_enabled and state.vis_track_list_index >= 0 and len(state.vis_track_items) > 0
+	tdcol.enabled = state.vis_track_list_index >= 0 and len(state.vis_track_items) > 0
 	tdcol.prop(state, "vis_track_enabled", text="Enabled")
 	tdcol.prop(state, "vis_track_ipo_type", text="Source Type")
 	tdcol.prop_search(state, "vis_track_ipo_channel", state, "vis_channel_options", text="Source Channel")
