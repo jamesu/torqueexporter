@@ -147,7 +147,7 @@ def _selected_vis_track_name(state):
 	item = _selected_vis_track_item(state)
 	if item is None:
 		return ""
-	return getattr(item, "name", "") or item.track_name or ""
+	return item.display_name or item.track_name or getattr(item, "name", "") or ""
 
 
 def _set_name_collection(collection, values):
@@ -415,6 +415,7 @@ def _sync_vis_track_detail_from_index(state):
 		state.vis_track_ipo_type = ipo_type
 		state.vis_track_ipo_channel = str(track.ipo_channel or "")
 		state.vis_track_ipo_object = str(track.name or track.track_name or "")
+		track.display_name = str(track.track_name or track.name or "")
 		_refresh_vis_option_sources(state)
 	finally:
 		if owned:
@@ -552,6 +553,7 @@ def _sync_visibility_from_prefs(state, seq_name):
 			item = state.vis_track_items.add()
 			item.name = name
 			item.track_name = name
+			item.display_name = name
 			item.has_track = bool(track.get("hasVisTrack", False))
 			item.ipo_type = str(track.get("IPOType", "") or "")
 			item.ipo_channel = str(track.get("IPOChannel", "") or "")
@@ -1141,6 +1143,7 @@ class TorqueExporterSequenceItem(bpy.types.PropertyGroup):
 
 class TorqueExporterVisTrackItem(bpy.types.PropertyGroup):
 	track_name: StringProperty(name="Track", default="")
+	display_name: StringProperty(name="Display Name", default="")
 	has_track: BoolProperty(name="Enabled", default=False)
 	ipo_type: StringProperty(name="IPO Type", default="")
 	ipo_channel: StringProperty(name="IPO Channel", default="")
@@ -1196,7 +1199,7 @@ class TORQUEEXPORTER_UL_vis_track_items(bpy.types.UIList):
 	def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
 		if self.layout_type in {"DEFAULT", "COMPACT"}:
 			row = layout.row(align=True)
-			display_name = getattr(item, "name", "") or item.track_name or f"Track {index + 1}"
+			display_name = item.display_name or item.track_name or getattr(item, "name", "") or f"Track {index + 1}"
 			row.label(text=display_name, icon="VISIBLE_IPO_ON" if item.has_track else "HIDE_OFF")
 			summary = []
 			if item.ipo_type:
@@ -1208,7 +1211,7 @@ class TORQUEEXPORTER_UL_vis_track_items(bpy.types.UIList):
 			if summary:
 				row.label(text=" / ".join(summary))
 		elif self.layout_type == "GRID":
-			layout.label(text=getattr(item, "name", "") or item.track_name or f"Track {index + 1}")
+			layout.label(text=item.display_name or item.track_name or getattr(item, "name", "") or f"Track {index + 1}")
 
 
 class TORQUEEXPORTER_OT_refresh_materials(bpy.types.Operator):
