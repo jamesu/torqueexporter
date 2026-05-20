@@ -1051,7 +1051,7 @@ class TORQUEEXPORTER_UL_banned_bone_items(bpy.types.UIList):
 	def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
 		if self.layout_type in {"DEFAULT", "COMPACT"}:
 			row = layout.row(align=True)
-			row.prop(item, "name", text="", emboss=False, icon="BONE_DATA")
+			row.label(text=item.name or "<empty>", icon="BONE_DATA")
 		elif self.layout_type == "GRID":
 			layout.label(text=item.name or "<empty>")
 
@@ -1614,10 +1614,10 @@ def _draw_armature_block(layout, state):
 		rows=5,
 	)
 	row = box.row(align=True)
-	row.prop(state, "banned_bone_new", text="Pattern")
-	row.operator("torqueexporter.add_banned_bone", text="", icon="ADD")
-	row.operator("torqueexporter.remove_banned_bone", text="", icon="REMOVE")
-	box.label(text="Use bone names or wildcards like Head* and keep them in Prefs['BannedBones'].")
+	row.prop(state, "banned_bone_new", text="Bone / Pattern")
+	row.operator("torqueexporter.add_banned_bone", text="Add", icon="ADD")
+	row.operator("torqueexporter.remove_banned_bone", text="Remove Selected", icon="REMOVE")
+	box.label(text="Use bone names or wildcards like Head*; the list is stored in Prefs['BannedBones'].")
 
 
 def _draw_about_block(layout, state):
