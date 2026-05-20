@@ -29,6 +29,9 @@ except Exception:  # pragma: no cover - outside Blender
 	bc = None
 
 
+_SYNCING_STATE_IDS = set()
+
+
 def _legacy_module():
 	try:
 		import Dts_Blender as legacy
@@ -186,6 +189,7 @@ def _sync_sequence_from_prefs(state, seq_name):
 	state.seq_priority = int(seq.get("Priority", 0))
 	state.seq_cyclic = bool(seq.get("Cyclic", False))
 	state.seq_no_export = bool(seq.get("NoExport", False))
+	state.seq_dsq = bool(seq.get("Dsq", False))
 	state.seq_total_frames = int(seq.get("TotalFrames", 0))
 	state.seq_duration = float(seq.get("Duration", 1.0))
 	state.seq_fps = float(seq.get("FPS", 25.0))
@@ -335,6 +339,7 @@ def _on_material_list_index_changed(self, context):
 	if self.selected_material != mat_name:
 		self.selected_material = mat_name
 	_sync_material_from_prefs(self, mat_name)
+	_sync_state_to_legacy_safe(self)
 
 
 def _on_sequence_list_index_changed(self, context):
@@ -350,6 +355,7 @@ def _on_sequence_list_index_changed(self, context):
 		self.selected_sequence = seq_name
 	try:
 		_sync_sequence_from_prefs(self, seq_name)
+		_sync_state_to_legacy_safe(self)
 	except Exception as exc:
 		_log_ui_error("_on_sequence_list_index_changed", exc)
 
@@ -358,6 +364,7 @@ def _on_selected_sequence_changed(self, context):
 	try:
 		if self.selected_sequence != "N/A":
 			_sync_sequence_from_prefs(self, self.selected_sequence)
+			_sync_state_to_legacy_safe(self)
 	except Exception as exc:
 		_log_ui_error("_on_selected_sequence_changed", exc)
 
@@ -372,6 +379,7 @@ def _on_selected_material_changed(self, context):
 					if self.material_list_index != idx:
 						self.material_list_index = idx
 					break
+		_sync_state_to_legacy_safe(self)
 	except Exception as exc:
 		_log_ui_error("_on_selected_material_changed", exc)
 
@@ -415,10 +423,16 @@ def _on_state_changed(self, context):
 
 
 def _sync_state_to_legacy_safe(state):
+	state_id = id(state)
+	if state_id in _SYNCING_STATE_IDS:
+		return
+	_SYNCING_STATE_IDS.add(state_id)
 	try:
 		_sync_state_to_legacy(state)
 	except Exception as exc:
 		print(f"Torque UI sync warning: {exc}")
+	finally:
+		_SYNCING_STATE_IDS.discard(state_id)
 
 
 def _sync_state_to_legacy(state):
@@ -453,6 +467,7 @@ def _sync_state_to_legacy(state):
 		seq["Priority"] = state.seq_priority
 		seq["Cyclic"] = state.seq_cyclic
 		seq["NoExport"] = state.seq_no_export
+		seq["Dsq"] = state.seq_dsq
 		seq["TotalFrames"] = state.seq_total_frames
 		seq["Duration"] = state.seq_duration
 		seq["FPS"] = state.seq_fps
@@ -535,6 +550,18 @@ def _sync_state_to_legacy(state):
 	except Exception:
 		pass
 
+	try:
+		_sync_sequence_list_from_prefs(state)
+		_sync_material_list_from_prefs(state)
+	except Exception as exc:
+		_log_ui_error("_sync_state_to_legacy.refresh_lists", exc)
+
+	try:
+		_sync_sequence_list_from_prefs(state)
+		_sync_material_list_from_prefs(state)
+	except Exception as exc:
+		_log_ui_error("_sync_state_to_legacy.refresh_lists", exc)
+
 
 def _refresh_sequences(state):
 	legacy = _legacy_module()
@@ -565,6 +592,113 @@ def _refresh_materials(state):
 	_sync_material_list_from_prefs(state)
 
 
+def _snapshot_state(state):
+	return {
+		"export_basepath": state.export_basepath,
+		"export_basename": state.export_basename,
+		"dts_version": state.dts_version,
+		"write_shape_script": state.write_shape_script,
+		"export_scale": state.export_scale,
+		"prim_type": state.prim_type,
+		"max_strip_size": state.max_strip_size,
+		"cluster_depth": state.cluster_depth,
+		"always_write_depth": state.always_write_depth,
+		"collapse_root_transform": state.collapse_root_transform,
+		"tse_material": state.tse_material,
+		"billboard_enabled": state.billboard_enabled,
+		"billboard_equator": state.billboard_equator,
+		"billboard_polar": state.billboard_polar,
+		"billboard_polar_angle": state.billboard_polar_angle,
+		"billboard_dim": state.billboard_dim,
+		"billboard_include_poles": state.billboard_include_poles,
+		"billboard_size": state.billboard_size,
+		"selected_sequence": state.selected_sequence,
+		"seq_priority": state.seq_priority,
+		"seq_cyclic": state.seq_cyclic,
+		"seq_no_export": state.seq_no_export,
+		"seq_total_frames": state.seq_total_frames,
+		"seq_duration": state.seq_duration,
+		"seq_fps": state.seq_fps,
+		"seq_duration_locked": state.seq_duration_locked,
+		"seq_fps_locked": state.seq_fps_locked,
+		"seq_action_enabled": state.seq_action_enabled,
+		"seq_action_start": state.seq_action_start,
+		"seq_action_end": state.seq_action_end,
+		"seq_action_auto_samples": state.seq_action_auto_samples,
+		"seq_action_auto_frames": state.seq_action_auto_frames,
+		"seq_action_frame_samples": state.seq_action_frame_samples,
+		"seq_action_num_ground_frames": state.seq_action_num_ground_frames,
+		"seq_action_blend": state.seq_action_blend,
+		"seq_action_blend_ref_action": state.seq_action_blend_ref_action,
+		"seq_action_blend_ref_frame": state.seq_action_blend_ref_frame,
+		"seq_dsq": state.seq_dsq,
+		"seq_ifl_enabled": state.seq_ifl_enabled,
+		"seq_ifl_material": state.seq_ifl_material,
+		"seq_ifl_num_images": state.seq_ifl_num_images,
+		"seq_ifl_total_frames": state.seq_ifl_total_frames,
+		"seq_ifl_write_file": state.seq_ifl_write_file,
+		"seq_vis_enabled": state.seq_vis_enabled,
+		"seq_vis_start": state.seq_vis_start,
+		"seq_vis_end": state.seq_vis_end,
+		"selected_material": state.selected_material,
+		"material_show_advanced": state.material_show_advanced,
+		"mat_swrap": state.mat_swrap,
+		"mat_twrap": state.mat_twrap,
+		"mat_translucent": state.mat_translucent,
+		"mat_additive": state.mat_additive,
+		"mat_subtractive": state.mat_subtractive,
+		"mat_self_illum": state.mat_self_illum,
+		"mat_never_env_map": state.mat_never_env_map,
+		"mat_no_mipmap": state.mat_no_mipmap,
+		"mat_mipmap_zero_border": state.mat_mipmap_zero_border,
+		"mat_ifl_material": state.mat_ifl_material,
+		"mat_detail_map_flag": state.mat_detail_map_flag,
+		"mat_bump_map_flag": state.mat_bump_map_flag,
+		"mat_reflectance_map_flag": state.mat_reflectance_map_flag,
+		"mat_detail_tex": state.mat_detail_tex,
+		"mat_bump_tex": state.mat_bump_tex,
+		"mat_ref_tex": state.mat_ref_tex,
+		"mat_reflectance": state.mat_reflectance,
+		"mat_detail_scale": state.mat_detail_scale,
+		"banned_bones": state.banned_bones,
+	}
+
+
+def _restore_snapshot(state, snapshot):
+	for key, value in snapshot.items():
+		try:
+			setattr(state, key, value)
+		except Exception as exc:
+			_log_ui_error("_restore_snapshot.%s" % key, exc)
+
+
+def _ensure_loaded_state(prefs):
+	loaded = prefs.get("LoadedState")
+	if loaded is None:
+		loaded = {}
+		prefs["LoadedState"] = loaded
+	return loaded
+
+
+def _load_saved_snapshot(state):
+	prefs = _ensure_prefs()
+	if prefs is None:
+		return
+	loaded = _ensure_loaded_state(prefs)
+	if not loaded:
+		_sync_state_from_legacy(state)
+		_store_saved_snapshot(state)
+		return
+	_restore_snapshot(state, loaded)
+
+
+def _store_saved_snapshot(state):
+	prefs = _ensure_prefs()
+	if prefs is None:
+		return
+	prefs["LoadedState"] = _snapshot_state(state)
+
+
 def _bootstrap_ui_state():
 	if bpy is None:
 		return
@@ -579,6 +713,12 @@ def _bootstrap_ui_state():
 		_sync_state_from_legacy(state)
 	except Exception as exc:
 		_log_ui_error("_bootstrap_ui_state", exc)
+	try:
+		prefs = _ensure_prefs()
+		if prefs is not None and not prefs.get("LoadedState"):
+			_store_saved_snapshot(state)
+	except Exception as exc:
+		_log_ui_error("_bootstrap_ui_state.loaded_state", exc)
 
 
 class TorqueExporterMaterialItem(bpy.types.PropertyGroup):
@@ -675,6 +815,7 @@ class TorqueExporterUIState(bpy.types.PropertyGroup):
 			("TriStrips", "TriStrips", "Triangle strips"),
 		],
 		default="Tris",
+		update=_on_state_changed,
 	)
 	max_strip_size: IntProperty(name="Max Strip Size", default=6, min=3, max=256, update=_on_state_changed)
 	cluster_depth: IntProperty(name="Cluster Depth", default=1, min=0, max=32, update=_on_state_changed)
@@ -694,6 +835,7 @@ class TorqueExporterUIState(bpy.types.PropertyGroup):
 	seq_priority: IntProperty(name="Priority", default=0, update=_on_state_changed)
 	seq_cyclic: BoolProperty(name="Cyclic", default=False, update=_on_state_changed)
 	seq_no_export: BoolProperty(name="No Export", default=False, update=_on_state_changed)
+	seq_dsq: BoolProperty(name="DSQ", default=False, update=_on_state_changed)
 	seq_total_frames: IntProperty(name="Total Frames", default=0, update=_on_state_changed)
 	seq_duration: FloatProperty(name="Duration", default=1.0, min=0.0, update=_on_state_changed)
 	seq_fps: FloatProperty(name="FPS", default=25.0, min=0.0, update=_on_state_changed)
@@ -757,23 +899,14 @@ class TorqueExporterUIState(bpy.types.PropertyGroup):
 
 
 class TORQUEEXPORTER_OT_refresh_ui(bpy.types.Operator):
-	bl_idname = "torqueexporter.refresh_ui"
-	bl_label = "Refresh Torque UI"
+	bl_idname = "torqueexporter.reset_ui"
+	bl_label = "Reset Torque UI"
 	bl_options = {"INTERNAL"}
 
 	def execute(self, context):
 		state = context.scene.torque_export_ui
-		_sync_state_from_legacy(state)
-		return {"FINISHED"}
-
-
-class TORQUEEXPORTER_OT_apply_ui(bpy.types.Operator):
-	bl_idname = "torqueexporter.apply_ui"
-	bl_label = "Apply Torque UI"
-	bl_options = {"INTERNAL"}
-
-	def execute(self, context):
-		_sync_state_to_legacy_safe(context.scene.torque_export_ui)
+		_load_saved_snapshot(state)
+		_sync_state_to_legacy_safe(state)
 		return {"FINISHED"}
 
 
@@ -784,6 +917,7 @@ class TORQUEEXPORTER_OT_export_from_ui(bpy.types.Operator):
 
 	def execute(self, context):
 		_sync_state_to_legacy_safe(context.scene.torque_export_ui)
+		_store_saved_snapshot(context.scene.torque_export_ui)
 		legacy = _legacy_module()
 		if legacy is None:
 			self.report({"ERROR"}, "Legacy exporter module is not available")
@@ -824,14 +958,13 @@ class TORQUEEXPORTER_PT_scene_panel(bpy.types.Panel):
 		try:
 			state = context.scene.torque_export_ui
 			row = layout.row(align=True)
-			row.operator("torqueexporter.refresh_ui", text="Refresh")
-			row.operator("torqueexporter.apply_ui", text="Sync")
+			row.operator("torqueexporter.reset_ui", text="Reset")
 			row.operator("torqueexporter.export_from_ui", text="Export", icon="EXPORT")
 
 			if not state.ui_initialized:
 				box = layout.box()
 				box.label(text="Torque UI not initialized")
-				box.label(text="Use Refresh to load current scene/prefs.")
+				box.label(text="Use Reset to load current saved state.")
 				return
 
 			_draw_main(layout, state)
@@ -914,6 +1047,7 @@ def _draw_sequence_block(layout, state):
 	row.prop(state, "seq_cyclic")
 	row = gencol.row(align=True)
 	row.prop(state, "seq_no_export")
+	row.prop(state, "seq_dsq")
 	row.prop(state, "seq_total_frames")
 	row = gencol.row(align=True)
 	row.prop(state, "seq_duration")
@@ -1069,7 +1203,6 @@ _CLASSES = (
 	TORQUEEXPORTER_OT_refresh_materials,
 	TORQUEEXPORTER_OT_refresh_sequences,
 	TORQUEEXPORTER_OT_refresh_ui,
-	TORQUEEXPORTER_OT_apply_ui,
 	TORQUEEXPORTER_OT_use_blend_dir,
 	TORQUEEXPORTER_OT_export_from_ui,
 	TORQUEEXPORTER_PT_scene_panel,

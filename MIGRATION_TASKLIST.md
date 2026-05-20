@@ -37,8 +37,9 @@ Status note: placeholder Blender 4.x preview surfaces now exist for the Properti
 Status note: a Scene panel port has started in `torqueplugin/ui_port.py`, and the porting checklist now lives in [UI_PORT_CHECKLIST.md](/Users/jamesu/Desktop/torqueexporter/UI_PORT_CHECKLIST.md).
 Status note: the Scene panel now writes changes back into the legacy config model live, and the export button saves prefs before handing off to the legacy export routine.
 Status note: the Scene panel now also exposes an explicit export-path field with a "use current file folder" action, and the material section is mapped to the old imported U/V texture list behavior instead of a generic material browser.
-Status note: the Materials section in `torqueplugin/ui_port.py` now exposes the old U/V texture list behavior with refresh/select support, matching the legacy importer-driven material entries more closely.
-Status note: the sequence and material sections in `torqueplugin/ui_port.py` now use list-first layouts with the list box at the top and the editable controls grouped below as General/Action/IFL/Visibility or General/Advanced, the UI no longer exposes the redundant classic/compact layout split, and the armature section now centers banned bones plus scene armature summary instead of a confusing armature picker.
+Status note: the Materials section in `torqueplugin/ui_port.py` now exposes the old U/V texture list behavior with list selection, live control syncing, and persistence support, matching the legacy importer-driven material entries more closely.
+Status note: the sequence and material sections in `torqueplugin/ui_port.py` now use list-first layouts with the list box at the top and the editable controls grouped below as General/Action/IFL/Visibility or General/Advanced, the UI no longer exposes the redundant classic/compact layout split, the sequence section exposes the DSQ toggle, and the armature section now centers banned bones plus scene armature summary instead of a confusing armature picker.
+Status note: the UI panel now stores a `LoadedState` snapshot in the legacy prefs so the Reset button can restore the last saved UI/config state without changing the existing config format.
 
 ## 3. Preferences And Configuration
 

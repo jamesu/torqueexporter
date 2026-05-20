@@ -17,12 +17,15 @@ Goal: port the old Torque exporter UI into a modern Blender 4.x Scene panel whil
 - [x] Export scale control.
 - [x] Primitive type control.
 - [x] Export action wiring and config sync.
+- [x] Reset restores the last saved UI/config state via `LoadedState`.
 - [ ] Final file browser behavior.
 
 ## Sequence Section
 
 - [x] Sequence selector.
 - [x] Sequence list appears as a readable single-line list.
+- [x] Sequence list selection syncs the controls.
+- [x] DSQ toggle is exposed for sequences.
 - [x] Common sequence settings.
 - [x] Action sequence settings.
 - [x] IFL sequence settings.
@@ -42,6 +45,7 @@ Goal: port the old Torque exporter UI into a modern Blender 4.x Scene panel whil
 
 - [x] Material selector.
 - [x] Material list appears as a readable single-line list.
+- [x] Material list selection syncs the controls.
 - [x] Common material flags.
 - [x] Texture / map fields.
 - [x] Reflectance and detail scale controls.
