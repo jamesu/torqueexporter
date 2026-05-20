@@ -1552,23 +1552,20 @@ def _draw_material_block(layout, state):
 def _draw_armature_block(layout, state):
 	box = layout.box()
 	box.label(text="Banned Bones")
-	row = box.row()
-	row.template_list(
+	actions = box.row(align=True)
+	actions.operator("torqueexporter.add_banned_bone", text="Add Item", icon="ADD")
+	actions.operator("torqueexporter.remove_banned_bone", text="Remove Selected", icon="REMOVE")
+	list_box = box.box()
+	list_box.template_list(
 		"TORQUEEXPORTER_UL_banned_bone_items",
 		"",
 		state,
 		"banned_bone_items",
 		state,
 		"banned_bone_list_index",
-		rows=5,
+		rows=6,
 	)
-	buttons = row.column(align=True)
-	buttons.operator("torqueexporter.add_banned_bone", text="", icon="ADD")
-	buttons.operator("torqueexporter.remove_banned_bone", text="", icon="REMOVE")
-	actions = box.row(align=True)
-	actions.operator("torqueexporter.add_banned_bone", text="Add Item", icon="ADD")
-	actions.operator("torqueexporter.remove_banned_bone", text="Remove Selected", icon="REMOVE")
-	box.label(text="Click + to add a row, then type a bone name or wildcard like Head* directly in the list.")
+	box.label(text="Add a row, then type a bone name or wildcard like Head* directly in the list.")
 
 
 def _draw_about_block(layout, state):
