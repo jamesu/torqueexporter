@@ -143,6 +143,13 @@ def _selected_vis_track_item(state):
 	return state.vis_track_items[index]
 
 
+def _selected_vis_track_name(state):
+	item = _selected_vis_track_item(state)
+	if item is None:
+		return ""
+	return item.track_name or getattr(item, "name", "") or ""
+
+
 def _set_name_collection(collection, values):
 	collection.clear()
 	seen = set()
@@ -709,6 +716,7 @@ def _on_vis_track_changed(self, context):
 			item.ipo_type = self.vis_track_ipo_type
 			item.ipo_channel = self.vis_track_ipo_channel
 			item.ipo_object = item.track_name or item.name or ""
+			self.vis_track_ipo_object = item.ipo_object
 		_refresh_vis_option_sources(self)
 		_write_current_vis_track_to_prefs(self)
 	except Exception as exc:
@@ -1621,7 +1629,7 @@ def _draw_sequence_block(layout, state):
 	tdcol.prop(state, "vis_track_enabled", text="Enabled")
 	tdcol.prop(state, "vis_track_ipo_type", text="Source Type")
 	tdcol.prop_search(state, "vis_track_ipo_channel", state, "vis_channel_options", text="Source Channel")
-	tdcol.label(text=f"Track Object: {state.vis_track_ipo_object or '<none>'}")
+	tdcol.label(text=f"Track Object: {_selected_vis_track_name(state) or '<none>'}")
 	viscol.label(text=f"Tracks: {state.seq_vis_tracks_summary or 'none'}")
 
 
