@@ -147,7 +147,7 @@ def _selected_vis_track_name(state):
 	item = _selected_vis_track_item(state)
 	if item is None:
 		return ""
-	return item.track_name or getattr(item, "name", "") or ""
+	return getattr(item, "name", "") or item.track_name or ""
 
 
 def _set_name_collection(collection, values):
@@ -414,7 +414,7 @@ def _sync_vis_track_detail_from_index(state):
 		state.vis_track_enabled = bool(track.has_track)
 		state.vis_track_ipo_type = ipo_type
 		state.vis_track_ipo_channel = str(track.ipo_channel or "")
-		state.vis_track_ipo_object = str(track.track_name or track.name or "")
+		state.vis_track_ipo_object = str(track.name or track.track_name or "")
 		_refresh_vis_option_sources(state)
 	finally:
 		if owned:
@@ -715,7 +715,7 @@ def _on_vis_track_changed(self, context):
 			item.has_track = bool(self.vis_track_enabled)
 			item.ipo_type = self.vis_track_ipo_type
 			item.ipo_channel = self.vis_track_ipo_channel
-			item.ipo_object = item.track_name or item.name or ""
+			item.ipo_object = item.name or item.track_name or ""
 		_refresh_vis_option_sources(self)
 		_write_current_vis_track_to_prefs(self)
 	except Exception as exc:
@@ -1196,7 +1196,7 @@ class TORQUEEXPORTER_UL_vis_track_items(bpy.types.UIList):
 	def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
 		if self.layout_type in {"DEFAULT", "COMPACT"}:
 			row = layout.row(align=True)
-			display_name = item.track_name or getattr(item, "name", "") or f"Track {index + 1}"
+			display_name = getattr(item, "name", "") or item.track_name or f"Track {index + 1}"
 			row.label(text=display_name, icon="VISIBLE_IPO_ON" if item.has_track else "HIDE_OFF")
 			summary = []
 			if item.ipo_type:
@@ -1207,9 +1207,8 @@ class TORQUEEXPORTER_UL_vis_track_items(bpy.types.UIList):
 				summary.append(item.ipo_object)
 			if summary:
 				row.label(text=" / ".join(summary))
-			row.label(text="On" if item.has_track else "Off")
 		elif self.layout_type == "GRID":
-			layout.label(text=item.track_name or getattr(item, "name", "") or f"Track {index + 1}")
+			layout.label(text=getattr(item, "name", "") or item.track_name or f"Track {index + 1}")
 
 
 class TORQUEEXPORTER_OT_refresh_materials(bpy.types.Operator):
