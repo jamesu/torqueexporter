@@ -323,6 +323,30 @@ def _sync_vis_track_detail_from_index(state):
 			_end_internal_ui_update(state)
 
 
+def _write_current_vis_track_to_prefs(state):
+	prefs = _ensure_prefs()
+	if prefs is None:
+		return
+	seq_name = state.selected_sequence
+	seq = prefs.get("Sequences", {}).get(seq_name)
+	if not seq:
+		return
+	seq.setdefault("Vis", {})
+	seq["Vis"]["Enabled"] = state.seq_vis_enabled
+	seq["Vis"]["StartFrame"] = state.seq_vis_start
+	seq["Vis"]["EndFrame"] = state.seq_vis_end
+	seq["Vis"]["Tracks"] = {}
+	for item in state.vis_track_items:
+		if not item.track_name:
+			continue
+		seq["Vis"]["Tracks"][item.track_name] = {
+			"hasVisTrack": bool(item.has_track),
+			"IPOType": item.ipo_type,
+			"IPOChannel": item.ipo_channel,
+			"IPOObject": item.ipo_object,
+		}
+
+
 def _set_sequence_selection(state, seq_name, persist=True):
 	owned = _begin_internal_ui_update(state)
 	try:
@@ -427,7 +451,7 @@ def _sync_visibility_from_prefs(state, seq_name):
 		for name in sorted(set(scene_tracks) | set(track_prefs.keys()), key=lambda x: x.lower()):
 			track = track_prefs.get(name, {})
 			item = state.vis_track_items.add()
-			item.name = name
+			item.track_name = name
 			item.has_track = bool(track.get("hasVisTrack", False))
 			item.ipo_type = str(track.get("IPOType", "") or "")
 			item.ipo_channel = str(track.get("IPOChannel", "") or "")
@@ -580,7 +604,6 @@ def _on_vis_track_list_index_changed(self, context):
 		if owned:
 			_end_internal_ui_update(self)
 	_sync_vis_track_detail_from_index(self)
-	_sync_state_to_legacy_safe(self)
 
 
 def _on_vis_track_changed(self, context):
@@ -593,7 +616,7 @@ def _on_vis_track_changed(self, context):
 			item.ipo_type = self.vis_track_ipo_type
 			item.ipo_channel = self.vis_track_ipo_channel
 			item.ipo_object = self.vis_track_ipo_object
-		_sync_state_to_legacy_safe(self)
+		_write_current_vis_track_to_prefs(self)
 	except Exception as exc:
 		_log_ui_error("_on_vis_track_changed", exc)
 
@@ -761,9 +784,9 @@ def _sync_state_to_legacy(state):
 		seq["Vis"]["EndFrame"] = state.seq_vis_end
 		seq["Vis"]["Tracks"] = {}
 		for item in state.vis_track_items:
-			if not item.name:
+			if not item.track_name:
 				continue
-			seq["Vis"]["Tracks"][item.name] = {
+			seq["Vis"]["Tracks"][item.track_name] = {
 				"hasVisTrack": bool(item.has_track),
 				"IPOType": item.ipo_type,
 				"IPOChannel": item.ipo_channel,
@@ -1016,7 +1039,7 @@ class TorqueExporterSequenceItem(bpy.types.PropertyGroup):
 
 
 class TorqueExporterVisTrackItem(bpy.types.PropertyGroup):
-	name: StringProperty(name="Name", default="")
+	track_name: StringProperty(name="Track", default="")
 	has_track: BoolProperty(name="Enabled", default=False)
 	ipo_type: StringProperty(name="IPO Type", default="")
 	ipo_channel: StringProperty(name="IPO Channel", default="")
@@ -1068,7 +1091,7 @@ class TORQUEEXPORTER_UL_vis_track_items(bpy.types.UIList):
 	def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
 		if self.layout_type in {"DEFAULT", "COMPACT"}:
 			row = layout.row(align=True)
-			row.label(text=item.name, icon="VISIBLE_IPO_ON" if item.has_track else "HIDE_OFF")
+			row.label(text=item.track_name or "<unnamed>", icon="VISIBLE_IPO_ON" if item.has_track else "HIDE_OFF")
 			summary = []
 			if item.ipo_type:
 				summary.append(item.ipo_type)
@@ -1079,7 +1102,7 @@ class TORQUEEXPORTER_UL_vis_track_items(bpy.types.UIList):
 			if summary:
 				row.label(text=" / ".join(summary))
 		elif self.layout_type == "GRID":
-			layout.label(text=item.name)
+			layout.label(text=item.track_name or "<unnamed>")
 
 
 class TORQUEEXPORTER_OT_refresh_materials(bpy.types.Operator):
@@ -1469,7 +1492,8 @@ def _draw_sequence_block(layout, state):
 	row.prop(state, "seq_vis_enabled")
 	row.prop(state, "seq_vis_start")
 	row.prop(state, "seq_vis_end")
-	viscol.label(text="Visibility tracks come from scene objects and map to IPO-based material/alpha tracks.")
+	viscol.label(text="Each track corresponds to a scene object from the export hierarchy.")
+	viscol.label(text="Choose how that object's visibility is driven. Most legacy setups use Object / LocZ.")
 	track_box = vis.box()
 	track_box.template_list(
 		"TORQUEEXPORTER_UL_vis_track_items",
@@ -1484,10 +1508,14 @@ def _draw_sequence_block(layout, state):
 	track_detail.label(text="General")
 	tdcol = track_detail.column(align=True)
 	tdcol.enabled = state.seq_vis_enabled and state.vis_track_list_index >= 0 and len(state.vis_track_items) > 0
-	tdcol.prop(state, "vis_track_enabled")
-	tdcol.prop(state, "vis_track_ipo_type")
-	tdcol.prop(state, "vis_track_ipo_channel")
-	tdcol.prop(state, "vis_track_ipo_object")
+	tdcol.prop(state, "vis_track_enabled", text="Enabled")
+	tdcol.prop(state, "vis_track_ipo_type", text="Source Type")
+	tdcol.prop(state, "vis_track_ipo_channel", text="Source Channel")
+	tdcol.prop(
+		state,
+		"vis_track_ipo_object",
+		text="Source Material" if state.vis_track_ipo_type == "Material" else "Source Object",
+	)
 	viscol.label(text=f"Tracks: {state.seq_vis_tracks_summary or 'none'}")
 
 
