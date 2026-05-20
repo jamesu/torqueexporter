@@ -134,28 +134,6 @@ def _material_items(self, context):
 	return items
 
 
-def _enum_items_with_current(current_value, values, empty_label="<None>"):
-	items = [("", empty_label, "")]
-	seen = set()
-	for value in values:
-		text = str(value or "")
-		if not text or text in seen:
-			continue
-		seen.add(text)
-		items.append((text, text, ""))
-	current_text = str(current_value or "")
-	if current_text and current_text not in seen:
-		items.append((current_text, current_text, ""))
-	return items
-
-
-def _vis_type_items(self, context):
-	return _enum_items_with_current(
-		getattr(self, "vis_track_ipo_type", ""),
-		["Object", "Material"],
-	)
-
-
 def _selected_vis_track_item(state):
 	if not state.vis_track_items:
 		return None
@@ -165,36 +143,36 @@ def _selected_vis_track_item(state):
 	return state.vis_track_items[index]
 
 
-def _vis_channel_items(self, context):
-	legacy = _legacy_module()
-	selected = _selected_vis_track_item(self)
-	ipo_type = getattr(self, "vis_track_ipo_type", "") or (selected.ipo_type if selected else "") or "Object"
-	values = []
-	if legacy is not None:
-		try:
-			values = legacy.getIPOChannelTypes(ipo_type) or []
-		except Exception as exc:
-			_log_ui_error("_vis_channel_items", exc)
-	return _enum_items_with_current(
-		getattr(self, "vis_track_ipo_channel", "") or (selected.ipo_channel if selected else ""),
-		values,
-	)
+def _set_name_collection(collection, values):
+	collection.clear()
+	seen = set()
+	for value in values:
+		text = str(value or "")
+		if not text or text in seen:
+			continue
+		seen.add(text)
+		item = collection.add()
+		item.name = text
 
 
-def _vis_object_items(self, context):
+def _refresh_vis_option_sources(state):
 	legacy = _legacy_module()
 	selected = _selected_vis_track_item(self)
-	ipo_type = getattr(self, "vis_track_ipo_type", "") or (selected.ipo_type if selected else "") or "Object"
-	values = []
+	ipo_type = getattr(state, "vis_track_ipo_type", "") or (selected.ipo_type if selected else "") or "Object"
+	_set_name_collection(state.vis_type_options, ["Object", "Material"])
+	channel_values = []
+	object_values = []
 	if legacy is not None:
 		try:
-			values = legacy.getAllSceneObjectNames(ipo_type) or []
+			channel_values = legacy.getIPOChannelTypes(ipo_type) or []
 		except Exception as exc:
-			_log_ui_error("_vis_object_items", exc)
-	return _enum_items_with_current(
-		getattr(self, "vis_track_ipo_object", "") or (selected.ipo_object if selected else ""),
-		sorted(values, key=lambda x: str(x).lower()),
-	)
+			_log_ui_error("_refresh_vis_option_sources.channels", exc)
+		try:
+			object_values = legacy.getAllSceneObjectNames(ipo_type) or []
+		except Exception as exc:
+			_log_ui_error("_refresh_vis_option_sources.objects", exc)
+	_set_name_collection(state.vis_channel_options, channel_values)
+	_set_name_collection(state.vis_object_options, sorted(object_values, key=lambda x: str(x).lower()))
 
 
 def _material_summary(mat):
@@ -375,6 +353,7 @@ def _sync_vis_track_detail_from_index(state):
 			state.vis_track_ipo_type = ""
 			state.vis_track_ipo_channel = ""
 			state.vis_track_ipo_object = ""
+			_refresh_vis_option_sources(state)
 			return
 		track = state.vis_track_items[state.vis_track_list_index]
 		ipo_type = str(track.ipo_type or "Object")
@@ -382,6 +361,7 @@ def _sync_vis_track_detail_from_index(state):
 		state.vis_track_ipo_type = ipo_type
 		state.vis_track_ipo_channel = str(track.ipo_channel or "")
 		state.vis_track_ipo_object = str(track.ipo_object or "")
+		_refresh_vis_option_sources(state)
 	finally:
 		if owned:
 			_end_internal_ui_update(state)
@@ -681,6 +661,7 @@ def _on_vis_track_changed(self, context):
 			item.ipo_type = self.vis_track_ipo_type
 			item.ipo_channel = self.vis_track_ipo_channel
 			item.ipo_object = self.vis_track_ipo_object
+		_refresh_vis_option_sources(self)
 		_write_current_vis_track_to_prefs(self)
 	except Exception as exc:
 		_log_ui_error("_on_vis_track_changed", exc)
@@ -1115,6 +1096,10 @@ class TorqueExporterBannedBoneItem(bpy.types.PropertyGroup):
 	name: StringProperty(name="Pattern", default="", update=_on_banned_bone_item_name_changed)
 
 
+class TorqueExporterOptionItem(bpy.types.PropertyGroup):
+	name: StringProperty(name="Name", default="")
+
+
 class TORQUEEXPORTER_UL_banned_bone_items(bpy.types.UIList):
 	def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
 		if self.layout_type in {"DEFAULT", "COMPACT"}:
@@ -1318,9 +1303,12 @@ class TorqueExporterUIState(bpy.types.PropertyGroup):
 	seq_vis_end: IntProperty(name="End Frame", default=1, update=_on_state_changed)
 	seq_vis_tracks_summary: StringProperty(name="Tracks", default="")
 	vis_track_enabled: BoolProperty(name="Track Enabled", default=False, update=_on_vis_track_changed)
-	vis_track_ipo_type: EnumProperty(name="Source Type", items=_vis_type_items, update=_on_vis_track_changed)
-	vis_track_ipo_channel: EnumProperty(name="Source Channel", items=_vis_channel_items, update=_on_vis_track_changed)
-	vis_track_ipo_object: EnumProperty(name="Source Object", items=_vis_object_items, update=_on_vis_track_changed)
+	vis_track_ipo_type: StringProperty(name="Source Type", default="", update=_on_vis_track_changed)
+	vis_track_ipo_channel: StringProperty(name="Source Channel", default="", update=_on_vis_track_changed)
+	vis_track_ipo_object: StringProperty(name="Source Object", default="", update=_on_vis_track_changed)
+	vis_type_options: CollectionProperty(type=TorqueExporterOptionItem)
+	vis_channel_options: CollectionProperty(type=TorqueExporterOptionItem)
+	vis_object_options: CollectionProperty(type=TorqueExporterOptionItem)
 
 	sequence_list_index: IntProperty(name="Sequence Index", default=-1, update=_on_sequence_list_index_changed)
 	sequence_items: CollectionProperty(type=TorqueExporterSequenceItem)
@@ -1575,11 +1563,13 @@ def _draw_sequence_block(layout, state):
 	tdcol = track_detail.column(align=True)
 	tdcol.enabled = state.seq_vis_enabled and state.vis_track_list_index >= 0 and len(state.vis_track_items) > 0
 	tdcol.prop(state, "vis_track_enabled", text="Enabled")
-	tdcol.prop(state, "vis_track_ipo_type", text="Source Type")
-	tdcol.prop(state, "vis_track_ipo_channel", text="Source Channel")
-	tdcol.prop(
+	tdcol.prop_search(state, "vis_track_ipo_type", state, "vis_type_options", text="Source Type")
+	tdcol.prop_search(state, "vis_track_ipo_channel", state, "vis_channel_options", text="Source Channel")
+	tdcol.prop_search(
 		state,
 		"vis_track_ipo_object",
+		state,
+		"vis_object_options",
 		text="Source Material" if state.vis_track_ipo_type == "Material" else "Source Object",
 	)
 	viscol.label(text=f"Tracks: {state.seq_vis_tracks_summary or 'none'}")
@@ -1674,6 +1664,7 @@ _CLASSES = (
 	TorqueExporterSequenceItem,
 	TorqueExporterVisTrackItem,
 	TorqueExporterBannedBoneItem,
+	TorqueExporterOptionItem,
 	TORQUEEXPORTER_UL_banned_bone_items,
 	TORQUEEXPORTER_UL_material_items,
 	TORQUEEXPORTER_UL_sequence_items,
