@@ -887,38 +887,38 @@ def _draw_sequence_block(layout, state):
 	box = layout.box()
 	box.label(text="Sequences")
 	head = box.row(align=True)
-	head.prop(state, "selected_sequence", text="Sequence")
+	head.label(text="Sequences come from the scene's actions and are configured here.")
 	head.operator("torqueexporter.refresh_sequences", text="", icon="FILE_REFRESH")
-	box.label(text="Sequences come from the scene's actions and are configured here.")
 	if len(state.sequence_items) == 0:
 		box.label(text="No sequences imported. Refresh to pull from prefs or actions.")
 		return
-	split = box.split(factor=0.42)
-	left = split.column()
-	left.template_list(
+	list_box = box.box()
+	list_box.template_list(
 		"TORQUEEXPORTER_UL_sequence_items",
 		"",
 		state,
 		"sequence_items",
 		state,
 		"sequence_list_index",
-		rows=6,
+		rows=7,
 	)
-	right = split.column(align=True)
 	if state.selected_sequence == "N/A":
-		right.label(text="No sequence selected")
+		box.label(text="No sequence selected")
 		return
-	col = right.column(align=True)
-	row = col.row(align=True)
+
+	gen = box.box()
+	gen.label(text="General")
+	gencol = gen.column(align=True)
+	row = gencol.row(align=True)
 	row.prop(state, "seq_priority")
 	row.prop(state, "seq_cyclic")
-	row = col.row(align=True)
+	row = gencol.row(align=True)
 	row.prop(state, "seq_no_export")
 	row.prop(state, "seq_total_frames")
-	row = col.row(align=True)
+	row = gencol.row(align=True)
 	row.prop(state, "seq_duration")
 	row.prop(state, "seq_fps")
-	row = col.row(align=True)
+	row = gencol.row(align=True)
 	row.prop(state, "seq_duration_locked")
 	row.prop(state, "seq_fps_locked")
 
@@ -965,7 +965,7 @@ def _draw_material_block(layout, state):
 	box = layout.box()
 	box.label(text="Materials")
 	head = box.row(align=True)
-	head.label(text="U/V Textures")
+	head.label(text="Material list")
 	head.operator("torqueexporter.refresh_materials", text="", icon="FILE_REFRESH")
 	head.prop(state, "material_show_advanced", text="Advanced", toggle=True)
 
@@ -973,23 +973,21 @@ def _draw_material_block(layout, state):
 		box.label(text="No materials imported. Refresh to pull from the current scene.")
 		return
 
-	split = box.split(factor=0.42)
-	left = split.column()
-	left.template_list(
+	list_box = box.box()
+	list_box.template_list(
 		"TORQUEEXPORTER_UL_material_items",
 		"",
 		state,
 		"material_items",
 		state,
 		"material_list_index",
-		rows=6,
+		rows=7,
 	)
 
-	right = split.column(align=True)
-	right.prop(state, "selected_material", text="Material")
-
 	selected_ok = state.selected_material != "N/A"
-	detail = right.column(align=True)
+	gen = box.box()
+	gen.label(text="General")
+	detail = gen.column(align=True)
 	detail.enabled = selected_ok
 	detail.prop(state, "mat_swrap")
 	detail.prop(state, "mat_twrap")
@@ -1008,7 +1006,7 @@ def _draw_material_block(layout, state):
 	row.prop(state, "mat_detail_map_flag")
 
 	if state.material_show_advanced:
-		adv = right.box()
+		adv = box.box()
 		adv.label(text="Advanced")
 		advcol = adv.column(align=True)
 		advcol.enabled = selected_ok
