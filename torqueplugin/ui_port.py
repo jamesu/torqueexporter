@@ -134,6 +134,69 @@ def _material_items(self, context):
 	return items
 
 
+def _enum_items_with_current(current_value, values, empty_label="<None>"):
+	items = [("", empty_label, "")]
+	seen = set()
+	for value in values:
+		text = str(value or "")
+		if not text or text in seen:
+			continue
+		seen.add(text)
+		items.append((text, text, ""))
+	current_text = str(current_value or "")
+	if current_text and current_text not in seen:
+		items.append((current_text, current_text, ""))
+	return items
+
+
+def _vis_type_items(self, context):
+	return _enum_items_with_current(
+		getattr(self, "vis_track_ipo_type", ""),
+		["Object", "Material"],
+	)
+
+
+def _selected_vis_track_item(state):
+	if not state.vis_track_items:
+		return None
+	index = getattr(state, "vis_track_list_index", -1)
+	if index < 0 or index >= len(state.vis_track_items):
+		return None
+	return state.vis_track_items[index]
+
+
+def _vis_channel_items(self, context):
+	legacy = _legacy_module()
+	selected = _selected_vis_track_item(self)
+	ipo_type = getattr(self, "vis_track_ipo_type", "") or (selected.ipo_type if selected else "") or "Object"
+	values = []
+	if legacy is not None:
+		try:
+			values = legacy.getIPOChannelTypes(ipo_type) or []
+		except Exception as exc:
+			_log_ui_error("_vis_channel_items", exc)
+	return _enum_items_with_current(
+		getattr(self, "vis_track_ipo_channel", "") or (selected.ipo_channel if selected else ""),
+		values,
+	)
+
+
+def _vis_object_items(self, context):
+	legacy = _legacy_module()
+	selected = _selected_vis_track_item(self)
+	ipo_type = getattr(self, "vis_track_ipo_type", "") or (selected.ipo_type if selected else "") or "Object"
+	values = []
+	if legacy is not None:
+		try:
+			values = legacy.getAllSceneObjectNames(ipo_type) or []
+		except Exception as exc:
+			_log_ui_error("_vis_object_items", exc)
+	return _enum_items_with_current(
+		getattr(self, "vis_track_ipo_object", "") or (selected.ipo_object if selected else ""),
+		sorted(values, key=lambda x: str(x).lower()),
+	)
+
+
 def _material_summary(mat):
 	parts = []
 	base = mat.get("BaseTex")
@@ -314,8 +377,9 @@ def _sync_vis_track_detail_from_index(state):
 			state.vis_track_ipo_object = ""
 			return
 		track = state.vis_track_items[state.vis_track_list_index]
+		ipo_type = str(track.ipo_type or "Object")
 		state.vis_track_enabled = bool(track.has_track)
-		state.vis_track_ipo_type = str(track.ipo_type or "")
+		state.vis_track_ipo_type = ipo_type
 		state.vis_track_ipo_channel = str(track.ipo_channel or "")
 		state.vis_track_ipo_object = str(track.ipo_object or "")
 	finally:
@@ -451,6 +515,7 @@ def _sync_visibility_from_prefs(state, seq_name):
 		for name in sorted(set(scene_tracks) | set(track_prefs.keys()), key=lambda x: x.lower()):
 			track = track_prefs.get(name, {})
 			item = state.vis_track_items.add()
+			item.name = name
 			item.track_name = name
 			item.has_track = bool(track.get("hasVisTrack", False))
 			item.ipo_type = str(track.get("IPOType", "") or "")
@@ -1091,7 +1156,8 @@ class TORQUEEXPORTER_UL_vis_track_items(bpy.types.UIList):
 	def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
 		if self.layout_type in {"DEFAULT", "COMPACT"}:
 			row = layout.row(align=True)
-			row.label(text=item.track_name or "<unnamed>", icon="VISIBLE_IPO_ON" if item.has_track else "HIDE_OFF")
+			display_name = item.track_name or getattr(item, "name", "") or f"Track {index + 1}"
+			row.label(text=display_name, icon="VISIBLE_IPO_ON" if item.has_track else "HIDE_OFF")
 			summary = []
 			if item.ipo_type:
 				summary.append(item.ipo_type)
@@ -1102,7 +1168,7 @@ class TORQUEEXPORTER_UL_vis_track_items(bpy.types.UIList):
 			if summary:
 				row.label(text=" / ".join(summary))
 		elif self.layout_type == "GRID":
-			layout.label(text=item.track_name or "<unnamed>")
+			layout.label(text=item.track_name or getattr(item, "name", "") or f"Track {index + 1}")
 
 
 class TORQUEEXPORTER_OT_refresh_materials(bpy.types.Operator):
@@ -1252,9 +1318,9 @@ class TorqueExporterUIState(bpy.types.PropertyGroup):
 	seq_vis_end: IntProperty(name="End Frame", default=1, update=_on_state_changed)
 	seq_vis_tracks_summary: StringProperty(name="Tracks", default="")
 	vis_track_enabled: BoolProperty(name="Track Enabled", default=False, update=_on_vis_track_changed)
-	vis_track_ipo_type: StringProperty(name="IPO Type", default="", update=_on_vis_track_changed)
-	vis_track_ipo_channel: StringProperty(name="IPO Channel", default="", update=_on_vis_track_changed)
-	vis_track_ipo_object: StringProperty(name="IPO Object", default="", update=_on_vis_track_changed)
+	vis_track_ipo_type: EnumProperty(name="Source Type", items=_vis_type_items, update=_on_vis_track_changed)
+	vis_track_ipo_channel: EnumProperty(name="Source Channel", items=_vis_channel_items, update=_on_vis_track_changed)
+	vis_track_ipo_object: EnumProperty(name="Source Object", items=_vis_object_items, update=_on_vis_track_changed)
 
 	sequence_list_index: IntProperty(name="Sequence Index", default=-1, update=_on_sequence_list_index_changed)
 	sequence_items: CollectionProperty(type=TorqueExporterSequenceItem)
