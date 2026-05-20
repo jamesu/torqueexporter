@@ -220,6 +220,13 @@ def _sync_sequence_from_prefs(state, seq_name):
 def _sync_sequence_list_from_prefs(state):
 	prefs = _ensure_prefs() or _legacy_prefs() or {}
 	seqs = prefs.get("Sequences", {})
+	if not seqs:
+		legacy = _legacy_module()
+		if legacy is not None:
+			try:
+				seqs = {name: {} for name in legacy.getCurrentActions().keys()}
+			except Exception as exc:
+				_log_ui_error("_sync_sequence_list_from_prefs", exc)
 	state.sequence_items.clear()
 	names = sorted(seqs.keys(), key=lambda x: x.lower())
 	for name in names:
@@ -369,14 +376,6 @@ def _on_selected_material_changed(self, context):
 		_log_ui_error("_on_selected_material_changed", exc)
 
 
-def _on_armature_name_changed(self, context):
-	try:
-		if self.armature_name == "N/A":
-			return
-	except Exception as exc:
-		_log_ui_error("_on_armature_name_changed", exc)
-
-
 def _sync_state_from_legacy(state):
 	prefs = _legacy_prefs() or {}
 	if not prefs:
@@ -405,13 +404,6 @@ def _sync_state_from_legacy(state):
 	if state.selected_sequence != "N/A":
 		_sync_sequence_from_prefs(state, state.selected_sequence)
 	_sync_material_list_from_prefs(state)
-	if getattr(state, "armature_name", "N/A") == "N/A":
-		try:
-			items = _armature_items(None, None)
-			if items and items[0][0] != "N/A":
-				state.armature_name = items[0][0]
-		except Exception as exc:
-			_log_ui_error("_sync_state_from_legacy.armature", exc)
 	if state.selected_material == "N/A" or state.selected_material not in prefs.get("Materials", {}):
 		mat_names = sorted(prefs.get("Materials", {}).keys(), key=lambda x: x.lower())
 		if mat_names:
@@ -573,6 +565,22 @@ def _refresh_materials(state):
 	_sync_material_list_from_prefs(state)
 
 
+def _bootstrap_ui_state():
+	if bpy is None:
+		return
+	scene = getattr(getattr(bpy, "context", None), "scene", None)
+	if scene is None:
+		return
+	try:
+		state = scene.torque_export_ui
+	except Exception:
+		return
+	try:
+		_sync_state_from_legacy(state)
+	except Exception as exc:
+		_log_ui_error("_bootstrap_ui_state", exc)
+
+
 class TorqueExporterMaterialItem(bpy.types.PropertyGroup):
 	name: StringProperty(name="Name", default="")
 	summary: StringProperty(name="Summary", default="")
@@ -590,15 +598,14 @@ class TorqueExporterSequenceItem(bpy.types.PropertyGroup):
 class TORQUEEXPORTER_UL_material_items(bpy.types.UIList):
 	def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
 		if self.layout_type in {"DEFAULT", "COMPACT"}:
-			col = layout.column(align=True)
-			row = col.row(align=True)
+			row = layout.row(align=True)
 			row.label(text=item.name, icon="MATERIAL")
 			if item.base_tex:
 				row.label(text=item.base_tex)
-			if item.summary:
-				col.label(text=item.summary)
+			elif item.summary:
+				row.label(text=item.summary)
 			elif item.flags:
-				col.label(text=item.flags)
+				row.label(text=item.flags)
 		elif self.layout_type == "GRID":
 			layout.label(text=item.name)
 
@@ -606,13 +613,12 @@ class TORQUEEXPORTER_UL_material_items(bpy.types.UIList):
 class TORQUEEXPORTER_UL_sequence_items(bpy.types.UIList):
 	def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
 		if self.layout_type in {"DEFAULT", "COMPACT"}:
-			col = layout.column(align=True)
-			row = col.row(align=True)
+			row = layout.row(align=True)
 			row.label(text=item.name, icon="ACTION")
 			if item.summary:
-				col.label(text=item.summary)
+				row.label(text=item.summary)
 			elif item.flags:
-				col.label(text=item.flags)
+				row.label(text=item.flags)
 		elif self.layout_type == "GRID":
 			layout.label(text=item.name)
 
@@ -654,19 +660,11 @@ class TORQUEEXPORTER_OT_refresh_sequences(bpy.types.Operator):
 
 
 class TorqueExporterUIState(bpy.types.PropertyGroup):
-	display_mode: EnumProperty(
-		name="Mode",
-		items=[
-			("CLASSIC", "Classic", "Legacy-shaped layout"),
-			("COMPACT", "Compact", "Condensed 4.x layout"),
-		],
-		default="CLASSIC",
-	)
 	ui_initialized: BoolProperty(default=False)
 
 	export_basepath: StringProperty(name="Export Path", default="", update=_on_state_changed)
 	export_basename: StringProperty(name="Basename", default="", update=_on_state_changed)
-	dts_version: IntProperty(name="DTS Version", default=24, min=0, max=255, update=_on_state_changed)
+	dts_version: IntProperty(name="DTS Version", default=24, min=23, max=24, update=_on_state_changed)
 	write_shape_script: BoolProperty(name="Write Shape Script", default=False, update=_on_state_changed)
 	export_scale: FloatProperty(name="Export Scale", default=1.0, min=0.0, update=_on_state_changed)
 	prim_type: EnumProperty(
@@ -756,7 +754,6 @@ class TorqueExporterUIState(bpy.types.PropertyGroup):
 		description="Comma-separated list of bone names to skip",
 		update=_on_state_changed,
 	)
-	armature_name: EnumProperty(name="Armature", items=_armature_items, update=_on_armature_name_changed)
 
 
 class TORQUEEXPORTER_OT_refresh_ui(bpy.types.Operator):
@@ -826,7 +823,6 @@ class TORQUEEXPORTER_PT_scene_panel(bpy.types.Panel):
 		layout = self.layout
 		try:
 			state = context.scene.torque_export_ui
-			layout.prop(state, "display_mode", expand=True)
 			row = layout.row(align=True)
 			row.operator("torqueexporter.refresh_ui", text="Refresh")
 			row.operator("torqueexporter.apply_ui", text="Sync")
@@ -838,10 +834,7 @@ class TORQUEEXPORTER_PT_scene_panel(bpy.types.Panel):
 				box.label(text="Use Refresh to load current scene/prefs.")
 				return
 
-			if state.display_mode == "CLASSIC":
-				_draw_legacy(layout, state)
-			else:
-				_draw_modern(layout, state)
+			_draw_main(layout, state)
 		except Exception as exc:
 			_log_ui_error("TORQUEEXPORTER_PT_scene_panel.draw", exc)
 			box = layout.box()
@@ -894,8 +887,9 @@ def _draw_sequence_block(layout, state):
 	box = layout.box()
 	box.label(text="Sequences")
 	head = box.row(align=True)
+	head.prop(state, "selected_sequence", text="Sequence")
 	head.operator("torqueexporter.refresh_sequences", text="", icon="FILE_REFRESH")
-	head.prop(state, "selected_sequence")
+	box.label(text="Sequences come from the scene's actions and are configured here.")
 	if len(state.sequence_items) == 0:
 		box.label(text="No sequences imported. Refresh to pull from prefs or actions.")
 		return
@@ -992,7 +986,7 @@ def _draw_material_block(layout, state):
 	)
 
 	right = split.column(align=True)
-	right.prop(state, "selected_material", text="Selected")
+	right.prop(state, "selected_material", text="Material")
 
 	selected_ok = state.selected_material != "N/A"
 	detail = right.column(align=True)
@@ -1032,7 +1026,8 @@ def _draw_material_block(layout, state):
 def _draw_armature_block(layout, state):
 	box = layout.box()
 	box.label(text="Armatures")
-	box.prop(state, "armature_name")
+	box.label(text="Bones are discovered automatically from scene armatures.")
+	box.label(text="Banned bones are skipped during armature export.")
 	box.prop(state, "banned_bones")
 	pad = box.box()
 	pad.label(text="Current scene armatures")
@@ -1055,25 +1050,15 @@ def _draw_about_block(layout, state):
 	box = layout.box()
 	box.label(text="About")
 	box.label(text="Torque DTS exporter UI port")
-	box.label(text="Classic layout mirrors the original exporter")
-	box.label(text="Compact layout is reserved for future reorganized UI")
+	box.label(text="This panel mirrors the old exporter state while using Blender 4.x UI.")
 
 
-def _draw_legacy(layout, state):
+def _draw_main(layout, state):
 	_draw_export_block(layout, state)
 	_draw_sequence_block(layout, state)
 	_draw_armature_block(layout, state)
 	_draw_material_block(layout, state)
 	_draw_general_block(layout, state)
-	_draw_about_block(layout, state)
-
-
-def _draw_modern(layout, state):
-	_draw_export_block(layout, state)
-	_draw_general_block(layout, state)
-	_draw_sequence_block(layout, state)
-	_draw_armature_block(layout, state)
-	_draw_material_block(layout, state)
 	_draw_about_block(layout, state)
 
 
@@ -1099,6 +1084,7 @@ def register():
 	for cls in _CLASSES:
 		bpy.utils.register_class(cls)
 	bpy.types.Scene.torque_export_ui = PointerProperty(type=TorqueExporterUIState)
+	_bootstrap_ui_state()
 
 
 def unregister():

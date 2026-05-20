@@ -1,12 +1,12 @@
 # Torque UI Port Checklist
 
-Goal: port the old Torque exporter UI into a modern Blender 4.x panel while keeping the legacy layout as the default display mode for now.
+Goal: port the old Torque exporter UI into a modern Blender 4.x Scene panel while keeping the controls recognizable and the data source aligned with the current export state.
 
-## Display Modes
+## Panel Layout
 
 - [x] Properties editor scene panel scaffold exists.
-- [x] Classic mode is the default display.
-- [x] Compact mode exists for future rearrangement.
+- [x] Single Scene panel layout is the active UI.
+- [x] The classic/compact split has been removed from the visible UI.
 - [ ] Final decision on whether a separate popup/dialog mode is still needed.
 
 ## Export Section
@@ -22,16 +22,18 @@ Goal: port the old Torque exporter UI into a modern Blender 4.x panel while keep
 ## Sequence Section
 
 - [x] Sequence selector.
+- [x] Sequence list appears as a readable single-line list.
 - [x] Common sequence settings.
 - [x] Action sequence settings.
 - [x] IFL sequence settings.
 - [x] Visibility sequence settings.
+- [x] Sequence section includes a short explanatory note.
 - [ ] Visibility track editor parity with the legacy GUI.
 - [ ] Sequence list add/remove/reorder controls.
 
 ## Armature Section
 
-- [x] Armature selector / summary.
+- [x] Armature summary / banned-bone guidance.
 - [x] Banned bones text entry.
 - [ ] Bone grid / per-bone toggle parity with the legacy GUI.
 - [ ] Armature ordering / traversal tools parity.
@@ -39,6 +41,7 @@ Goal: port the old Torque exporter UI into a modern Blender 4.x panel while keep
 ## Materials Section
 
 - [x] Material selector.
+- [x] Material list appears as a readable single-line list.
 - [x] Common material flags.
 - [x] Texture / map fields.
 - [x] Reflectance and detail scale controls.

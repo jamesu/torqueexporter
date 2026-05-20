@@ -38,7 +38,7 @@ Status note: a Scene panel port has started in `torqueplugin/ui_port.py`, and th
 Status note: the Scene panel now writes changes back into the legacy config model live, and the export button saves prefs before handing off to the legacy export routine.
 Status note: the Scene panel now also exposes an explicit export-path field with a "use current file folder" action, and the material section is mapped to the old imported U/V texture list behavior instead of a generic material browser.
 Status note: the Materials section in `torqueplugin/ui_port.py` now exposes the old U/V texture list behavior with refresh/select support, matching the legacy importer-driven material entries more closely.
-Status note: the sequence section in `torqueplugin/ui_port.py` now uses a real list sourced from legacy prefs or action names, and the armature selector is hardened so invalid or missing data logs a warning instead of crashing the panel.
+Status note: the sequence section in `torqueplugin/ui_port.py` now uses a real list sourced from legacy prefs or action names, the UI no longer exposes the redundant classic/compact layout split, and the armature section now centers banned bones plus scene armature summary instead of a confusing armature picker.
 
 ## 3. Preferences And Configuration
 
