@@ -30,6 +30,23 @@ except Exception:  # pragma: no cover - outside Blender
 
 
 _SYNCING_STATE_IDS = set()
+_INTERNAL_UI_UPDATE_IDS = set()
+
+
+def _begin_internal_ui_update(state):
+	state_id = id(state)
+	if state_id in _INTERNAL_UI_UPDATE_IDS:
+		return False
+	_INTERNAL_UI_UPDATE_IDS.add(state_id)
+	return True
+
+
+def _end_internal_ui_update(state):
+	_INTERNAL_UI_UPDATE_IDS.discard(id(state))
+
+
+def _ui_update_active(state):
+	return id(state) in _INTERNAL_UI_UPDATE_IDS
 
 
 def _legacy_module():
@@ -180,187 +197,233 @@ def _armature_items(self, context):
 
 
 def _sync_sequence_from_prefs(state, seq_name):
+	owned = _begin_internal_ui_update(state)
 	prefs = _legacy_prefs() or {}
-	seq = prefs.get("Sequences", {}).get(seq_name)
-	if not seq:
-		return
-	if state.selected_sequence != seq_name:
-		state.selected_sequence = seq_name
-	state.seq_priority = int(seq.get("Priority", 0))
-	state.seq_cyclic = bool(seq.get("Cyclic", False))
-	state.seq_no_export = bool(seq.get("NoExport", False))
-	state.seq_dsq = bool(seq.get("Dsq", False))
-	state.seq_total_frames = int(seq.get("TotalFrames", 0))
-	state.seq_duration = float(seq.get("Duration", 1.0))
-	state.seq_fps = float(seq.get("FPS", 25.0))
-	state.seq_duration_locked = bool(seq.get("DurationLocked", False))
-	state.seq_fps_locked = bool(seq.get("FPSLocked", True))
+	try:
+		seq = prefs.get("Sequences", {}).get(seq_name)
+		if not seq:
+			return
+		if state.selected_sequence != seq_name:
+			state.selected_sequence = seq_name
+		state.seq_priority = int(seq.get("Priority", 0))
+		state.seq_cyclic = bool(seq.get("Cyclic", False))
+		state.seq_no_export = bool(seq.get("NoExport", False))
+		state.seq_dsq = bool(seq.get("Dsq", False))
+		state.seq_total_frames = int(seq.get("TotalFrames", 0))
+		state.seq_duration = float(seq.get("Duration", 1.0))
+		state.seq_fps = float(seq.get("FPS", 25.0))
+		state.seq_duration_locked = bool(seq.get("DurationLocked", False))
+		state.seq_fps_locked = bool(seq.get("FPSLocked", True))
 
-	action = seq.get("Action", {})
-	state.seq_action_enabled = bool(action.get("Enabled", False))
-	state.seq_action_start = int(action.get("StartFrame", 1))
-	state.seq_action_end = int(action.get("EndFrame", 1))
-	state.seq_action_auto_samples = bool(action.get("AutoSamples", False))
-	state.seq_action_auto_frames = bool(action.get("AutoFrames", False))
-	state.seq_action_frame_samples = int(action.get("FrameSamples", 0))
-	state.seq_action_num_ground_frames = int(action.get("NumGroundFrames", 0))
-	state.seq_action_blend = bool(action.get("Blend", False))
-	state.seq_action_blend_ref_action = str(action.get("BlendRefPoseAction", "") or "")
-	state.seq_action_blend_ref_frame = int(action.get("BlendRefPoseFrame", 1))
+		action = seq.get("Action", {})
+		state.seq_action_enabled = bool(action.get("Enabled", False))
+		state.seq_action_start = int(action.get("StartFrame", 1))
+		state.seq_action_end = int(action.get("EndFrame", 1))
+		state.seq_action_auto_samples = bool(action.get("AutoSamples", False))
+		state.seq_action_auto_frames = bool(action.get("AutoFrames", False))
+		state.seq_action_frame_samples = int(action.get("FrameSamples", 0))
+		state.seq_action_num_ground_frames = int(action.get("NumGroundFrames", 0))
+		state.seq_action_blend = bool(action.get("Blend", False))
+		state.seq_action_blend_ref_action = str(action.get("BlendRefPoseAction", "") or "")
+		state.seq_action_blend_ref_frame = int(action.get("BlendRefPoseFrame", 1))
 
-	ifl = seq.get("IFL", {})
-	state.seq_ifl_enabled = bool(ifl.get("Enabled", False))
-	state.seq_ifl_material = str(ifl.get("Material", "") or "")
-	state.seq_ifl_num_images = int(ifl.get("NumImages", 1))
-	state.seq_ifl_total_frames = int(ifl.get("TotalFrames", 1))
-	state.seq_ifl_write_file = bool(ifl.get("WriteIFLFile", True))
+		ifl = seq.get("IFL", {})
+		state.seq_ifl_enabled = bool(ifl.get("Enabled", False))
+		state.seq_ifl_material = str(ifl.get("Material", "") or "")
+		state.seq_ifl_num_images = int(ifl.get("NumImages", 1))
+		state.seq_ifl_total_frames = int(ifl.get("TotalFrames", 1))
+		state.seq_ifl_write_file = bool(ifl.get("WriteIFLFile", True))
 
-	vis = seq.get("Vis", {})
-	state.seq_vis_enabled = bool(vis.get("Enabled", False))
-	state.seq_vis_start = int(vis.get("StartFrame", 1))
-	state.seq_vis_end = int(vis.get("EndFrame", 1))
+		vis = seq.get("Vis", {})
+		state.seq_vis_enabled = bool(vis.get("Enabled", False))
+		state.seq_vis_start = int(vis.get("StartFrame", 1))
+		state.seq_vis_end = int(vis.get("EndFrame", 1))
+	finally:
+		if owned:
+			_end_internal_ui_update(state)
 
 
 def _sync_sequence_list_from_prefs(state):
+	owned = _begin_internal_ui_update(state)
 	prefs = _ensure_prefs() or _legacy_prefs() or {}
-	seqs = prefs.get("Sequences", {})
-	if not seqs:
-		legacy = _legacy_module()
-		if legacy is not None:
-			try:
-				seqs = {name: {} for name in legacy.getCurrentActions().keys()}
-			except Exception as exc:
-				_log_ui_error("_sync_sequence_list_from_prefs", exc)
-	state.sequence_items.clear()
-	names = sorted(seqs.keys(), key=lambda x: x.lower())
-	for name in names:
-		seq = seqs.get(name, {})
-		item = state.sequence_items.add()
-		item.name = name
-		item.summary = _sequence_summary(seq)
-		item.action = "Action" if seq.get("Action", {}).get("Enabled") else ""
-		item.flags = ", ".join(
-			flag for flag, enabled in (
-				("Cyclic", bool(seq.get("Cyclic", False))),
-				("NoExport", bool(seq.get("NoExport", False))),
-				("DSQ", bool(seq.get("Dsq", False))),
-			)
-			if enabled
-		)
-
-	if not names:
-		state.sequence_list_index = -1
-		state.selected_sequence = "N/A"
-		return
-
-	if state.selected_sequence not in seqs:
-		state.selected_sequence = names[0]
-
 	try:
-		state.sequence_list_index = names.index(state.selected_sequence)
-	except ValueError:
-		state.sequence_list_index = 0
-		state.selected_sequence = names[0]
+		seqs = prefs.get("Sequences", {})
+		if not seqs:
+			legacy = _legacy_module()
+			if legacy is not None:
+				try:
+					seqs = {name: {} for name in legacy.getCurrentActions().keys()}
+				except Exception as exc:
+					_log_ui_error("_sync_sequence_list_from_prefs", exc)
+		state.sequence_items.clear()
+		names = sorted(seqs.keys(), key=lambda x: x.lower())
+		for name in names:
+			seq = seqs.get(name, {})
+			item = state.sequence_items.add()
+			item.name = name
+			item.summary = _sequence_summary(seq)
+			item.action = "Action" if seq.get("Action", {}).get("Enabled") else ""
+			item.flags = ", ".join(
+				flag for flag, enabled in (
+					("Cyclic", bool(seq.get("Cyclic", False))),
+					("NoExport", bool(seq.get("NoExport", False))),
+					("DSQ", bool(seq.get("Dsq", False))),
+				)
+				if enabled
+			)
+
+		if not names:
+			state.sequence_list_index = -1
+			state.selected_sequence = "N/A"
+			return
+
+		if state.selected_sequence not in seqs:
+			state.selected_sequence = names[0]
+
+		try:
+			state.sequence_list_index = names.index(state.selected_sequence)
+		except ValueError:
+			state.sequence_list_index = 0
+			state.selected_sequence = names[0]
+	finally:
+		if owned:
+			_end_internal_ui_update(state)
 
 
 def _sync_material_from_prefs(state, mat_name):
+	owned = _begin_internal_ui_update(state)
 	prefs = _legacy_prefs() or {}
-	mat = prefs.get("Materials", {}).get(mat_name)
-	if not mat:
-		return
-	if state.selected_material != mat_name:
-		state.selected_material = mat_name
-	state.mat_swrap = bool(mat.get("SWrap", False))
-	state.mat_twrap = bool(mat.get("TWrap", False))
-	state.mat_translucent = bool(mat.get("Translucent", False))
-	state.mat_additive = bool(mat.get("Additive", False))
-	state.mat_subtractive = bool(mat.get("Subtractive", False))
-	state.mat_self_illum = bool(mat.get("SelfIlluminating", False))
-	state.mat_never_env_map = bool(mat.get("NeverEnvMap", False))
-	state.mat_no_mipmap = bool(mat.get("NoMipMap", False))
-	state.mat_mipmap_zero_border = bool(mat.get("MipMapZeroBorder", False))
-	state.mat_ifl_material = bool(mat.get("IFLMaterial", False))
-	state.mat_detail_map_flag = bool(mat.get("DetailMapFlag", False))
-	state.mat_bump_map_flag = bool(mat.get("BumpMapFlag", False))
-	state.mat_reflectance_map_flag = bool(mat.get("ReflectanceMapFlag", False))
-	state.mat_detail_tex = str(mat.get("DetailTex", "") or "")
-	state.mat_bump_tex = str(mat.get("BumpMapTex", "") or "")
-	state.mat_ref_tex = str(mat.get("RefMapTex", "") or "")
-	state.mat_reflectance = float(mat.get("reflectance", 0.0))
-	state.mat_detail_scale = float(mat.get("detailScale", 1.0))
+	try:
+		mat = prefs.get("Materials", {}).get(mat_name)
+		if not mat:
+			return
+		if state.selected_material != mat_name:
+			state.selected_material = mat_name
+		state.mat_swrap = bool(mat.get("SWrap", False))
+		state.mat_twrap = bool(mat.get("TWrap", False))
+		state.mat_translucent = bool(mat.get("Translucent", False))
+		state.mat_additive = bool(mat.get("Additive", False))
+		state.mat_subtractive = bool(mat.get("Subtractive", False))
+		state.mat_self_illum = bool(mat.get("SelfIlluminating", False))
+		state.mat_never_env_map = bool(mat.get("NeverEnvMap", False))
+		state.mat_no_mipmap = bool(mat.get("NoMipMap", False))
+		state.mat_mipmap_zero_border = bool(mat.get("MipMapZeroBorder", False))
+		state.mat_ifl_material = bool(mat.get("IFLMaterial", False))
+		state.mat_detail_map_flag = bool(mat.get("DetailMapFlag", False))
+		state.mat_bump_map_flag = bool(mat.get("BumpMapFlag", False))
+		state.mat_reflectance_map_flag = bool(mat.get("ReflectanceMapFlag", False))
+		state.mat_detail_tex = str(mat.get("DetailTex", "") or "")
+		state.mat_bump_tex = str(mat.get("BumpMapTex", "") or "")
+		state.mat_ref_tex = str(mat.get("RefMapTex", "") or "")
+		state.mat_reflectance = float(mat.get("reflectance", 0.0))
+		state.mat_detail_scale = float(mat.get("detailScale", 1.0))
+	finally:
+		if owned:
+			_end_internal_ui_update(state)
 
 
 def _sync_material_list_from_prefs(state):
+	owned = _begin_internal_ui_update(state)
 	prefs = _legacy_prefs() or {}
-	materials = prefs.get("Materials", {})
-	state.material_items.clear()
-	names = sorted(materials.keys(), key=lambda x: x.lower())
-	for name in names:
-		mat = materials.get(name, {})
-		item = state.material_items.add()
-		item.name = name
-		item.summary = _material_summary(mat)
-		item.base_tex = str(mat.get("BaseTex", "") or "")
-		item.flags = ", ".join(
-			flag for flag, enabled in (
-				("IFL", bool(mat.get("IFLMaterial", False))),
-				("Detail", bool(mat.get("DetailMapFlag", False))),
-				("Bump", bool(mat.get("BumpMapFlag", False))),
-				("Env", bool(mat.get("ReflectanceMapFlag", False))),
-				("Trans", bool(mat.get("Translucent", False))),
-			)
-			if enabled
-		)
-
-	if not names:
-		state.material_list_index = -1
-		state.selected_material = "N/A"
-		return
-
-	if state.selected_material not in materials:
-		state.selected_material = names[0]
-
 	try:
-		state.material_list_index = names.index(state.selected_material)
-	except ValueError:
-		state.material_list_index = 0
-		state.selected_material = names[0]
+		materials = prefs.get("Materials", {})
+		state.material_items.clear()
+		names = sorted(materials.keys(), key=lambda x: x.lower())
+		for name in names:
+			mat = materials.get(name, {})
+			item = state.material_items.add()
+			item.name = name
+			item.summary = _material_summary(mat)
+			item.base_tex = str(mat.get("BaseTex", "") or "")
+			item.flags = ", ".join(
+				flag for flag, enabled in (
+					("IFL", bool(mat.get("IFLMaterial", False))),
+					("Detail", bool(mat.get("DetailMapFlag", False))),
+					("Bump", bool(mat.get("BumpMapFlag", False))),
+					("Env", bool(mat.get("ReflectanceMapFlag", False))),
+					("Trans", bool(mat.get("Translucent", False))),
+				)
+				if enabled
+			)
+
+		if not names:
+			state.material_list_index = -1
+			state.selected_material = "N/A"
+			return
+
+		if state.selected_material not in materials:
+			state.selected_material = names[0]
+
+		try:
+			state.material_list_index = names.index(state.selected_material)
+		except ValueError:
+			state.material_list_index = 0
+			state.selected_material = names[0]
+	finally:
+		if owned:
+			_end_internal_ui_update(state)
 
 
 def _on_material_list_index_changed(self, context):
+	if _ui_update_active(self):
+		return
 	items = self.material_items
 	if not items:
-		self.selected_material = "N/A"
+		owned = _begin_internal_ui_update(self)
+		try:
+			self.selected_material = "N/A"
+		finally:
+			if owned:
+				_end_internal_ui_update(self)
 		return
 	index = max(0, min(self.material_list_index, len(items) - 1))
-	if index != self.material_list_index:
-		self.material_list_index = index
 	mat_name = items[index].name
-	if self.selected_material != mat_name:
-		self.selected_material = mat_name
-	_sync_material_from_prefs(self, mat_name)
+	owned = _begin_internal_ui_update(self)
+	try:
+		if index != self.material_list_index:
+			self.material_list_index = index
+		if self.selected_material != mat_name:
+			self.selected_material = mat_name
+		_sync_material_from_prefs(self, mat_name)
+	finally:
+		if owned:
+			_end_internal_ui_update(self)
 	_sync_state_to_legacy_safe(self)
 
 
 def _on_sequence_list_index_changed(self, context):
+	if _ui_update_active(self):
+		return
 	items = self.sequence_items
 	if not items:
-		self.selected_sequence = "N/A"
+		owned = _begin_internal_ui_update(self)
+		try:
+			self.selected_sequence = "N/A"
+		finally:
+			if owned:
+				_end_internal_ui_update(self)
 		return
 	index = max(0, min(self.sequence_list_index, len(items) - 1))
-	if index != self.sequence_list_index:
-		self.sequence_list_index = index
 	seq_name = items[index].name
-	if self.selected_sequence != seq_name:
-		self.selected_sequence = seq_name
+	owned = _begin_internal_ui_update(self)
 	try:
+		if index != self.sequence_list_index:
+			self.sequence_list_index = index
+		if self.selected_sequence != seq_name:
+			self.selected_sequence = seq_name
 		_sync_sequence_from_prefs(self, seq_name)
+	finally:
+		if owned:
+			_end_internal_ui_update(self)
+	try:
 		_sync_state_to_legacy_safe(self)
 	except Exception as exc:
 		_log_ui_error("_on_sequence_list_index_changed", exc)
 
 
 def _on_selected_sequence_changed(self, context):
+	if _ui_update_active(self):
+		return
 	try:
 		if self.selected_sequence != "N/A":
 			_sync_sequence_from_prefs(self, self.selected_sequence)
@@ -370,6 +433,8 @@ def _on_selected_sequence_changed(self, context):
 
 
 def _on_selected_material_changed(self, context):
+	if _ui_update_active(self):
+		return
 	try:
 		if self.selected_material != "N/A":
 			_sync_material_from_prefs(self, self.selected_material)
@@ -385,37 +450,42 @@ def _on_selected_material_changed(self, context):
 
 
 def _sync_state_from_legacy(state):
+	owned = _begin_internal_ui_update(state)
 	prefs = _legacy_prefs() or {}
-	if not prefs:
-		return
-	state.export_basepath = str(prefs.get("exportBasepath", "") or _blend_dir())
-	state.export_basename = str(prefs.get("exportBasename", ""))
-	state.dts_version = int(prefs.get("DTSVersion", 24))
-	state.write_shape_script = bool(prefs.get("WriteShapeScript", False))
-	state.export_scale = float(prefs.get("ExportScale", 1.0))
-	state.prim_type = str(prefs.get("PrimType", "Tris"))
-	state.max_strip_size = int(prefs.get("MaxStripSize", 6))
-	state.cluster_depth = int(prefs.get("ClusterDepth", 1))
-	state.always_write_depth = bool(prefs.get("AlwaysWriteDepth", False))
-	state.collapse_root_transform = bool(prefs.get("CollapseRootTransform", True))
-	state.tse_material = bool(prefs.get("TSEMaterial", False))
-	state.billboard_enabled = bool(prefs.get("Billboard", {}).get("Enabled", False))
-	state.billboard_equator = int(prefs.get("Billboard", {}).get("Equator", 10))
-	state.billboard_polar = int(prefs.get("Billboard", {}).get("Polar", 10))
-	state.billboard_polar_angle = float(prefs.get("Billboard", {}).get("PolarAngle", 25.0))
-	state.billboard_dim = int(prefs.get("Billboard", {}).get("Dim", 64))
-	state.billboard_include_poles = bool(prefs.get("Billboard", {}).get("IncludePoles", True))
-	state.billboard_size = float(prefs.get("Billboard", {}).get("Size", 20.0))
-	state.banned_bones = ", ".join(prefs.get("BannedBones", []))
-	state.ui_initialized = True
-	_sync_sequence_list_from_prefs(state)
-	if state.selected_sequence != "N/A":
-		_sync_sequence_from_prefs(state, state.selected_sequence)
-	_sync_material_list_from_prefs(state)
-	if state.selected_material == "N/A" or state.selected_material not in prefs.get("Materials", {}):
-		mat_names = sorted(prefs.get("Materials", {}).keys(), key=lambda x: x.lower())
-		if mat_names:
-			state.selected_material = mat_names[0]
+	try:
+		if not prefs:
+			return
+		state.export_basepath = str(prefs.get("exportBasepath", "") or _blend_dir())
+		state.export_basename = str(prefs.get("exportBasename", ""))
+		state.dts_version = int(prefs.get("DTSVersion", 24))
+		state.write_shape_script = bool(prefs.get("WriteShapeScript", False))
+		state.export_scale = float(prefs.get("ExportScale", 1.0))
+		state.prim_type = str(prefs.get("PrimType", "Tris"))
+		state.max_strip_size = int(prefs.get("MaxStripSize", 6))
+		state.cluster_depth = int(prefs.get("ClusterDepth", 1))
+		state.always_write_depth = bool(prefs.get("AlwaysWriteDepth", False))
+		state.collapse_root_transform = bool(prefs.get("CollapseRootTransform", True))
+		state.tse_material = bool(prefs.get("TSEMaterial", False))
+		state.billboard_enabled = bool(prefs.get("Billboard", {}).get("Enabled", False))
+		state.billboard_equator = int(prefs.get("Billboard", {}).get("Equator", 10))
+		state.billboard_polar = int(prefs.get("Billboard", {}).get("Polar", 10))
+		state.billboard_polar_angle = float(prefs.get("Billboard", {}).get("PolarAngle", 25.0))
+		state.billboard_dim = int(prefs.get("Billboard", {}).get("Dim", 64))
+		state.billboard_include_poles = bool(prefs.get("Billboard", {}).get("IncludePoles", True))
+		state.billboard_size = float(prefs.get("Billboard", {}).get("Size", 20.0))
+		state.banned_bones = ", ".join(prefs.get("BannedBones", []))
+		state.ui_initialized = True
+		_sync_sequence_list_from_prefs(state)
+		if state.selected_sequence != "N/A":
+			_sync_sequence_from_prefs(state, state.selected_sequence)
+		_sync_material_list_from_prefs(state)
+		if state.selected_material == "N/A" or state.selected_material not in prefs.get("Materials", {}):
+			mat_names = sorted(prefs.get("Materials", {}).keys(), key=lambda x: x.lower())
+			if mat_names:
+				state.selected_material = mat_names[0]
+	finally:
+		if owned:
+			_end_internal_ui_update(state)
 
 
 def _on_state_changed(self, context):
@@ -423,9 +493,9 @@ def _on_state_changed(self, context):
 
 
 def _sync_state_to_legacy_safe(state):
-	state_id = id(state)
-	if state_id in _SYNCING_STATE_IDS:
+	if not _begin_internal_ui_update(state):
 		return
+	state_id = id(state)
 	_SYNCING_STATE_IDS.add(state_id)
 	try:
 		_sync_state_to_legacy(state)
@@ -433,6 +503,7 @@ def _sync_state_to_legacy_safe(state):
 		print(f"Torque UI sync warning: {exc}")
 	finally:
 		_SYNCING_STATE_IDS.discard(state_id)
+		_end_internal_ui_update(state)
 
 
 def _sync_state_to_legacy(state):
@@ -556,12 +627,6 @@ def _sync_state_to_legacy(state):
 	except Exception as exc:
 		_log_ui_error("_sync_state_to_legacy.refresh_lists", exc)
 
-	try:
-		_sync_sequence_list_from_prefs(state)
-		_sync_material_list_from_prefs(state)
-	except Exception as exc:
-		_log_ui_error("_sync_state_to_legacy.refresh_lists", exc)
-
 
 def _refresh_sequences(state):
 	legacy = _legacy_module()
@@ -665,11 +730,16 @@ def _snapshot_state(state):
 
 
 def _restore_snapshot(state, snapshot):
-	for key, value in snapshot.items():
-		try:
-			setattr(state, key, value)
-		except Exception as exc:
-			_log_ui_error("_restore_snapshot.%s" % key, exc)
+	owned = _begin_internal_ui_update(state)
+	try:
+		for key, value in snapshot.items():
+			try:
+				setattr(state, key, value)
+			except Exception as exc:
+				_log_ui_error("_restore_snapshot.%s" % key, exc)
+	finally:
+		if owned:
+			_end_internal_ui_update(state)
 
 
 def _ensure_loaded_state(prefs):
